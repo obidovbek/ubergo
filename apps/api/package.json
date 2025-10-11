@@ -1,0 +1,22 @@
+{
+  "name": "ubergoapi",
+  "version": "1.0.0",
+  "description": "Shaharlar aro xizmatlat(taxi, jo'natma)",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
+  },
+  "author": "Obidov Bekzod",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}

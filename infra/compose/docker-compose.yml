@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: ubergo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ubergo
+      POSTGRES_PASSWORD: ubergo_password
+      POSTGRES_DB: ubergo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ubergo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ubergo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Service
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    container_name: ubergo-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://ubergo:ubergo_password@postgres:5432/ubergo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ubergo-network
+    volumes:
+      - ../../apps/api/src:/app/src:cached
+      - /app/node_modules
+
+  # Admin Web App
+  admin:
+    build:
+      context: ../../apps/admin
+      dockerfile: Dockerfile
+    container_name: ubergo-admin
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: http://localhost:4000
+    depends_on:
+      - api
+    networks:
+      - ubergo-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ubergo-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - admin
+    networks:
+      - ubergo-network
+
+networks:
+  ubergo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+

@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: ubergo-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ubergo
+      POSTGRES_PASSWORD: ubergo_password
+      POSTGRES_DB: ubergo
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - ubergo-network-dev
+
+  # API Service (Development mode with hot reload)
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile.dev
+    container_name: ubergo-api-dev
+    restart: unless-stopped
+    ports:
+      - "4001:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://ubergo:ubergo_password@postgres:5432/ubergo
+    depends_on:
+      - postgres
+    networks:
+      - ubergo-network-dev
+    volumes:
+      - ../../apps/api/src:/app/src:cached
+      - ../../apps/api/package.json:/app/package.json
+      - /app/node_modules
+
+  # Admin Web App (Development mode with hot reload)
+  admin:
+    build:
+      context: ../../apps/admin
+      dockerfile: Dockerfile.dev
+    container_name: ubergo-admin-dev
+    restart: unless-stopped
+    ports:
+      - "3001:5173"
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:4001
+    depends_on:
+      - api
+    networks:
+      - ubergo-network-dev
+    volumes:
+      - ../../apps/admin/src:/app/src:cached
+      - ../../apps/admin/public:/app/public:cached
+      - ../../apps/admin/index.html:/app/index.html
+      - ../../apps/admin/vite.config.ts:/app/vite.config.ts
+      - ../../apps/admin/package.json:/app/package.json
+      - /app/node_modules
+
+networks:
+  ubergo-network-dev:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
+    driver: local
+
