@@ -1,0 +1,121 @@
+# =============================================================================
+# UberGo Global Environment Configuration
+# =============================================================================
+# Copy this entire content to a file named .env in the project root
+# Location: D:\projects\UberGo\.env
+# =============================================================================
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=ubexgo
+DB_USER=ubexgo
+DB_PASSWORD=ubexgo_password
+DB_DIALECT=postgres
+DB_SSL=false
+
+# PostgreSQL Docker Configuration (same credentials)
+POSTGRES_USER=ubexgo
+POSTGRES_PASSWORD=ubexgo_password
+POSTGRES_DB=ubexgo
+
+# =============================================================================
+# API SERVICE CONFIGURATION
+# =============================================================================
+NODE_ENV=development
+API_PORT=4000
+API_PREFIX=/api
+
+# =============================================================================
+# JWT CONFIGURATION
+# =============================================================================
+# IMPORTANT: Change these secrets in production!
+JWT_SECRET=dev-secret-key-change-in-production-12345
+JWT_EXPIRES_IN=7d
+JWT_REFRESH_SECRET=dev-refresh-secret-key-change-in-production-67890
+JWT_REFRESH_EXPIRES_IN=30d
+
+# =============================================================================
+# CORS CONFIGURATION
+# =============================================================================
+CORS_ORIGIN=*
+CORS_CREDENTIALS=true
+
+# =============================================================================
+# FILE UPLOAD CONFIGURATION
+# =============================================================================
+MAX_FILE_SIZE=5242880
+UPLOAD_PATH=./uploads
+
+# =============================================================================
+# EMAIL CONFIGURATION (Optional)
+# =============================================================================
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@example.com
+EMAIL_PASSWORD=your-email-password
+EMAIL_FROM=noreply@ubergo.com
+
+# =============================================================================
+# REDIS CONFIGURATION (Optional)
+# =============================================================================
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# =============================================================================
+# RATE LIMITING
+# =============================================================================
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+LOG_LEVEL=debug
+LOG_FILE_PATH=./logs
+
+# =============================================================================
+# ADMIN PANEL CONFIGURATION (Vite)
+# =============================================================================
+VITE_API_BASE_URL=http://localhost:4001/api
+VITE_API_URL=http://localhost:4001
+VITE_APP_NAME=UberGo Admin
+VITE_APP_VERSION=1.0.0
+
+# =============================================================================
+# MOBILE APP CONFIGURATION (Expo)
+# =============================================================================
+EXPO_PUBLIC_API_BASE_URL=http://localhost:4001/api
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+# =============================================================================
+# DOCKER DEVELOPMENT PORTS
+# =============================================================================
+# External ports for accessing services from host machine
+POSTGRES_PORT_EXTERNAL=5433
+API_PORT_EXTERNAL=4001
+ADMIN_PORT_EXTERNAL=3001
+
+# =============================================================================
+# PRODUCTION OVERRIDES (Uncomment and modify for production)
+# =============================================================================
+# NODE_ENV=production
+# DB_HOST=your-production-db-host
+# DB_PASSWORD=your-secure-production-password
+# DB_SSL=true
+# JWT_SECRET=your-strong-production-secret-here
+# JWT_REFRESH_SECRET=your-strong-refresh-secret-here
+# CORS_ORIGIN=https://yourdomain.com
+# LOG_LEVEL=error
+
+# =============================================================================
+# INSTRUCTIONS
+# =============================================================================
+# 1. Copy this entire content to a file named .env in the project root
+# 2. Update any values as needed for your environment
+# 3. Never commit the .env file to version control
+# 4. For production, use strong secrets and secure passwords
+# =============================================================================

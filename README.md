@@ -5,7 +5,7 @@
 - Texnik Topshiriq
     - Umumiy Info
         
-        # TEXNIK TOPSHIRIQ (TT): “UberGo” (MVP → v1.0)
+        # TEXNIK TOPSHIRIQ (TT): “UbexGo” (MVP → v1.0)
         
         ## 0. Maqsad va qamrov
         

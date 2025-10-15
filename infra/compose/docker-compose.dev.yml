@@ -4,36 +4,66 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:17-alpine
-    container_name: ubergo-postgres-dev
+    container_name: ubexgo-postgres-dev
     restart: unless-stopped
+    env_file:
+      - ./.env
     environment:
-      POSTGRES_USER: ubergo
-      POSTGRES_PASSWORD: ubergo_password
-      POSTGRES_DB: ubergo
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT_EXTERNAL:-5433}:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - ../../tmp/database/postgres_data_dev:/var/lib/postgresql/data
     networks:
-      - ubergo-network-dev
+      - ubexgo-network-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # API Service (Development mode with hot reload)
   api:
     build:
       context: ../../apps/api
       dockerfile: Dockerfile.dev
-    container_name: ubergo-api-dev
+    container_name: ubexgo-api-dev
     restart: unless-stopped
     ports:
-      - "4001:4000"
+      - "${API_PORT_EXTERNAL:-4001}:${API_PORT:-4000}"
+    env_file:
+      - ./.env
     environment:
-      NODE_ENV: development
-      PORT: 4000
-      DATABASE_URL: postgresql://ubergo:ubergo_password@postgres:5432/ubergo
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${API_PORT:-4000}
+      API_PORT: ${API_PORT:-4000}
+      API_PREFIX: ${API_PREFIX:-/api}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DIALECT: ${DB_DIALECT:-postgres}
+      DB_SSL: ${DB_SSL:-false}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-5242880}
+      UPLOAD_PATH: ${UPLOAD_PATH:-./uploads}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-./logs}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
-      - ubergo-network-dev
+      - ubexgo-network-dev
     volumes:
       - ../../apps/api/src:/app/src:cached
       - ../../apps/api/package.json:/app/package.json
@@ -44,17 +74,22 @@ services:
     build:
       context: ../../apps/admin
       dockerfile: Dockerfile.dev
-    container_name: ubergo-admin-dev
+    container_name: ubexgo-admin-dev
     restart: unless-stopped
     ports:
-      - "3001:5173"
+      - "${ADMIN_PORT_EXTERNAL:-3001}:5173"
+    env_file:
+      - ./.env
     environment:
-      NODE_ENV: development
-      VITE_API_URL: http://localhost:4001
+      NODE_ENV: ${NODE_ENV:-development}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4001}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4001/api}
+      VITE_APP_NAME: ${VITE_APP_NAME:-UberGo Admin}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
     depends_on:
       - api
     networks:
-      - ubergo-network-dev
+      - ubexgo-network-dev
     volumes:
       - ../../apps/admin/src:/app/src:cached
       - ../../apps/admin/public:/app/public:cached
@@ -64,7 +99,7 @@ services:
       - /app/node_modules
 
 networks:
-  ubergo-network-dev:
+  ubexgo-network-dev:
     driver: bridge
 
 volumes:

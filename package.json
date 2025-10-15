@@ -1,9 +1,9 @@
 {
-  "name": "ubergo-monorepo",
+  "name": "ubexgo-monorepo",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "UberGo Monorepo - Shared configurations and scripts",
+  "description": "UbexGo Monorepo - Shared configurations and scripts",
   "workspaces": [
     "apps/*"
   ],

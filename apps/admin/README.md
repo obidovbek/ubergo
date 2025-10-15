@@ -17,10 +17,10 @@ Build and run the application using Docker:
 
 ```bash
 # Build the Docker image
-docker build -t ubergo-admin .
+docker build -t ubexgo-admin .
 
 # Run the container
-docker run -p 3000:80 ubergo-admin
+docker run -p 3000:80 ubexgo-admin
 ```
 
 Or use Docker Compose:

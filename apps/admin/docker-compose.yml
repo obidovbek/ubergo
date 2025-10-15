@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"
-    container_name: ubergo-admin
+    container_name: ubexgo-admin
     restart: unless-stopped
     environment:
       - NODE_ENV=production
