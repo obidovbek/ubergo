@@ -3,8 +3,10 @@
  * Provides authentication state and methods throughout the app
  */
 
-import { createContext, useReducer, useEffect, ReactNode } from 'react';
-import { authReducer, initialAuthState, AuthState, User } from './auth-reducer/auth.reducer';
+import { createContext, useReducer, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { authReducer, initialAuthState } from './auth-reducer/auth.reducer';
+import type { AuthState, User } from './auth-reducer/auth.reducer';
 import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
 import * as authApi from '../api/auth';
 
