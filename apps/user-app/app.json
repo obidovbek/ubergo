@@ -1,6 +1,5 @@
 {
   "expo": {
-    "entryPoint": "./index.js",
     "name": "UbexGoUser",
     "slug": "ubexgo-monorepo",
     "version": "1.0.0",

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "265820506317",
+    "project_id": "ubexgo-ae910",
+    "storage_bucket": "ubexgo-ae910.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:265820506317:android:14680ffa66c9e516bf0184",
+        "android_client_info": {
+          "package_name": "com.obidovbek94.UbexGoUser"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4j2nvsFU2Ki9lVd_RBF3gn_2ElyPg-sU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:265820506317:android:b0b34906e69f02b6bf0184",
+        "android_client_info": {
+          "package_name": "ubexgo.uz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4j2nvsFU2Ki9lVd_RBF3gn_2ElyPg-sU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
