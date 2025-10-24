@@ -60,7 +60,7 @@ export const config = {
     },
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: '*', // Allow all origins
     credentials: process.env.CORS_CREDENTIALS === 'true',
   },
   upload: {
