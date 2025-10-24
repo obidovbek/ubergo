@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubexgo-api-test3
+  namespace: test3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ubexgo-api-test3
+  template:
+    metadata:
+      labels:
+        app: ubexgo-api-test3
+    spec:
+      containers:
+        - name: api
+          image: ubexgo-api-test3:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: ubexgo-test3-env
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "postgres-service-test3"
+

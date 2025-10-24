@@ -1,0 +1,86 @@
+# ------------------------
+# PersistentVolume
+# ------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv-test3
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /opt/local-path-provisioner/postgres-data-test3
+
+---
+# ------------------------
+# PersistentVolumeClaim
+# ------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc-test3
+  namespace: test3
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: postgres-pv-test3
+  storageClassName: local-path
+
+---
+# ------------------------
+# PostgreSQL Service
+# ------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service-test3
+  namespace: test3
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-test3
+  ports:
+    - port: 5432
+
+---
+# ------------------------
+# PostgreSQL Deployment
+# ------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-test3
+  namespace: test3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-test3
+  template:
+    metadata:
+      labels:
+        app: postgres-test3
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          envFrom:
+            - configMapRef:
+                name: ubexgo-test3-env
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc-test3
+

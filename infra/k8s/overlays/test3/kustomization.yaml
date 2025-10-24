@@ -1,0 +1,27 @@
+namespace: test3
+
+resources:
+  # - clusterissuer.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+  - admin-deployment.yaml
+  - admin-service.yaml
+  - ingress.yaml
+  - postgres.yaml
+
+images:
+  - name: REPLACEME
+    newName: docker.io/library/ubexgo-api-test3
+    newTag: latest
+  - name: REPLACEME
+    newName: docker.io/library/ubexgo-admin-test3
+    newTag: latest
+
+configMapGenerator:
+  - name: ubexgo-test3-env
+    envs:
+      - .env
+
+generatorOptions:
+  disableNameSuffixHash: true
+

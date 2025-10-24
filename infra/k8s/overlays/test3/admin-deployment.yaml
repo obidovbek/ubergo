@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubexgo-admin-test3
+  namespace: test3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ubexgo-admin-test3
+  template:
+    metadata:
+      labels:
+        app: ubexgo-admin-test3
+    spec:
+      containers:
+        - name: admin
+          image: ubexgo-admin-test3:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: ubexgo-test3-env
+
