@@ -10,7 +10,7 @@ echo "🧹 Resetting PersistentVolume..."
 kubectl patch pv postgres-pv-test3 -p '{"spec":{"claimRef": null}}' || true
 
 echo "🚀 Building API..."
-cd ../../../../apps/api
+cd ../../apps/api
 docker build -t ubexgo-api-test3:latest .
 docker save ubexgo-api-test3:latest -o ubexgo-api-test3.tar
 k3s ctr images import ubexgo-api-test3.tar
