@@ -3,11 +3,11 @@
  * Handles HTTP requests for authentication
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/AuthService';
-import { successResponse } from '../utils/response';
-import { AuthRequest } from '../types';
-import { HTTP_STATUS, SUCCESS_MESSAGES } from '../constants';
+import type { Request, Response, NextFunction } from 'express';
+import type { AuthRequest } from '../types/index.js';
+import { AuthService } from '../services/AuthService.js';
+import { successResponse } from '../utils/response.js';
+import { HttpStatus, SuccessMessages } from '../constants/index.js';
 
 export class AuthController {
   static async register(
@@ -29,8 +29,8 @@ export class AuthController {
       successResponse(
         res,
         result,
-        SUCCESS_MESSAGES.REGISTER_SUCCESS,
-        HTTP_STATUS.CREATED
+        SuccessMessages.USER_CREATED,
+        HttpStatus.CREATED
       );
     } catch (error) {
       next(error);
@@ -47,7 +47,7 @@ export class AuthController {
 
       const result = await AuthService.login(email, password);
 
-      successResponse(res, result, SUCCESS_MESSAGES.LOGIN_SUCCESS);
+      successResponse(res, result, SuccessMessages.LOGIN_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -76,7 +76,7 @@ export class AuthController {
   ): Promise<void> {
     try {
       // In a real app, you might want to blacklist the token
-      successResponse(res, null, SUCCESS_MESSAGES.LOGOUT_SUCCESS);
+      successResponse(res, null, SuccessMessages.LOGOUT_SUCCESS);
     } catch (error) {
       next(error);
     }

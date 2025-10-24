@@ -17,6 +17,6 @@ EXPOSE 4000
 # Set environment
 ENV NODE_ENV=development
 
-# Start the application in development mode with hot reload
-CMD ["npm", "run", "dev"]
+# Use polling-based file watching for Docker compatibility
+CMD ["npm", "run", "dev:poll"]
 

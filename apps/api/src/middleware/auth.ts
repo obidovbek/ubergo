@@ -2,11 +2,11 @@
  * Authentication Middleware
  */
 
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../types';
-import { verifyToken } from '../utils/jwt';
-import { UnauthorizedError } from '../errors/AppError';
-import { UserRole } from '../constants';
+import type { Response, NextFunction } from 'express';
+import type { AuthRequest } from '../types/index.js';
+import { verifyToken } from '../utils/jwt.js';
+import { UnauthorizedError } from '../errors/AppError.js';
+import { UserRole } from '../constants/index.js';
 
 export const authenticate = async (
   req: AuthRequest,

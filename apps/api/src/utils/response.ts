@@ -3,9 +3,9 @@
  * Standardized API responses
  */
 
-import { Response } from 'express';
-import { ApiResponse, PaginatedResponse } from '../types';
-import { HTTP_STATUS } from '../constants';
+import type { Response } from 'express';
+import type { ApiResponse, PaginatedResponse } from '../types/index.js';
+import { HttpStatus as HTTP_STATUS } from '../constants/index.js';
 
 export const successResponse = <T>(
   res: Response,
@@ -15,7 +15,7 @@ export const successResponse = <T>(
 ): Response => {
   const response: ApiResponse<T> = {
     success: true,
-    message,
+    message: message || '',
     data,
   };
   return res.status(statusCode).json(response);

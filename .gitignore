@@ -2,7 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
-
+env.example
 # Testing
 coverage/
 *.lcov
@@ -190,3 +190,5 @@ site/
 # Vercel
 .vercel
 
+
+MD/

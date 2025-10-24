@@ -28,9 +28,36 @@ export const config = {
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'ubergo-secret-key',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m', // Access token: 15 minutes
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'ubergo-refresh-secret',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d', // Refresh token: 7 days (can be up to 30d)
+  },
+  otp: {
+    codeLength: parseInt(process.env.OTP_CODE_LENGTH || '4', 10),
+    expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '5', 10),
+    maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '5', 10),
+  },
+  eskiz: {
+    email: process.env.ESKIZ_EMAIL || '',
+    password: process.env.ESKIZ_PASSWORD || '',
+    token: process.env.ESKIZ_TOKEN || '', // Direct token (alternative to email/password)
+    apiUrl: process.env.ESKIZ_API_URL || 'https://notify.eskiz.uz/api',
+  },
+  ivr: {
+    apiUrl: process.env.IVR_API_URL || '',
+    apiKey: process.env.IVR_API_KEY || '',
+  },
+  sso: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    },
+    apple: {
+      clientId: process.env.APPLE_CLIENT_ID || '',
+      teamId: process.env.APPLE_TEAM_ID || '',
+      keyId: process.env.APPLE_KEY_ID || '',
+      privateKey: process.env.APPLE_PRIVATE_KEY || '',
+    },
   },
   cors: {
     origin: process.env.CORS_ORIGIN || '*',

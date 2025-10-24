@@ -2,9 +2,9 @@
  * Request Validation Middleware
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { ValidationError } from '../errors/AppError';
-import { isValidEmail, isValidPhone, isValidPassword } from '../utils/validation';
+import type { Request, Response, NextFunction } from 'express';
+import { ValidationError } from '../errors/AppError.js';
+import { isValidEmail, isValidPhone, isValidPassword } from '../utils/validation.js';
 
 export const validateRegister = (
   req: Request,

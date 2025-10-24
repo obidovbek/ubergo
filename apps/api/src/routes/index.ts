@@ -3,6 +3,8 @@
  */
 
 import { Router } from 'express';
+import authRoutesV2 from './auth.routes.v2.js';
+import userRoutes from './user.routes.js';
 
 const router = Router();
 
@@ -11,19 +13,21 @@ router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'UberGo API is running',
-    version: '1.0.0',
+    version: '2.0.0',
     timestamp: new Date().toISOString(),
   });
 });
 
-// TODO: Add route modules here
-// import authRoutes from './auth.routes';
-// import userRoutes from './user.routes';
+// Auth routes (OTP + SSO)
+router.use('/auth', authRoutesV2);
+
+// User routes
+router.use('/user', userRoutes);
+
+// TODO: Add more route modules
 // import rideRoutes from './ride.routes';
 // import driverRoutes from './driver.routes';
 
-// router.use('/auth', authRoutes);
-// router.use('/users', userRoutes);
 // router.use('/rides', rideRoutes);
 // router.use('/drivers', driverRoutes);
 

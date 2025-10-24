@@ -3,9 +3,9 @@
  * Database operations for users
  */
 
-import { pool } from '../config/database';
-import { User, UserDTO } from '../types';
-import { UserRole, UserStatus } from '../constants';
+import { pool } from '../config/database.js';
+import { UserRole, UserStatus } from '../constants/index.js';
+import type { User,UserDTO } from '../types/index.js';
 
 export class UserModel {
   static async findById(id: string): Promise<User | null> {

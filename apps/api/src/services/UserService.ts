@@ -4,10 +4,10 @@
  */
 
 import { UserModel } from '../models/User';
-import { UserDTO, PaginationParams } from '../types';
-import { UserRole, UserStatus } from '../constants';
-import { NotFoundError } from '../errors/AppError';
-import { ERROR_MESSAGES } from '../constants';
+import type { UserDTO, PaginationParams } from '../types/index.js';
+import { UserRole, UserStatus } from '../constants/index.js';
+import { NotFoundError } from '../errors/AppError.js';
+import { ErrorMessages as ERROR_MESSAGES } from '../constants/index.js';
 
 export class UserService {
   static async getUsers(
@@ -29,7 +29,7 @@ export class UserService {
   static async getUserById(id: string): Promise<UserDTO> {
     const user = await UserModel.findById(id);
     if (!user) {
-      throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
+      throw new NotFoundError(ERROR_MESSAGES.NOT_FOUND);
     }
 
     return UserModel.toDTO(user);
@@ -41,7 +41,7 @@ export class UserService {
   ): Promise<UserDTO> {
     const user = await UserModel.update(id, updateData);
     if (!user) {
-      throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
+      throw new NotFoundError(ERROR_MESSAGES.NOT_FOUND);
     }
 
     return UserModel.toDTO(user);
@@ -50,7 +50,7 @@ export class UserService {
   static async deleteUser(id: string): Promise<void> {
     const deleted = await UserModel.delete(id);
     if (!deleted) {
-      throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
+      throw new NotFoundError(ERROR_MESSAGES.NOT_FOUND);
     }
   }
 }

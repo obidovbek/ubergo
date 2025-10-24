@@ -39,12 +39,44 @@ sequelize
     console.error('❌ Sequelize: Unable to connect to database:', err);
   });
 
-// Import models
+// Import model classes and initialization functions
+import { User, initUser } from './User.js';
+import { UserIdentity, initUserIdentity } from './UserIdentity.js';
+import { Phone, initPhone } from './Phone.js';
+import { OtpCode, initOtpCode } from './OtpCode.js';
+import { DeletionRequest, initDeletionRequest } from './DeletionRequest.js';
+import { AuditLog, initAuditLog } from './AuditLog.js';
 
+// Initialize all models
+initUser(sequelize);
+initUserIdentity(sequelize);
+initPhone(sequelize);
+initOtpCode(sequelize);
+initDeletionRequest(sequelize);
+initAuditLog(sequelize);
+
+// Define associations
+User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
+Phone.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+User.hasMany(UserIdentity, { foreignKey: 'user_id', as: 'identities' });
+UserIdentity.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+User.hasMany(DeletionRequest, { foreignKey: 'user_id', as: 'deletionRequests' });
+DeletionRequest.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
+AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 // Export models and sequelize instance
 export {
   sequelize,
+  User,
+  UserIdentity,
+  Phone,
+  OtpCode,
+  DeletionRequest,
+  AuditLog,
 };
 
 export default sequelize;

@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database server
   postgres:
     image: postgres:17-alpine
     container_name: ubexgo-postgres
@@ -48,11 +48,32 @@ services:
       DB_DIALECT: ${DB_DIALECT:-postgres}
       DB_SSL: ${DB_SSL:-false}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      # OTP Configuration
+      OTP_CODE_LENGTH: ${OTP_CODE_LENGTH:-6}
+      OTP_EXPIRY_MINUTES: ${OTP_EXPIRY_MINUTES:-5}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      # Eskiz SMS Configuration
+      ESKIZ_EMAIL: ${ESKIZ_EMAIL}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD}
+      ESKIZ_API_URL: ${ESKIZ_API_URL:-https://notify.eskiz.uz/api}
+      # IVR Configuration
+      IVR_API_URL: ${IVR_API_URL}
+      IVR_API_KEY: ${IVR_API_KEY}
+      # Google SSO
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Apple SSO
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID}
+      APPLE_KEY_ID: ${APPLE_KEY_ID}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY}
+      # CORS
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+      # Other
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-5242880}
       UPLOAD_PATH: ${UPLOAD_PATH:-./uploads}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}

@@ -7,11 +7,15 @@ import { UserController } from '../controllers/UserController';
 import { authenticate, authorize } from '../middleware/auth';
 import { validatePagination } from '../middleware/validator';
 import { UserRole } from '../constants';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
 // All user routes require authentication
 router.use(authenticate);
+
+// Update current user profile (any authenticated user)
+router.put('/profile', asyncHandler(UserController.updateProfile));
 
 // Get all users (admin only)
 router.get(

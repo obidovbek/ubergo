@@ -3,7 +3,7 @@
  * PostgreSQL connection setup
  */
 
-import { Pool, PoolConfig } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import { config } from './index';
 
 const poolConfig: PoolConfig = {

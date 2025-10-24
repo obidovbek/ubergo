@@ -2,7 +2,7 @@
  * TypeScript Type Definitions
  */
 
-import { Request } from 'express';
+import type { Request } from 'express';
 import { UserRole, UserStatus, RideStatus, RideType, PaymentStatus, PaymentMethod } from '../constants';
 
 // User Types
