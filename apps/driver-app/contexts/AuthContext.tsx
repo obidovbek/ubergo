@@ -9,6 +9,7 @@ import { authReducer, initialAuthState, AuthState } from './auth-reducer/auth.re
 import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
+import * as AuthAPI from '../api/auth';
 
 interface LoginCredentials {
   email: string;
@@ -27,6 +28,13 @@ interface AuthContextType extends AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
+  // Social auth methods
+  googleSignIn: (idToken: string) => Promise<void>;
+  appleSignIn: (idToken: string) => Promise<void>;
+  facebookSignIn: (accessToken: string) => Promise<void>;
+  // OTP methods
+  sendOtp: (phone: string, channel?: 'sms' | 'call') => Promise<void>;
+  verifyOtp: (phone: string, code: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -147,31 +155,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-
+      console.log('AuthContext: Starting logout process...');
+      
       // Call logout endpoint if token exists
       if (state.token) {
-        await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.logout}`, {
-          method: 'POST',
-          headers: getHeaders(state.token),
-        });
+        console.log('AuthContext: Calling logout API endpoint...');
+        try {
+          await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.logout}`, {
+            method: 'POST',
+            headers: getHeaders(state.token),
+          });
+          console.log('AuthContext: Logout API call successful');
+        } catch (apiError) {
+          console.warn('AuthContext: Logout API call failed, but continuing with local logout:', apiError);
+        }
       }
 
+      console.log('AuthContext: Clearing local storage...');
       // Clear storage
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
       ]);
 
+      console.log('AuthContext: Dispatching logout action...');
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      console.log('AuthContext: Logout completed successfully');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('AuthContext: Logout error:', error);
       // Still clear local state even if API call fails
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER),
-      ]);
-      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      try {
+        await Promise.all([
+          AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+          AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        ]);
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        console.log('AuthContext: Local logout completed despite error');
+      } catch (clearError) {
+        console.error('AuthContext: Failed to clear storage:', clearError);
+        // Force logout even if storage clear fails
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      }
     }
   };
 
@@ -180,12 +204,126 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
   };
 
+  const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms') => {
+    try {
+      // Don't set global loading state for OTP sending
+      // This prevents interference with navigation
+      await AuthAPI.sendOtp(phone, channel);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send OTP';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
+      throw error;
+    }
+  };
+
+  const verifyOtp = async (phone: string, code: string) => {
+    try {
+      // Don't set global loading state for OTP verification
+      // This prevents interference with navigation and 3-attempt logic
+      
+      const response = await AuthAPI.verifyOtp(phone, code);
+      const { user, access, refresh } = response.data;
+
+      // Store credentials
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
+        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+      ]);
+
+      dispatch({
+        type: AUTH_ACTIONS.LOGIN,
+        payload: { user: user as any, token: access },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to verify OTP';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
+      throw error;
+    }
+  };
+
+  const googleSignIn = async (idToken: string) => {
+    try {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+      
+      const response = await AuthAPI.googleSignIn(idToken);
+      const { user, access, refresh } = response.data;
+
+      // Store credentials
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
+        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+      ]);
+
+      dispatch({
+        type: AUTH_ACTIONS.LOGIN,
+        payload: { user: user as any, token: access },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google sign-in failed';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
+      throw error;
+    }
+  };
+
+  const appleSignIn = async (idToken: string) => {
+    try {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+      
+      const response = await AuthAPI.appleSignIn(idToken);
+      const { user, access, refresh } = response.data;
+
+      // Store credentials
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
+        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+      ]);
+
+      dispatch({
+        type: AUTH_ACTIONS.LOGIN,
+        payload: { user: user as any, token: access },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Apple sign-in failed';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
+      throw error;
+    }
+  };
+
+  const facebookSignIn = async (accessToken: string) => {
+    try {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+      
+      const response = await AuthAPI.facebookSignIn(accessToken);
+      const { user, access, refresh } = response.data;
+
+      // Store credentials
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
+        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+      ]);
+
+      dispatch({
+        type: AUTH_ACTIONS.LOGIN,
+        payload: { user: user as any, token: access },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Facebook sign-in failed';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     ...state,
     login,
     register,
     logout,
     updateUser,
+    googleSignIn,
+    appleSignIn,
+    facebookSignIn,
+    sendOtp,
+    verifyOtp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

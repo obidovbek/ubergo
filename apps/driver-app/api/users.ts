@@ -1,30 +1,43 @@
 /**
- * User API
- * Handles all user-related API requests
+ * Users API - Driver App
+ * Handles driver profile-related API requests
  */
 
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
 
-export interface User {
+export interface DriverProfile {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UpdateUserData {
-  name?: string;
+  phone_e164: string;
   email?: string;
-  phone?: string;
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  driver_type?: 'driver' | 'dispatcher' | 'special_transport' | 'logist';
+  role: string;
+  status: string;
+  is_verified: boolean;
+  rating?: number;
+  total_rides?: number;
+  vehicle_info?: {
+    make: string;
+    model: string;
+    year: number;
+    color: string;
+    license_plate: string;
+  };
+  documents?: {
+    license_number?: string;
+    license_expiry?: string;
+    vehicle_registration?: string;
+  };
+  created_at: string;
+  updated_at: string;
 }
 
 /**
- * Fetch user profile
+ * Get driver profile
  */
-export const getUserProfile = async (token: string): Promise<User> => {
+export const getDriverProfile = async (token: string): Promise<DriverProfile> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -40,12 +53,13 @@ export const getUserProfile = async (token: string): Promise<User> => {
 
     clearTimeout(timeoutId);
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch user profile: ${response.statusText}`);
+      throw new Error(data.message || 'Failed to get driver profile');
     }
 
-    const data = await response.json();
-    return data;
+    return data.data.user;
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -53,34 +67,35 @@ export const getUserProfile = async (token: string): Promise<User> => {
 };
 
 /**
- * Update user profile
+ * Update driver profile
  */
-export const updateUserProfile = async (
+export const updateDriverProfile = async (
   token: string,
-  userData: UpdateUserData
-): Promise<User> => {
+  updates: Partial<DriverProfile>
+): Promise<DriverProfile> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.user.update}`,
+      `${API_BASE_URL}${API_ENDPOINTS.user.updateProfile}`,
       {
         method: 'PUT',
         headers: getHeaders(token),
-        body: JSON.stringify(userData),
+        body: JSON.stringify(updates),
         signal: controller.signal,
       }
     );
 
     clearTimeout(timeoutId);
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to update user profile: ${response.statusText}`);
+      throw new Error(data.message || 'Failed to update driver profile');
     }
 
-    const data = await response.json();
-    return data;
+    return data.data.user;
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -88,39 +103,22 @@ export const updateUserProfile = async (
 };
 
 /**
- * Upload user avatar
+ * Update driver availability status
  */
-export const uploadUserAvatar = async (
+export const updateDriverAvailability = async (
   token: string,
-  imageUri: string
-): Promise<{ avatarUrl: string }> => {
-  const formData = new FormData();
-  
-  // Extract filename from URI
-  const filename = imageUri.split('/').pop() || 'avatar.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-  // @ts-ignore - FormData typing issues with React Native
-  formData.append('avatar', {
-    uri: imageUri,
-    name: filename,
-    type,
-  });
-
+  isAvailable: boolean
+): Promise<void> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.user.avatar}`,
+      `${API_BASE_URL}${API_ENDPOINTS.user.updateAvailability}`,
       {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
+        method: 'PUT',
+        headers: getHeaders(token),
+        body: JSON.stringify({ is_available: isAvailable }),
         signal: controller.signal,
       }
     );
@@ -128,14 +126,54 @@ export const uploadUserAvatar = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Failed to upload avatar: ${response.statusText}`);
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to update availability');
     }
-
-    const data = await response.json();
-    return data;
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
   }
 };
 
+/**
+ * Get driver earnings
+ */
+export const getDriverEarnings = async (
+  token: string,
+  startDate?: string,
+  endDate?: string
+): Promise<any> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    let url = `${API_BASE_URL}${API_ENDPOINTS.user.earnings}`;
+    
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(token),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to get earnings');
+    }
+
+    return data.data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};

@@ -3,6 +3,8 @@
  * Application-wide settings and feature flags
  */
 
+export { default as GOOGLE_CONFIG, validateGoogleConfig } from './google';
+
 export const APP_CONFIG = {
   // App Information
   appName: 'UbexGo',

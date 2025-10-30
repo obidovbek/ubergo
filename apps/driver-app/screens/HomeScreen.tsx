@@ -24,59 +24,23 @@ export const HomeScreen: React.FC = () => {
   const { location, loading: locationLoading } = useLocation();
   const [selectedRideType, setSelectedRideType] = useState('economy');
 
+  // Get user display name from different possible fields
+  const displayName = (user as any)?.display_name || 
+                     (user as any)?.name || 
+                     (user as any)?.email?.split('@')[0] || 
+                     'Guest';
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>
-            Hello, {user?.name || 'Guest'}!
+            Salom, {displayName}!
           </Text>
-          <Text style={styles.subtitle}>Where would you like to go?</Text>
+          <Text style={styles.subtitle}>Qayerga bormoqchisiz?</Text>
         </View>
 
-        {/* Location Display */}
-        <View style={styles.locationCard}>
-          <Text style={styles.locationLabel}>Your Location</Text>
-          {locationLoading ? (
-            <Text style={styles.locationText}>Loading...</Text>
-          ) : location ? (
-            <Text style={styles.locationText}>
-              {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-            </Text>
-          ) : (
-            <Text style={styles.locationText}>Location unavailable</Text>
-          )}
-        </View>
-
-        {/* Ride Type Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Ride Type</Text>
-          {rideTypes.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                styles.rideTypeCard,
-                selectedRideType === type.id && styles.rideTypeCardSelected,
-              ]}
-              onPress={() => setSelectedRideType(type.id)}
-            >
-              <Text style={styles.rideIcon}>{type.icon}</Text>
-              <View style={styles.rideInfo}>
-                <Text style={styles.rideName}>{type.name}</Text>
-                <Text style={styles.rideDescription}>{type.description}</Text>
-                <Text style={styles.ridePrice}>
-                  ${type.basePrice} + ${type.pricePerKm}/km
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Book Ride Button */}
-        <TouchableOpacity style={styles.bookButton}>
-          <Text style={styles.bookButtonText}>Book Ride</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

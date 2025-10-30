@@ -1,5 +1,8 @@
 {
-    "cli": { "version": ">= 8.0.0" },
+    "cli": { 
+      "version": ">= 8.0.0",
+      "appVersionSource": "remote"
+    },
     "build": {
       "preview": {
         "android": { "buildType": "apk" }
@@ -14,4 +17,6 @@
       }
     }
   }
-  
+
+
+

@@ -18,10 +18,12 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { isValidEmail } from '../utils/validation';
+import { useNavigation } from '@react-navigation/native';
 
 const theme = createTheme('light');
 
 export const LoginScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -136,7 +138,7 @@ export const LoginScreen: React.FC = () => {
             {/* Register Link */}
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Don't have an account? </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => (navigation as any).navigate('PhoneRegistration')}>
                 <Text style={styles.registerLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>

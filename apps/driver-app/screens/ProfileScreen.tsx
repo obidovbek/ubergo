@@ -15,26 +15,47 @@ import {
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
+import { useTranslation } from '../hooks/useTranslation';
+import { showToast } from '../utils/toast';
 
 const theme = createTheme('light');
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
+
+  // Get user display data
+  const displayName = (user as any)?.display_name || (user as any)?.name || t('menu.guest');
+  const userEmail = (user as any)?.email || t('profile.noEmail');
+  const userPhone = (user as any)?.phone_e164 || (user as any)?.phone || t('profile.noPhone');
+  const userInitial = displayName.charAt(0).toUpperCase();
+
+  // Debug auth state
+  console.log('ProfileScreen: Auth state:', { 
+    user: user?.id, 
+    logoutAvailable: typeof logout,
+    isAuthenticated: !!user 
+  });
 
   const handleLogout = () => {
+    console.log('ProfileScreen: Logout button pressed');
+    console.log('ProfileScreen: logout function available:', typeof logout);
+    
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('profile.logout'),
+      t('profile.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Logout',
+          text: t('profile.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Calling logout directly...');
               await logout();
+              console.log('Direct logout completed');
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('Direct logout error:', error);
             }
           },
         },
@@ -43,11 +64,11 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const menuItems = [
-    { id: 'edit', title: 'Edit Profile', icon: '✏️' },
-    { id: 'payment', title: 'Payment Methods', icon: '💳' },
-    { id: 'history', title: 'Ride History', icon: '📜' },
-    { id: 'help', title: 'Help & Support', icon: '❓' },
-    { id: 'settings', title: 'Settings', icon: '⚙️' },
+    { id: 'edit', title: t('profile.editProfile'), icon: '✏️' },
+    { id: 'payment', title: t('profile.paymentMethods'), icon: '💳' },
+    { id: 'history', title: t('profile.tripHistory'), icon: '📜' },
+    { id: 'help', title: t('profile.helpSupport'), icon: '❓' },
+    { id: 'settings', title: t('profile.settings'), icon: '⚙️' },
   ];
 
   return (
@@ -56,13 +77,11 @@ export const ProfileScreen: React.FC = () => {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
+            <Text style={styles.avatarText}>{userInitial}</Text>
           </View>
-          <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
-          <Text style={styles.email}>{user?.email || 'No email'}</Text>
-          <Text style={styles.phone}>{user?.phone || 'No phone'}</Text>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.email}>{userEmail}</Text>
+          <Text style={styles.phone}>{userPhone}</Text>
         </View>
 
         {/* Menu Items */}
@@ -81,13 +100,28 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+        <TouchableOpacity 
+          style={styles.logoutButton} 
+          onPress={async () => {
+            console.log('Direct logout test pressed');
+            try {
+              console.log('Calling logout directly...');
+              await logout();
+              console.log('Direct logout completed');
+            } catch (error) {
+              console.error('Direct logout error:', error);
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
+
+
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>UbexGo v1.0.0</Text>
+          <Text style={styles.appInfoText}>{t('profile.appVersion')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

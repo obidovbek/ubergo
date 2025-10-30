@@ -3,10 +3,17 @@
  * Centralized API endpoint configuration for the application
  */
 
-// Base API URL - Update this based on your environment
+import { Platform } from 'react-native';
+
+// Base API URL - Update this based on your environment 
+// Production: https://test3.fstu.uz/api 
+// Development: http://10.0.2.2:4001/api
+//http://10.0.2.2:4001/api
 export const API_BASE_URL = __DEV__
-  ? 'http://localhost:3000/api' // Development
-  : 'https://api.production.com'; // Production
+  ? Platform.OS === 'android' 
+    ? 'https://test3.fstu.uz/api'  // Android emulator
+    : 'https://test3.fstu.uz/api'  // iOS simulator/device
+  : 'https://test3.fstu.uz/api'; // Production
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -16,10 +23,20 @@ export const API_ENDPOINTS = {
     logout: '/auth/logout',
     refresh: '/auth/refresh',
     verifyToken: '/auth/verify',
+    // OTP endpoints
+    sendOtp: '/auth/otp/send',
+    verifyOtp: '/auth/otp/verify',
+    // Social auth endpoints
+    googleAuth: '/auth/social/google',
+    appleAuth: '/auth/social/apple',
+    facebookAuth: '/auth/social/facebook',
+    // User info
+    me: '/auth/me',
   },
   user: {
     profile: '/user/profile',
     update: '/user/update',
+    updateProfile: '/user/profile',
     avatar: '/user/avatar',
   },
   rides: {

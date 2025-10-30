@@ -1,48 +1,52 @@
 /**
- * Rides API
- * Handles all ride-related API requests
+ * Rides API - Driver App
+ * Handles ride-related API requests for drivers
  */
 
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
 
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address: string;
-}
-
 export interface Ride {
   id: string;
-  userId: string;
-  driverId?: string;
-  pickup: Location;
-  destination: Location;
   status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
-  fare: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateRideData {
-  pickup: Location;
-  destination: Location;
-  rideType: 'economy' | 'comfort' | 'premium';
+  pickup_location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  dropoff_location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  passenger: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
+  fare: {
+    base_fare: number;
+    distance_fare: number;
+    time_fare: number;
+    total: number;
+    currency: string;
+  };
+  created_at: string;
+  accepted_at?: string;
+  started_at?: string;
+  completed_at?: string;
 }
 
 /**
- * Fetch user's ride history
+ * Get available rides for driver
  */
-export const getRideHistory = async (
-  token: string,
-  page: number = 1,
-  limit: number = 20
-): Promise<{ rides: Ride[]; total: number }> => {
+export const getAvailableRides = async (token: string): Promise<Ride[]> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.rides.list}?page=${page}&limit=${limit}`,
+      `${API_BASE_URL}${API_ENDPOINTS.rides.available}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -52,12 +56,13 @@ export const getRideHistory = async (
 
     clearTimeout(timeoutId);
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch ride history: ${response.statusText}`);
+      throw new Error(data.message || 'Failed to get available rides');
     }
 
-    const data = await response.json();
-    return data;
+    return data.data.rides || [];
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -65,34 +70,31 @@ export const getRideHistory = async (
 };
 
 /**
- * Create a new ride request
+ * Accept a ride
  */
-export const createRide = async (
-  token: string,
-  rideData: CreateRideData
-): Promise<Ride> => {
+export const acceptRide = async (token: string, rideId: string): Promise<Ride> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.rides.create}`,
+      `${API_BASE_URL}${API_ENDPOINTS.rides.accept(rideId)}`,
       {
         method: 'POST',
         headers: getHeaders(token),
-        body: JSON.stringify(rideData),
         signal: controller.signal,
       }
     );
 
     clearTimeout(timeoutId);
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to create ride: ${response.statusText}`);
+      throw new Error(data.message || 'Failed to accept ride');
     }
 
-    const data = await response.json();
-    return data;
+    return data.data.ride;
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -100,18 +102,79 @@ export const createRide = async (
 };
 
 /**
- * Get ride details
+ * Start a ride
  */
-export const getRideDetail = async (
-  token: string,
-  rideId: string
-): Promise<Ride> => {
+export const startRide = async (token: string, rideId: string): Promise<Ride> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.rides.detail(rideId)}`,
+      `${API_BASE_URL}${API_ENDPOINTS.rides.start(rideId)}`,
+      {
+        method: 'POST',
+        headers: getHeaders(token),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to start ride');
+    }
+
+    return data.data.ride;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Complete a ride
+ */
+export const completeRide = async (token: string, rideId: string): Promise<Ride> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.rides.complete(rideId)}`,
+      {
+        method: 'POST',
+        headers: getHeaders(token),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to complete ride');
+    }
+
+    return data.data.ride;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Get driver's ride history
+ */
+export const getRideHistory = async (token: string): Promise<Ride[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.rides.history}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -121,12 +184,13 @@ export const getRideDetail = async (
 
     clearTimeout(timeoutId);
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch ride details: ${response.statusText}`);
+      throw new Error(data.message || 'Failed to get ride history');
     }
 
-    const data = await response.json();
-    return data;
+    return data.data.rides || [];
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -136,11 +200,7 @@ export const getRideDetail = async (
 /**
  * Cancel a ride
  */
-export const cancelRide = async (
-  token: string,
-  rideId: string,
-  reason?: string
-): Promise<{ success: boolean; message: string }> => {
+export const cancelRide = async (token: string, rideId: string, reason: string): Promise<void> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -157,15 +217,13 @@ export const cancelRide = async (
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(`Failed to cancel ride: ${response.statusText}`);
-    }
-
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to cancel ride');
+    }
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
   }
 };
-
