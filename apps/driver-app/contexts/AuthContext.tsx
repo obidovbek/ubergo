@@ -33,8 +33,8 @@ interface AuthContextType extends AuthState {
   appleSignIn: (idToken: string) => Promise<void>;
   facebookSignIn: (accessToken: string) => Promise<void>;
   // OTP methods
-  sendOtp: (phone: string, channel?: 'sms' | 'call') => Promise<void>;
-  verifyOtp: (phone: string, code: string) => Promise<void>;
+  sendOtp: (phone?: string, channel?: 'sms' | 'call' | 'push', opts?: { userId?: string }) => Promise<void>;
+  verifyOtp: (phone: string | undefined, code: string, opts?: { userId?: string }) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -204,11 +204,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
   };
 
-  const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms') => {
+  const sendOtp = async (phone?: string, channel: 'sms' | 'call' | 'push' = 'sms', opts?: { userId?: string }) => {
     try {
       // Don't set global loading state for OTP sending
       // This prevents interference with navigation
-      await AuthAPI.sendOtp(phone, channel);
+      await AuthAPI.sendOtp(phone, channel, opts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send OTP';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
@@ -216,12 +216,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const verifyOtp = async (phone: string, code: string) => {
+  const verifyOtp = async (phone: string | undefined, code: string, opts?: { userId?: string }) => {
     try {
       // Don't set global loading state for OTP verification
       // This prevents interference with navigation and 3-attempt logic
       
-      const response = await AuthAPI.verifyOtp(phone, code);
+      const response = await AuthAPI.verifyOtp(phone, code, opts);
       const { user, access, refresh } = response.data;
 
       // Store credentials

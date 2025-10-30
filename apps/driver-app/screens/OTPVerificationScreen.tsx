@@ -28,7 +28,7 @@ const theme = createTheme('light');
 export const OTPVerificationScreen: React.FC = () => {
   const navigation = useNavigation<OTPVerificationNavigationProp>();
   const route = useRoute();
-  const { phoneNumber } = (route.params as any) || {};
+  const { phoneNumber, userId: routeUserId } = (route.params as any) || {};
   const { verifyOtp, sendOtp, user } = useAuth();
   const { t } = useTranslation();
 
@@ -87,7 +87,7 @@ export const OTPVerificationScreen: React.FC = () => {
       console.log('Phone:', phoneNumber);
       console.log('OTP Code:', otpCode);
       
-      await verifyOtp(phoneNumber, otpCode);
+      await verifyOtp(phoneNumber, otpCode, { userId: routeUserId });
       
       console.log('OTP verified successfully');
       showToast.success(t('common.success'), 'Telefon tasdiqlandi');
@@ -135,7 +135,7 @@ export const OTPVerificationScreen: React.FC = () => {
 
   const handleResendCode = async () => {
     try {
-      await sendOtp(phoneNumber, 'sms');
+      await sendOtp(phoneNumber, 'push', { userId: routeUserId });
       showToast.success(t('common.success'), 'Yangi kod yuborildi');
       
       // Reset attempts when resending code

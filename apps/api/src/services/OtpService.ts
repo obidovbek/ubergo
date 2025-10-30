@@ -7,8 +7,9 @@ import axios, { type AxiosInstance } from 'axios';
 import validator from 'validator';
 import { Op } from 'sequelize';
 import { config } from '../config/index.js';
-import { OtpCode } from '../database/models/index.js';
+import { OtpCode, User, PushToken } from '../database/models/index.js';
 import { logAudit, AuditActions } from '../utils/auditLogger.js';
+import PushService from './PushService.js';
 
 interface EskizAuthResponse {
   message: string;
@@ -222,7 +223,7 @@ class OtpService {
    */
   async sendOtp(
     phone: string,
-    channel: 'sms' | 'call' = 'sms',
+    channel: 'sms' | 'call' | 'push' = 'sms',
     metadata?: Record<string, any>
   ): Promise<{ sent: boolean; expiresInSec: number }> {
     // Validate phone number
@@ -256,6 +257,29 @@ class OtpService {
         sent = await this.sendSms(phone, code);
       } else if (channel === 'call') {
         sent = await this.sendIvr(phone, code);
+      } else if (channel === 'push') {
+        // Find user by phone
+        const user = await User.findOne({ where: { phone_e164: phone } });
+        if (!user) {
+          throw new Error('User not found for provided phone');
+        }
+
+        // Find latest push token for user app
+        const push = await PushToken.findOne({
+          where: { user_id: user.id, app: 'user' },
+          order: [['updated_at', 'DESC']],
+        });
+
+        if (!push) {
+          throw new Error('User device token not registered');
+        }
+
+        sent = await PushService.sendFCM({
+          token: push.token,
+          title: 'UbexGo tasdiqlash kodingiz',
+          body: `Kodni haydovchi ilovasiga kiriting: ${code}`,
+          data: { type: 'otp', code, phone },
+        });
       }
     } catch (error: any) {
       console.error(`Failed to send OTP via ${channel}:`, error.message);

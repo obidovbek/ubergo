@@ -36,7 +36,7 @@ export interface OtpSendResponse {
 /**
  * Send OTP to phone number
  */
-export const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms'): Promise<OtpSendResponse> => {
+export const sendOtp = async (phone: string, channel: 'sms' | 'call' | 'push' = 'sms'): Promise<OtpSendResponse> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 

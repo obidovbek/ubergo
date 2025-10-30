@@ -10,8 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.obidovbek94.UbexGoUser",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.obidovbek94.UbexGoUser"
     },
     "android": {
       "adaptiveIcon": {
@@ -42,13 +41,9 @@
           }
         }
       ],
-      [
-        "@react-native-google-signin/google-signin"
-      ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "eas": {

@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import authRoutesV2 from './auth.routes.v2.js';
 import userRoutes from './user.routes.js';
+import deviceRoutes from './device.routes.js';
 
 const router = Router();
 
@@ -23,6 +24,9 @@ router.use('/auth', authRoutesV2);
 
 // User routes
 router.use('/user', userRoutes);
+
+// Device routes (push tokens)
+router.use('/devices', deviceRoutes);
 
 // TODO: Add more route modules
 // import rideRoutes from './ride.routes';

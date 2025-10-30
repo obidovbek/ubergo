@@ -117,107 +117,26 @@ export const useGoogleSignIn = () => {
  * Alternative: Direct Google Sign-In (if using @react-native-google-signin/google-signin)
  * Note: This requires additional native configuration
  */
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+// import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
 export class GoogleSignInServiceNative {
   private static configured = false;
 
   static configure() {
-    if (this.configured) return;
-
-    try {
-      // Validate configuration
-      if (!GOOGLE_CONFIG.isConfigured()) {
-        console.warn('⚠️ Google Sign-In not properly configured. See GOOGLE_SIGNIN_FIX.md');
-        const errors = GOOGLE_CONFIG.getConfigErrors();
-        errors.forEach(error => console.warn(`  - ${error}`));
-      }
-
-      GoogleSignin.configure({
-        webClientId: GOOGLE_CONFIG.webClientId,
-        iosClientId: GOOGLE_CONFIG.iosClientId,
-        offlineAccess: true,
-        scopes: GOOGLE_CONFIG.scopes,
-      });
-      this.configured = true;
-      console.log('✅ Native Google Sign-In configured successfully');
-    } catch (error) {
-      console.error('❌ Failed to configure Google Sign-In:', error);
-      throw error;
-    }
+    console.log('Google Sign-In native module disabled for Expo Go compatibility');
   }
 
   static async signIn(): Promise<GoogleSignInResult> {
-    try {
-      this.configure();
-
-      // Check if device supports Google Play services (Android only)
-      if (Platform.OS === 'android') {
-        const hasPlayServices = await GoogleSignin.hasPlayServices({
-          showPlayServicesUpdateDialog: false, // Don't show update dialog
-        });
-        
-        if (!hasPlayServices) {
-          throw new Error('PLAY_SERVICES_NOT_AVAILABLE');
-        }
-      }
-
-      // Sign in
-      const signInResult = await GoogleSignin.signIn();
-
-      // Get ID token
-      const tokens = await GoogleSignin.getTokens();
-
-      if (!tokens.idToken) {
-        throw new Error('No ID token received. Please ensure Firebase OAuth is configured correctly.');
-      }
-
-      console.log('✅ Native Google Sign-In successful');
-
-      return {
-        idToken: tokens.idToken,
-        accessToken: tokens.accessToken,
-        user: signInResult.data?.user ? {
-          email: signInResult.data.user.email,
-          name: signInResult.data.user.name || '',
-          photo: signInResult.data.user.photo || undefined,
-        } : undefined,
-      };
-    } catch (error: any) {
-      console.error('❌ Native Google Sign-In error:', error);
-
-      // Provide more specific error messages
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        throw new Error('SIGN_IN_CANCELLED');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        throw new Error('SIGN_IN_IN_PROGRESS');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE || 
-                 error.message === 'PLAY_SERVICES_NOT_AVAILABLE') {
-        throw new Error('PLAY_SERVICES_NOT_AVAILABLE');
-      } else {
-        // Re-throw to allow fallback to web flow
-        throw error;
-      }
-    }
+    throw new Error('Native Google Sign-In not available in Expo Go. Use development build or web flow.');
   }
 
   static async signOut() {
-    try {
-      await GoogleSignin.signOut();
-    } catch (error) {
-      console.error('Google Sign-Out error:', error);
-    }
+    console.log('Google Sign-Out not available in Expo Go');
   }
 
   static async isSignedIn(): Promise<boolean> {
-    try {
-      const isSignedIn = await GoogleSignin.getCurrentUser();
-      return !!isSignedIn;
-    } catch (error) {
-      console.error('Error checking sign-in status:', error);
-      return false;
-    }
+    return false;
   }
 }
 

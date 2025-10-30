@@ -17,14 +17,24 @@ import { AppError } from '../errors/AppError.js';
  */
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, channel = 'sms' } = req.body;
+    const { phone: rawPhone, userId, channel = 'sms' } = req.body as any;
 
-    if (!phone) {
-      throw new AppError('Phone number is required', 400);
+    let phone = rawPhone as string | undefined;
+
+    if (!phone && userId) {
+      const user = await User.findByPk(userId);
+      if (!user || !user.phone_e164) {
+        throw new AppError('User not found or phone missing', 404);
+      }
+      phone = user.phone_e164;
     }
 
-    if (!['sms', 'call'].includes(channel)) {
-      throw new AppError('Invalid channel. Use "sms" or "call"', 400);
+    if (!phone) {
+      throw new AppError('Phone number or userId is required', 400);
+    }
+
+    if (!['sms', 'call', 'push'].includes(channel)) {
+      throw new AppError('Invalid channel. Use "sms", "call" or "push"', 400);
     }
 
     const metadata = {
@@ -32,7 +42,7 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
       userAgent: req.get('user-agent'),
     };
 
-    const result = await OtpService.sendOtp(phone, channel as 'sms' | 'call', metadata);
+    const result = await OtpService.sendOtp(phone, channel as any, metadata);
 
     res.status(200).json({
       success: true,
@@ -57,10 +67,19 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
  */
 export async function verifyOtp(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, code } = req.body;
+    const { phone: rawPhone, userId, code } = req.body as any;
+
+    let phone = rawPhone as string | undefined;
+    if (!phone && userId) {
+      const userById = await User.findByPk(userId);
+      if (!userById || !userById.phone_e164) {
+        throw new AppError('User not found or phone missing', 404);
+      }
+      phone = userById.phone_e164;
+    }
 
     if (!phone || !code) {
-      throw new AppError('Phone number and code are required', 400);
+      throw new AppError('Phone number or userId and code are required', 400);
     }
 
     // Verify OTP

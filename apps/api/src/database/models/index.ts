@@ -45,6 +45,7 @@ import { UserIdentity, initUserIdentity } from './UserIdentity.js';
 import { Phone, initPhone } from './Phone.js';
 import { OtpCode, initOtpCode } from './OtpCode.js';
 import { DeletionRequest, initDeletionRequest } from './DeletionRequest.js';
+import { PushToken, initPushToken } from './PushToken.js';
 import { AuditLog, initAuditLog } from './AuditLog.js';
 
 // Initialize all models
@@ -54,6 +55,7 @@ initPhone(sequelize);
 initOtpCode(sequelize);
 initDeletionRequest(sequelize);
 initAuditLog(sequelize);
+initPushToken(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -68,6 +70,9 @@ DeletionRequest.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
 AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+User.hasMany(PushToken, { foreignKey: 'user_id', as: 'pushTokens' });
+PushToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -77,6 +82,7 @@ export {
   OtpCode,
   DeletionRequest,
   AuditLog,
+  PushToken,
 };
 
 export default sequelize;

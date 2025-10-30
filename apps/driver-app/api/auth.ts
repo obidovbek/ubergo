@@ -37,13 +37,19 @@ export interface OtpSendResponse {
 /**
  * Send OTP to driver phone number
  */
-export const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms'): Promise<OtpSendResponse> => {
+export const sendOtp = async (
+  phone?: string,
+  channel: 'sms' | 'call' | 'push' = 'sms',
+  opts?: { userId?: string }
+): Promise<OtpSendResponse> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const url = `${API_BASE_URL}${API_ENDPOINTS.auth.sendOtp}`;
-    const requestBody = { phone, channel };
+    const requestBody: any = { channel };
+    if (phone) requestBody.phone = phone;
+    if (opts?.userId) requestBody.userId = opts.userId;
     
     console.log('=== Driver API Request ===');
     console.log('URL:', url);
@@ -91,7 +97,7 @@ export const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms'): P
 /**
  * Verify OTP code for driver
  */
-export const verifyOtp = async (phone: string, code: string): Promise<AuthResponse> => {
+export const verifyOtp = async (phone: string | undefined, code: string, opts?: { userId?: string }): Promise<AuthResponse> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -101,7 +107,7 @@ export const verifyOtp = async (phone: string, code: string): Promise<AuthRespon
       {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ phone, code, userId: opts?.userId }),
         signal: controller.signal,
       }
     );

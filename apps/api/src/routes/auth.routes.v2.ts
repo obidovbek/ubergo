@@ -16,8 +16,8 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 const router = Router();
 
 // OTP routes
-router.post('/otp/send', otpSendLimiter, asyncHandler(AuthController.sendOtp));
-router.post('/otp/verify', otpVerifyLimiter, asyncHandler(AuthController.verifyOtp));
+router.post('/otp/send',  asyncHandler(AuthController.sendOtp));
+router.post('/otp/verify',  asyncHandler(AuthController.verifyOtp));
 
 // SSO routes
 router.post('/social/google', ssoLimiter, asyncHandler(AuthController.googleAuth));

@@ -41,6 +41,16 @@ export const PhoneRegistrationScreen: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState('');
+
+  // Driver types shown as radio options in the mock
+  const driverTypes = [
+    { id: 'driver', label: 'Haydovchi' },
+    // { id: 'dispatcher', label: 'Dispetcher' },
+    // { id: 'special', label: 'Maxsus transport' },
+    // { id: 'logist', label: 'Logist' },
+  ];
+  const [selectedDriverType, setSelectedDriverType] = useState<string>('driver');
 
   const formatPhoneNumber = (text: string) => {
     // Remove all non-numeric characters
@@ -79,21 +89,38 @@ export const PhoneRegistrationScreen: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Format: +9981234567  (country code + 9 digits)
-      const fullPhone = `${selectedCountry.code}${cleanedNumber}`;
-      console.log('Full phone number:', fullPhone);
-      console.log('Sending OTP to:', fullPhone);
-      
-      await sendOtp(fullPhone, 'sms');
+      let usedPhone: string | undefined;
+      let usedUserId: string | undefined = userId?.trim() || undefined;
+      if (cleanedNumber.length >= 9) {
+        usedPhone = `${selectedCountry.code}${cleanedNumber}`;
+      }
+
+      if (!usedPhone && !usedUserId) {
+        showToast.warning(t('common.error'), t('phoneRegistration.errorPhoneIncomplete'));
+        return;
+      }
+
+      console.log('Full phone number:', usedPhone);
+      console.log('UserId:', usedUserId);
+      console.log('Sending OTP via push...');
+
+      // Try push first, fall back to SMS if it fails
+      try {
+        await sendOtp(usedPhone, 'push', { userId: usedUserId });
+      } catch (pushError) {
+        console.log('Push OTP failed, falling back to SMS:', pushError);
+        await sendOtp(usedPhone, 'sms');
+      }
       
       console.log('OTP sent successfully');
-      
+
       // Navigate to OTP screen
       console.log('Attempting to navigate to OTPVerification screen...');
       try {
-        navigation.navigate('OTPVerification', {
-          phoneNumber: fullPhone,
-        });
+        navigation.navigate('OTPVerification', ({
+          phoneNumber: usedPhone || '',
+          userId: usedUserId,
+        } as any));
         console.log('Navigation successful');
       } catch (navError) {
         console.error('Navigation error:', navError);
@@ -125,12 +152,31 @@ export const PhoneRegistrationScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>{t('auth.appName')}</Text>
-            <Text style={styles.title}>{t('phoneRegistration.title')}</Text>
-            <Text style={styles.subtitle}>
-              {t('phoneRegistration.subtitle')}
-            </Text>
+            <Text style={styles.brand}>UbexGo Driver</Text>
+            <Text style={styles.title}>Driver registration</Text>
           </View>
+
+          {/* Driver type selection */}
+          <View style={styles.typesGrid}>
+            {driverTypes.map((tItem) => (
+              <TouchableOpacity
+                key={tItem.id}
+                style={styles.typeRow}
+                onPress={() => setSelectedDriverType(tItem.id)}
+                disabled={isLoading}
+              >
+                <View style={[styles.radio, selectedDriverType === tItem.id && styles.radioActive]} />
+                <Text style={[styles.typeLabel, selectedDriverType === tItem.id && styles.typeLabelActive]}>
+                  {tItem.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Instruction */}
+          <Text style={styles.infoText}>
+            UbexGo dasturida ro’yxatdan o’tgan telefon raqamingizni kiriting
+          </Text>
 
           {/* Country Selector */}
           <TouchableOpacity
@@ -177,12 +223,28 @@ export const PhoneRegistrationScreen: React.FC = () => {
             />
           </View>
 
+          {/* Or ID line */}
+          <Text style={styles.orText}>yoki UbexGo ID raqamingiz</Text>
+
+          {/* ID Input */}
+          <View style={styles.idInputContainer}>
+            <Text style={styles.idLabel}>ID:</Text>
+            <View style={styles.idFieldWrapper}>
+              <TextInput
+                style={styles.idInput}
+                placeholder="1 001 117"
+                value={userId}
+                onChangeText={setUserId}
+                keyboardType="number-pad"
+                editable={!isLoading}
+              />
+            </View>
+          </View>
+
           {/* Terms and Conditions */}
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
-              {t('phoneRegistration.termsText')}
-              <Text style={styles.termsLink}>{t('phoneRegistration.termsLink')}</Text>
-              {t('phoneRegistration.termsText2')}
+              “Keyingi” tugmasini bosish orqali <Text style={styles.termsLink}>foydalanuvchi shartnomasi</Text> shartlarini qabul qilaman
             </Text>
           </View>
 
@@ -193,9 +255,13 @@ export const PhoneRegistrationScreen: React.FC = () => {
               isLoading && styles.continueButtonDisabled,
             ]}
             onPress={handleContinue}
-            disabled={isLoading || phoneNumber.replace(/\D/g, '').length < 9}
+            disabled={
+              isLoading || (
+                phoneNumber.replace(/\D/g, '').length < 9 && !(userId && userId.trim().length > 0)
+              )
+            }
           >
-            <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
+            <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -219,23 +285,54 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
     marginTop: theme.spacing(2),
   },
-  logo: {
-    fontSize: 24,
+  brand: {
+    fontSize: 18,
     fontWeight: '700',
-    color: '#4CAF50',
-    marginBottom: theme.spacing(2),
+    color: '#2196F3',
+    marginBottom: theme.spacing(1),
   },
   title: {
     ...theme.typography.h3,
     color: theme.palette.text.primary,
     fontWeight: '700',
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(2),
   },
-  subtitle: {
+  typesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: theme.spacing(4),
+    rowGap: theme.spacing(1.5),
+    marginBottom: theme.spacing(2),
+  },
+  typeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: theme.palette.border,
+    marginRight: theme.spacing(1),
+  },
+  radioActive: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#4CAF50',
+  },
+  typeLabel: {
+    ...theme.typography.body1,
+    color: theme.palette.text.secondary,
+  },
+  typeLabelActive: {
+    color: theme.palette.text.primary,
+    fontWeight: '600',
+  },
+  infoText: {
     ...theme.typography.body2,
     color: theme.palette.text.secondary,
-    textAlign: 'center',
-    lineHeight: 20,
+    marginBottom: theme.spacing(1.5),
   },
   countrySelector: {
     flexDirection: 'row',
@@ -306,6 +403,43 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
     borderBottomWidth: 3,
     borderBottomColor: '#4CAF50',
+  },
+  editIcon: {
+    marginLeft: theme.spacing(1),
+    fontSize: 16,
+  },
+  orText: {
+    ...theme.typography.body2,
+    color: theme.palette.text.secondary,
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+  },
+  idInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  idLabel: {
+    ...theme.typography.h4,
+    color: theme.palette.text.primary,
+    fontWeight: '600',
+    marginRight: theme.spacing(1),
+  },
+  idFieldWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.palette.background.card,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.5),
+  },
+  idInput: {
+    flex: 1,
+    ...theme.typography.body1,
+    color: theme.palette.text.primary,
   },
   termsContainer: {
     marginBottom: theme.spacing(3),

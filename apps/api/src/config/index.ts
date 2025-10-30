@@ -74,6 +74,9 @@ export const config = {
     password: process.env.EMAIL_PASSWORD,
     from: process.env.EMAIL_FROM || 'noreply@ubergo.com',
   },
+  fcm: {
+    serverKey: process.env.FCM_SERVER_KEY || '',
+  },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),

@@ -10,6 +10,7 @@ import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
+import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
 
 interface LoginCredentials {
   email: string;
@@ -33,7 +34,7 @@ interface AuthContextType extends AuthState {
   appleSignIn: (idToken: string) => Promise<void>;
   facebookSignIn: (accessToken: string) => Promise<void>;
   // OTP methods
-  sendOtp: (phone: string, channel?: 'sms' | 'call') => Promise<void>;
+  sendOtp: (phone: string, channel?: 'sms' | 'call' | 'push') => Promise<void>;
   verifyOtp: (phone: string, code: string) => Promise<void>;
 }
 
@@ -55,6 +56,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     initializeAuth();
   }, []);
+
+  // Register push token when authenticated
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    if (state.token) {
+      registerPushTokenWithBackend(state.token).catch(() => {});
+      unsubscribe = subscribeTokenRefresh(state.token);
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [state.token]);
 
   const initializeAuth = async () => {
     try {
@@ -204,7 +217,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
   };
 
-  const sendOtp = async (phone: string, channel: 'sms' | 'call' = 'sms') => {
+  const sendOtp = async (phone: string, channel: 'sms' | 'call' | 'push' = 'sms') => {
     try {
       // Don't set global loading state for OTP sending
       // This prevents interference with navigation

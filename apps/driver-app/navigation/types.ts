@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // Auth Stack Parameter List - Driver App
 export type AuthStackParamList = {
   PhoneRegistration: undefined;
-  OTPVerification: { phoneNumber: string };
+  OTPVerification: { phoneNumber: string; userId?: string };
   DriverDetails: { phoneNumber: string };
   Login: undefined;
 };
@@ -32,7 +32,7 @@ export type PhoneRegistrationRouteProp = {
 };
 
 export type OTPVerificationRouteProp = {
-  params: { phoneNumber: string };
+  params: { phoneNumber: string; userId?: string };
 };
 
 export type DriverDetailsRouteProp = {

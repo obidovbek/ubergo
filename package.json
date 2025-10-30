@@ -15,7 +15,9 @@
     "lint:admin": "cd apps/admin && npm run lint",
     "lint:api": "cd apps/api && npm run lint",
     "lint:driver": "cd apps/driver-app && npm run lint",
-    "lint:user": "cd apps/user-app && npm run lint"
+    "lint:user": "cd apps/user-app && npm run lint",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -28,6 +30,10 @@
     "prettier": "^3.3.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.45.0"
+  },
+  "dependencies": {
+    "expo": "~54.0.21",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }
-
