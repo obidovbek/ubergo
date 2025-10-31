@@ -32,7 +32,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const { verifyOtp, sendOtp, user } = useAuth();
   const { t } = useTranslation();
 
-  const [otp, setOtp] = useState(['', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(3);
@@ -55,13 +55,13 @@ export const OTPVerificationScreen: React.FC = () => {
     setOtp(newOtp);
 
     // Auto-focus next input
-    if (text && index < 4) {
+    if (text && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all 5 digits entered
+    // Auto-submit when all 4 digits entered
     const newOtpCode = [...newOtp].join('');
-    if (newOtpCode.length === 5) {
+    if (newOtpCode.length === 4) {
       handleVerify(newOtpCode);
     }
   };
@@ -75,7 +75,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const handleVerify = async (code?: string) => {
     const otpCode = code || otp.join('');
     
-    if (otpCode.length < 5) {
+    if (otpCode.length < 4) {
       showToast.warning(t('common.error'), 'Iltimos kodni to\'ldiring');
       return;
     }
@@ -105,7 +105,7 @@ export const OTPVerificationScreen: React.FC = () => {
       
       if (newRemainingAttempts > 0) {
         // Clear OTP input fields after incorrect attempt
-        setOtp(['', '', '', '', '']);
+        setOtp(['', '', '', '']);
         inputRefs.current[0]?.focus();
         
         // Show error with remaining attempts
@@ -135,18 +135,20 @@ export const OTPVerificationScreen: React.FC = () => {
 
   const handleResendCode = async () => {
     try {
+      console.log('Resending OTP via push notification...');
       await sendOtp(phoneNumber, 'push', { userId: routeUserId });
-      showToast.success(t('common.success'), 'Yangi kod yuborildi');
+      showToast.success(t('common.success'), 'Yangi kod push notification orqali yuborildi');
       
       // Reset attempts when resending code
       setAttempts(0);
       setRemainingAttempts(3);
-      setOtp(['', '', '', '', '']);
+      setOtp(['', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (error) {
+      console.error('Failed to resend push notification:', error);
       handleBackendError(error, {
         t,
-        defaultMessage: 'Kod yuborishda xatolik',
+        defaultMessage: 'Push notification yuborishda xatolik. Foydalanuvchi ilovasi ochiq ekanligini tekshiring.',
       });
     }
   };
@@ -212,11 +214,11 @@ export const OTPVerificationScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.continueButton,
-            (isLoading || otp.join('').length < 5) &&
+            (isLoading || otp.join('').length < 4) &&
               styles.continueButtonDisabled,
           ]}
           onPress={handleContinue}
-          disabled={isLoading || otp.join('').length < 5}
+          disabled={isLoading || otp.join('').length < 4}
         >
           <Text style={styles.continueButtonText}>
             {isLoading ? 'Tekshirilmoqda...' : 'Continue'}

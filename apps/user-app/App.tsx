@@ -11,14 +11,29 @@ import { AuthProvider } from './contexts/AuthContext';
 import { RootNavigator } from './navigation/RootNavigator';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './utils/toast';
-// import messaging from '@react-native-firebase/messaging';
-import { Platform } from 'react-native';
+import { ensurePushPermission, setupForegroundNotificationHandler } from './services/PushService';
+import messaging from '@react-native-firebase/messaging';
+
+// Register background message handler at module level
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log('FCM message handled in background:', remoteMessage);
+});
 
 export default function App() {
   useEffect(() => {
-    // TODO: Implement push notifications when Firebase is properly configured
-    // For now, we'll use a different approach for OTP delivery
+    // Request push permissions on startup
+    ensurePushPermission().catch((error) => {
+      console.error('Error requesting push permissions:', error);
+    });
+
+    // Setup foreground notification handler
+    const unsubscribeForeground = setupForegroundNotificationHandler();
+
+    return () => {
+      unsubscribeForeground();
+    };
   }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

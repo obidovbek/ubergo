@@ -59,7 +59,7 @@ desktop.ini
 
 # ESLint
 .eslintcache
-
+ubexgo-*.json
 # Prettier
 .prettierignore.local
 

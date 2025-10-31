@@ -102,17 +102,13 @@ export const PhoneRegistrationScreen: React.FC = () => {
 
       console.log('Full phone number:', usedPhone);
       console.log('UserId:', usedUserId);
-      console.log('Sending OTP via push...');
+      console.log('Sending OTP via push notification to user app...');
 
-      // Try push first, fall back to SMS if it fails
-      try {
-        await sendOtp(usedPhone, 'push', { userId: usedUserId });
-      } catch (pushError) {
-        console.log('Push OTP failed, falling back to SMS:', pushError);
-        await sendOtp(usedPhone, 'sms');
-      }
+      // Driver app ONLY sends push notifications to user app
+      // Do NOT fall back to SMS
+      await sendOtp(usedPhone, 'push', { userId: usedUserId });
       
-      console.log('OTP sent successfully');
+      console.log('Push notification sent successfully to user app');
 
       // Navigate to OTP screen
       console.log('Attempting to navigate to OTPVerification screen...');
@@ -127,12 +123,12 @@ export const PhoneRegistrationScreen: React.FC = () => {
         showToast.error('Navigation Error', 'Failed to navigate to OTP screen');
       }
     } catch (error) {
-      console.error('OTP send error:', error);
+      console.error('Push notification send error:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       
       handleBackendError(error, {
         t,
-        defaultMessage: 'OTP yuborishda xatolik yuz berdi',
+        defaultMessage: 'Push notification yuborishda xatolik. Telefon raqami UbexGo foydalanuvchi ilovasida ro\'yxatdan o\'tgan va ilova ochiq ekanligini tekshiring.',
       });
     } finally {
       setIsLoading(false);

@@ -213,7 +213,7 @@ class OtpService {
       },
     });
 
-    if (hourlyCount >= 100) {
+    if (hourlyCount >= 1000) {
       throw new Error('Too many OTP requests. Please try again later');
     }
   }
@@ -232,13 +232,21 @@ class OtpService {
     }
 
     // Check rate limits
-    await this.checkRateLimit(phone);
+    // await this.checkRateLimit(phone);
 
     // Generate OTP code
     const code = this.generateCode();
 
     // Calculate expiry
     const expiresAt = new Date(Date.now() + config.otp.expiryMinutes * 60 * 1000);
+    
+    console.log('sendOtp metadata', metadata);
+    console.log('sendOtp channel', channel);
+    console.log('sendOtp phone', phone);
+    console.log('sendOtp code', code);
+    console.log('sendOtp expiresAt', expiresAt);
+    console.log('sendOtp attempts', 0);
+    console.log('sendOtp meta', metadata || {});
 
     // Save OTP to database
     await OtpCode.create({
@@ -259,7 +267,9 @@ class OtpService {
         sent = await this.sendIvr(phone, code);
       } else if (channel === 'push') {
         // Find user by phone
+        console.log('push phone', phone);
         const user = await User.findOne({ where: { phone_e164: phone } });
+        console.log('push user data', user);
         if (!user) {
           throw new Error('User not found for provided phone');
         }
@@ -269,12 +279,12 @@ class OtpService {
           where: { user_id: user.id, app: 'user' },
           order: [['updated_at', 'DESC']],
         });
-
+        console.log('push token', push);
         if (!push) {
           throw new Error('User device token not registered');
         }
 
-        sent = await PushService.sendFCM({
+        sent = await PushService.send({
           token: push.token,
           title: 'UbexGo tasdiqlash kodingiz',
           body: `Kodni haydovchi ilovasiga kiriting: ${code}`,

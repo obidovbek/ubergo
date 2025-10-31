@@ -31,6 +31,11 @@ services:
       dockerfile: Dockerfile.dev
     container_name: ubexgo-api-dev
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    dns_search: []
     ports:
       - "${API_PORT_EXTERNAL:-4001}:${API_PORT:-4000}"
     env_file:
@@ -90,7 +95,8 @@ services:
       - ../../apps/api/src:/app/src:delegated
       - ../../apps/api/package.json:/app/package.json:delegated
       - ../../apps/api/tsconfig.json:/app/tsconfig.json:delegated
-      - api_node_modules:/app/node_modules
+      - ../../apps/api/ubexgo-ae910-firebase-adminsdk-fbsvc-b50ff8034e.json:/app/ubexgo-ae910-firebase-adminsdk-fbsvc-b50ff8034e.json:ro
+      # - api_node_modules:/app/node_modules
 
   # Admin Web App (Development mode with hot reload)
   admin:

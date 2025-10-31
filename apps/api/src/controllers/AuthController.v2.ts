@@ -18,7 +18,6 @@ import { AppError } from '../errors/AppError.js';
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
     const { phone: rawPhone, userId, channel = 'sms' } = req.body as any;
-
     let phone = rawPhone as string | undefined;
 
     if (!phone && userId) {

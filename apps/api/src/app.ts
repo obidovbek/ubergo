@@ -11,6 +11,7 @@ import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import sequelize from './database/models/index.js';
+import { initializeFirebase } from './services/FirebaseService.js';
 
 // Global error handlers to prevent crashes
 process.on('uncaughtException', (error: Error) => {
@@ -25,6 +26,9 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
 });
 
 const app: Application = express();
+
+// Initialize Firebase Admin SDK
+initializeFirebase();
 
 // Initialize database connection
 sequelize.authenticate()

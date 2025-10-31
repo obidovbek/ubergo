@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // OtpCode attributes
 export interface OtpCodeAttributes {
   id: string;
-  channel: 'sms' | 'call';
+  channel: 'sms' | 'call' | 'push';
   target: string;
   code: string;
   expires_at: Date;
@@ -24,7 +24,7 @@ export interface OtpCodeCreationAttributes
 // OtpCode model class
 export class OtpCode extends Model<OtpCodeAttributes, OtpCodeCreationAttributes> implements OtpCodeAttributes {
   declare id: string;
-  declare channel: 'sms' | 'call';
+  declare channel: 'sms' | 'call' | 'push';
   declare target: string;
   declare code: string;
   declare expires_at: Date;
@@ -46,7 +46,7 @@ export function initOtpCode(sequelize: Sequelize) {
         allowNull: false
       },
       channel: {
-        type: DataTypes.ENUM('sms', 'call'),
+        type: DataTypes.ENUM('sms', 'call', 'push'),
         allowNull: false
       },
       target: {
