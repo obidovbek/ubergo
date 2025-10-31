@@ -46,9 +46,9 @@ export const API_ENDPOINTS = {
     cancel: (id: string) => `/rides/${id}/cancel`,
   },
   drivers: {
-    list: '/drivers',
-    detail: (id: string) => `/drivers/${id}`,
-    rating: (id: string) => `/drivers/${id}/rating`,
+    list: '/driver',
+    detail: (id: string) => `/driver/${id}`,
+    rating: (id: string) => `/driver/${id}/rating`,
   },
   devices: {
     register: '/devices/register',

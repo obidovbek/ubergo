@@ -29,7 +29,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const navigation = useNavigation<OTPVerificationNavigationProp>();
   const route = useRoute();
   const { phoneNumber, userId: routeUserId } = (route.params as any) || {};
-  const { verifyOtp, sendOtp, user } = useAuth();
+  const { verifyOtp, sendOtp, user, token } = useAuth();
   const { t } = useTranslation();
 
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -87,13 +87,17 @@ export const OTPVerificationScreen: React.FC = () => {
       console.log('Phone:', phoneNumber);
       console.log('OTP Code:', otpCode);
       
+      // Verify OTP - this will update auth context with token
       await verifyOtp(phoneNumber, otpCode, { userId: routeUserId });
       
       console.log('OTP verified successfully');
       showToast.success(t('common.success'), 'Telefon tasdiqlandi');
       
-      // Navigate to driver details screen after verification
-      // Note: Driver registration flow continues to DriverDetailsScreen
+      // Auth context will update and RootNavigator will automatically check
+      // driver profile status and route accordingly:
+      // - If profile incomplete → ProfileCompletionNavigator (DriverPersonalInfo)
+      // - If profile complete → MainNavigator (Home)
+      console.log('Auth context updated, RootNavigator will handle routing based on driver profile status');
     } catch (error) {
       console.error('OTP verification error:', error);
       

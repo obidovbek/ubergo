@@ -10,6 +10,11 @@ export type AuthStackParamList = {
   PhoneRegistration: undefined;
   OTPVerification: { phoneNumber: string; userId?: string };
   DriverDetails: { phoneNumber: string };
+  DriverPersonalInfo: undefined;
+  DriverPassport: undefined;
+  DriverLicense: undefined;
+  DriverVehicle: undefined;
+  DriverTaxiLicense: undefined;
   Login: undefined;
 };
 
@@ -24,6 +29,9 @@ export type MainStackParamList = {
 export type PhoneRegistrationNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'PhoneRegistration'>;
 export type OTPVerificationNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'OTPVerification'>;
 export type DriverDetailsNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverDetails'>;
+export type DriverPersonalInfoNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverPersonalInfo'>;
+export type DriverPassportNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverPassport'>;
+export type DriverLicenseNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverLicense'>;
 export type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 // Route Props

@@ -9,6 +9,9 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { PhoneRegistrationScreen } from '../screens/PhoneRegistrationScreen';
 import { OTPVerificationScreen } from '../screens/OTPVerificationScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
+import { DriverPersonalInfoScreen } from '../screens/DriverPersonalInfoScreen';
+import { DriverPassportScreen } from '../screens/DriverPassportScreen';
+import { DriverLicenseScreen } from '../screens/DriverLicenseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +20,9 @@ export const AuthNavigator: React.FC = () => {
     'PhoneRegistration',
     'OTPVerification', 
     'DriverDetails',
+    'DriverPersonalInfo',
+    'DriverPassport',
+    'DriverLicense',
     'Login'
   ]);
   
@@ -41,6 +47,21 @@ export const AuthNavigator: React.FC = () => {
         name="DriverDetails" 
         component={DriverDetailsScreen}
         options={{ title: 'Driver Details' }}
+      />
+      <Stack.Screen 
+        name="DriverPersonalInfo" 
+        component={DriverPersonalInfoScreen}
+        options={{ title: 'Personal Information' }}
+      />
+      <Stack.Screen 
+        name="DriverPassport" 
+        component={DriverPassportScreen}
+        options={{ title: 'Passport Information' }}
+      />
+      <Stack.Screen 
+        name="DriverLicense" 
+        component={DriverLicenseScreen}
+        options={{ title: 'License Information' }}
       />
       <Stack.Screen 
         name="Login" 

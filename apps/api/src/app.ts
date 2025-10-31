@@ -52,6 +52,9 @@ if (config.server.env === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(config.upload.uploadPath));
+
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.json({ 

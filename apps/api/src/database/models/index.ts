@@ -47,6 +47,12 @@ import { OtpCode, initOtpCode } from './OtpCode.js';
 import { DeletionRequest, initDeletionRequest } from './DeletionRequest.js';
 import { PushToken, initPushToken } from './PushToken.js';
 import { AuditLog, initAuditLog } from './AuditLog.js';
+import { DriverProfile, initDriverProfile } from './DriverProfile.js';
+import { DriverPassport, initDriverPassport } from './DriverPassport.js';
+import { DriverLicense, initDriverLicense } from './DriverLicense.js';
+import { EmergencyContact, initEmergencyContact } from './EmergencyContact.js';
+import { DriverVehicle, initDriverVehicle } from './DriverVehicle.js';
+import { DriverTaxiLicense, initDriverTaxiLicense } from './DriverTaxiLicense.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -56,6 +62,12 @@ initOtpCode(sequelize);
 initDeletionRequest(sequelize);
 initAuditLog(sequelize);
 initPushToken(sequelize);
+initDriverProfile(sequelize);
+initDriverPassport(sequelize);
+initDriverLicense(sequelize);
+initEmergencyContact(sequelize);
+initDriverVehicle(sequelize);
+initDriverTaxiLicense(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -73,6 +85,25 @@ AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(PushToken, { foreignKey: 'user_id', as: 'pushTokens' });
 PushToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// Driver associations
+User.hasOne(DriverProfile, { foreignKey: 'user_id', as: 'driverProfile' });
+DriverProfile.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+DriverProfile.hasOne(DriverPassport, { foreignKey: 'driver_profile_id', as: 'passport' });
+DriverPassport.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
+DriverProfile.hasOne(DriverLicense, { foreignKey: 'driver_profile_id', as: 'license' });
+DriverLicense.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
+DriverProfile.hasMany(EmergencyContact, { foreignKey: 'driver_profile_id', as: 'emergencyContacts' });
+EmergencyContact.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
+DriverProfile.hasOne(DriverVehicle, { foreignKey: 'driver_profile_id', as: 'vehicle' });
+DriverVehicle.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
+DriverProfile.hasOne(DriverTaxiLicense, { foreignKey: 'driver_profile_id', as: 'taxiLicense' });
+DriverTaxiLicense.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -83,6 +114,12 @@ export {
   DeletionRequest,
   AuditLog,
   PushToken,
+  DriverProfile,
+  DriverPassport,
+  DriverLicense,
+  EmergencyContact,
+  DriverVehicle,
+  DriverTaxiLicense,
 };
 
 export default sequelize;

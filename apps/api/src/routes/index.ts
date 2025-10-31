@@ -6,6 +6,8 @@ import { Router } from 'express';
 import authRoutesV2 from './auth.routes.v2.js';
 import userRoutes from './user.routes.js';
 import deviceRoutes from './device.routes.js';
+import driverRoutes from './driver.routes.js';
+import uploadRoutes from './upload.routes.js';
 
 const router = Router();
 
@@ -28,11 +30,14 @@ router.use('/user', userRoutes);
 // Device routes (push tokens)
 router.use('/devices', deviceRoutes);
 
+// Driver routes
+router.use('/driver', driverRoutes);
+
+// Upload routes
+router.use('/upload', uploadRoutes);
+
 // TODO: Add more route modules
 // import rideRoutes from './ride.routes';
-// import driverRoutes from './driver.routes';
-
 // router.use('/rides', rideRoutes);
-// router.use('/drivers', driverRoutes);
 
 export default router;

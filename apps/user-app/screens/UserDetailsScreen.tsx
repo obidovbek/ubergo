@@ -70,9 +70,63 @@ export const UserDetailsScreen: React.FC = () => {
     return `${day}.${month}.${year}`;
   };
 
+  const parseDate = (dateString: string): Date | null => {
+    // Parse DD.MM.YYYY format
+    const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!match) return null;
+    
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
+    const year = parseInt(match[3], 10);
+    
+    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear()) {
+      return null;
+    }
+    
+    const date = new Date(year, month, day);
+    // Validate the date (e.g., check for invalid dates like 31.02.2000)
+    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+      return null;
+    }
+    
+    return date;
+  };
+
+  const handleDateInputChange = (text: string) => {
+    // Remove all non-digits
+    const digitsOnly = text.replace(/\D/g, '');
+    
+    // Limit to 8 digits (DDMMYYYY)
+    if (digitsOnly.length > 8) return;
+    
+    // Auto-format as user types: DD.MM.YYYY
+    let formatted = digitsOnly;
+    if (digitsOnly.length > 4) {
+      // Insert dots: DDMMYYYY -> DD.MM.YYYY
+      formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2, 4) + '.' + digitsOnly.slice(4);
+    } else if (digitsOnly.length > 2) {
+      // Insert first dot: DDMM -> DD.MM
+      formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2);
+    }
+    
+    setBirthDate(formatted);
+    
+    // If valid format (DD.MM.YYYY), update selectedDate
+    if (formatted.length === 10) {
+      const parsedDate = parseDate(formatted);
+      if (parsedDate) {
+        setSelectedDate(parsedDate);
+        if (errors.birthDate) {
+          setErrors({ ...errors, birthDate: undefined });
+        }
+      }
+    }
+  };
+
   const handleDateConfirm = () => {
     setSelectedDate(tempDate);
-    setBirthDate(formatDate(tempDate));
+    const formattedDate = formatDate(tempDate);
+    setBirthDate(formattedDate);
     setShowDatePicker(false);
     if (errors.birthDate) {
       setErrors({ ...errors, birthDate: undefined });
@@ -82,6 +136,22 @@ export const UserDetailsScreen: React.FC = () => {
   const handleDateCancel = () => {
     setTempDate(selectedDate);
     setShowDatePicker(false);
+  };
+
+  const openDatePicker = () => {
+    // Try to parse existing birthDate, or use selectedDate, or default to 2000-01-01
+    let initialDate = selectedDate;
+    if (birthDate) {
+      const parsed = parseDate(birthDate);
+      if (parsed) {
+        initialDate = parsed;
+      }
+    }
+    if (!initialDate || isNaN(initialDate.getTime())) {
+      initialDate = new Date(2000, 0, 1);
+    }
+    setTempDate(initialDate);
+    setShowDatePicker(true);
   };
 
   const generateYears = () => {
@@ -433,21 +503,25 @@ export const UserDetailsScreen: React.FC = () => {
             <Text style={styles.label}>
               {t('userDetails.birthDate')} <Text style={styles.required}>*</Text>
             </Text>
-            <TouchableOpacity
-              style={[styles.datePickerButton, errors.birthDate && styles.inputError]}
-              onPress={() => {
-                console.log('Date picker button pressed');
-                setTempDate(selectedDate);
-                setShowDatePicker(true);
-                console.log('showDatePicker set to true');
-              }}
-              disabled={isLoading}
-            >
-              <Text style={[styles.datePickerText, !birthDate && styles.datePickerPlaceholder]}>
-                {birthDate || t('userDetails.birthDatePlaceholder')}
-              </Text>
-              <Text style={styles.calendarIcon}>📅</Text>
-            </TouchableOpacity>
+            <View style={[styles.dateInputContainer, errors.birthDate && styles.inputError]}>
+              <TextInput
+                style={styles.dateInput}
+                placeholder="KK.OO.YYYY"
+                value={birthDate}
+                onChangeText={handleDateInputChange}
+                keyboardType="numeric"
+                maxLength={10}
+                placeholderTextColor={theme.palette.text.secondary}
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={styles.calendarButton}
+                onPress={openDatePicker}
+                disabled={isLoading}
+              >
+                <Text style={styles.calendarIcon}>📅</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.helperText}>
               {t('userDetails.birthDateHelper')}
             </Text>
@@ -488,7 +562,10 @@ export const UserDetailsScreen: React.FC = () => {
                                 styles.pickerItem,
                                 tempDate.getDate() === day && styles.pickerItemSelected
                               ]}
-                              onPress={() => setTempDate(new Date(tempDate.getFullYear(), tempDate.getMonth(), day))}
+                              onPress={() => {
+                                const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
+                                setTempDate(newDate);
+                              }}
                             >
                               <Text style={[
                                 styles.pickerItemText,
@@ -513,7 +590,9 @@ export const UserDetailsScreen: React.FC = () => {
                                 tempDate.getMonth() + 1 === month.value && styles.pickerItemSelected
                               ]}
                               onPress={() => {
-                                const newDate = new Date(tempDate.getFullYear(), month.value - 1, tempDate.getDate());
+                                const maxDay = new Date(tempDate.getFullYear(), month.value, 0).getDate();
+                                const day = Math.min(tempDate.getDate(), maxDay);
+                                const newDate = new Date(tempDate.getFullYear(), month.value - 1, day);
                                 setTempDate(newDate);
                               }}
                             >
@@ -540,7 +619,9 @@ export const UserDetailsScreen: React.FC = () => {
                                 tempDate.getFullYear() === year && styles.pickerItemSelected
                               ]}
                               onPress={() => {
-                                const newDate = new Date(year, tempDate.getMonth(), tempDate.getDate());
+                                const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
+                                const day = Math.min(tempDate.getDate(), maxDay);
+                                const newDate = new Date(year, tempDate.getMonth(), day);
                                 setTempDate(newDate);
                               }}
                             >
@@ -853,10 +934,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  datePickerButton: {
+  dateInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
     borderBottomColor: '#4CAF50',
@@ -864,15 +944,20 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderRightWidth: 0,
     borderRadius: 0,
-    padding: theme.spacing(2),
+    marginBottom: 0,
+    minHeight: 48,
   },
-  datePickerText: {
+  dateInput: {
+    flex: 1,
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    flex: 1,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(2),
   },
-  datePickerPlaceholder: {
-    color: theme.palette.text.secondary,
+  calendarButton: {
+    padding: theme.spacing(1.5),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   calendarIcon: {
     fontSize: 20,
@@ -911,8 +996,9 @@ const styles = StyleSheet.create({
   },
   datePickerContainer: {
     flexDirection: 'row',
-    height: 200,
+    height: 250,
     paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   pickerColumn: {
     flex: 1,
@@ -920,10 +1006,13 @@ const styles = StyleSheet.create({
   },
   pickerLabel: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#666',
     marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   pickerScroll: {
     flex: 1,
@@ -934,13 +1023,15 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: '#FAFAFA',
   },
   pickerItemSelected: {
     backgroundColor: '#4CAF50',
   },
   pickerItemText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#666',
+    fontWeight: '500',
   },
   pickerItemTextSelected: {
     color: '#FFFFFF',
