@@ -52,7 +52,6 @@ desktop.ini
 .settings/
 *.sublime-project
 *.sublime-workspace
-
 # TypeScript
 *.tsbuildinfo
 *.d.ts.map

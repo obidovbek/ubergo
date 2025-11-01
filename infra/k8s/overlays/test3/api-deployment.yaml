@@ -13,6 +13,20 @@ spec:
       labels:
         app: ubexgo-api-test3
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:17-alpine
+          command: ['sh', '-c']
+          args:
+            - |
+              until pg_isready -h postgres-service-test3 -p 5432 -U ubexgo; do
+                echo "Waiting for PostgreSQL to be ready..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+          env:
+            - name: PGPASSWORD
+              value: "ubexgo_password_prod"
       containers:
         - name: api
           image: ubexgo-api-test3:latest
@@ -27,4 +41,20 @@ spec:
               value: "production"
             - name: DB_HOST
               value: "postgres-service-test3"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
 

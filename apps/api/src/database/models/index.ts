@@ -29,15 +29,43 @@ const sequelize = new Sequelize({
   }
 });
 
-// Test connection
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log('✅ Sequelize: Database connection established successfully');
-  })
-  .catch((err) => {
-    console.error('❌ Sequelize: Unable to connect to database:', err);
-  });
+// Log database configuration for debugging
+console.log('database', {
+  host: config.database.host,
+  port: config.database.port,
+  database: config.database.name,
+  username: config.database.user,
+  password: config.database.password
+});
+
+// Add network debugging
+console.log('🔍 Environment variables:');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
+// Test connection with retry logic
+const connectWithRetry = async (retries = 5, delay = 5000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Sequelize: Database connection established successfully');
+      return;
+    } catch (err) {
+      console.error(`❌ Sequelize: Unable to connect to database (attempt ${i + 1}/${retries}):`, err);
+      
+      if (i === retries - 1) {
+        console.error('❌ Sequelize: All connection attempts failed');
+        throw err;
+      }
+      
+      console.log(`⏳ Retrying database connection in ${delay/1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+connectWithRetry();
 
 // Import model classes and initialization functions
 import { User, initUser } from './User.js';

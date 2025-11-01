@@ -56,12 +56,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(config.upload.uploadPath));
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: config.server.env 
-  });
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    // Test database connection
+    await sequelize.authenticate();
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      environment: config.server.env,
+      database: 'connected'
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'error', 
+      timestamp: new Date().toISOString(),
+      environment: config.server.env,
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // API routes
