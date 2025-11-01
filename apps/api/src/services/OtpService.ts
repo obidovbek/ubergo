@@ -213,7 +213,7 @@ class OtpService {
       },
     });
 
-    if (hourlyCount >= 1000) {
+    if (hourlyCount >= 100) {
       throw new Error('Too many OTP requests. Please try again later');
     }
   }
@@ -232,7 +232,7 @@ class OtpService {
     }
 
     // Check rate limits
-    // await this.checkRateLimit(phone);
+    await this.checkRateLimit(phone);
 
     // Generate OTP code
     const code = this.generateCode();

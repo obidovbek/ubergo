@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "ubexgodriver",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.obidovbek94.UbexGoDriver",
@@ -47,8 +47,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": false,
+      "reactCompiler": false
     },
     "extra": {
       "eas": {
