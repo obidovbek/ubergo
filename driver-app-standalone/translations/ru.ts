@@ -154,6 +154,17 @@ export default {
     december: 'Декабрь',
   },
 
+  // Driver Messages
+  driver: {
+    profileUpdated: 'Профиль обновлен',
+    profileIncomplete: 'Профиль не заполнен',
+    registrationComplete: 'Регистрация завершена',
+    passportUpdated: 'Данные паспорта сохранены',
+    licenseUpdated: 'Данные прав сохранены',
+    vehicleUpdated: 'Данные автомобиля сохранены',
+    taxiLicenseUpdated: 'Лицензия такси сохранена',
+  },
+
   // Backend Error Messages
   errors: {
     network: 'Нет подключения к интернету',
@@ -167,6 +178,74 @@ export default {
     validation: 'Неверные данные',
     unknown: 'Произошла неизвестная ошибка',
     tryAgain: 'Пожалуйста, попробуйте снова',
+  },
+
+  // Form Validation Messages
+  formValidation: {
+    // Driver Details
+    driverTypeRequired: 'Выберите тип водителя',
+    driverTypeInvalid: 'Выбран неверный тип водителя',
+
+    // Personal Info
+    firstNameRequired: 'Имя обязательно',
+    firstNameTooShort: 'Имя слишком короткое',
+    lastNameRequired: 'Фамилия обязательна',
+    lastNameTooShort: 'Фамилия слишком короткая',
+    fatherNameRequired: 'Отчество обязательно',
+    genderRequired: 'Выберите пол',
+    genderInvalid: 'Выбран неверный пол',
+    birthDateRequired: 'Дата рождения обязательна',
+    birthDateInvalid: 'Неверный формат даты',
+    emailInvalid: 'Неверный формат email',
+    addressCountryRequired: 'Страна обязательна',
+    addressRegionRequired: 'Регион обязателен',
+    addressCityRequired: 'Город обязателен',
+    photoRequired: 'Загрузка фото обязательна',
+
+    // Passport Info
+    idCardRequired: 'Номер ID карты обязателен',
+    idCardTooShort: 'Номер ID карты слишком короткий',
+    pinflRequired: 'ПИНФЛ обязателен',
+    pinflInvalid: 'ПИНФЛ должен содержать 14 цифр',
+    citizenshipRequired: 'Гражданство обязательно',
+    issueDateRequired: 'Дата выдачи обязательна',
+    expiryDateRequired: 'Срок действия обязателен',
+
+    // License Info
+    licenseNumberRequired: 'Номер прав обязателен',
+    licenseNumberTooShort: 'Номер прав слишком короткий',
+    issueDateInvalid: 'Неверная дата выдачи',
+    categoryRequired: 'Необходимо выбрать хотя бы одну категорию',
+
+    // Emergency Contacts
+    phoneRequired: 'Номер телефона обязателен',
+    phoneInvalid: 'Неверный формат телефона',
+    relationshipRequired: 'Родство обязательно',
+
+    // Vehicle Info
+    vehicleTypeRequired: 'Тип транспорта обязателен',
+    vehicleTypeInvalid: 'Неверный тип транспорта',
+    licensePlateRequired: 'Гос номер обязателен',
+    licensePlateTooShort: 'Гос номер слишком короткий',
+    makeRequired: 'Марка обязательна',
+    modelRequired: 'Модель обязательна',
+    yearRequired: 'Год выпуска обязателен',
+    yearInvalid: 'Неверный формат года',
+    colorRequired: 'Цвет обязателен',
+
+    // Taxi License
+    taxiLicenseRequired: 'Номер лицензии такси обязателен',
+    licenseSheetRequired: 'Номер лицензии обязателен',
+    validFromRequired: 'Дата начала действия обязательна',
+    validUntilRequired: 'Дата окончания действия обязательна',
+
+    // Generic messages
+    required: 'Это поле обязательно',
+    tooShort: 'Значение слишком короткое',
+    tooLong: 'Значение слишком длинное',
+    invalid: 'Неверный формат',
+    mustBeNumber: 'Должно быть числом',
+    mustBePositive: 'Должно быть положительным значением',
   },
 };
 

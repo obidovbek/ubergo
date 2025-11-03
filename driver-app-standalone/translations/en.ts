@@ -154,6 +154,17 @@ export default {
     december: 'December',
   },
 
+  // Driver Messages
+  driver: {
+    profileUpdated: 'Profile updated',
+    profileIncomplete: 'Profile incomplete',
+    registrationComplete: 'Registration complete',
+    passportUpdated: 'Passport information saved',
+    licenseUpdated: 'License information saved',
+    vehicleUpdated: 'Vehicle information saved',
+    taxiLicenseUpdated: 'Taxi license saved',
+  },
+
   // Backend Error Messages
   errors: {
     network: 'No internet connection',
@@ -167,6 +178,74 @@ export default {
     validation: 'Invalid data',
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
+  },
+
+  // Form Validation Messages
+  formValidation: {
+    // Driver Details
+    driverTypeRequired: 'Please select driver type',
+    driverTypeInvalid: 'Invalid driver type selected',
+
+    // Personal Info
+    firstNameRequired: 'First name is required',
+    firstNameTooShort: 'First name is too short',
+    lastNameRequired: 'Last name is required',
+    lastNameTooShort: 'Last name is too short',
+    fatherNameRequired: "Father's name is required",
+    genderRequired: 'Please select gender',
+    genderInvalid: 'Invalid gender selected',
+    birthDateRequired: 'Date of birth is required',
+    birthDateInvalid: 'Invalid date format',
+    emailInvalid: 'Invalid email format',
+    addressCountryRequired: 'Country is required',
+    addressRegionRequired: 'Region is required',
+    addressCityRequired: 'City is required',
+    photoRequired: 'Photo upload is required',
+
+    // Passport Info
+    idCardRequired: 'ID card number is required',
+    idCardTooShort: 'ID card number is too short',
+    pinflRequired: 'PINFL is required',
+    pinflInvalid: 'PINFL must be 14 digits',
+    citizenshipRequired: 'Citizenship is required',
+    issueDateRequired: 'Issue date is required',
+    expiryDateRequired: 'Expiry date is required',
+
+    // License Info
+    licenseNumberRequired: 'License number is required',
+    licenseNumberTooShort: 'License number is too short',
+    issueDateInvalid: 'Invalid issue date',
+    categoryRequired: 'At least one category must be selected',
+
+    // Emergency Contacts
+    phoneRequired: 'Phone number is required',
+    phoneInvalid: 'Invalid phone format',
+    relationshipRequired: 'Relationship is required',
+
+    // Vehicle Info
+    vehicleTypeRequired: 'Vehicle type is required',
+    vehicleTypeInvalid: 'Invalid vehicle type',
+    licensePlateRequired: 'License plate is required',
+    licensePlateTooShort: 'License plate is too short',
+    makeRequired: 'Make is required',
+    modelRequired: 'Model is required',
+    yearRequired: 'Year is required',
+    yearInvalid: 'Invalid year format',
+    colorRequired: 'Color is required',
+
+    // Taxi License
+    taxiLicenseRequired: 'Taxi license number is required',
+    licenseSheetRequired: 'License sheet number is required',
+    validFromRequired: 'Valid from date is required',
+    validUntilRequired: 'Valid until date is required',
+
+    // Generic messages
+    required: 'This field is required',
+    tooShort: 'Value is too short',
+    tooLong: 'Value is too long',
+    invalid: 'Invalid format',
+    mustBeNumber: 'Must be a number',
+    mustBePositive: 'Must be a positive value',
   },
 };
 

@@ -153,3 +153,32 @@ export const parseValidationErrors = (error: any): Record<string, string> => {
   return errors;
 };
 
+/**
+ * Display validation errors with toast notifications
+ */
+export const displayValidationErrors = (
+  error: any,
+  t: (key: string) => string,
+  showFirstOnly: boolean = true
+): void => {
+  const errors = parseValidationErrors(error);
+  const errorEntries = Object.entries(errors);
+  
+  if (errorEntries.length > 0) {
+    if (showFirstOnly) {
+      // Show only the first error
+      const [field, message] = errorEntries[0];
+      showToast.error(t('common.error'), message);
+    } else {
+      // Show all errors (up to 3)
+      const maxErrors = Math.min(errorEntries.length, 3);
+      for (let i = 0; i < maxErrors; i++) {
+        const [field, message] = errorEntries[i];
+        setTimeout(() => {
+          showToast.error(t('common.error'), message);
+        }, i * 300); // Stagger the toasts
+      }
+    }
+  }
+};
+

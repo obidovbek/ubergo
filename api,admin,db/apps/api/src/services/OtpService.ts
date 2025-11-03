@@ -213,7 +213,7 @@ class OtpService {
       },
     });
 
-    if (hourlyCount >= 100) {
+    if (hourlyCount >= 1000) {
       throw new Error('Too many OTP requests. Please try again later');
     }
   }

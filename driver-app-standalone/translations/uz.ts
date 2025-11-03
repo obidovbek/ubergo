@@ -163,6 +163,17 @@ export default {
     december: 'Dekabr',
   },
 
+  // Driver Messages
+  driver: {
+    profileUpdated: 'Profil yangilandi',
+    profileIncomplete: "Profil to'ldirilmagan",
+    registrationComplete: "Ro'yxatdan o'tish yakunlandi",
+    passportUpdated: 'Passport ma\'lumotlari saqlandi',
+    licenseUpdated: 'Guvohnoma ma\'lumotlari saqlandi',
+    vehicleUpdated: 'Avtomobil ma\'lumotlari saqlandi',
+    taxiLicenseUpdated: 'Taksi litsenziyasi saqlandi',
+  },
+
   // Backend Error Messages
   errors: {
     network: "Internet bilan aloqa yo'q",
@@ -176,6 +187,74 @@ export default {
     validation: "Ma'lumotlar noto'g'ri",
     unknown: "Noma'lum xatolik yuz berdi",
     tryAgain: "Iltimos qaytadan urinib ko'ring",
+  },
+
+  // Form Validation Messages
+  formValidation: {
+    // Driver Details
+    driverTypeRequired: "Yo'nalishni tanlang",
+    driverTypeInvalid: "Noto'g'ri yo'nalish tanlangan",
+
+    // Personal Info
+    firstNameRequired: "Ism majburiy maydon",
+    firstNameTooShort: "Ism juda qisqa",
+    lastNameRequired: "Familiya majburiy maydon",
+    lastNameTooShort: "Familiya juda qisqa",
+    fatherNameRequired: "Otasining ismi majburiy maydon",
+    genderRequired: "Jinsni tanlang",
+    genderInvalid: "Noto'g'ri jins tanlangan",
+    birthDateRequired: "Tug'ilgan sanani kiriting",
+    birthDateInvalid: "Sana noto'g'ri formatda",
+    emailInvalid: "Email noto'g'ri formatda",
+    addressCountryRequired: "Mamlakatni kiriting",
+    addressRegionRequired: "Viloyatni kiriting",
+    addressCityRequired: "Shaharni kiriting",
+    photoRequired: "Rasm yuklash majburiy",
+
+    // Passport Info
+    idCardRequired: "ID karta raqamini kiriting",
+    idCardTooShort: "ID karta raqami juda qisqa",
+    pinflRequired: "JSHSHIR (PINFL) ni kiriting",
+    pinflInvalid: "JSHSHIR 14 raqamdan iborat bo'lishi kerak",
+    citizenshipRequired: "Fuqaroligini kiriting",
+    issueDateRequired: "Berilgan sanani kiriting",
+    expiryDateRequired: "Amal qilish muddatini kiriting",
+
+    // License Info
+    licenseNumberRequired: "Guvohnoma raqamini kiriting",
+    licenseNumberTooShort: "Guvohnoma raqami juda qisqa",
+    issueDateInvalid: "Berilgan sana noto'g'ri",
+    categoryRequired: "Kamida bitta kategoriya tanlanishi kerak",
+
+    // Emergency Contacts
+    phoneRequired: "Telefon raqamini kiriting",
+    phoneInvalid: "Telefon raqami noto'g'ri formatda",
+    relationshipRequired: "Qarindoshlik aloqasini kiriting",
+
+    // Vehicle Info
+    vehicleTypeRequired: "Transport turini tanlang",
+    vehicleTypeInvalid: "Noto'g'ri transport turi",
+    licensePlateRequired: "Davlat raqamini kiriting",
+    licensePlateTooShort: "Davlat raqami juda qisqa",
+    makeRequired: "Markani kiriting",
+    modelRequired: "Modelni kiriting",
+    yearRequired: "Ishlab chiqarilgan yilini kiriting",
+    yearInvalid: "Yil noto'g'ri formatda",
+    colorRequired: "Rangni kiriting",
+
+    // Taxi License
+    taxiLicenseRequired: "Taksi litsenziya raqamini kiriting",
+    licenseSheetRequired: "Litsenziya varaqasi raqamini kiriting",
+    validFromRequired: "Amal qilish boshlanish sanasini kiriting",
+    validUntilRequired: "Amal qilish tugash sanasini kiriting",
+
+    // Generic messages
+    required: "Bu maydon majburiy",
+    tooShort: "Qiymat juda qisqa",
+    tooLong: "Qiymat juda uzun",
+    invalid: "Noto'g'ri format",
+    mustBeNumber: "Faqat raqamlar kiritilishi kerak",
+    mustBePositive: "Musbat qiymat bo'lishi kerak",
   },
 };
 

@@ -1,9 +1,12 @@
 /**
- * Error Handling Middleware
+ * Error Handling Middleware with i18n support
  */
 
 import type { Application, Request, Response, NextFunction } from 'express';
 import { HttpStatus, ErrorMessages } from '../constants/index.js';
+import { getLanguageFromHeaders } from '../i18n/index.js';
+import { t } from '../i18n/translator.js';
+import { ValidationError } from './validator.js';
 
 // Custom error class
 export class AppError extends Error {
@@ -21,8 +24,9 @@ export class AppError extends Error {
 
 // Not found handler
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
+  const language = getLanguageFromHeaders(req.headers['accept-language']);
   const error = new AppError(
-    `Route ${req.originalUrl} not found`,
+    t('common.notFound', language),
     HttpStatus.NOT_FOUND
   );
   next(error);
@@ -30,15 +34,22 @@ export const notFoundHandler = (req: Request, res: Response, next: NextFunction)
 
 // Global error handler
 export const errorHandler = (
-  err: Error | AppError,
+  err: Error | AppError | ValidationError,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  const language = getLanguageFromHeaders(req.headers['accept-language']);
   let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-  let message = ErrorMessages.INTERNAL_ERROR;
+  let message = t('common.serverError', language);
+  let errors: any = undefined;
 
-  if (err instanceof AppError) {
+  if (err instanceof ValidationError) {
+    // Validation errors with field-specific messages
+    statusCode = err.statusCode;
+    message = t('validation.invalid', language, { field: '' });
+    errors = err.errors;
+  } else if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
   } else if (err.name === 'ValidationError') {
@@ -46,7 +57,17 @@ export const errorHandler = (
     message = err.message;
   } else if (err.name === 'UnauthorizedError') {
     statusCode = HttpStatus.UNAUTHORIZED;
-    message = ErrorMessages.UNAUTHORIZED;
+    message = t('common.unauthorized', language);
+  } else if (err.name === 'SequelizeValidationError') {
+    statusCode = HttpStatus.BAD_REQUEST;
+    message = t('validation.invalid', language, { field: '' });
+    errors = (err as any).errors?.map((e: any) => ({
+      field: e.path,
+      message: e.message,
+    }));
+  } else if (err.name === 'SequelizeUniqueConstraintError') {
+    statusCode = HttpStatus.CONFLICT;
+    message = t('common.conflict', language);
   }
 
   // Log error in development
@@ -54,11 +75,20 @@ export const errorHandler = (
     console.error('Error:', err);
   }
 
-  res.status(statusCode).json({
+  const response: any = {
     success: false,
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+  };
+
+  if (errors) {
+    response.errors = errors;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+  }
+
+  res.status(statusCode).json(response);
 };
 
 // Async handler wrapper

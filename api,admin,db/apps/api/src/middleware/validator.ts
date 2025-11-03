@@ -1,86 +1,156 @@
 /**
- * Request Validation Middleware
+ * Validation Middleware with i18n support
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { ValidationError } from '../errors/AppError.js';
-import { isValidEmail, isValidPhone, isValidPassword } from '../utils/validation.js';
+import { getLanguageFromHeaders } from '../i18n/index.js';
+import { getValidationError, formatValidationErrors, type ValidationErrorDetail } from '../i18n/translator.js';
+import { isValidEmail, isValidPhone } from '../utils/validation.js';
 
-export const validateRegister = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const { name, email, phone, password } = req.body;
+export class ValidationError extends Error {
+  public statusCode: number;
+  public errors: ValidationErrorDetail[];
 
-  const errors: string[] = [];
-
-  if (!name || name.trim().length < 2) {
-    errors.push('Name must be at least 2 characters');
+  constructor(errors: ValidationErrorDetail[]) {
+    super('Validation Error');
+    this.statusCode = 422;
+    this.errors = errors;
+    this.name = 'ValidationError';
   }
+}
 
-  if (!email || !isValidEmail(email)) {
-    errors.push('Valid email is required');
-  }
-
-  if (!phone || !isValidPhone(phone)) {
-    errors.push('Valid phone number is required');
-  }
-
-  if (!password || !isValidPassword(password)) {
-    errors.push('Password must be at least 8 characters');
-  }
-
-  if (errors.length > 0) {
-    return next(new ValidationError(errors.join(', ')));
-  }
-
-  next();
+/**
+ * Validation rule types
+ */
+type ValidationRule = {
+  field: string;
+  type: 'required' | 'email' | 'phone' | 'minLength' | 'maxLength' | 'min' | 'max' | 'date' | 'in' | 'custom';
+  params?: Record<string, any>;
+  customValidator?: (value: any) => boolean;
+  message?: string;
 };
 
-export const validateLogin = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const { email, password } = req.body;
+/**
+ * Validate request data
+ */
+export const validateRequest = (rules: ValidationRule[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const language = getLanguageFromHeaders(req.headers['accept-language']);
+    const data = { ...req.body, ...req.params, ...req.query };
+    const errors: Array<{ field: string; type: string; params?: Record<string, any> }> = [];
 
-  const errors: string[] = [];
+    for (const rule of rules) {
+      const value = data[rule.field];
 
-  if (!email || !isValidEmail(email)) {
-    errors.push('Valid email is required');
-  }
+      switch (rule.type) {
+        case 'required':
+          if (value === undefined || value === null || value === '') {
+            errors.push({ field: rule.field, type: 'required' });
+          }
+          break;
 
-  if (!password) {
-    errors.push('Password is required');
-  }
+        case 'email':
+          if (value && !isValidEmail(value)) {
+            errors.push({ field: rule.field, type: 'email' });
+          }
+          break;
 
-  if (errors.length > 0) {
-    return next(new ValidationError(errors.join(', ')));
-  }
+        case 'phone':
+          if (value && !isValidPhone(value)) {
+            errors.push({ field: rule.field, type: 'phone' });
+          }
+          break;
 
-  next();
+        case 'minLength':
+          if (value && typeof value === 'string' && value.length < (rule.params?.min || 0)) {
+            errors.push({ field: rule.field, type: 'tooShort', params: { min: rule.params?.min } });
+          }
+          break;
+
+        case 'maxLength':
+          if (value && typeof value === 'string' && value.length > (rule.params?.max || Infinity)) {
+            errors.push({ field: rule.field, type: 'tooLong', params: { max: rule.params?.max } });
+          }
+          break;
+
+        case 'min':
+          if (value !== undefined && value !== null && Number(value) < (rule.params?.min || 0)) {
+            errors.push({ field: rule.field, type: 'minValue', params: { min: rule.params?.min } });
+          }
+          break;
+
+        case 'max':
+          if (value !== undefined && value !== null && Number(value) > (rule.params?.max || Infinity)) {
+            errors.push({ field: rule.field, type: 'maxValue', params: { max: rule.params?.max } });
+          }
+          break;
+
+        case 'in':
+          if (value && rule.params?.values && !rule.params.values.includes(value)) {
+            errors.push({ field: rule.field, type: 'invalidChoice' });
+          }
+          break;
+
+        case 'date':
+          if (value && isNaN(Date.parse(value))) {
+            errors.push({ field: rule.field, type: 'invalidDate' });
+          }
+          break;
+
+        case 'custom':
+          if (rule.customValidator && value && !rule.customValidator(value)) {
+            errors.push({ field: rule.field, type: 'invalid' });
+          }
+          break;
+      }
+    }
+
+    if (errors.length > 0) {
+      const formattedErrors = formatValidationErrors(errors, language);
+      throw new ValidationError(formattedErrors);
+    }
+
+    next();
+  };
 };
 
-export const validatePagination = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 25;
+/**
+ * Driver registration validation rules
+ */
+export const driverDetailsValidation = validateRequest([
+  { field: 'driver_type', type: 'required' },
+  { field: 'driver_type', type: 'in', params: { values: ['driver', 'dispatcher', 'special_transport', 'logist'] } },
+]);
 
-  if (page < 1) {
-    return next(new ValidationError('Page must be greater than 0'));
-  }
+export const personalInfoValidation = validateRequest([
+  { field: 'first_name', type: 'required' },
+  { field: 'last_name', type: 'required' },
+  { field: 'father_name', type: 'required' },
+  { field: 'gender', type: 'required' },
+  { field: 'gender', type: 'in', params: { values: ['male', 'female'] } },
+  { field: 'birth_date', type: 'required' },
+  { field: 'birth_date', type: 'date' },
+  { field: 'email', type: 'email' },
+]);
 
-  if (limit < 1 || limit > 100) {
-    return next(new ValidationError('Limit must be between 1 and 100'));
-  }
+export const passportValidation = validateRequest([
+  { field: 'id_card_number', type: 'required' },
+  { field: 'id_card_number', type: 'minLength', params: { min: 5 } },
+  { field: 'pinfl', type: 'required' },
+  { field: 'pinfl', type: 'minLength', params: { min: 14 } },
+  { field: 'pinfl', type: 'maxLength', params: { max: 14 } },
+]);
 
-  req.query.page = page.toString();
-  req.query.limit = limit.toString();
+export const licenseValidation = validateRequest([
+  { field: 'license_number', type: 'required' },
+  { field: 'license_number', type: 'minLength', params: { min: 5 } },
+]);
 
-  next();
-};
+export const vehicleValidation = validateRequest([
+  { field: 'license_plate', type: 'required' },
+  { field: 'license_plate', type: 'minLength', params: { min: 5 } },
+]);
 
+export const taxiLicenseValidation = validateRequest([
+  { field: 'license_number', type: 'required' },
+]);

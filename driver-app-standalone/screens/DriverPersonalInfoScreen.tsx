@@ -25,8 +25,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
-import { handleBackendError } from '../utils/errorHandler';
+import { handleBackendError, displayValidationErrors } from '../utils/errorHandler';
 import { updatePersonalInfo, getDriverProfileStatus, uploadImage } from '../api/driver';
+import { validateForm, isValidEmail, type ValidationRule } from '../utils/validation';
 
 const theme = createTheme('light');
 
@@ -355,24 +356,70 @@ export const DriverPersonalInfoScreen: React.FC = () => {
   };
 
   const handleContinue = async () => {
-    // Validation
-    if (!formData.first_name || !formData.last_name || !formData.father_name) {
-      showToast.warning(t('common.error'), 'Iltimos barcha majburiy maydonlarni to\'ldiring');
-      return;
+    // Frontend validation
+    const validationRules: ValidationRule[] = [
+      {
+        field: 'first_name',
+        value: formData.first_name,
+        rules: [
+          { type: 'required', errorKey: 'formValidation.firstNameRequired' },
+          { type: 'minLength', errorKey: 'formValidation.firstNameTooShort', params: { min: 2 } },
+        ],
+      },
+      {
+        field: 'last_name',
+        value: formData.last_name,
+        rules: [
+          { type: 'required', errorKey: 'formValidation.lastNameRequired' },
+          { type: 'minLength', errorKey: 'formValidation.lastNameTooShort', params: { min: 2 } },
+        ],
+      },
+      {
+        field: 'father_name',
+        value: formData.father_name,
+        rules: [
+          { type: 'required', errorKey: 'formValidation.fatherNameRequired' },
+        ],
+      },
+      {
+        field: 'gender',
+        value: formData.gender,
+        rules: [
+          { type: 'required', errorKey: 'formValidation.genderRequired' },
+          { type: 'in', errorKey: 'formValidation.genderInvalid', params: { values: ['male', 'female'] } },
+        ],
+      },
+      {
+        field: 'birth_date',
+        value: formData.birth_date,
+        rules: [
+          { type: 'required', errorKey: 'formValidation.birthDateRequired' },
+          { type: 'date', errorKey: 'formValidation.birthDateInvalid' },
+        ],
+      },
+    ];
+
+    // Add email validation only if email is provided
+    if (formData.email) {
+      validationRules.push({
+        field: 'email',
+        value: formData.email,
+        rules: [
+          { type: 'email', errorKey: 'formValidation.emailInvalid' },
+        ],
+      });
     }
 
-    if (!formData.gender) {
-      showToast.warning(t('common.error'), 'Iltimos jinsingizni tanlang');
-      return;
-    }
-
-    if (!formData.birth_date) {
-      showToast.warning(t('common.error'), 'Iltimos tug\'ilgan sanangizni kiriting');
+    const validationErrors = validateForm(validationRules, t);
+    
+    if (validationErrors.length > 0) {
+      // Show first validation error
+      showToast.error(t('common.error'), validationErrors[0].message);
       return;
     }
 
     if (!token) {
-      showToast.error(t('common.error'), 'Autentifikatsiya xatosi');
+      showToast.error(t('common.error'), t('errors.unauthorized'));
       return;
     }
 
@@ -386,16 +433,22 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
       await updatePersonalInfo(token, cleanData);
       
-      showToast.success(t('common.success'), 'Shaxsiy ma\'lumotlar saqlandi');
+      showToast.success(t('common.success'), t('driver.profileUpdated'));
       
       // Navigate to next step (Passport)
       navigation.navigate('DriverPassport' as any);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save personal info:', error);
-      handleBackendError(error, {
-        t,
-        defaultMessage: 'Ma\'lumotlarni saqlashda xatolik',
-      });
+      
+      // Check if it's a validation error from backend
+      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+        displayValidationErrors(error, t, true);
+      } else {
+        handleBackendError(error, {
+          t,
+          defaultMessage: t('userDetails.errorUpdate'),
+        });
+      }
     } finally {
       setIsLoading(false);
     }

@@ -46,8 +46,9 @@ export const DriverDetailsScreen: React.FC = () => {
   ];
 
   const handleContinue = async () => {
+    // Validate driver type selection
     if (!driverType) {
-      showToast.warning('Xatolik', 'Iltimos yo\'nalishni tanlang');
+      showToast.warning(t('common.error'), t('formValidation.driverTypeRequired'));
       return;
     }
 
@@ -68,7 +69,7 @@ export const DriverDetailsScreen: React.FC = () => {
         `${API_BASE_URL}${API_ENDPOINTS.user.updateProfile}`,
         {
           method: 'PUT',
-          headers: getHeaders(token),
+          headers: getHeaders(token || undefined),
           body: JSON.stringify(profileData),
         }
       );
@@ -77,7 +78,14 @@ export const DriverDetailsScreen: React.FC = () => {
       console.log('Driver profile update response:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to update driver profile');
+        // Handle validation errors from backend
+        if (response.status === 422 && data.errors) {
+          const firstError = data.errors[0];
+          showToast.error(t('common.error'), firstError.message);
+        } else {
+          throw new Error(data.message || 'Failed to update driver profile');
+        }
+        return;
       }
 
       if (data.data && data.data.user) {
@@ -85,14 +93,14 @@ export const DriverDetailsScreen: React.FC = () => {
       }
 
       console.log('Driver profile updated successfully');
-      showToast.success('Muvaffaqiyatli', 'Profil yangilandi');
+      showToast.success(t('common.success'), t('driver.profileUpdated'));
       
       // Navigate to main app after successful registration
     } catch (error) {
       console.error('Driver profile update error:', error);
       handleBackendError(error, {
         t,
-        defaultMessage: 'Profil yangilanmadi',
+        defaultMessage: t('userDetails.errorUpdate'),
       });
     } finally {
       setIsLoading(false);
