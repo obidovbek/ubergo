@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { getLanguageFromHeaders } from '../i18n/index.js';
+import { getLanguageFromHeaders } from '../i18n/config.js';
 import { getValidationError, formatValidationErrors, type ValidationErrorDetail } from '../i18n/translator.js';
 import { isValidEmail, isValidPhone } from '../utils/validation.js';
 

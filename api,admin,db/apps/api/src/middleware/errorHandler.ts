@@ -2,9 +2,9 @@
  * Error Handling Middleware with i18n support
  */
 
-import type { Application, Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { HttpStatus, ErrorMessages } from '../constants/index.js';
-import { getLanguageFromHeaders } from '../i18n/index.js';
+import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import { ValidationError } from './validator.js';
 

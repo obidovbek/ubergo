@@ -3,7 +3,8 @@
  * Provides translation functions for API responses
  */
 
-import { Language, DEFAULT_LANGUAGE } from './index.js';
+import type { Language } from './types.js';
+import { DEFAULT_LANGUAGE } from './config.js';
 import uz from './translations/uz.js';
 import en from './translations/en.js';
 import ru from './translations/ru.js';
