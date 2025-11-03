@@ -1,0 +1,22 @@
+{
+    "cli": { 
+      "version": ">= 8.0.0",
+      "appVersionSource": "remote"
+    },
+    "build": {
+      "preview": {
+        "android": { "buildType": "apk" }
+      },
+      "production": {
+        "android": { "buildType": "app-bundle" }
+      }
+    },
+    "submit": {
+      "production": {
+        "android": { "track": "internal" }
+      }
+    }
+  }
+
+
+
