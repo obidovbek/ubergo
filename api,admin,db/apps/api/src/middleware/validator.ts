@@ -154,3 +154,58 @@ export const vehicleValidation = validateRequest([
 export const taxiLicenseValidation = validateRequest([
   { field: 'license_number', type: 'required' },
 ]);
+
+/**
+ * Auth validation (legacy validators for backward compatibility)
+ */
+export const validateRegister = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'name', type: 'minLength', params: { min: 2 } },
+  { field: 'email', type: 'required' },
+  { field: 'email', type: 'email' },
+  { field: 'phone', type: 'required' },
+  { field: 'phone', type: 'phone' },
+  { field: 'password', type: 'required' },
+  { field: 'password', type: 'minLength', params: { min: 8 } },
+]);
+
+export const validateLogin = validateRequest([
+  { field: 'email', type: 'required' },
+  { field: 'email', type: 'email' },
+  { field: 'password', type: 'required' },
+]);
+
+/**
+ * Pagination validation
+ */
+export const validatePagination = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 25;
+
+  if (page < 1) {
+    const language = getLanguageFromHeaders(req.headers['accept-language']);
+    throw new ValidationError([{
+      field: 'page',
+      message: 'Page must be greater than 0',
+      type: 'min',
+    }]);
+  }
+
+  if (limit < 1 || limit > 100) {
+    const language = getLanguageFromHeaders(req.headers['accept-language']);
+    throw new ValidationError([{
+      field: 'limit',
+      message: 'Limit must be between 1 and 100',
+      type: 'min',
+    }]);
+  }
+
+  req.query.page = page.toString();
+  req.query.limit = limit.toString();
+
+  next();
+};
