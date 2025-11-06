@@ -478,6 +478,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="ISM"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.first_name}
             onChangeText={(value) => updateField('first_name', value)}
             editable={!isLoading}
@@ -486,6 +487,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Familiya"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.last_name}
             onChangeText={(value) => updateField('last_name', value)}
             editable={!isLoading}
@@ -494,6 +496,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Otasining ismi"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.father_name}
             onChangeText={(value) => updateField('father_name', value)}
             editable={!isLoading}
@@ -660,6 +663,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="email (elektron manzil)"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.email}
             onChangeText={(value) => updateField('email', value)}
             keyboardType="email-address"
@@ -673,6 +677,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="O'zbekiston"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_country}
             onChangeText={(value) => updateField('address_country', value)}
             editable={!isLoading}
@@ -681,6 +686,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona viloyat"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_region}
             onChangeText={(value) => updateField('address_region', value)}
             editable={!isLoading}
@@ -689,6 +695,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona shahar"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_city}
             onChangeText={(value) => updateField('address_city', value)}
             editable={!isLoading}
@@ -697,6 +704,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Aholi yashash punkti QFY, Shaharcha, Ovul"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_settlement_type}
             onChangeText={(value) => updateField('address_settlement_type', value)}
             editable={!isLoading}
@@ -705,6 +713,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Mahalla Fuqarolar yig'ini"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_mahalla}
             onChangeText={(value) => updateField('address_mahalla', value)}
             editable={!isLoading}
@@ -713,6 +722,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Adress. A.Navoiy k 145 uy"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.address_street}
             onChangeText={(value) => updateField('address_street', value)}
             editable={!isLoading}

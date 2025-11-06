@@ -211,6 +211,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
             <TextInput
               style={styles.phoneInput}
               placeholder={t('phoneRegistration.phonePlaceholder')}
+              placeholderTextColor={theme.palette.text.secondary}
               value={phoneNumber}
               onChangeText={(text: string) => setPhoneNumber(formatPhoneNumber(text))}
               keyboardType="phone-pad"
@@ -229,6 +230,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
               <TextInput
                 style={styles.idInput}
                 placeholder="1 001 117"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={userId}
                 onChangeText={setUserId}
                 keyboardType="number-pad"

@@ -1,12 +1,13 @@
 /**
  * Login Page
- * User authentication page
+ * User authentication page - Mantis Design Style
  */
 
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isValidEmail } from '../../utils/validation';
+import { EyeIcon, EyeOffIcon } from '../../components/icons';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -15,21 +16,23 @@ export const LoginPage = () => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Email talab qilinadi';
     } else if (!isValidEmail(email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = 'Noto\'g\'ri email formati';
     }
 
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Parol talab qilinadi';
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = 'Parol kamida 6 belgidan iborat bo\'lishi kerak';
     }
 
     setErrors(newErrors);
@@ -51,14 +54,30 @@ export const LoginPage = () => {
 
   return (
     <div className="login-page">
+      <div className="login-background">
+        <div className="login-background-shapes"></div>
+      </div>
+      
+      <div className="login-header">
+        <div className="login-logo">
+          <div className="logo-diamond">
+            <div className="logo-diamond-outer"></div>
+            <div className="logo-diamond-inner"></div>
+          </div>
+          <span className="logo-text">UbexGo</span>
+        </div>
+      </div>
+
       <div className="login-container">
         <div className="login-card">
-          <h1 className="login-title">UberGo Admin</h1>
-          <p className="login-subtitle">Sign in to your account</p>
+          <div className="login-card-header">
+            <h1 className="login-title">Kirish</h1>
+            <a href="#" className="login-link">Hisobingiz yo'qmi?</a>
+          </div>
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">Email manzil</label>
               <input
                 id="email"
                 type="email"
@@ -67,6 +86,7 @@ export const LoginPage = () => {
                   setEmail(e.target.value);
                   if (errors.email) setErrors({ ...errors, email: undefined });
                 }}
+                placeholder="info@codedthemes.com"
                 className={errors.email ? 'error' : ''}
                 disabled={isLoading}
               />
@@ -74,28 +94,55 @@ export const LoginPage = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors({ ...errors, password: undefined });
-                }}
-                className={errors.password ? 'error' : ''}
-                disabled={isLoading}
-              />
+              <label htmlFor="password">Parol</label>
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors({ ...errors, password: undefined });
+                  }}
+                  className={errors.password ? 'error' : ''}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
               {errors.password && <span className="error-text">{errors.password}</span>}
+            </div>
+
+            <div className="form-options">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={keepSignedIn}
+                  onChange={(e) => setKeepSignedIn(e.target.checked)}
+                  className="checkbox-input"
+                />
+                <span>Meni eslab qol</span>
+              </label>
+              <a href="#" className="forgot-password-link">Parolni unutdingizmi?</a>
             </div>
 
             {error && <div className="error-message">{error}</div>}
 
             <button type="submit" className="login-button" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Kirilmoqda...' : 'Kirish'}
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="login-footer">
+        <span>Boshqa kirish ko'rinishlarini ko'ring</span>
       </div>
     </div>
   );

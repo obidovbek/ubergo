@@ -134,6 +134,7 @@ export const DriverLicenseScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="4a. Berilgan sanasi  21.01.2025"
+            placeholderTextColor={theme.palette.text.secondary}
             value={licenseData.issue_date}
             onChangeText={(value) => updateLicenseField('issue_date', value)}
             keyboardType="numeric"
@@ -146,6 +147,7 @@ export const DriverLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="AG 1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={licenseData.license_number}
               onChangeText={(value) => updateLicenseField('license_number', value)}
               editable={!isLoading}
@@ -163,6 +165,7 @@ export const DriverLicenseScreen: React.FC = () => {
                 <TextInput
                   style={styles.categoryInput}
                   placeholder="10. Ruxsat berilgan sana 10.01.2009"
+                  placeholderTextColor={theme.palette.text.secondary}
                   value={licenseData[fieldKey] || ''}
                   onChangeText={(value) => updateLicenseField(fieldKey, value)}
                   keyboardType="numeric"
@@ -204,6 +207,7 @@ export const DriverLicenseScreen: React.FC = () => {
               <TextInput
                 style={styles.phoneInput}
                 placeholder="0 00 00 00 00"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={contact.phone_number}
                 onChangeText={(value) => updateEmergencyContact(index, 'phone_number', value)}
                 keyboardType="phone-pad"
@@ -212,6 +216,7 @@ export const DriverLicenseScreen: React.FC = () => {
               <TextInput
                 style={styles.relationshipInput}
                 placeholder={index === 0 ? 'Ota' : "Turmush o'rtoq"}
+                placeholderTextColor={theme.palette.text.secondary}
                 value={contact.relationship}
                 onChangeText={(value) => updateEmergencyContact(index, 'relationship', value)}
                 editable={!isLoading}

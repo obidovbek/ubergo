@@ -19,8 +19,13 @@ src/i18n/
 ```
 src/middleware/
 ├── errorHandler.ts    ✅ Updated imports
-└── validator.ts       ✅ Updated imports
+└── validator.ts       ✅ Updated imports + restored missing validators
 ```
+
+**Restored Validators:**
+- ✅ `validateRegister` - Auth registration validation
+- ✅ `validateLogin` - Auth login validation  
+- ✅ `validatePagination` - Pagination validation
 
 ### 3. Code Quality
 - ✅ No linter errors

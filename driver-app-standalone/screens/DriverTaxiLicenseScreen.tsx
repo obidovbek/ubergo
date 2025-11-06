@@ -216,6 +216,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="AT 1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.license_number}
               onChangeText={(value: string) => updateField('license_number', value)}
               editable={!isLoading}
@@ -227,6 +228,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="25.01.2025"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.license_issue_date}
               onChangeText={(value: string) => updateField('license_issue_date', value)}
               keyboardType="numeric"
@@ -239,6 +241,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.license_registry_number}
               onChangeText={(value: string) => updateField('license_registry_number', value)}
               editable={!isLoading}
@@ -282,6 +285,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="AT 1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.license_sheet_number}
               onChangeText={(value: string) => updateField('license_sheet_number', value)}
               editable={!isLoading}
@@ -294,6 +298,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               <TextInput
                 style={styles.dateInput}
                 placeholder="25.01.2025"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={formData.license_sheet_valid_from}
                 onChangeText={(value: string) => updateField('license_sheet_valid_from', value)}
                 keyboardType="numeric"
@@ -303,6 +308,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               <TextInput
                 style={styles.dateInput}
                 placeholder="24.01.2026"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={formData.license_sheet_valid_until}
                 onChangeText={(value: string) => updateField('license_sheet_valid_until', value)}
                 keyboardType="numeric"
@@ -343,6 +349,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="1234567890"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.self_employment_number}
               onChangeText={(value: string) => updateField('self_employment_number', value)}
               keyboardType="numeric"

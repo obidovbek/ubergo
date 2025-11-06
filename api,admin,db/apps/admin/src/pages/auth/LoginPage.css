@@ -1,42 +1,141 @@
+/* Mantis Design - Login Page */
+
 .login-page {
   min-height: 100vh;
+  width: 100%;
+  position: relative;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Background with abstract shapes */
+.login-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.login-background-shapes {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+  background: 
+    linear-gradient(135deg, rgba(94, 114, 228, 0.3) 0%, transparent 50%),
+    linear-gradient(225deg, rgba(46, 213, 115, 0.2) 0%, transparent 50%),
+    linear-gradient(315deg, rgba(255, 71, 87, 0.15) 0%, transparent 50%);
+  filter: blur(80px);
+  transform: rotate(-45deg);
+  transform-origin: bottom left;
+}
+
+/* Header with Logo */
+.login-header {
+  position: relative;
+  z-index: 1;
+  padding: 32px 48px;
+}
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-diamond {
+  position: relative;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.logo-diamond-outer {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: #5e72e4;
+  transform: rotate(45deg);
+  border-radius: 4px;
+}
+
+.logo-diamond-inner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #1a1a1a;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+/* Login Container */
 .login-container {
-  width: 100%;
-  max-width: 400px;
-  padding: 20px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
 }
 
+/* Login Card */
 .login-card {
-  background: white;
+  background: #2a2a2a;
   border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 64px;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.login-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 56px;
 }
 
 .login-title {
-  font-size: 2rem;
+  font-size: 42px;
   font-weight: 600;
-  text-align: center;
-  margin-bottom: 8px;
-  color: #212121;
+  color: #ffffff;
+  margin: 0;
 }
 
-.login-subtitle {
-  text-align: center;
-  color: #757575;
-  margin-bottom: 32px;
+.login-link {
+  font-size: 17px;
+  color: #5e72e4;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
+.login-link:hover {
+  color: #4c63d2;
+}
+
+/* Form Styles */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 36px;
 }
 
 .form-group {
@@ -46,59 +145,186 @@
 }
 
 .form-group label {
+  font-size: 17px;
   font-weight: 500;
-  color: #212121;
-  font-size: 0.875rem;
+  color: #ffffff;
 }
 
 .form-group input {
-  padding: 12px;
-  border: 1px solid #e0e0e0;
+  padding: 18px 20px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
   border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
+  font-size: 18px;
+  color: #ffffff;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.form-group input::placeholder {
+  color: #6a6a6a;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #5e72e4;
+  background: #1f1f1f;
 }
 
 .form-group input.error {
   border-color: #d32f2f;
 }
 
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #b0b0b0;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #ffffff;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Form Options */
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 17px;
+  color: #ffffff;
+  user-select: none;
+}
+
+.checkbox-input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #5e72e4;
+}
+
+.forgot-password-link {
+  font-size: 17px;
+  color: #5e72e4;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.forgot-password-link:hover {
+  color: #4c63d2;
+}
+
+/* Error Messages */
 .error-text {
   color: #d32f2f;
-  font-size: 0.75rem;
+  font-size: 14px;
+  margin-top: 4px;
 }
 
 .error-message {
-  padding: 12px;
-  background-color: #ffebee;
-  color: #c62828;
+  padding: 14px 18px;
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #ff6b6b;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 16px;
+  border: 1px solid rgba(211, 47, 47, 0.3);
 }
 
+/* Login Button */
 .login-button {
-  padding: 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 20px;
+  background: #5e72e4;
+  color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 19px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.2s;
+  width: 100%;
+  margin-top: 8px;
 }
 
 .login-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background: #4c63d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(94, 114, 228, 0.3);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .login-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* Footer */
+.login-footer {
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+  text-align: center;
+}
+
+.login-footer span {
+  font-size: 16px;
+  color: #6a6a6a;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .login-header {
+    padding: 24px;
+  }
+
+  .login-card {
+    padding: 32px 24px;
+  }
+
+  .login-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

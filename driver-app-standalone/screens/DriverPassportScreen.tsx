@@ -162,6 +162,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="ISM"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.first_name}
             onChangeText={(value) => updateField('first_name', value)}
             editable={!isLoading}
@@ -170,6 +171,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Familiya"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.last_name}
             onChangeText={(value) => updateField('last_name', value)}
             editable={!isLoading}
@@ -178,6 +180,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Otasining ismi"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.father_name}
             onChangeText={(value) => updateField('father_name', value)}
             editable={!isLoading}
@@ -207,6 +210,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Tug'ilgan sanasi  21.01.1985"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.birth_date}
             onChangeText={(value) => updateField('birth_date', value)}
             keyboardType="numeric"
@@ -216,6 +220,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Berilgan sanasi  21.01.2025"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.issue_date}
             onChangeText={(value) => updateField('issue_date', value)}
             keyboardType="numeric"
@@ -225,6 +230,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Amal qilish muddati  20.01.2035"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.expiry_date}
             onChangeText={(value) => updateField('expiry_date', value)}
             keyboardType="numeric"
@@ -234,6 +240,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Fuqaroligi"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.citizenship}
             onChangeText={(value) => updateField('citizenship', value)}
             editable={!isLoading}
@@ -245,6 +252,7 @@ export const DriverPassportScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="AD 1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.id_card_number}
               onChangeText={(value) => updateField('id_card_number', value)}
               editable={!isLoading}
@@ -257,6 +265,7 @@ export const DriverPassportScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="32101855210037"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.pinfl}
               onChangeText={(value) => updateField('pinfl', value)}
               keyboardType="numeric"
@@ -270,6 +279,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="O'zbekiston"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.birth_place_country}
             onChangeText={(value) => updateField('birth_place_country', value)}
             editable={!isLoading}
@@ -278,6 +288,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona viloyat"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.birth_place_region}
             onChangeText={(value) => updateField('birth_place_region', value)}
             editable={!isLoading}
@@ -286,6 +297,7 @@ export const DriverPassportScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona shahar"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.birth_place_city}
             onChangeText={(value) => updateField('birth_place_city', value)}
             editable={!isLoading}

@@ -251,6 +251,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Sedan"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.body_type}
               onChangeText={(value: string) => updateField('body_type', value)}
               editable={!isLoading}
@@ -262,6 +263,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Chevrolet"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.make}
               onChangeText={(value: string) => updateField('make', value)}
               editable={!isLoading}
@@ -273,6 +275,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Cobalt"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.model}
               onChangeText={(value: string) => updateField('model', value)}
               editable={!isLoading}
@@ -284,6 +287,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Havorang"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.color}
               onChangeText={(value: string) => updateField('color', value)}
               editable={!isLoading}
@@ -297,6 +301,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="AAG 1234567"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.tech_passport_series}
               onChangeText={(value: string) => updateField('tech_passport_series', value)}
               editable={!isLoading}
@@ -308,6 +313,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="01 A 123 AA"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.license_plate}
               onChangeText={(value: string) => updateField('license_plate', value)}
               editable={!isLoading}
@@ -319,6 +325,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Cobalt"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.model}
               onChangeText={(value: string) => updateField('model', value)}
               editable={!isLoading}
@@ -330,6 +337,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="Xavorang tumannoe ozero"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.color}
               onChangeText={(value: string) => updateField('color', value)}
               editable={!isLoading}
@@ -343,6 +351,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="LOGISTIKA MCHJ"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.company_name}
               onChangeText={(value: string) => updateField('company_name', value)}
               editable={!isLoading}
@@ -355,6 +364,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="ISM"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_first_name}
             onChangeText={(value) => updateField('owner_first_name', value)}
             editable={!isLoading}
@@ -363,6 +373,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Familiya"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_last_name}
             onChangeText={(value) => updateField('owner_last_name', value)}
             editable={!isLoading}
@@ -371,6 +382,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Otasining ismi"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_father_name}
             onChangeText={(value) => updateField('owner_father_name', value)}
             editable={!isLoading}
@@ -382,6 +394,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="O'zbekiston"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_country}
             onChangeText={(value) => updateField('owner_address_country', value)}
             editable={!isLoading}
@@ -390,6 +403,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona viloyat"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_region}
             onChangeText={(value) => updateField('owner_address_region', value)}
             editable={!isLoading}
@@ -398,6 +412,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Farg'ona shahar"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_city}
             onChangeText={(value) => updateField('owner_address_city', value)}
             editable={!isLoading}
@@ -406,6 +421,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Aholi yashash punkti QFY, Shaharcha, Ovul"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_mahalla}
             onChangeText={(value) => updateField('owner_address_mahalla', value)}
             editable={!isLoading}
@@ -414,6 +430,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Mahalla Fuqarolar yig'ini"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_mahalla}
             onChangeText={(value) => updateField('owner_address_mahalla', value)}
             editable={!isLoading}
@@ -422,6 +439,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Adress. A.Navoiy k. 145 uy"
+            placeholderTextColor={theme.palette.text.secondary}
             value={formData.owner_address_street}
             onChangeText={(value) => updateField('owner_address_street', value)}
             editable={!isLoading}
@@ -433,6 +451,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="301458658"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.company_tax_id}
               onChangeText={(value: string) => updateField('company_tax_id', value)}
               keyboardType="numeric"
@@ -445,6 +464,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="30111854310047"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.owner_pinfl}
               onChangeText={(value: string) => updateField('owner_pinfl', value)}
               keyboardType="numeric"
@@ -458,6 +478,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="2025"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.year}
               onChangeText={(value: string) => updateField('year', value)}
               keyboardType="numeric"
@@ -471,12 +492,14 @@ export const DriverVehicleScreen: React.FC = () => {
               <TextInput
                 style={styles.typeInput}
                 placeholder="Yengil"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={formData.vehicle_type === 'light' ? 'Yengil' : ''}
                 editable={false}
               />
               <TextInput
                 style={styles.typeInput}
                 placeholder="Sedan"
+                placeholderTextColor={theme.palette.text.secondary}
                 value={formData.body_type}
                 onChangeText={(value: string) => updateField('body_type', value)}
                 editable={!isLoading}
@@ -489,6 +512,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="1850"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.gross_weight}
               onChangeText={(value: string) => updateField('gross_weight', value)}
               keyboardType="numeric"
@@ -502,6 +526,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="1850"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.unladen_weight}
               onChangeText={(value: string) => updateField('unladen_weight', value)}
               keyboardType="numeric"
@@ -540,6 +565,7 @@ export const DriverVehicleScreen: React.FC = () => {
             <TextInput
               style={styles.rowInput}
               placeholder="5"
+              placeholderTextColor={theme.palette.text.secondary}
               value={formData.seating_capacity}
               onChangeText={(value: string) => updateField('seating_capacity', value)}
               keyboardType="numeric"
