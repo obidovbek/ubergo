@@ -74,7 +74,7 @@ export default {
     male: 'Erkak',
     female: 'Ayol',
     birthDate: "Tug'ilgan sanasi",
-    email: 'email (elektron manzil)',
+    email: 'Email',
     phone: 'Tel.:',
     userId: 'ID:',
     promoCode: 'PROMO:',

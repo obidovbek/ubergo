@@ -6,6 +6,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { config } from '../config/index.js';
+import type { AdminAuthTokenPayload } from '../types/index.js';
 
 export interface TokenPayload {
   userId: string;
@@ -14,6 +15,9 @@ export interface TokenPayload {
   role: string;
   tokenId?: string; // For tracking token rotation
 }
+
+// Union type for both regular and admin tokens
+export type AnyTokenPayload = TokenPayload | AdminAuthTokenPayload;
 
 export interface TokenPair {
   access: string;
@@ -33,7 +37,7 @@ function generateTokenId(): string {
 /**
  * Generate access token (short-lived)
  */
-export function generateAccessToken(payload: TokenPayload): string {
+export function generateAccessToken(payload: AnyTokenPayload): string {
   const tokenPayload = {
     ...payload,
     type: 'access',
@@ -48,7 +52,7 @@ export function generateAccessToken(payload: TokenPayload): string {
 /**
  * Generate refresh token (long-lived)
  */
-export function generateRefreshToken(payload: TokenPayload): string {
+export function generateRefreshToken(payload: AnyTokenPayload): string {
   const tokenPayload = {
     ...payload,
     type: 'refresh',
@@ -63,7 +67,7 @@ export function generateRefreshToken(payload: TokenPayload): string {
 /**
  * Generate both access and refresh tokens
  */
-export function generateTokenPair(payload: TokenPayload): TokenPair {
+export function generateTokenPair(payload: AnyTokenPayload): TokenPair {
   const tokenId = generateTokenId();
   const enhancedPayload = { ...payload, tokenId };
   
@@ -76,7 +80,7 @@ export function generateTokenPair(payload: TokenPayload): TokenPair {
 /**
  * Verify access token
  */
-export function verifyAccessToken(token: string): TokenPayload {
+export function verifyAccessToken(token: string): AnyTokenPayload {
   try {
     const decoded = jwt.verify(token, config.jwt.secret) as any;
     
@@ -85,7 +89,7 @@ export function verifyAccessToken(token: string): TokenPayload {
       throw new Error('Token has been revoked');
     }
     
-    return decoded as TokenPayload;
+    return decoded as AnyTokenPayload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw new Error('Access token expired');
@@ -100,7 +104,7 @@ export function verifyAccessToken(token: string): TokenPayload {
 /**
  * Verify refresh token
  */
-export function verifyRefreshToken(token: string): TokenPayload {
+export function verifyRefreshToken(token: string): AnyTokenPayload {
   try {
     const decoded = jwt.verify(token, config.jwt.refreshSecret) as any;
     
@@ -109,7 +113,7 @@ export function verifyRefreshToken(token: string): TokenPayload {
       throw new Error('Refresh token has been revoked');
     }
     
-    return decoded as TokenPayload;
+    return decoded as AnyTokenPayload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw new Error('Refresh token expired');
@@ -135,12 +139,19 @@ export function rotateTokens(oldRefreshToken: string): TokenPair {
   }
   
   // Generate new token pair with new tokenId
-  const newPayload: TokenPayload = {
-    userId: payload.userId,
-    email: payload.email,
-    phone: payload.phone,
-    role: payload.role,
-  };
+  // Preserve either role or roles depending on token type
+  const newPayload: AnyTokenPayload = 'role' in payload
+    ? {
+        userId: payload.userId,
+        email: payload.email,
+        phone: payload.phone,
+        role: payload.role,
+      }
+    : {
+        userId: payload.userId,
+        email: payload.email,
+        roles: payload.roles,
+      };
   
   return generateTokenPair(newPayload);
 }

@@ -3,7 +3,7 @@
  * Final step of registration - collect user profile information
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
   Platform,
   Alert,
   Modal,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -25,25 +27,61 @@ import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
+import { useCountries } from '../hooks/useCountries';
+import type { CountryOption } from '../types/country';
 
 const theme = createTheme('light');
+const placeholderColor = theme.palette.text.secondary;
 
 
-// Country codes for additional phone
-const countryCodes = [
-  { code: '+998', flag: '🇺🇿' },
-  { code: '+33', flag: '🇫🇷' },
-];
+const formatPhoneForCountry = (value: string, country: CountryOption): string => {
+  const digits = value.replace(/\D/g, '').slice(0, country.localLength);
+
+  if (!digits) {
+    return '';
+  }
+
+  if (country.pattern === 'uz') {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+    if (digits.length <= 7) return `${digits.slice(0, 2)} ${digits.slice(2, 5)}-${digits.slice(5)}`;
+    return `${digits.slice(0, 2)} ${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 9)}`;
+  }
+
+  if (country.pattern === 'ru') {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 3)} ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+  }
+
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`.trim();
+};
+
+const getFormattedMaxLength = (country: CountryOption): number => {
+  switch (country.pattern) {
+    case 'uz':
+      return 14;
+    case 'ru':
+      return 15;
+    default:
+      return country.localLength + Math.ceil(country.localLength / 3);
+  }
+};
 
 export const UserDetailsScreen: React.FC = () => {
   const navigation = useNavigation<UserDetailsNavigationProp>();
   const route = useRoute();
   const { user, token, updateUser } = useAuth();
   const { t } = useTranslation();
+  const { countries, isLoading: countriesLoading, error: countriesError } = useCountries();
   
   // Get phone number from route params or user context
   const phoneNumberFromRoute = (route.params as any)?.phoneNumber;
-  const phoneNumber = phoneNumberFromRoute || user?.phone_e164 || '';
+  const phoneNumber = phoneNumberFromRoute || (user as any)?.phone_e164 || '';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -55,13 +93,41 @@ export const UserDetailsScreen: React.FC = () => {
   const [promoCode, setPromoCode] = useState('');
   const [additionalPhones, setAdditionalPhones] = useState<string[]>([]);
   const [currentPhoneInput, setCurrentPhoneInput] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tempDate, setTempDate] = useState(new Date());
   const textInputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    if (countries.length === 0) {
+      return;
+    }
+
+    setSelectedCountry((prev) => {
+      if (!prev) {
+        return countries[0];
+      }
+
+      const match = countries.find(
+        (country) => country.code === prev.code && country.name === prev.name
+      );
+
+      return match || countries[0];
+    });
+  }, [countries]);
+
+  useEffect(() => {
+    if (countriesError) {
+      console.warn('Country fetch error:', countriesError);
+    }
+  }, [countriesError]);
+
+  const activeCountry = selectedCountry ?? countries[0];
 
   const formatDate = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
@@ -190,25 +256,45 @@ export const UserDetailsScreen: React.FC = () => {
   };
 
   const addPhoneNumber = () => {
-    if (currentPhoneInput.replace(/\D/g, '').length >= 9) {
-      const fullPhone = `${selectedCountry.code}${currentPhoneInput.replace(/\D/g, '')}`;
-      if (!additionalPhones.includes(fullPhone)) {
-        setAdditionalPhones([...additionalPhones, fullPhone]);
-        setCurrentPhoneInput('');
-        if (textInputRef.current) {
-          textInputRef.current.clear();
-        }
-      }
-    } else {
+    if (!activeCountry) {
+      return;
+    }
+
+    const digits = currentPhoneInput.replace(/\D/g, '').slice(0, activeCountry.localLength);
+
+    if (digits.length < activeCountry.localLength) {
       showToast.warning(t('common.error'), t('userDetails.errorPhone'));
+      return;
+    }
+
+    const fullPhone = `${activeCountry.code}${digits}`;
+    if (!additionalPhones.includes(fullPhone)) {
+      setAdditionalPhones([...additionalPhones, fullPhone]);
+      setCurrentPhoneInput('');
+      if (textInputRef.current) {
+        textInputRef.current.clear();
+      }
     }
   };
 
-  const formatPhoneNumber = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    const formatted = cleaned.match(/.{1,2}/g)?.join(' ') || cleaned;
-    return formatted.substring(0, 14);
+  const scrollToEnd = () => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
   };
+
+  const formatPhoneNumber = (text: string, country?: CountryOption | null) => {
+    const targetCountry = country ?? selectedCountry ?? countries[0];
+    if (!targetCountry) {
+      return text.replace(/\D/g, '');
+    }
+
+    return formatPhoneForCountry(text, targetCountry);
+  };
+
+  useEffect(() => {
+    if (activeCountry) {
+      setCurrentPhoneInput((prev) => formatPhoneNumber(prev, activeCountry));
+    }
+  }, [activeCountry?.code, activeCountry?.pattern]);
 
   const validate = (): boolean => {
     const newErrors: any = {};
@@ -225,15 +311,11 @@ export const UserDetailsScreen: React.FC = () => {
       newErrors.gender = t('userDetails.errorGender');
     }
 
-    if (!birthDate) {
-      newErrors.birthDate = t('userDetails.errorBirthDate');
-    } else if (birthDate.length < 10) {
+    if (birthDate && birthDate.length < 10) {
       newErrors.birthDate = t('userDetails.errorBirthDateIncomplete');
     }
 
-    if (!email.trim()) {
-      newErrors.email = t('userDetails.errorEmail');
-    } else if (!isValidEmail(email)) {
+    if (email.trim() && !isValidEmail(email)) {
       newErrors.email = t('userDetails.errorEmailInvalid');
     }
 
@@ -259,8 +341,8 @@ export const UserDetailsScreen: React.FC = () => {
         last_name: lastName,
         father_name: fatherName || undefined,
         gender: gender,
-        birth_date: birthDate,
-        email: email,
+        birth_date: birthDate || undefined,
+        email: email || undefined,
         additional_phones: additionalPhones,
         promo_code: promoCode || undefined,
         referral_id: userId || undefined,
@@ -272,7 +354,7 @@ export const UserDetailsScreen: React.FC = () => {
         `${API_BASE_URL}${API_ENDPOINTS.user.updateProfile}`,
         {
           method: 'PUT',
-          headers: getHeaders(token),
+          headers: getHeaders(token ?? undefined),
           body: JSON.stringify(profileData),
         }
       );
@@ -284,9 +366,15 @@ export const UserDetailsScreen: React.FC = () => {
         throw new Error(data.message || 'Failed to update profile');
       }
 
-      // Update user in context
+      // Update user in context with profile_complete flag
       if (data.data && data.data.user) {
-        updateUser(data.data.user);
+        // Ensure profile_complete is set to true after successful update
+        const updatedUser = {
+          ...data.data.user,
+          profile_complete: true
+        };
+        updateUser(updatedUser);
+        console.log('User updated with profile_complete: true', updatedUser);
       }
 
       console.log('Profile updated successfully');
@@ -312,21 +400,27 @@ export const UserDetailsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 48 : 0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>{t('auth.appName')}</Text>
-          <Text style={styles.title}>{t('userDetails.title')}</Text>
-          <Text style={styles.subtitle}>
-            {t('userDetails.subtitle')}
-          </Text>
-        </View>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.logo}>{t('auth.appName')}</Text>
+            <Text style={styles.title}>{t('userDetails.title')}</Text>
+            <Text style={styles.subtitle}>
+              {t('userDetails.subtitle')}
+            </Text>
+          </View>
 
-        {/* Form */}
-        <View style={styles.form}>
+          {/* Form */}
+          <View style={styles.form}>
           {/* Required Field Indicator */}
           <Text style={styles.requiredIndicator}>{t('userDetails.requiredField')}</Text>
 
@@ -338,6 +432,7 @@ export const UserDetailsScreen: React.FC = () => {
             <TextInput
               style={[styles.input, errors.firstName && styles.inputError]}
               placeholder={t('userDetails.firstNamePlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={firstName}
               onChangeText={(text) => {
                 setFirstName(text);
@@ -347,6 +442,7 @@ export const UserDetailsScreen: React.FC = () => {
               }}
               editable={!isLoading}
             />
+            {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
           </View>
 
           {/* Last Name */}
@@ -357,6 +453,7 @@ export const UserDetailsScreen: React.FC = () => {
             <TextInput
               style={[styles.input, errors.lastName && styles.inputError]}
               placeholder={t('userDetails.lastNamePlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={lastName}
               onChangeText={(text) => {
                 setLastName(text);
@@ -366,6 +463,7 @@ export const UserDetailsScreen: React.FC = () => {
               }}
               editable={!isLoading}
             />
+            {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
           </View>
 
           {/* Father Name (Optional) */}
@@ -374,6 +472,7 @@ export const UserDetailsScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               placeholder={t('userDetails.fatherNamePlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={fatherName}
               onChangeText={setFatherName}
               editable={!isLoading}
@@ -447,6 +546,7 @@ export const UserDetailsScreen: React.FC = () => {
             <Text style={styles.helperText}>
               {t('userDetails.genderHelper')}
             </Text>
+            {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
           </View>
 
           {/* Info Note */}
@@ -479,10 +579,12 @@ export const UserDetailsScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               placeholder={t('userDetails.userIdPlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={userId}
               onChangeText={setUserId}
               keyboardType="number-pad"
               editable={!isLoading}
+              onFocus={scrollToEnd}
             />
           </View>
 
@@ -492,16 +594,18 @@ export const UserDetailsScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               placeholder={t('userDetails.promoCodePlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={promoCode}
               onChangeText={setPromoCode}
               editable={!isLoading}
+              onFocus={scrollToEnd}
             />
           </View>
 
           {/* Birth Date */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              {t('userDetails.birthDate')} <Text style={styles.required}>*</Text>
+              {t('userDetails.birthDate')}
             </Text>
             <View style={[styles.dateInputContainer, errors.birthDate && styles.inputError]}>
               <TextInput
@@ -511,8 +615,9 @@ export const UserDetailsScreen: React.FC = () => {
                 onChangeText={handleDateInputChange}
                 keyboardType="numeric"
                 maxLength={10}
-                placeholderTextColor={theme.palette.text.secondary}
+                placeholderTextColor={placeholderColor}
                 editable={!isLoading}
+                onFocus={scrollToEnd}
               />
               <TouchableOpacity
                 style={styles.calendarButton}
@@ -525,6 +630,7 @@ export const UserDetailsScreen: React.FC = () => {
             <Text style={styles.helperText}>
               {t('userDetails.birthDateHelper')}
             </Text>
+            {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate}</Text>}
             
             {showDatePicker && (
               <Modal
@@ -542,7 +648,7 @@ export const UserDetailsScreen: React.FC = () => {
                       >
                         <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.modalTitle}>{t('userDetails.selectDate')}</Text>
+                      <Text style={styles.modalTitle}></Text>
                       <TouchableOpacity
                         onPress={handleDateConfirm}
                         style={styles.modalButton}
@@ -645,11 +751,12 @@ export const UserDetailsScreen: React.FC = () => {
           {/* Email */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              {t('userDetails.email')} <Text style={styles.required}>*</Text>
+              {t('userDetails.email')}
             </Text>
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder={t('userDetails.emailPlaceholder')}
+              placeholderTextColor={placeholderColor}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -660,8 +767,10 @@ export const UserDetailsScreen: React.FC = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               editable={!isLoading}
+              onFocus={scrollToEnd}
             />
             <Text style={styles.helperText}>{t('userDetails.emailHelper')}</Text>
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           {/* Additional Contact */}
@@ -690,35 +799,50 @@ export const UserDetailsScreen: React.FC = () => {
             {/* Add New Phone */}
             {additionalPhones.length < 5 && (
               <View style={styles.addPhoneContainer}>
+                
                 <View style={styles.phoneRow}>
-                  <View style={styles.countryCodeButton}>
-                    <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
-                    <Text style={styles.countryCode}>{selectedCountry.code}</Text>
-                  </View>
-                  <TextInput
-                    style={[styles.input, styles.phoneRowInput]}
-                    placeholder={t('userDetails.phonePlaceholder')}
-                    value={currentPhoneInput}
-                    onChangeText={(text) => setCurrentPhoneInput(formatPhoneNumber(text))}
-                    keyboardType="phone-pad"
-                    maxLength={14}
-                    editable={!isLoading}
-                    ref={(ref) => (textInputRef.current = ref)}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.addPhoneButton,
-                      (currentPhoneInput.replace(/\D/g, '').length < 9) && styles.addPhoneButtonDisabled
-                    ]}
-                    onPress={addPhoneNumber}
-                    disabled={currentPhoneInput.replace(/\D/g, '').length < 9 || isLoading}
-                  >
-                    <Text style={styles.addPhoneText}>+</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.addPhoneButton,
+                    (!activeCountry || currentPhoneInput.replace(/\D/g, '').length < activeCountry.localLength) &&
+                      styles.addPhoneButtonDisabled,
+                  ]}
+                  onPress={addPhoneNumber}
+                  disabled={
+                    !activeCountry ||
+                    currentPhoneInput.replace(/\D/g, '').length < activeCountry.localLength ||
+                    isLoading
+                  }
+                >
+                  <Text style={styles.addPhoneText}>+</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.countryCodeButton}
+                  onPress={() => setShowCountryPicker((prev) => !prev)}
+                  disabled={isLoading || countriesLoading}
+                >
+                  <Text style={styles.countryFlag}>{activeCountry?.flag ?? '🌐'}</Text>
+                  <Text style={styles.countryCode}>{activeCountry?.code ?? ''}</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.input, styles.phoneRowInput]}
+                  placeholder={t('userDetails.phonePlaceholder')}
+                  placeholderTextColor={placeholderColor}
+                  value={currentPhoneInput}
+                  onChangeText={(text) =>
+                    setCurrentPhoneInput(formatPhoneNumber(text, activeCountry))
+                  }
+                  keyboardType="phone-pad"
+                  maxLength={activeCountry ? getFormattedMaxLength(activeCountry) : 20}
+                  editable={!isLoading}
+                  ref={textInputRef}
+                  onFocus={scrollToEnd}
+                />
+
               </View>
-            )}
-          </View>
+            </View>
+          )}
+        </View>
 
           {/* Submit Button */}
           <TouchableOpacity
@@ -733,8 +857,39 @@ export const UserDetailsScreen: React.FC = () => {
               {isLoading ? t('common.loading') : t('userDetails.submit')}
             </Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showCountryPicker}
+        onRequestClose={() => setShowCountryPicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
+          <View style={styles.pickerOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.countryPickerModal}>
+                {countries.map((country) => (
+                  <TouchableOpacity
+                    key={`${country.id ?? country.code}-${country.name}`}
+                    style={styles.countryOption}
+                    onPress={() => {
+                      setSelectedCountry(country);
+                      setShowCountryPicker(false);
+                      setCurrentPhoneInput((prev) => formatPhoneNumber(prev, country));
+                    }}
+                  >
+                    <Text style={styles.countryFlag}>{country.flag ?? '🌐'}</Text>
+                    <Text style={styles.countryName}>{country.name}</Text>
+                    <Text style={styles.countryCode}>{country.code}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -744,9 +899,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.default,
   },
+  keyboardAvoiding: {
+    flex: 1,
+  },
   scrollContent: {
     padding: theme.spacing(3),
-    paddingBottom: theme.spacing(5),
+    paddingBottom: theme.spacing(8),
+    width: '100%',
+    flexGrow: 1,
   },
   header: {
     alignItems: 'center',
@@ -808,6 +968,11 @@ const styles = StyleSheet.create({
   helperText: {
     ...theme.typography.caption,
     color: theme.palette.text.secondary,
+    marginTop: theme.spacing(0.5),
+  },
+  errorText: {
+    ...theme.typography.caption,
+    color: theme.palette.error.main,
     marginTop: theme.spacing(0.5),
   },
   genderContainer: {
@@ -873,6 +1038,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing(1),
     marginBottom: theme.spacing(1),
+    width: '100%',
+  },
+  countryPicker: {
+    backgroundColor: theme.palette.background.card,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+    marginTop: theme.spacing(1),
+    ...theme.shadows.md,
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+  },
+  countryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(1.5),
+    paddingHorizontal: theme.spacing(2),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.palette.divider,
+    width: '100%',
   },
   countryCodeButton: {
     flexDirection: 'row',
@@ -897,8 +1083,16 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
     fontWeight: '600',
   },
+  countryName: {
+    ...theme.typography.body1,
+    color: theme.palette.text.primary,
+    flex: 1,
+    marginHorizontal: theme.spacing(1),
+  },
   phoneRowInput: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     backgroundColor: 'transparent',
     borderBottomWidth: 2,
     borderBottomColor: '#4CAF50',
@@ -909,6 +1103,7 @@ const styles = StyleSheet.create({
   },
   addPhoneContainer: {
     marginTop: theme.spacing(1),
+    width: '100%',
   },
   addPhoneButton: {
     paddingHorizontal: theme.spacing(2),
@@ -922,7 +1117,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: theme.spacing(1),
+    marginLeft: 0,
     minWidth: 50,
   },
   addPhoneButtonDisabled: {
@@ -1082,6 +1277,21 @@ const styles = StyleSheet.create({
     ...theme.typography.button,
     color: '#FFFFFF',
     fontSize: 18,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    padding: theme.spacing(3),
+  },
+  countryPickerModal: {
+    backgroundColor: theme.palette.background.card,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+    ...theme.shadows.md,
+    maxHeight: '70%',
+    width: '100%',
   },
 });
 

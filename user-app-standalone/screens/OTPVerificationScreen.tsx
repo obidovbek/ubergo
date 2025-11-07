@@ -12,6 +12,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -153,86 +156,99 @@ export const OTPVerificationScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>{t('auth.appName')}</Text>
-          <Text style={styles.title}>{t('otpVerification.title')}</Text>
-          <Text style={styles.subtitle}>
-            {t('otpVerification.subtitle')}
-          </Text>
-        </View>
-
-        {/* Phone Number Display */}
-        <View style={styles.phoneContainer}>
-          <Text style={styles.phoneNumber}>{phoneNumber}</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.editIcon}>✏️</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Attempts Counter */}
-        {attempts > 0 && (
-          <View style={[
-            styles.attemptsContainer,
-            remainingAttempts === 1 && styles.attemptsContainerWarning
-          ]}>
-            <Text style={[
-              styles.attemptsText,
-              remainingAttempts === 1 && styles.attemptsTextWarning
-            ]}>
-              {t('otpVerification.attemptsLabel')}{attempts}/3{t('otpVerification.remainingLabel')}{remainingAttempts}
-            </Text>
-          </View>
-        )}
-
-        {/* OTP Input */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <View key={index} style={styles.otpInputWrapper}>
-              <TextInput
-                ref={(ref) => (inputRefs.current[index] = ref)}
-                style={styles.otpInput}
-                value={digit}
-                onChangeText={(text) => handleOtpChange(text, index)}
-                onKeyPress={(e) => handleKeyPress(e, index)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-              <View
-                style={[
-                  styles.otpIndicator,
-                  digit && styles.otpIndicatorFilled,
-                ]}
-              />
-            </View>
-          ))}
-        </View>
-
-        {/* Continue Button */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            (isLoading || otp.join('').length < 4) &&
-              styles.continueButtonDisabled,
-          ]}
-          onPress={handleContinue}
-          disabled={isLoading || otp.join('').length < 4}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.continueButtonText}>
-            {isLoading ? t('otpVerification.verifying') : t('common.continue')}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.logo}>{t('auth.appName')}</Text>
+              <Text style={styles.title}>{t('otpVerification.title')}</Text>
+              <Text style={styles.subtitle}>
+                {t('otpVerification.subtitle')}
+              </Text>
+            </View>
 
-        {/* Resend Code */}
-        <TouchableOpacity style={styles.resendContainer} onPress={handleResendCode}>
-          <Text style={styles.resendText}>
-            {t('otpVerification.resendQuestion')}
-            <Text style={styles.resendLink}>{t('otpVerification.resendLink')}</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
+            {/* Phone Number Display */}
+            <View style={styles.phoneContainer}>
+              <Text style={styles.phoneNumber}>{phoneNumber}</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Text style={styles.editIcon}>✏️</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Attempts Counter */}
+            {attempts > 0 && (
+              <View style={[
+                styles.attemptsContainer,
+                remainingAttempts === 1 && styles.attemptsContainerWarning
+              ]}>
+                <Text style={[
+                  styles.attemptsText,
+                  remainingAttempts === 1 && styles.attemptsTextWarning
+                ]}>
+                  {t('otpVerification.attemptsLabel')}{attempts}/3{t('otpVerification.remainingLabel')}{remainingAttempts}
+                </Text>
+              </View>
+            )}
+
+            {/* OTP Input */}
+            <View style={styles.otpContainer}>
+              {otp.map((digit, index) => (
+                <View key={index} style={styles.otpInputWrapper}>
+                  <TextInput
+                    ref={(ref) => {
+                      inputRefs.current[index] = ref;
+                    }}
+                    style={styles.otpInput}
+                    value={digit}
+                    onChangeText={(text) => handleOtpChange(text, index)}
+                    onKeyPress={(e) => handleKeyPress(e, index)}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    selectTextOnFocus
+                  />
+                  <View
+                    style={[
+                      styles.otpIndicator,
+                      digit && styles.otpIndicatorFilled,
+                    ]}
+                  />
+                </View>
+              ))}
+            </View>
+
+            {/* Continue Button */}
+            <TouchableOpacity
+              style={[
+                styles.continueButton,
+                (isLoading || otp.join('').length < 4) &&
+                  styles.continueButtonDisabled,
+              ]}
+              onPress={handleContinue}
+              disabled={isLoading || otp.join('').length < 4}
+            >
+              <Text style={styles.continueButtonText}>
+                {isLoading ? t('otpVerification.verifying') : t('common.continue')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Resend Code */}
+            <TouchableOpacity style={styles.resendContainer} onPress={handleResendCode}>
+              <Text style={styles.resendText}>
+                {t('otpVerification.resendQuestion')}
+                <Text style={styles.resendLink}>{t('otpVerification.resendLink')}</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -241,6 +257,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.palette.background.default,
+  },
+  keyboardAvoiding: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,

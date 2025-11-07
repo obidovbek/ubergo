@@ -31,11 +31,56 @@ export interface UserDTO {
   updatedAt: Date;
 }
 
+// Admin User Types
+export type AdminUserRole = 'main_admin' | 'dispatcher' | 'support' | 'manager' | 'viewer';
+export type AdminUserStatus = 'active' | 'inactive' | 'suspended';
+
+export interface Role {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  permissions?: string[] | null;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  status: AdminUserStatus;
+  last_login_at?: Date | null;
+  last_login_ip?: string | null;
+  created_by?: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AdminUserDTO {
+  id: string;
+  email: string;
+  full_name: string;
+  roles: Role[];
+  status: AdminUserStatus;
+  last_login_at?: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // Auth Types
 export interface AuthTokenPayload {
   userId: string;
   email: string;
   role: UserRole;
+}
+
+export interface AdminAuthTokenPayload {
+  userId: string;
+  email: string;
+  roles: string[]; // Array of role slugs
 }
 
 export interface AuthResponse {
@@ -44,9 +89,19 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export interface AdminAuthResponse {
+  user: AdminUserDTO;
+  token: string;
+  refreshToken: string;
+}
+
 // Request with User
 export interface AuthRequest extends Request {
   user?: AuthTokenPayload;
+}
+
+export interface AdminAuthRequest extends Request {
+  user?: AdminAuthTokenPayload;
 }
 
 // Location Types

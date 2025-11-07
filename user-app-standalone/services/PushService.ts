@@ -1,11 +1,60 @@
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
 import { registerDevice } from '../api/devices';
-import messaging from '@react-native-firebase/messaging';
+
+// Only import Firebase messaging on native platforms
+let messaging: any = null;
+if (Platform.OS !== 'web') {
+  messaging = require('@react-native-firebase/messaging').default;
+}
+
+const ANDROID_POST_NOTIFICATIONS = PermissionsAndroid.PERMISSIONS?.POST_NOTIFICATIONS;
+
+async function requestAndroidNotificationPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  // POST_NOTIFICATIONS permission is required starting from Android 13 (API 33)
+  const needsRuntimePermission = typeof Platform.Version === 'number' ? Platform.Version >= 33 : false;
+
+  if (!needsRuntimePermission || !ANDROID_POST_NOTIFICATIONS) {
+    return true;
+  }
+
+  try {
+    const alreadyGranted = await PermissionsAndroid.check(ANDROID_POST_NOTIFICATIONS);
+    if (alreadyGranted) {
+      return true;
+    }
+
+    const status = await PermissionsAndroid.request(ANDROID_POST_NOTIFICATIONS);
+    const granted = status === PermissionsAndroid.RESULTS.GRANTED;
+
+    if (!granted) {
+      console.warn('POST_NOTIFICATIONS permission denied on Android');
+    }
+
+    return granted;
+  } catch (error) {
+    console.error('Failed to request Android notification permission:', error);
+    return false;
+  }
+}
 
 /**
  * Request push notification permissions
  */
 export async function ensurePushPermission(): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    console.log('Push notifications not supported on web platform');
+    return false;
+  }
+  
+  const androidGranted = await requestAndroidNotificationPermission();
+  if (!androidGranted) {
+    return false;
+  }
+
   try {
     const authStatus = await messaging().requestPermission();
     const enabled =
@@ -24,6 +73,11 @@ export async function ensurePushPermission(): Promise<boolean> {
  * Get FCM push token
  */
 export async function getFcmPushToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    console.log('FCM push tokens not supported on web platform');
+    return null;
+  }
+  
   try {
     const hasPerm = await ensurePushPermission();
     if (!hasPerm) {
@@ -69,6 +123,11 @@ export async function registerPushTokenWithBackend(apiToken: string): Promise<vo
  * Subscribe to token refresh events
  */
 export function subscribeTokenRefresh(apiToken: string) {
+  if (Platform.OS === 'web') {
+    console.log('Token refresh not supported on web platform');
+    return () => {}; // Return no-op unsubscribe function
+  }
+  
   const unsubscribe = messaging().onTokenRefresh(async (token) => {
     try {
       console.log('FCM push token refreshed:', token);
@@ -90,6 +149,11 @@ export function subscribeTokenRefresh(apiToken: string) {
  * Setup foreground notification handler
  */
 export function setupForegroundNotificationHandler() {
+  if (Platform.OS === 'web') {
+    console.log('Foreground notification handler not supported on web platform');
+    return () => {}; // Return no-op unsubscribe function
+  }
+  
   const unsubscribe = messaging().onMessage(async (remoteMessage) => {
     console.log('FCM message received in foreground:', remoteMessage);
     

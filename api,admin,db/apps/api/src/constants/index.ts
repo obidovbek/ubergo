@@ -62,22 +62,42 @@ export enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
-// Error Messages
+// Error Messages (Uzbek)
 export const ErrorMessages = {
-  UNAUTHORIZED: 'Unauthorized access',
-  FORBIDDEN: 'Access forbidden',
-  NOT_FOUND: 'Resource not found',
-  INVALID_CREDENTIALS: 'Invalid credentials',
-  USER_EXISTS: 'User already exists',
-  VALIDATION_ERROR: 'Validation error',
-  INTERNAL_ERROR: 'Internal server error',
+  UNAUTHORIZED: 'Ruxsatsiz kirish',
+  FORBIDDEN: 'Kirish taqiqlangan',
+  NOT_FOUND: 'Ma\'lumot topilmadi',
+  INVALID_CREDENTIALS: 'Noto\'g\'ri email yoki parol',
+  USER_EXISTS: 'Foydalanuvchi allaqachon mavjud',
+  VALIDATION_ERROR: 'Ma\'lumotlarni tekshirishda xatolik',
+  INTERNAL_ERROR: 'Server xatoligi',
+  COUNTRY_EXISTS: 'Mamlakat allaqachon mavjud',
+  COUNTRY_NOT_FOUND: 'Mamlakat topilmadi',
 };
 
-// Success Messages
+// Alias for backward compatibility
+export const ERROR_MESSAGES = {
+  UNAUTHORIZED: ErrorMessages.UNAUTHORIZED,
+  FORBIDDEN: ErrorMessages.FORBIDDEN,
+  NOT_FOUND: ErrorMessages.NOT_FOUND,
+  INVALID_CREDENTIALS: ErrorMessages.INVALID_CREDENTIALS,
+  USER_ALREADY_EXISTS: ErrorMessages.USER_EXISTS,
+  USER_NOT_FOUND: 'Foydalanuvchi topilmadi',
+  USER_SUSPENDED: 'Foydalanuvchi hisobi bloklangan',
+  VALIDATION_ERROR: ErrorMessages.VALIDATION_ERROR,
+  INTERNAL_ERROR: ErrorMessages.INTERNAL_ERROR,
+  COUNTRY_ALREADY_EXISTS: ErrorMessages.COUNTRY_EXISTS,
+  COUNTRY_NOT_FOUND: ErrorMessages.COUNTRY_NOT_FOUND,
+};
+
+// Success Messages (Uzbek)
 export const SuccessMessages = {
-  USER_CREATED: 'User created successfully',
-  USER_UPDATED: 'User updated successfully',
-  USER_DELETED: 'User deleted successfully',
-  LOGIN_SUCCESS: 'Login successful',
-  LOGOUT_SUCCESS: 'Logout successful',
+  USER_CREATED: 'Foydalanuvchi muvaffaqiyatli yaratildi',
+  USER_UPDATED: 'Foydalanuvchi muvaffaqiyatli yangilandi',
+  USER_DELETED: 'Foydalanuvchi muvaffaqiyatli o\'chirildi',
+  LOGIN_SUCCESS: 'Kirish muvaffaqiyatli',
+  LOGOUT_SUCCESS: 'Chiqish muvaffaqiyatli',
+  COUNTRY_CREATED: 'Mamlakat muvaffaqiyatli qo\'shildi',
+  COUNTRY_UPDATED: 'Mamlakat ma\'lumotlari yangilandi',
+  COUNTRY_DELETED: 'Mamlakat muvaffaqiyatli o\'chirildi',
 };

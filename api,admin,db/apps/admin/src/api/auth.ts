@@ -13,9 +13,17 @@ export interface LoginCredentials {
 export interface AuthResponse {
   user: {
     id: string;
-    name: string;
+    full_name: string;
     email: string;
-    role: string;
+    roles: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      description?: string | null;
+      permissions?: string[] | null;
+      is_active: boolean;
+    }>;
+    status: 'active' | 'inactive' | 'suspended';
   };
   token: string;
   refreshToken: string;
@@ -42,13 +50,29 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error('Invalid credentials');
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || errorData.error || 'Kirishda xatolik yuz berdi';
+      throw new Error(errorMessage);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Handle API response format (successResponse wrapper)
+    if (data.success !== undefined && data.data) {
+      return data.data;
+    }
+    
+    return data;
   } catch (error) {
     clearTimeout(timeoutId);
-    throw error;
+    if (error instanceof Error) {
+      // Network errors
+      if (error.name === 'AbortError' || error.message.includes('fetch')) {
+        throw new Error('Network error: Could not connect to server. Please check if the API is running.');
+      }
+      throw error;
+    }
+    throw new Error('An unexpected error occurred during login');
   }
 };
 
@@ -97,7 +121,9 @@ export const getCurrentUser = async (token: string): Promise<AuthResponse['user'
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error('Failed to fetch user profile');
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || errorData.error || 'Foydalanuvchi ma\'lumotlarini yuklashda xatolik';
+      throw new Error(errorMessage);
     }
 
     return await response.json();

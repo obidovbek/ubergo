@@ -4,15 +4,22 @@
  */
 
 // Base API URL - Update based on environment
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4001/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
   auth: {
-    login: '/auth/login',
-    logout: '/auth/logout',
-    refresh: '/auth/refresh',
-    me: '/auth/me',
+    login: '/admin/auth/login',
+    logout: '/admin/auth/logout',
+    refresh: '/admin/auth/refresh',
+    me: '/admin/auth/me',
+  },
+  adminUsers: {
+    list: '/admin/users',
+    detail: (id: string) => `/admin/users/${id}`,
+    create: '/admin/users',
+    update: (id: string) => `/admin/users/${id}`,
+    delete: (id: string) => `/admin/users/${id}`,
   },
   users: {
     list: '/users',
@@ -21,11 +28,26 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/users/${id}`,
     delete: (id: string) => `/users/${id}`,
   },
+  passengers: {
+    list: '/admin/passengers',
+    detail: (id: string) => `/admin/passengers/${id}`,
+    update: (id: string) => `/admin/passengers/${id}`,
+    delete: (id: string) => `/admin/passengers/${id}`,
+  },
   drivers: {
-    list: '/drivers',
-    detail: (id: string) => `/drivers/${id}`,
+    list: '/admin/drivers',
+    detail: (id: string) => `/admin/drivers/${id}`,
+    update: (id: string) => `/admin/drivers/${id}`,
+    delete: (id: string) => `/admin/drivers/${id}`,
     approve: (id: string) => `/drivers/${id}/approve`,
     reject: (id: string) => `/drivers/${id}/reject`,
+  },
+  countries: {
+    list: '/admin/countries',
+    detail: (id: string) => `/admin/countries/${id}`,
+    create: '/admin/countries',
+    update: (id: string) => `/admin/countries/${id}`,
+    delete: (id: string) => `/admin/countries/${id}`,
   },
   rides: {
     list: '/rides',

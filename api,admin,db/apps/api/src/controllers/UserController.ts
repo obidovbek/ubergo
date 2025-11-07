@@ -146,6 +146,16 @@ export class UserController {
       
       await user.update(updateData);
 
+      // Check if profile is now complete
+      const isComplete =
+        user.first_name &&
+        user.last_name &&
+        user.gender;
+
+      if (isComplete && !user.profile_complete) {
+        await user.update({ profile_complete: true });
+      }
+;
       console.log('Profile updated successfully');
       console.log('Profile complete:', user.profile_complete);
 

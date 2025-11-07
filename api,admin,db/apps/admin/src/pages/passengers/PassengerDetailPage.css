@@ -1,0 +1,160 @@
+.passenger-detail-page {
+  padding: 24px;
+  color: #ffffff;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #ffffff;
+}
+
+.detail-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-section {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.detail-section h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 2px solid #3a3a3a;
+  padding-bottom: 12px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #999999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item span {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background-color: #1b5e20;
+  color: #81c784;
+}
+
+.status-blocked {
+  background-color: #b71c1c;
+  color: #ef5350;
+}
+
+.status-pending_delete {
+  background-color: #e65100;
+  color: #ffb74d;
+}
+
+.verified {
+  color: #81c784;
+}
+
+.not-verified {
+  color: #ef5350;
+}
+
+.complete {
+  color: #81c784;
+}
+
+.incomplete {
+  color: #ffb74d;
+}
+
+.phones-list,
+.identities-list,
+.tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.phone-item,
+.identity-item,
+.token-item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 12px;
+  background: #1f1f1f;
+  border-radius: 4px;
+}
+
+.phone-label,
+.identity-provider,
+.token-platform {
+  font-weight: 600;
+  color: #64b5f6;
+  min-width: 100px;
+}
+
+.phone-number,
+.identity-uid,
+.token-value {
+  flex: 1;
+  color: #e0e0e0;
+  font-family: monospace;
+}
+
+.token-app {
+  color: #999999;
+  font-size: 14px;
+}
+

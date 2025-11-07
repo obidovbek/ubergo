@@ -16,6 +16,8 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation } from '@react-navigation/native';
@@ -25,61 +27,118 @@ import { useGoogleSignIn, GoogleSignInServiceNative } from '../services/GoogleSi
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
+import { useCountries } from '../hooks/useCountries';
+import type { CountryOption } from '../types/country';
 
 const theme = createTheme('light');
 
 
-// Country data (simplified for demo) 
-const countries = [
-  { code: '+998', flag: '🇺🇿', name: "O'zbekiston" },
-  // { code: '+33', flag: '🇫🇷', name: 'France' },
-  // { code: '+1', flag: '🇺🇸', name: 'USA' },
-  // { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+7', flag: '🇷🇺', name: 'Russia' },
-];
+const formatPhoneForCountry = (value: string, country: CountryOption): string => {
+  const digits = value.replace(/\D/g, '').slice(0, country.localLength);
+
+  if (!digits) {
+    return '';
+  }
+
+  if (country.pattern === 'uz') {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+    if (digits.length <= 7) return `${digits.slice(0, 2)} ${digits.slice(2, 5)}-${digits.slice(5)}`;
+    return `${digits.slice(0, 2)} ${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 9)}`;
+  }
+
+  if (country.pattern === 'ru') {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 3)} ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+  }
+
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`.trim();
+};
+
+const getFormattedMaxLength = (country: CountryOption): number => {
+  switch (country.pattern) {
+    case 'uz':
+      return 14;
+    case 'ru':
+      return 15;
+    default:
+      return country.localLength + Math.ceil(country.localLength / 3);
+  }
+};
 
 export const PhoneRegistrationScreen: React.FC = () => {
   const navigation = useNavigation<PhoneRegistrationNavigationProp>();
   const { googleSignIn, sendOtp } = useAuth();
   const { signIn: googleSignInExpo, isReady: googleReady } = useGoogleSignIn();
   const { t } = useTranslation();
+  const { countries, isLoading: countriesLoading, error: countriesError } = useCountries();
   
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]); // France by defaultss
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
 
-  const formatPhoneNumber = (text: string) => {
-    // Remove all non-numeric characters
-    const cleaned = text.replace(/\D/g, '');
-    
-    // Format as: XX XXX-XX-XX (Uzbekistan format)
-    // Pattern: XX XXX-XX-XX (total 9 digits)
-    let formatted = '';
-    if (cleaned.length <= 2) {
-      formatted = cleaned;
-    } else if (cleaned.length <= 5) {
-      formatted = `${cleaned.slice(0, 2)} ${cleaned.slice(2)}`;
-    } else if (cleaned.length <= 7) {
-      formatted = `${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)}-${cleaned.slice(5)}`;
-    } else {
-      formatted = `${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)}-${cleaned.slice(5, 7)}-${cleaned.slice(7, 9)}`;
+  useEffect(() => {
+    if (countries.length === 0) {
+      return;
     }
-    
-    return formatted.substring(0, 15); // Max length with formatting
+
+    setSelectedCountry((prev) => {
+      if (!prev) {
+        return countries[0];
+      }
+
+      const match = countries.find(
+        (country) => country.code === prev.code && country.name === prev.name
+      );
+
+      return match || countries[0];
+    });
+  }, [countries]);
+
+  useEffect(() => {
+    if (countriesError) {
+      console.warn('Country fetch error:', countriesError);
+    }
+  }, [countriesError]);
+
+  const activeCountry = selectedCountry ?? countries[0];
+
+  const formatPhoneNumber = (text: string, country?: CountryOption | null) => {
+    const targetCountry = country ?? activeCountry;
+    if (!targetCountry) {
+      return text.replace(/\D/g, '');
+    }
+    return formatPhoneForCountry(text, targetCountry);
   };
 
+  useEffect(() => {
+    if (activeCountry) {
+      setPhoneNumber((prev) => formatPhoneNumber(prev, activeCountry));
+    }
+  }, [activeCountry?.code, activeCountry?.pattern]);
+
   const handleContinue = async () => {
+    if (!activeCountry) {
+      console.warn('No active country selected');
+      return;
+    }
+
     // Remove all non-numeric characters
     const cleanedNumber = phoneNumber.replace(/\D/g, '');
     
     console.log('=== OTP Send Debug ===');
     console.log('Phone input value:', phoneNumber);
     console.log('Cleaned number:', cleanedNumber);
-    console.log('Selected country code:', selectedCountry.code);
+    console.log('Selected country code:', activeCountry.code);
     
-    if (cleanedNumber.length < 9) {
+    if (cleanedNumber.length < activeCountry.localLength) {
       showToast.warning(t('common.error'), t('phoneRegistration.errorPhoneIncomplete'));
       return;
     }
@@ -88,7 +147,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
     
     try {
       // Format: +9981234567  (country code + 9 digits)
-      const fullPhone = `${selectedCountry.code}${cleanedNumber}`;
+      const fullPhone = `${activeCountry.code}${cleanedNumber}`;
       console.log('Full phone number:', fullPhone);
       console.log('Sending OTP to:', fullPhone);
       
@@ -207,43 +266,58 @@ export const PhoneRegistrationScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.countrySelector}
             onPress={() => setShowCountryPicker(!showCountryPicker)}
+            disabled={countriesLoading}
           >
-            <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
-            <Text style={styles.countryName}>{selectedCountry.name}</Text>
+            <Text style={styles.countryFlag}>{activeCountry?.flag ?? '🌐'}</Text>
+            <Text style={styles.countryName}>{activeCountry?.name ?? t('phoneRegistration.selectCountry')}</Text>
           </TouchableOpacity>
 
           {/* Country Picker */}
-          {showCountryPicker && (
-            <View style={styles.countryPicker}>
-              {countries.map((country) => (
-                <TouchableOpacity
-                  key={country.code}
-                  style={styles.countryOption}
-                  onPress={() => {
-                    setSelectedCountry(country);
-                    setShowCountryPicker(false);
-                  }}
-                >
-                  <Text style={styles.countryFlag}>{country.flag}</Text>
-                  <Text style={styles.countryName}>{country.name}</Text>
-                  <Text style={styles.countryCode}>{country.code}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          <Modal
+            transparent
+            animationType="fade"
+            visible={showCountryPicker}
+            onRequestClose={() => setShowCountryPicker(false)}
+          >
+            <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
+              <View style={styles.pickerOverlay}>
+                <TouchableWithoutFeedback onPress={() => {}}>
+                  <View style={styles.countryPickerModal}>
+                    {countries.map((country) => (
+                      <TouchableOpacity
+                        key={`${country.id ?? country.code}-${country.name}`}
+                        style={styles.countryOption}
+                        onPress={() => {
+                          setSelectedCountry(country);
+                          setShowCountryPicker(false);
+                          setPhoneNumber((prev) => formatPhoneNumber(prev, country));
+                        }}
+                      >
+                        <Text style={styles.countryFlag}>{country.flag ?? '🌐'}</Text>
+                        <Text style={styles.countryName}>{country.name}</Text>
+                        <Text style={styles.countryCode}>{country.code}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
 
           {/* Phone Input */}
           <View style={styles.phoneInputContainer}>
             <View style={styles.phoneCodeBox}>
-              <Text style={styles.phoneCode}>{selectedCountry.code}</Text>
+              <Text style={styles.phoneCode}>{activeCountry?.code ?? ''}</Text>
             </View>
             <TextInput
               style={styles.phoneInput}
               placeholder={t('phoneRegistration.phonePlaceholder')}
               value={phoneNumber}
-              onChangeText={(text: string) => setPhoneNumber(formatPhoneNumber(text))}
+              onChangeText={(text: string) =>
+                setPhoneNumber(formatPhoneNumber(text, activeCountry))
+              }
               keyboardType="phone-pad"
-              maxLength={15}
+              maxLength={activeCountry ? getFormattedMaxLength(activeCountry) : 20}
               editable={!isLoading}
             />
           </View>
@@ -264,13 +338,17 @@ export const PhoneRegistrationScreen: React.FC = () => {
               isLoading && styles.continueButtonDisabled,
             ]}
             onPress={handleContinue}
-            disabled={isLoading || phoneNumber.replace(/\D/g, '').length < 9}
+            disabled={
+              isLoading ||
+              !activeCountry ||
+              phoneNumber.replace(/\D/g, '').length < activeCountry.localLength
+            }
           >
             <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
           </TouchableOpacity>
 
           {/* Social Login Options */}
-          <View style={styles.socialContainer}>
+          {/* <View style={styles.socialContainer}>
             <TouchableOpacity
               style={[styles.socialButton, socialLoading && styles.socialButtonDisabled]}
               onPress={() => handleSocialAuth('Google')}
@@ -311,24 +389,24 @@ export const PhoneRegistrationScreen: React.FC = () => {
               <Text style={styles.socialIcon}>⊞</Text>
               <Text style={styles.socialText}>{t('phoneRegistration.microsoftSignIn')}</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {/* Footer */}
-          <View style={styles.footer}>
+          {/* <View style={styles.footer}>
             <Text style={styles.footerText}>
               {t('phoneRegistration.footerText')}
               <Text style={styles.footerLink}>{t('phoneRegistration.footerLink')}</Text>
               {t('phoneRegistration.footerText2')}
             </Text>
-          </View>
+          </View> */}
 
           {/* Login Link */}
-          <View style={styles.loginContainer}>
+          {/* <View style={styles.loginContainer}>
             <Text style={styles.loginText}>{t('phoneRegistration.alreadyHaveAccount')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={styles.loginLink}>{t('phoneRegistration.login')}</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -528,6 +606,20 @@ const styles = StyleSheet.create({
     ...theme.typography.body2,
     color: '#2196F3',
     fontWeight: '600',
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    padding: theme.spacing(3),
+  },
+  countryPickerModal: {
+    backgroundColor: theme.palette.background.card,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+    ...theme.shadows.md,
+    maxHeight: '70%',
   },
 });
 

@@ -30,14 +30,8 @@ const app: Application = express();
 // Initialize Firebase Admin SDK
 initializeFirebase();
 
-// Initialize database connection
-sequelize.authenticate()
-  .then(() => {
-    console.log('✅ Database connection established successfully');
-  })
-  .catch((err: Error) => {
-    console.error('❌ Unable to connect to database:', err);
-  });
+// Database connection is initialized in database/models/index.ts
+// No need to authenticate here as it's already done during model initialization
 
 // Security middleware
 app.use(helmet());

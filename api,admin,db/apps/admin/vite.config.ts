@@ -13,5 +13,13 @@ export default defineConfig({
     hmr: {
       clientPort: 3001,
     },
+    // Proxy API requests to backend in development
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });

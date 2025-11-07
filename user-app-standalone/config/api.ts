@@ -8,11 +8,14 @@ import { Platform } from 'react-native';
 // Base API URL - Update this based on your environment 
 // Production: https://test3.fstu.uz/api 
 // Development: http://10.0.2.2:4001/api
-//http://10.0.2.2:4001/api
+// ? Platform.OS === 'android' 
+// ? 'http://10.0.2.2:4001/api'  // Android emulator
+// : 'http://localhost:4001/api'  // iOS simulator/device
+// : 'https://test3.fstu.uz/api'; // Production
 export const API_BASE_URL = __DEV__
   ? Platform.OS === 'android' 
-    ? 'https://test3.fstu.uz/api'  // Android emulator
-    : 'https://test3.fstu.uz/api'  // iOS simulator/device
+    ? 'http://10.0.2.2:4001/api'  // Android emulator
+    : 'http://localhost:4001/api'  // iOS simulator/device
   : 'https://test3.fstu.uz/api'; // Production
 
 // API Endpoints
@@ -52,6 +55,9 @@ export const API_ENDPOINTS = {
   },
   devices: {
     register: '/devices/register',
+  },
+  metadata: {
+    countries: '/countries',
   },
 };
 

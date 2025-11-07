@@ -7,7 +7,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { MainLayout } from '../layout/MainLayout';
 import { LoginPage } from '../pages/auth/LoginPage';
-import { DashboardPage } from '../pages/dashboard/DashboardPage';
+import { AdminUsersListPage } from '../pages/adminUsers/AdminUsersListPage';
+import { AdminUsersCreatePage } from '../pages/adminUsers/AdminUsersCreatePage';
+import { AdminUsersEditPage } from '../pages/adminUsers/AdminUsersEditPage';
+import { PassengersListPage } from '../pages/passengers/PassengersListPage';
+import { PassengerDetailPage } from '../pages/passengers/PassengerDetailPage';
+import { DriversListPage } from '../pages/drivers/DriversListPage';
+import { DriverDetailPage } from '../pages/drivers/DriverDetailPage';
+import { ProfilePage } from '../pages/profile/ProfilePage';
+import { CountriesListPage } from '../pages/countries/CountriesListPage';
+import { CountryCreatePage } from '../pages/countries/CountryCreatePage';
+import { CountryEditPage } from '../pages/countries/CountryEditPage';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -33,7 +43,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin-users" replace />;
   }
 
   return <>{children}</>;
@@ -55,19 +65,46 @@ export const AppRoutes = () => {
 
         {/* Protected Routes */}
         <Route
-          path="/dashboard"
+          path="/admin-users"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <AdminUsersListPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/users"
+          path="/admin-users/create"
           element={
             <ProtectedRoute>
-              <div>Users Page (Coming Soon)</div>
+              <AdminUsersCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin-users/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AdminUsersEditPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/passengers"
+          element={
+            <ProtectedRoute>
+              <PassengersListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/passengers/:id"
+          element={
+            <ProtectedRoute>
+              <PassengerDetailPage />
             </ProtectedRoute>
           }
         />
@@ -76,31 +113,58 @@ export const AppRoutes = () => {
           path="/drivers"
           element={
             <ProtectedRoute>
-              <div>Drivers Page (Coming Soon)</div>
+              <DriversListPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/rides"
+          path="/drivers/:id"
           element={
             <ProtectedRoute>
-              <div>Rides Page (Coming Soon)</div>
+              <DriverDetailPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/settings"
+          path="/profile"
           element={
             <ProtectedRoute>
-              <div>Settings Page (Coming Soon)</div>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/countries"
+          element={
+            <ProtectedRoute>
+              <CountriesListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/countries/create"
+          element={
+            <ProtectedRoute>
+              <CountryCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/countries/:id/edit"
+          element={
+            <ProtectedRoute>
+              <CountryEditPage />
             </ProtectedRoute>
           }
         />
 
         {/* Default Route */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/admin-users" replace />} />
 
         {/* 404 Route */}
         <Route path="*" element={<div>404 - Page Not Found</div>} />

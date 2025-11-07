@@ -81,6 +81,10 @@ export function initUser(sequelize: Sequelize) {
         type: DataTypes.CITEXT,
         allowNull: true,
         unique: true,
+        set(this: User, value: string | null) {
+          const normalized = value?.trim() ?? '';
+          this.setDataValue('email', normalized ? normalized : null);
+        },
         validate: {
           isEmail: true
         }
@@ -130,7 +134,21 @@ export function initUser(sequelize: Sequelize) {
       },
       birth_date: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: true,
+        set(this: User, value: string | Date | null) {
+          if (value === undefined || value === null || value === '') {
+            this.setDataValue('birth_date', null);
+            return;
+          }
+
+          if (value instanceof Date) {
+            this.setDataValue('birth_date', value.toISOString().slice(0, 10));
+            return;
+          }
+
+          const normalized = value.trim();
+          this.setDataValue('birth_date', normalized || null);
+        }
       },
       additional_phones: {
         type: DataTypes.JSONB,

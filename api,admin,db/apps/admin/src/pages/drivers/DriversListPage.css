@@ -1,0 +1,213 @@
+.drivers-page {
+  padding: 24px;
+  color: #ffffff;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #64b5f6;
+}
+
+.status-filter,
+.registration-filter {
+  padding: 10px 16px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.status-filter:focus,
+.registration-filter:focus {
+  outline: none;
+  border-color: #64b5f6;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.drivers-table-container {
+  background: #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.drivers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.drivers-table thead {
+  background-color: #1f1f1f;
+}
+
+.drivers-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 16px;
+  color: #ffffff;
+  border-bottom: 2px solid #3a3a3a;
+}
+
+.drivers-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #3a3a3a;
+  font-size: 16px;
+  color: #e0e0e0;
+}
+
+.drivers-table tr:hover {
+  background-color: #333333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #999999;
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background-color: #1b5e20;
+  color: #81c784;
+}
+
+.status-blocked {
+  background-color: #b71c1c;
+  color: #ef5350;
+}
+
+.status-pending_delete {
+  background-color: #e65100;
+  color: #ffb74d;
+}
+
+.step-badge {
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.step-personal {
+  background-color: #1e3a5f;
+  color: #64b5f6;
+}
+
+.step-passport {
+  background-color: #3d1e5f;
+  color: #ba68c8;
+}
+
+.step-license {
+  background-color: #5f3d1e;
+  color: #ffb74d;
+}
+
+.step-vehicle {
+  background-color: #1e5f3d;
+  color: #81c784;
+}
+
+.step-taxi_license {
+  background-color: #5f1e3d;
+  color: #f48fb1;
+}
+
+.step-complete {
+  background-color: #1b5e20;
+  color: #81c784;
+}
+
+.step-none {
+  background-color: #424242;
+  color: #bdbdbd;
+}
+
+.complete {
+  color: #81c784;
+}
+
+.incomplete {
+  color: #ffb74d;
+}
+
+.has-vehicle {
+  color: #81c784;
+}
+
+.no-vehicle {
+  color: #999999;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.page-info {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #ffffff;
+}
+

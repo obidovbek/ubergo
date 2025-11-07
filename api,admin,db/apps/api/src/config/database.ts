@@ -20,9 +20,15 @@ const poolConfig: PoolConfig = {
 
 export const pool = new Pool(poolConfig);
 
-// Test database connection
+// Track if we've logged the initial connection
+let initialConnectionLogged = false;
+
+// Test database connection (only log once for initial connection)
 pool.on('connect', () => {
-  console.log('✅ Database connected successfully');
+  if (!initialConnectionLogged) {
+    console.log('✅ PostgreSQL pool initialized successfully');
+    initialConnectionLogged = true;
+  }
 });
 
 pool.on('error', (err) => {

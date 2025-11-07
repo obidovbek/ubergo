@@ -3,7 +3,8 @@
  * User authentication page - Mantis Design Style
  */
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isValidEmail } from '../../utils/validation';
@@ -14,8 +15,8 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuth();
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@ubexgo.com');
+  const [password, setPassword] = useState('UbexGo@2024');
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -46,7 +47,7 @@ export const LoginPage = () => {
 
     try {
       await login({ email, password });
-      navigate('/dashboard');
+      navigate('/admin-users');
     } catch (err) {
       console.error('Login failed:', err);
     }

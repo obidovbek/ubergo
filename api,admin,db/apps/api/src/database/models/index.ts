@@ -81,6 +81,10 @@ import { DriverLicense, initDriverLicense } from './DriverLicense.js';
 import { EmergencyContact, initEmergencyContact } from './EmergencyContact.js';
 import { DriverVehicle, initDriverVehicle } from './DriverVehicle.js';
 import { DriverTaxiLicense, initDriverTaxiLicense } from './DriverTaxiLicense.js';
+import { AdminUser, initAdminUser } from './AdminUser.js';
+import { Role, initRole } from './Role.js';
+import { UserRole, initUserRole } from './UserRole.js';
+import { Country, initCountry } from './Country.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -96,6 +100,10 @@ initDriverLicense(sequelize);
 initEmergencyContact(sequelize);
 initDriverVehicle(sequelize);
 initDriverTaxiLicense(sequelize);
+initAdminUser(sequelize);
+initRole(sequelize);
+initUserRole(sequelize);
+initCountry(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -132,6 +140,28 @@ DriverVehicle.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'd
 DriverProfile.hasOne(DriverTaxiLicense, { foreignKey: 'driver_profile_id', as: 'taxiLicense' });
 DriverTaxiLicense.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
 
+// Admin User associations
+AdminUser.belongsTo(AdminUser, { foreignKey: 'created_by', as: 'creator' });
+
+// Admin User - Role associations (many-to-many)
+AdminUser.belongsToMany(Role, {
+  through: UserRole,
+  foreignKey: 'user_id',
+  otherKey: 'role_id',
+  as: 'roles'
+});
+
+Role.belongsToMany(AdminUser, {
+  through: UserRole,
+  foreignKey: 'role_id',
+  otherKey: 'user_id',
+  as: 'users'
+});
+
+UserRole.belongsTo(AdminUser, { foreignKey: 'user_id', as: 'user' });
+UserRole.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+UserRole.belongsTo(AdminUser, { foreignKey: 'assigned_by', as: 'assigner' });
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -148,6 +178,10 @@ export {
   EmergencyContact,
   DriverVehicle,
   DriverTaxiLicense,
+  AdminUser,
+  Role,
+  UserRole,
+  Country,
 };
 
 export default sequelize;

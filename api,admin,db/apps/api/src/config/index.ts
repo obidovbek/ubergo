@@ -60,8 +60,11 @@ export const config = {
     },
   },
   cors: {
-    origin: '*', // Allow all origins
+    origin: process.env.CORS_ORIGIN || '*', // Allow all origins in dev, specific in prod
     credentials: process.env.CORS_CREDENTIALS === 'true',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    exposedHeaders: ['Authorization'],
   },
   upload: {
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB

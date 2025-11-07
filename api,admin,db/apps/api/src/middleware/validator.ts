@@ -156,6 +156,25 @@ export const taxiLicenseValidation = validateRequest([
 ]);
 
 /**
+ * Country validation rules
+ */
+const COUNTRY_PATTERNS = ['uz', 'ru', 'generic'];
+
+export const validateCountryCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'code', type: 'required' },
+  { field: 'local_length', type: 'required' },
+  { field: 'local_length', type: 'min', params: { min: 1 } },
+  { field: 'pattern', type: 'required' },
+  { field: 'pattern', type: 'in', params: { values: COUNTRY_PATTERNS } },
+]);
+
+export const validateCountryUpdate = validateRequest([
+  { field: 'local_length', type: 'min', params: { min: 1 } },
+  { field: 'pattern', type: 'in', params: { values: COUNTRY_PATTERNS } },
+]);
+
+/**
  * Auth validation (legacy validators for backward compatibility)
  */
 export const validateRegister = validateRequest([
@@ -173,6 +192,25 @@ export const validateLogin = validateRequest([
   { field: 'email', type: 'required' },
   { field: 'email', type: 'email' },
   { field: 'password', type: 'required' },
+]);
+
+/**
+ * Admin auth validation
+ */
+export const validateAdminLogin = validateRequest([
+  { field: 'email', type: 'required' },
+  { field: 'email', type: 'email' },
+  { field: 'password', type: 'required' },
+]);
+
+export const validateAdminRegister = validateRequest([
+  { field: 'email', type: 'required' },
+  { field: 'email', type: 'email' },
+  { field: 'password', type: 'required' },
+  { field: 'password', type: 'minLength', params: { min: 8 } },
+  { field: 'full_name', type: 'required' },
+  { field: 'full_name', type: 'minLength', params: { min: 2 } },
+  { field: 'role_slugs', type: 'required' },
 ]);
 
 /**

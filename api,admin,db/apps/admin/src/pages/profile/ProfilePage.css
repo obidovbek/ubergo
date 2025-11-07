@@ -1,0 +1,257 @@
+.profile-page {
+  padding: 12px 20px;
+  color: #ffffff;
+  width: 100%;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.profile-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.profile-content {
+  width: 100%;
+}
+
+.profile-card {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 16px 20px;
+  border: 1px solid #3a3a3a;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.profile-section {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.profile-field {
+  margin-bottom: 12px;
+}
+
+.profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0b0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 5px;
+}
+
+.field-value {
+  font-size: 14px;
+  color: #e0e0e0;
+  padding: 6px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: #1b5e20;
+  color: #81c784;
+}
+
+.status-inactive {
+  background: #424242;
+  color: #bdbdbd;
+}
+
+.status-suspended {
+  background: #b71c1c;
+  color: #ef5350;
+}
+
+.roles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.role-item {
+  padding: 8px 10px;
+  background: #1f1f1f;
+  border-radius: 4px;
+  border: 1px solid #3a3a3a;
+}
+
+.role-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 3px;
+}
+
+.role-description {
+  display: block;
+  font-size: 12px;
+  color: #b0b0b0;
+}
+
+.no-roles {
+  color: #b0b0b0;
+  font-style: italic;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.error-message {
+  background: linear-gradient(135deg, #b71c1c 0%, #c62828 100%);
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  border-left: 3px solid #ef5350;
+  box-shadow: 0 2px 6px rgba(239, 83, 80, 0.2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Profile Edit Form */
+.profile-edit-form {
+  background: #2a2a2a;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3a;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.form-section {
+  margin-bottom: 0;
+}
+
+.form-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #3a3a3a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 2px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #b0b0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #1f1f1f;
+  color: #e0e0e0;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:hover {
+  border-color: #4a4a4a;
+  background-color: #252525;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #1976d2;
+  background-color: #252525;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.form-group input.error {
+  border-color: #ef5350;
+  background-color: #2a1f1f;
+}
+
+.form-group input.error:focus {
+  box-shadow: 0 0 0 2px rgba(239, 83, 80, 0.1);
+}
+
+.error-text {
+  display: block;
+  color: #ef5350;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.error-text::before {
+  content: '⚠';
+  font-size: 14px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #3a3a3a;
+  grid-column: 1 / -1;
+}
+
