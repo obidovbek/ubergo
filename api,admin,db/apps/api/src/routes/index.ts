@@ -34,16 +34,16 @@ router.use('/auth', authRoutesV2);
 router.use('/admin/auth', adminAuthRoutes);
 
 // Admin user routes
-router.use('/admin/users', adminUserRoutes);
+// router.use('/admin/users', adminUserRoutes);
 
-// Admin passenger routes (regular users)
-router.use('/admin/passengers', adminPassengerRoutes);
+// // Admin passenger routes (regular users)
+// router.use('/admin/passengers', adminPassengerRoutes);
 
-// Admin driver routes
-router.use('/admin/drivers', adminDriverRoutes);
+// // Admin driver routes
+// router.use('/admin/drivers', adminDriverRoutes);
 
-// Admin country routes
-router.use('/admin/countries', adminCountryRoutes);
+// // Admin country routes
+// router.use('/admin/countries', adminCountryRoutes);
 
 // User routes
 router.use('/user', userRoutes);
