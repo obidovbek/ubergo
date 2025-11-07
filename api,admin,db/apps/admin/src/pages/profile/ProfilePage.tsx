@@ -3,7 +3,8 @@
  * Displays and edits current user profile information
  */
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { updateAdminUser } from '../../api/adminUsers';
 import { Button } from '../../components/Button';

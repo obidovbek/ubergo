@@ -3,7 +3,8 @@
  * Form to create a new admin user
  */
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import * as adminUsersApi from '../../api/adminUsers';

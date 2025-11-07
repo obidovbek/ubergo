@@ -8,7 +8,7 @@ import { AUTH_ACTIONS } from './auth.actions';
 export interface User {
   id: string;
   full_name: string;
-  name: string;
+  name?: string;
   email: string;
   roles: Array<{
     id: string;
@@ -19,7 +19,7 @@ export interface User {
     is_active: boolean;
   }>;
   status: 'active' | 'inactive' | 'suspended';
-  last_login_at?: string;
+  last_login_at?: string | null;
 }
 
 export interface AuthState {

@@ -3,7 +3,8 @@
  * Form to edit an existing admin user
  */
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import * as adminUsersApi from '../../api/adminUsers';

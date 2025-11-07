@@ -1,11 +1,11 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/Button';
 import {
   getCountryById,
   updateCountry,
-  type Country,
   type CountryPayload,
   type CountryPattern,
 } from '../../api/countries';
