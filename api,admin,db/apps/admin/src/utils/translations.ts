@@ -126,6 +126,7 @@ export const translations = {
     updateFailed: 'Admin foydalanuvchini yangilashda xatolik',
     deleteFailed: 'Admin foydalanuvchini o\'chirishda xatolik',
     loadUserFailed: 'Admin foydalanuvchini yuklashda xatolik',
+    updateUserFailed: 'Foydalanuvchini yangilashda xatolik',
     countriesLoadFailed: 'Mamlakatlarni yuklashda xatolik',
     countryCreateFailed: 'Mamlakatni yaratishda xatolik',
     countryUpdateFailed: 'Mamlakatni yangilashda xatolik',
