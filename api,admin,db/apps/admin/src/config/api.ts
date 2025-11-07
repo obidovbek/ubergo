@@ -3,8 +3,8 @@
  * Centralized API endpoint configuration
  */
 
-// Base API URL - Update based on environment
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4001/api';
+// Base API URL - Update based on environment http://localhost:4001/api
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://test3.fstu.uz/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
