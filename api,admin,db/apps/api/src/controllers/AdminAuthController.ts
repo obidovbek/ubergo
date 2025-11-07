@@ -45,6 +45,7 @@ export class AdminAuthController {
   ): Promise<void> {
     try {
       const { email, password } = req.body;
+      console.log("api/admin/auth/login",email, password);
       const ip = req.ip || req.socket.remoteAddress || undefined;
 
       const result = await AdminAuthService.login(email, password, ip);
