@@ -54,11 +54,12 @@ export default {
     role: 'Роль',
     
     // Address fields
-    address_country: 'Страна',
-    address_region: 'Регион',
-    address_city: 'Город',
-    address_settlement_type: 'Тип населенного пункта',
-    address_mahalla: 'Махалля',
+    address_country_id: 'Страна',
+    address_province_id: 'Регион',
+    address_city_district_id: 'Город / Район',
+    address_administrative_area_id: 'Административная зона',
+    address_settlement_id: 'Населенный пункт',
+    address_neighborhood_id: 'Махалля',
     address_street: 'Улица',
     
     // Passport fields
@@ -74,6 +75,15 @@ export default {
     // License fields
     license_number: 'Номер прав',
     category: 'Категория',
+    category_a: 'Категория A',
+    category_b: 'Категория B',
+    category_c: 'Категория C',
+    category_d: 'Категория D',
+    category_be: 'Категория BE',
+    category_ce: 'Категория CE',
+    category_de: 'Категория DE',
+    license_front_url: 'Фото лицевой стороны прав',
+    license_back_url: 'Фото обратной стороны прав',
     
     // Emergency contact fields
     phone_number: 'Номер телефона',
@@ -141,6 +151,42 @@ export default {
     licenseUpdated: 'Данные прав сохранены',
     vehicleUpdated: 'Данные автомобиля сохранены',
     taxiLicenseUpdated: 'Лицензия такси сохранена',
+  },
+
+  // Driver License specific messages
+  driverLicense: {
+    // Validation errors
+    licenseNumberRequired: 'Номер прав обязателен',
+    issueDateRequired: 'Дата выдачи обязательна',
+    licenseNumberInvalid: 'Номер прав неверен',
+    issueDateInvalid: 'Дата выдачи неверна',
+    categoryDateInvalid: 'Дата категории неверна',
+    licenseNumberTooShort: 'Номер прав слишком короткий',
+    licenseNumberTooLong: 'Номер прав слишком длинный',
+    
+    // Field-specific validation
+    licenseNumberFormat: 'Формат номера прав неверен (например: AG 1234567)',
+    issueDatePast: 'Дата выдачи должна быть в прошлом',
+    issueDateFuture: 'Дата выдачи не может быть в будущем',
+    categoryDateFuture: 'Дата категории не может быть в будущем',
+    
+    // Success messages
+    licenseCreated: 'Данные прав созданы',
+    licenseUpdated: 'Данные прав обновлены',
+    licenseSaved: 'Данные прав сохранены',
+    
+    // Error messages
+    licenseNotFound: 'Права не найдены',
+    licenseAlreadyExists: 'Права уже существуют',
+    licenseUpdateFailed: 'Не удалось обновить данные прав',
+    licenseCreateFailed: 'Не удалось создать данные прав',
+    licenseDeleteFailed: 'Не удалось удалить данные прав',
+    
+    // Photo upload errors
+    photoUploadFailed: 'Не удалось загрузить фото',
+    photoFormatInvalid: 'Формат фото неверен',
+    photoSizeTooLarge: 'Размер фото слишком большой',
+    photoRequired: 'Фото обязательно',
   },
 };
 

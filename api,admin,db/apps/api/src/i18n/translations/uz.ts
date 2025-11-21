@@ -55,11 +55,12 @@ export default {
     role: 'Rol',
     
     // Address fields
-    address_country: 'Mamlakat',
-    address_region: 'Viloyat',
-    address_city: 'Shahar',
-    address_settlement_type: 'Aholi yashash punkti',
-    address_mahalla: 'Mahalla',
+    address_country_id: 'Mamlakat',
+    address_province_id: 'Viloyat',
+    address_city_district_id: 'Shahar / Tuman',
+    address_administrative_area_id: 'Ma\'muriy hudud',
+    address_settlement_id: 'Aholi punkti',
+    address_neighborhood_id: 'Mahalla',
     address_street: 'Ko\'cha',
     
     // Passport fields
@@ -75,6 +76,15 @@ export default {
     // License fields
     license_number: 'Guvohnoma raqami',
     category: 'Kategoriya',
+    category_a: 'Kategoriya A',
+    category_b: 'Kategoriya B',
+    category_c: 'Kategoriya C',
+    category_d: 'Kategoriya D',
+    category_be: 'Kategoriya BE',
+    category_ce: 'Kategoriya CE',
+    category_de: 'Kategoriya DE',
+    license_front_url: 'Guvohnoma old tomoni rasmi',
+    license_back_url: 'Guvohnoma orqa tomoni rasmi',
     
     // Emergency contact fields
     phone_number: 'Telefon raqami',
@@ -142,6 +152,42 @@ export default {
     licenseUpdated: 'Guvohnoma ma\'lumotlari saqlandi',
     vehicleUpdated: 'Avtomobil ma\'lumotlari saqlandi',
     taxiLicenseUpdated: 'Taksi litsenziyasi saqlandi',
+  },
+
+  // Driver License specific messages
+  driverLicense: {
+    // Validation errors
+    licenseNumberRequired: 'Guvohnoma raqami majburiy maydon',
+    issueDateRequired: 'Berilgan sana majburiy maydon',
+    licenseNumberInvalid: 'Guvohnoma raqami noto\'g\'ri formatda',
+    issueDateInvalid: 'Berilgan sana noto\'g\'ri formatda',
+    categoryDateInvalid: 'Kategoriya sanasi noto\'g\'ri formatda',
+    licenseNumberTooShort: 'Guvohnoma raqami juda qisqa',
+    licenseNumberTooLong: 'Guvohnoma raqami juda uzun',
+    
+    // Field-specific validation
+    licenseNumberFormat: 'Guvohnoma raqami noto\'g\'ri formatda (masalan: AG 1234567)',
+    issueDatePast: 'Berilgan sana o\'tmishda bo\'lishi kerak',
+    issueDateFuture: 'Berilgan sana kelajakda bo\'lishi mumkin emas',
+    categoryDateFuture: 'Kategoriya sanasi kelajakda bo\'lishi mumkin emas',
+    
+    // Success messages
+    licenseCreated: 'Guvohnoma ma\'lumotlari yaratildi',
+    licenseUpdated: 'Guvohnoma ma\'lumotlari yangilandi',
+    licenseSaved: 'Guvohnoma ma\'lumotlari saqlandi',
+    
+    // Error messages
+    licenseNotFound: 'Guvohnoma topilmadi',
+    licenseAlreadyExists: 'Guvohnoma allaqachon mavjud',
+    licenseUpdateFailed: 'Guvohnoma ma\'lumotlarini yangilashda xatolik',
+    licenseCreateFailed: 'Guvohnoma ma\'lumotlarini yaratishda xatolik',
+    licenseDeleteFailed: 'Guvohnoma ma\'lumotlarini o\'chirishda xatolik',
+    
+    // Photo upload errors
+    photoUploadFailed: 'Rasmni yuklashda xatolik',
+    photoFormatInvalid: 'Rasm formati noto\'g\'ri',
+    photoSizeTooLarge: 'Rasm hajmi juda katta',
+    photoRequired: 'Rasm majburiy',
   },
 };
 

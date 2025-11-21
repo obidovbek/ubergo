@@ -10,20 +10,20 @@ export interface DriverPassportAttributes {
   id: string;
   driver_profile_id: string;
   // Personal Information (from passport)
-  first_name?: string | null;
-  last_name?: string | null;
+  first_name: string;
+  last_name: string;
   father_name?: string | null;
-  gender?: 'male' | 'female' | null;
-  birth_date?: Date | null;
-  citizenship?: string | null;
+  gender: 'male' | 'female';
+  birth_date: Date;
+  citizenship: string;
   birth_place_country?: string | null;
   birth_place_region?: string | null;
   birth_place_city?: string | null;
   // Passport Details
-  id_card_number?: string | null;
-  pinfl?: string | null; // JSHSHIR / ПИНФЛ
-  issue_date?: Date | null;
-  expiry_date?: Date | null;
+  id_card_number: string;
+  pinfl: string; // JSHSHIR / ПИНФЛ
+  issue_date: Date;
+  expiry_date: Date;
   // Document Images
   passport_front_url?: string | null;
   passport_back_url?: string | null;
@@ -33,27 +33,36 @@ export interface DriverPassportAttributes {
 
 // Creation attributes
 export interface DriverPassportCreationAttributes
-  extends Optional<DriverPassportAttributes, 'id' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'citizenship' | 'birth_place_country' | 'birth_place_region' | 'birth_place_city' | 'id_card_number' | 'pinfl' | 'issue_date' | 'expiry_date' | 'passport_front_url' | 'passport_back_url' | 'created_at' | 'updated_at'> {
+  extends Optional<DriverPassportAttributes, 'id' | 'father_name' | 'birth_place_country' | 'birth_place_region' | 'birth_place_city' | 'passport_front_url' | 'passport_back_url' | 'created_at' | 'updated_at'> {
   driver_profile_id: string;
+  first_name: string;
+  last_name: string;
+  gender: 'male' | 'female';
+  birth_date: Date;
+  citizenship: string;
+  id_card_number: string;
+  pinfl: string;
+  issue_date: Date;
+  expiry_date: Date;
 }
 
 // Driver Passport model class
 export class DriverPassport extends Model<DriverPassportAttributes, DriverPassportCreationAttributes> implements DriverPassportAttributes {
   declare id: string;
   declare driver_profile_id: string;
-  declare first_name?: string | null;
-  declare last_name?: string | null;
+  declare first_name: string;
+  declare last_name: string;
   declare father_name?: string | null;
-  declare gender?: 'male' | 'female' | null;
-  declare birth_date?: Date | null;
-  declare citizenship?: string | null;
+  declare gender: 'male' | 'female';
+  declare birth_date: Date;
+  declare citizenship: string;
   declare birth_place_country?: string | null;
   declare birth_place_region?: string | null;
   declare birth_place_city?: string | null;
-  declare id_card_number?: string | null;
-  declare pinfl?: string | null;
-  declare issue_date?: Date | null;
-  declare expiry_date?: Date | null;
+  declare id_card_number: string;
+  declare pinfl: string;
+  declare issue_date: Date;
+  declare expiry_date: Date;
   declare passport_front_url?: string | null;
   declare passport_back_url?: string | null;
   declare readonly created_at: Date;
@@ -85,11 +94,11 @@ export function initDriverPassport(sequelize: Sequelize) {
       },
       first_name: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       last_name: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       father_name: {
         type: DataTypes.TEXT,
@@ -97,15 +106,15 @@ export function initDriverPassport(sequelize: Sequelize) {
       },
       gender: {
         type: DataTypes.ENUM('male', 'female'),
-        allowNull: true
+        allowNull: false
       },
       birth_date: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: false
       },
       citizenship: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       birth_place_country: {
         type: DataTypes.TEXT,
@@ -121,19 +130,19 @@ export function initDriverPassport(sequelize: Sequelize) {
       },
       id_card_number: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       pinfl: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       issue_date: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: false
       },
       expiry_date: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: false
       },
       passport_front_url: {
         type: DataTypes.TEXT,

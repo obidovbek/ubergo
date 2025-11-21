@@ -54,11 +54,12 @@ export default {
     role: 'Role',
     
     // Address fields
-    address_country: 'Country',
-    address_region: 'Region',
-    address_city: 'City',
-    address_settlement_type: 'Settlement Type',
-    address_mahalla: 'Mahalla',
+    address_country_id: 'Country',
+    address_province_id: 'Province',
+    address_city_district_id: 'City / District',
+    address_administrative_area_id: 'Administrative Area',
+    address_settlement_id: 'Settlement',
+    address_neighborhood_id: 'Neighborhood',
     address_street: 'Street Address',
     
     // Passport fields
@@ -74,6 +75,15 @@ export default {
     // License fields
     license_number: 'License Number',
     category: 'Category',
+    category_a: 'Category A',
+    category_b: 'Category B',
+    category_c: 'Category C',
+    category_d: 'Category D',
+    category_be: 'Category BE',
+    category_ce: 'Category CE',
+    category_de: 'Category DE',
+    license_front_url: 'License Front Photo',
+    license_back_url: 'License Back Photo',
     
     // Emergency contact fields
     phone_number: 'Phone Number',
@@ -141,6 +151,42 @@ export default {
     licenseUpdated: 'License information saved',
     vehicleUpdated: 'Vehicle information saved',
     taxiLicenseUpdated: 'Taxi license saved',
+  },
+
+  // Driver License specific messages
+  driverLicense: {
+    // Validation errors
+    licenseNumberRequired: 'License number is required',
+    issueDateRequired: 'Issue date is required',
+    licenseNumberInvalid: 'License number is invalid',
+    issueDateInvalid: 'Issue date is invalid',
+    categoryDateInvalid: 'Category date is invalid',
+    licenseNumberTooShort: 'License number is too short',
+    licenseNumberTooLong: 'License number is too long',
+    
+    // Field-specific validation
+    licenseNumberFormat: 'License number format is invalid (e.g., AG 1234567)',
+    issueDatePast: 'Issue date must be in the past',
+    issueDateFuture: 'Issue date cannot be in the future',
+    categoryDateFuture: 'Category date cannot be in the future',
+    
+    // Success messages
+    licenseCreated: 'License information created',
+    licenseUpdated: 'License information updated',
+    licenseSaved: 'License information saved',
+    
+    // Error messages
+    licenseNotFound: 'License not found',
+    licenseAlreadyExists: 'License already exists',
+    licenseUpdateFailed: 'Failed to update license information',
+    licenseCreateFailed: 'Failed to create license information',
+    licenseDeleteFailed: 'Failed to delete license information',
+    
+    // Photo upload errors
+    photoUploadFailed: 'Failed to upload photo',
+    photoFormatInvalid: 'Photo format is invalid',
+    photoSizeTooLarge: 'Photo size is too large',
+    photoRequired: 'Photo is required',
   },
 };
 

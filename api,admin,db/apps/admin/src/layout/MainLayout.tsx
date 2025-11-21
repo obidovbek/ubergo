@@ -34,7 +34,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['users']));
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [sidebarProfileMenuOpen, setSidebarProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -236,19 +236,205 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
             },
           ],
         },
+        {
+          id: 'settings-geo',
+          label: translations.geo.title,
+          icon: <UserIcon />,
+          children: [
+            {
+              id: 'settings-geo-countries',
+              label: translations.geo.countries.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-countries-list',
+                  label: translations.geo.countries.list,
+                  path: '/geo/countries',
+                },
+                {
+                  id: 'settings-geo-countries-create',
+                  label: translations.geo.countries.create,
+                  path: '/geo/countries/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-geo-provinces',
+              label: translations.geo.provinces.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-provinces-list',
+                  label: translations.geo.provinces.list,
+                  path: '/geo/provinces',
+                },
+                {
+                  id: 'settings-geo-provinces-create',
+                  label: translations.geo.provinces.create,
+                  path: '/geo/provinces/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-geo-city-districts',
+              label: translations.geo.cityDistricts.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-city-districts-list',
+                  label: translations.geo.cityDistricts.list,
+                  path: '/geo/city-districts',
+                },
+                {
+                  id: 'settings-geo-city-districts-create',
+                  label: translations.geo.cityDistricts.create,
+                  path: '/geo/city-districts/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-geo-administrative-areas',
+              label: translations.geo.administrativeAreas.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-administrative-areas-list',
+                  label: translations.geo.administrativeAreas.list,
+                  path: '/geo/administrative-areas',
+                },
+                {
+                  id: 'settings-geo-administrative-areas-create',
+                  label: translations.geo.administrativeAreas.create,
+                  path: '/geo/administrative-areas/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-geo-settlements',
+              label: translations.geo.settlements.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-settlements-list',
+                  label: translations.geo.settlements.list,
+                  path: '/geo/settlements',
+                },
+                {
+                  id: 'settings-geo-settlements-create',
+                  label: translations.geo.settlements.create,
+                  path: '/geo/settlements/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-geo-neighborhoods',
+              label: translations.geo.neighborhoods.sectionTitle,
+              children: [
+                {
+                  id: 'settings-geo-neighborhoods-list',
+                  label: translations.geo.neighborhoods.list,
+                  path: '/geo/neighborhoods',
+                },
+                {
+                  id: 'settings-geo-neighborhoods-create',
+                  label: translations.geo.neighborhoods.create,
+                  path: '/geo/neighborhoods/create',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'settings-vehicles',
+          label: translations.vehicles.title,
+          icon: <UserIcon />,
+          children: [
+            {
+              id: 'settings-vehicles-types',
+              label: translations.vehicles.types.sectionTitle,
+              children: [
+                {
+                  id: 'settings-vehicles-types-list',
+                  label: translations.vehicles.types.list,
+                  path: '/vehicle-types',
+                },
+                {
+                  id: 'settings-vehicles-types-create',
+                  label: translations.vehicles.types.create,
+                  path: '/vehicle-types/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-vehicles-makes',
+              label: translations.vehicles.makes.sectionTitle,
+              children: [
+                {
+                  id: 'settings-vehicles-makes-list',
+                  label: translations.vehicles.makes.list,
+                  path: '/vehicle-makes',
+                },
+                {
+                  id: 'settings-vehicles-makes-create',
+                  label: translations.vehicles.makes.create,
+                  path: '/vehicle-makes/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-vehicles-models',
+              label: translations.vehicles.models.sectionTitle,
+              children: [
+                {
+                  id: 'settings-vehicles-models-list',
+                  label: translations.vehicles.models.list,
+                  path: '/vehicle-models',
+                },
+                {
+                  id: 'settings-vehicles-models-create',
+                  label: translations.vehicles.models.create,
+                  path: '/vehicle-models/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-vehicles-body-types',
+              label: translations.vehicles.bodyTypes.sectionTitle,
+              children: [
+                {
+                  id: 'settings-vehicles-body-types-list',
+                  label: translations.vehicles.bodyTypes.list,
+                  path: '/vehicle-body-types',
+                },
+                {
+                  id: 'settings-vehicles-body-types-create',
+                  label: translations.vehicles.bodyTypes.create,
+                  path: '/vehicle-body-types/create',
+                },
+              ],
+            },
+            {
+              id: 'settings-vehicles-colors',
+              label: translations.vehicles.colors.sectionTitle,
+              children: [
+                {
+                  id: 'settings-vehicles-colors-list',
+                  label: translations.vehicles.colors.list,
+                  path: '/vehicle-colors',
+                },
+                {
+                  id: 'settings-vehicles-colors-create',
+                  label: translations.vehicles.colors.create,
+                  path: '/vehicle-colors/create',
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
   ];
 
+  // Initialize and update expanded items based on current pathname
   useEffect(() => {
     const ancestorIds = collectActiveAncestors(menuItems, location.pathname) || [];
-    if (ancestorIds.length > 0) {
-      setExpandedItems((prev) => {
-        const next = new Set(prev);
-        ancestorIds.forEach((id) => next.add(id));
-        return next;
-      });
-    }
+    // Replace the entire set with the new ancestor IDs to ensure correct state on page reload
+    setExpandedItems(new Set(ancestorIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 

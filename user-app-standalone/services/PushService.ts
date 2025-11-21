@@ -7,7 +7,7 @@ if (Platform.OS !== 'web') {
   messaging = require('@react-native-firebase/messaging').default;
 }
 
-const ANDROID_POST_NOTIFICATIONS = PermissionsAndroid.PERMISSIONS?.POST_NOTIFICATIONS;
+const ANDROID_POST_NOTIFICATIONS = PermissionsAndroid?.PERMISSIONS?.POST_NOTIFICATIONS;
 
 async function requestAndroidNotificationPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') {

@@ -5,6 +5,15 @@
 
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
 
+export interface GeoLocation {
+  id: number;
+  name: string;
+}
+
+export interface GeoSettlementLocation extends GeoLocation {
+  type?: string | null;
+}
+
 export interface DriverProfile {
   id: string;
   user_id: string;
@@ -14,11 +23,12 @@ export interface DriverProfile {
   gender?: 'male' | 'female' | null;
   birth_date?: string | null;
   email?: string | null;
-  address_country?: string | null;
-  address_region?: string | null;
-  address_city?: string | null;
-  address_settlement_type?: string | null;
-  address_mahalla?: string | null;
+  address_country_id?: number | null;
+  address_province_id?: number | null;
+  address_city_district_id?: number | null;
+  address_administrative_area_id?: number | null;
+  address_settlement_id?: number | null;
+  address_neighborhood_id?: number | null;
   address_street?: string | null;
   photo_face_url?: string | null;
   photo_body_url?: string | null;
@@ -31,6 +41,12 @@ export interface DriverProfile {
   emergencyContacts?: EmergencyContact[];
   vehicle?: DriverVehicle;
   taxiLicense?: DriverTaxiLicense;
+  addressCountry?: GeoLocation | null;
+  addressProvince?: GeoLocation | null;
+  addressCityDistrict?: GeoLocation | null;
+  addressAdministrativeArea?: GeoLocation | null;
+  addressSettlement?: GeoSettlementLocation | null;
+  addressNeighborhood?: GeoLocation | null;
 }
 
 export interface DriverPassport {

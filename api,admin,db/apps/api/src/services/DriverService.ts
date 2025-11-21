@@ -3,14 +3,20 @@
  * Handles driver profile and registration logic
  */
 
-import { 
-  DriverProfile, 
-  DriverPassport, 
-  DriverLicense, 
+import {
+  DriverProfile,
+  DriverPassport,
+  DriverLicense,
   EmergencyContact,
   DriverVehicle,
   DriverTaxiLicense,
-  User 
+  User,
+  GeoCountry,
+  GeoProvince,
+  GeoCityDistrict,
+  GeoAdministrativeArea,
+  GeoSettlement,
+  GeoNeighborhood
 } from '../database/models/index.js';
 import { AppError } from '../errors/AppError.js';
 
@@ -41,6 +47,36 @@ export class DriverService {
         {
           model: DriverTaxiLicense,
           as: 'taxiLicense'
+        },
+        {
+          model: GeoCountry,
+          as: 'addressCountry',
+          attributes: ['id', 'name']
+        },
+        {
+          model: GeoProvince,
+          as: 'addressProvince',
+          attributes: ['id', 'name']
+        },
+        {
+          model: GeoCityDistrict,
+          as: 'addressCityDistrict',
+          attributes: ['id', 'name']
+        },
+        {
+          model: GeoAdministrativeArea,
+          as: 'addressAdministrativeArea',
+          attributes: ['id', 'name']
+        },
+        {
+          model: GeoSettlement,
+          as: 'addressSettlement',
+          attributes: ['id', 'name', 'type']
+        },
+        {
+          model: GeoNeighborhood,
+          as: 'addressNeighborhood',
+          attributes: ['id', 'name']
         }
       ]
     });
@@ -67,24 +103,28 @@ export class DriverService {
   /**
    * Create or update driver profile (Step 1: Personal Info)
    */
-  static async upsertDriverProfile(userId: string, data: {
-    first_name?: string;
-    last_name?: string;
-    father_name?: string;
-    gender?: 'male' | 'female';
-    birth_date?: string;
-    email?: string;
-    address_country?: string;
-    address_region?: string;
-    address_city?: string;
-    address_settlement_type?: string;
-    address_mahalla?: string;
-    address_street?: string;
-    photo_face_url?: string;
-    photo_body_url?: string;
-    vehicle_owner_type?: 'own' | 'other_person' | 'company';
-    vehicle_usage_type?: 'rent' | 'free_use';
-  }) {
+  static async upsertDriverProfile(
+    userId: string,
+    data: {
+      first_name?: string;
+      last_name?: string;
+      father_name?: string;
+      gender?: 'male' | 'female';
+      birth_date?: string;
+      email?: string;
+      address_country_id?: number | null;
+      address_province_id?: number | null;
+      address_city_district_id?: number | null;
+      address_administrative_area_id?: number | null;
+      address_settlement_id?: number | null;
+      address_neighborhood_id?: number | null;
+      address_street?: string;
+      photo_face_url?: string;
+      photo_body_url?: string;
+      vehicle_owner_type?: 'own' | 'other_person' | 'company';
+      vehicle_usage_type?: 'rent' | 'free_use';
+    }
+  ) {
     // Update user role to driver
     await User.update(
       { role: 'driver' },

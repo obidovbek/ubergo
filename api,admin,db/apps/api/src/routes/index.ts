@@ -14,6 +14,14 @@ import deviceRoutes from './device.routes.js';
 import driverRoutes from './driver.routes.js';
 import uploadRoutes from './upload.routes.js';
 import countryRoutes from './country.routes.js';
+import geoRoutes from './geo.routes.js';
+import adminGeoRoutes from './admin-geo.routes.js';
+import adminVehicleMakeRoutes from './admin-vehicle-make.routes.js';
+import adminVehicleModelRoutes from './admin-vehicle-model.routes.js';
+import adminVehicleBodyTypeRoutes from './admin-vehicle-body-type.routes.js';
+import adminVehicleColorRoutes from './admin-vehicle-color.routes.js';
+import adminVehicleTypeRoutes from './admin-vehicle-type.routes.js';
+import vehicleRoutes from './vehicle.routes.js';
 
 const router = Router();
 
@@ -45,11 +53,27 @@ router.use('/admin/drivers', adminDriverRoutes);
 // Admin country routes
 router.use('/admin/countries', adminCountryRoutes);
 
+// Admin geo routes
+router.use('/admin/geo', adminGeoRoutes);
+
+// Admin vehicle routes
+router.use('/admin/vehicle-types', adminVehicleTypeRoutes);
+router.use('/admin/vehicle-makes', adminVehicleMakeRoutes);
+router.use('/admin/vehicle-models', adminVehicleModelRoutes);
+router.use('/admin/vehicle-body-types', adminVehicleBodyTypeRoutes);
+router.use('/admin/vehicle-colors', adminVehicleColorRoutes);
+
 // User routes
 router.use('/user', userRoutes);
 
 // Public country routes
 router.use('/countries', countryRoutes);
+
+// Public geo routes
+router.use('/geo', geoRoutes);
+
+// Public vehicle routes
+router.use('/vehicles', vehicleRoutes);
 
 // Device routes (push tokens)
 router.use('/devices', deviceRoutes);

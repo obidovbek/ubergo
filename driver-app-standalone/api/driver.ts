@@ -11,6 +11,14 @@ export interface DriverProfileStatus {
   isComplete: boolean;
 }
 
+export interface GeoOption {
+  id: number;
+  name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  type?: string | null;
+}
+
 export interface DriverProfile {
   id: string;
   user_id: string;
@@ -20,12 +28,26 @@ export interface DriverProfile {
   gender?: 'male' | 'female';
   birth_date?: string;
   email?: string;
+  // Legacy string fields (may be undefined when using new geo hierarchy)
   address_country?: string;
   address_region?: string;
   address_city?: string;
   address_settlement_type?: string;
   address_mahalla?: string;
-  address_street?: string;
+  address_street?: string | null;
+  // New geo hierarchy references
+  address_country_id?: number | null;
+  address_province_id?: number | null;
+  address_city_district_id?: number | null;
+  address_administrative_area_id?: number | null;
+  address_settlement_id?: number | null;
+  address_neighborhood_id?: number | null;
+  addressCountry?: GeoOption | null;
+  addressProvince?: GeoOption | null;
+  addressCityDistrict?: GeoOption | null;
+  addressAdministrativeArea?: GeoOption | null;
+  addressSettlement?: GeoOption | null;
+  addressNeighborhood?: GeoOption | null;
   photo_face_url?: string;
   photo_body_url?: string;
   vehicle_owner_type?: 'own' | 'other_person' | 'company';
@@ -167,6 +189,310 @@ export const updatePersonalInfo = async (token: string, data: Partial<DriverProf
     }
 
     return result.data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+const fetchGeoList = async <T extends GeoOption[]>(
+  path: string
+): Promise<T> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load geo data');
+    }
+
+    return result.data as T;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+export const fetchGeoCountries = async (): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>('/geo/countries');
+};
+
+export const fetchGeoProvinces = async (countryId: number): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/countries/${countryId}/provinces`);
+};
+
+export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`);
+};
+
+export const fetchGeoAdministrativeAreas = async (
+  cityDistrictId: number
+): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(
+    `/geo/city-districts/${cityDistrictId}/administrative-areas`
+  );
+};
+
+export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`);
+};
+
+export const fetchGeoNeighborhoods = async (
+  cityDistrictId: number
+): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`);
+};
+
+export interface CountryOption {
+  id: string;
+  name: string;
+  code: string;
+  flag?: string | null;
+  local_length: number;
+  pattern: 'uz' | 'ru' | 'generic';
+  sort_order: number;
+  is_active: boolean;
+}
+
+/**
+ * Fetch countries for phone country codes
+ */
+export const fetchCountries = async (): Promise<CountryOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/countries`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load countries');
+    }
+
+    return result.data as CountryOption[];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+// Vehicle data interfaces
+export interface VehicleMakeOption {
+  id: string;
+  name: string;
+  name_uz?: string | null;
+  name_ru?: string | null;
+  name_en?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface VehicleModelOption {
+  id: string;
+  vehicle_make_id: string;
+  name: string;
+  name_uz?: string | null;
+  name_ru?: string | null;
+  name_en?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface VehicleBodyTypeOption {
+  id: string;
+  name: string;
+  name_uz?: string | null;
+  name_ru?: string | null;
+  name_en?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface VehicleColorOption {
+  id: string;
+  name: string;
+  name_uz?: string | null;
+  name_ru?: string | null;
+  name_en?: string | null;
+  hex_code?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface VehicleTypeOption {
+  id: string;
+  name: string;
+  name_uz?: string | null;
+  name_ru?: string | null;
+  name_en?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+/**
+ * Fetch vehicle makes
+ */
+export const fetchVehicleMakes = async (token: string): Promise<VehicleMakeOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/vehicles/makes`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: getHeaders(token),
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load vehicle makes');
+    }
+
+    return result.data as VehicleMakeOption[];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Fetch vehicle models by make
+ */
+export const fetchVehicleModels = async (token: string, makeId?: string): Promise<VehicleModelOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const url = makeId 
+      ? `${API_BASE_URL}/vehicles/models?make_id=${makeId}`
+      : `${API_BASE_URL}/vehicles/models`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: getHeaders(token),
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load vehicle models');
+    }
+
+    return result.data as VehicleModelOption[];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Fetch vehicle body types
+ */
+export const fetchVehicleBodyTypes = async (token: string): Promise<VehicleBodyTypeOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/vehicles/body-types`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: getHeaders(token),
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load vehicle body types');
+    }
+
+    return result.data as VehicleBodyTypeOption[];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Fetch vehicle colors
+ */
+export const fetchVehicleColors = async (token: string): Promise<VehicleColorOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/vehicles/colors`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: getHeaders(token),
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load vehicle colors');
+    }
+
+    return result.data as VehicleColorOption[];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Fetch vehicle types
+ */
+export const fetchVehicleTypes = async (token: string): Promise<VehicleTypeOption[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/vehicles/types`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: getHeaders(token),
+    });
+
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to load vehicle types');
+    }
+
+    return result.data as VehicleTypeOption[];
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

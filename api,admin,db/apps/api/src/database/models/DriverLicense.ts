@@ -15,8 +15,8 @@ export interface DriverLicenseAttributes {
   father_name?: string | null;
   birth_date?: Date | null;
   // License Details
-  license_number?: string | null;
-  issue_date?: Date | null;
+  license_number: string;
+  issue_date: Date;
   // License Categories
   category_a?: Date | null;
   category_b?: Date | null;
@@ -34,8 +34,10 @@ export interface DriverLicenseAttributes {
 
 // Creation attributes
 export interface DriverLicenseCreationAttributes
-  extends Optional<DriverLicenseAttributes, 'id' | 'first_name' | 'last_name' | 'father_name' | 'birth_date' | 'license_number' | 'issue_date' | 'category_a' | 'category_b' | 'category_c' | 'category_d' | 'category_be' | 'category_ce' | 'category_de' | 'license_front_url' | 'license_back_url' | 'created_at' | 'updated_at'> {
+  extends Optional<DriverLicenseAttributes, 'id' | 'first_name' | 'last_name' | 'father_name' | 'birth_date' | 'category_a' | 'category_b' | 'category_c' | 'category_d' | 'category_be' | 'category_ce' | 'category_de' | 'license_front_url' | 'license_back_url' | 'created_at' | 'updated_at'> {
   driver_profile_id: string;
+  license_number: string;
+  issue_date: Date;
 }
 
 // Driver License model class
@@ -46,8 +48,8 @@ export class DriverLicense extends Model<DriverLicenseAttributes, DriverLicenseC
   declare last_name?: string | null;
   declare father_name?: string | null;
   declare birth_date?: Date | null;
-  declare license_number?: string | null;
-  declare issue_date?: Date | null;
+  declare license_number: string;
+  declare issue_date: Date;
   declare category_a?: Date | null;
   declare category_b?: Date | null;
   declare category_c?: Date | null;
@@ -102,11 +104,11 @@ export function initDriverLicense(sequelize: Sequelize) {
       },
       license_number: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false
       },
       issue_date: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: false
       },
       category_a: {
         type: DataTypes.DATEONLY,

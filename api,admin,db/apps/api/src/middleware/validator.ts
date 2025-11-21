@@ -73,17 +73,29 @@ export const validateRequest = (rules: ValidationRule[]) => {
           }
           break;
 
-        case 'min':
-          if (value !== undefined && value !== null && Number(value) < (rule.params?.min || 0)) {
+        case 'min': {
+          if (
+            value !== undefined &&
+            value !== null &&
+            value !== '' &&
+            Number(value) < (rule.params?.min ?? 0)
+          ) {
             errors.push({ field: rule.field, type: 'minValue', params: { min: rule.params?.min } });
           }
           break;
+        }
 
-        case 'max':
-          if (value !== undefined && value !== null && Number(value) > (rule.params?.max || Infinity)) {
+        case 'max': {
+          if (
+            value !== undefined &&
+            value !== null &&
+            value !== '' &&
+            Number(value) > (rule.params?.max ?? Infinity)
+          ) {
             errors.push({ field: rule.field, type: 'maxValue', params: { max: rule.params?.max } });
           }
           break;
+        }
 
         case 'in':
           if (value && rule.params?.values && !rule.params.values.includes(value)) {
@@ -97,11 +109,13 @@ export const validateRequest = (rules: ValidationRule[]) => {
           }
           break;
 
-        case 'custom':
-          if (rule.customValidator && value && !rule.customValidator(value)) {
+        case 'custom': {
+          const shouldValidate = value !== undefined && value !== null && value !== '';
+          if (rule.customValidator && shouldValidate && !rule.customValidator(value)) {
             errors.push({ field: rule.field, type: 'invalid' });
           }
           break;
+        }
       }
     }
 
@@ -172,6 +186,146 @@ export const validateCountryCreate = validateRequest([
 export const validateCountryUpdate = validateRequest([
   { field: 'local_length', type: 'min', params: { min: 1 } },
   { field: 'pattern', type: 'in', params: { values: COUNTRY_PATTERNS } },
+]);
+
+/**
+ * Geo hierarchy validation helpers
+ */
+const isCoordinate = (value: unknown, min: number, max: number): boolean => {
+  const num = Number(value);
+  if (Number.isNaN(num)) {
+    return false;
+  }
+  return num >= min && num <= max;
+};
+
+export const validateGeoCountryCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoCountryUpdate = validateRequest([
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoProvinceCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'country_id', type: 'required' },
+  { field: 'country_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoProvinceUpdate = validateRequest([
+  { field: 'country_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoCityDistrictCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'province_id', type: 'required' },
+  { field: 'province_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoCityDistrictUpdate = validateRequest([
+  { field: 'province_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoAdministrativeAreaCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'city_district_id', type: 'required' },
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoAdministrativeAreaUpdate = validateRequest([
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoSettlementCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'city_district_id', type: 'required' },
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoSettlementUpdate = validateRequest([
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoNeighborhoodCreate = validateRequest([
+  { field: 'name', type: 'required' },
+  { field: 'city_district_id', type: 'required' },
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
+]);
+
+export const validateGeoNeighborhoodUpdate = validateRequest([
+  { field: 'city_district_id', type: 'custom', customValidator: (value) => !Number.isNaN(Number(value)) },
+  { field: 'latitude', type: 'custom', customValidator: (value) => isCoordinate(value, -90, 90) },
+  { field: 'latitude', type: 'min', params: { min: -90 } },
+  { field: 'latitude', type: 'max', params: { max: 90 } },
+  { field: 'longitude', type: 'custom', customValidator: (value) => isCoordinate(value, -180, 180) },
+  { field: 'longitude', type: 'min', params: { min: -180 } },
+  { field: 'longitude', type: 'max', params: { max: 180 } },
 ]);
 
 /**

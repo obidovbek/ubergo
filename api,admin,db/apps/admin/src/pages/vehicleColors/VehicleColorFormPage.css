@@ -1,0 +1,137 @@
+.vehicle-color-form-page {
+  padding: 24px;
+  color: #ffffff;
+}
+
+.vehicle-color-form-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.vehicle-color-form-page .page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.vehicle-color-form {
+  display: grid;
+  gap: 24px;
+}
+
+.vehicle-color-form .form-section {
+  background: #2a2a2a;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.vehicle-color-form .form-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+.vehicle-color-form .form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.vehicle-color-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vehicle-color-form label {
+  font-size: 14px;
+  color: #cccccc;
+}
+
+.vehicle-color-form input,
+.vehicle-color-form select,
+.vehicle-color-form textarea {
+  background: #1f1f1f;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.vehicle-color-form input:focus,
+.vehicle-color-form select:focus,
+.vehicle-color-form textarea:focus {
+  outline: none;
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 1px rgba(77, 171, 247, 0.3);
+}
+
+.vehicle-color-form input.error,
+.vehicle-color-form select.error {
+  border-color: #e57373;
+}
+
+.vehicle-color-form .error-text {
+  color: #ff8a80;
+  font-size: 13px;
+}
+
+.vehicle-color-form .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #d0d0d0;
+}
+
+.vehicle-color-form .checkbox-group input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+
+.vehicle-color-form .form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.vehicle-color-form .info-text {
+  font-size: 13px;
+  color: #9e9e9e;
+}
+
+.hex-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-preview-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid #3a3a3a;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: #ffffff;
+}
+

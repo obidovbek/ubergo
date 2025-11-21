@@ -85,6 +85,17 @@ import { AdminUser, initAdminUser } from './AdminUser.js';
 import { Role, initRole } from './Role.js';
 import { UserRole, initUserRole } from './UserRole.js';
 import { Country, initCountry } from './Country.js';
+import { GeoCountry, initGeoCountry } from './GeoCountry.js';
+import { GeoProvince, initGeoProvince } from './GeoProvince.js';
+import { GeoCityDistrict, initGeoCityDistrict } from './GeoCityDistrict.js';
+import { GeoAdministrativeArea, initGeoAdministrativeArea } from './GeoAdministrativeArea.js';
+import { GeoSettlement, initGeoSettlement } from './GeoSettlement.js';
+import { GeoNeighborhood, initGeoNeighborhood } from './GeoNeighborhood.js';
+import { VehicleMake, initVehicleMake } from './VehicleMake.js';
+import { VehicleModel, initVehicleModel } from './VehicleModel.js';
+import { VehicleBodyType, initVehicleBodyType } from './VehicleBodyType.js';
+import { VehicleColor, initVehicleColor } from './VehicleColor.js';
+import { VehicleType, initVehicleType } from './VehicleType.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -94,6 +105,12 @@ initOtpCode(sequelize);
 initDeletionRequest(sequelize);
 initAuditLog(sequelize);
 initPushToken(sequelize);
+initGeoCountry(sequelize);
+initGeoProvince(sequelize);
+initGeoCityDistrict(sequelize);
+initGeoAdministrativeArea(sequelize);
+initGeoSettlement(sequelize);
+initGeoNeighborhood(sequelize);
 initDriverProfile(sequelize);
 initDriverPassport(sequelize);
 initDriverLicense(sequelize);
@@ -104,6 +121,11 @@ initAdminUser(sequelize);
 initRole(sequelize);
 initUserRole(sequelize);
 initCountry(sequelize);
+initVehicleMake(sequelize);
+initVehicleModel(sequelize);
+initVehicleBodyType(sequelize);
+initVehicleColor(sequelize);
+initVehicleType(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -121,9 +143,64 @@ AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(PushToken, { foreignKey: 'user_id', as: 'pushTokens' });
 PushToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// Geo hierarchy associations
+GeoCountry.hasMany(GeoProvince, { foreignKey: 'country_id', as: 'provinces' });
+GeoProvince.belongsTo(GeoCountry, { foreignKey: 'country_id', as: 'country' });
+
+GeoProvince.hasMany(GeoCityDistrict, { foreignKey: 'province_id', as: 'cityDistricts' });
+GeoCityDistrict.belongsTo(GeoProvince, { foreignKey: 'province_id', as: 'province' });
+
+GeoCityDistrict.hasMany(GeoAdministrativeArea, {
+  foreignKey: 'city_district_id',
+  as: 'administrativeAreas'
+});
+GeoAdministrativeArea.belongsTo(GeoCityDistrict, {
+  foreignKey: 'city_district_id',
+  as: 'cityDistrict'
+});
+
+GeoCityDistrict.hasMany(GeoSettlement, { foreignKey: 'city_district_id', as: 'settlements' });
+GeoSettlement.belongsTo(GeoCityDistrict, { foreignKey: 'city_district_id', as: 'cityDistrict' });
+
+GeoCityDistrict.hasMany(GeoNeighborhood, { foreignKey: 'city_district_id', as: 'neighborhoods' });
+GeoNeighborhood.belongsTo(GeoCityDistrict, { foreignKey: 'city_district_id', as: 'cityDistrict' });
+
 // Driver associations
 User.hasOne(DriverProfile, { foreignKey: 'user_id', as: 'driverProfile' });
 DriverProfile.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+DriverProfile.belongsTo(GeoCountry, { foreignKey: 'address_country_id', as: 'addressCountry' });
+DriverProfile.belongsTo(GeoProvince, { foreignKey: 'address_province_id', as: 'addressProvince' });
+DriverProfile.belongsTo(GeoCityDistrict, {
+  foreignKey: 'address_city_district_id',
+  as: 'addressCityDistrict'
+});
+DriverProfile.belongsTo(GeoAdministrativeArea, {
+  foreignKey: 'address_administrative_area_id',
+  as: 'addressAdministrativeArea'
+});
+DriverProfile.belongsTo(GeoSettlement, {
+  foreignKey: 'address_settlement_id',
+  as: 'addressSettlement'
+});
+DriverProfile.belongsTo(GeoNeighborhood, {
+  foreignKey: 'address_neighborhood_id',
+  as: 'addressNeighborhood'
+});
+GeoCountry.hasMany(DriverProfile, { foreignKey: 'address_country_id', as: 'driverProfiles' });
+GeoProvince.hasMany(DriverProfile, { foreignKey: 'address_province_id', as: 'driverProfiles' });
+GeoCityDistrict.hasMany(DriverProfile, {
+  foreignKey: 'address_city_district_id',
+  as: 'driverProfiles'
+});
+GeoAdministrativeArea.hasMany(DriverProfile, {
+  foreignKey: 'address_administrative_area_id',
+  as: 'driverProfiles'
+});
+GeoSettlement.hasMany(DriverProfile, { foreignKey: 'address_settlement_id', as: 'driverProfiles' });
+GeoNeighborhood.hasMany(DriverProfile, {
+  foreignKey: 'address_neighborhood_id',
+  as: 'driverProfiles'
+});
 
 DriverProfile.hasOne(DriverPassport, { foreignKey: 'driver_profile_id', as: 'passport' });
 DriverPassport.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
@@ -136,6 +213,60 @@ EmergencyContact.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as:
 
 DriverProfile.hasOne(DriverVehicle, { foreignKey: 'driver_profile_id', as: 'vehicle' });
 DriverVehicle.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
+
+// DriverVehicle geo associations
+DriverVehicle.belongsTo(GeoCountry, { foreignKey: 'owner_address_country_id', as: 'ownerAddressCountry' });
+DriverVehicle.belongsTo(GeoProvince, { foreignKey: 'owner_address_province_id', as: 'ownerAddressProvince' });
+DriverVehicle.belongsTo(GeoCityDistrict, {
+  foreignKey: 'owner_address_city_district_id',
+  as: 'ownerAddressCityDistrict'
+});
+DriverVehicle.belongsTo(GeoAdministrativeArea, {
+  foreignKey: 'owner_address_administrative_area_id',
+  as: 'ownerAddressAdministrativeArea'
+});
+DriverVehicle.belongsTo(GeoSettlement, {
+  foreignKey: 'owner_address_settlement_id',
+  as: 'ownerAddressSettlement'
+});
+DriverVehicle.belongsTo(GeoNeighborhood, {
+  foreignKey: 'owner_address_neighborhood_id',
+  as: 'ownerAddressNeighborhood'
+});
+GeoCountry.hasMany(DriverVehicle, { foreignKey: 'owner_address_country_id', as: 'ownerVehicles' });
+GeoProvince.hasMany(DriverVehicle, { foreignKey: 'owner_address_province_id', as: 'ownerVehicles' });
+GeoCityDistrict.hasMany(DriverVehicle, {
+  foreignKey: 'owner_address_city_district_id',
+  as: 'ownerVehicles'
+});
+GeoAdministrativeArea.hasMany(DriverVehicle, {
+  foreignKey: 'owner_address_administrative_area_id',
+  as: 'ownerVehicles'
+});
+GeoSettlement.hasMany(DriverVehicle, {
+  foreignKey: 'owner_address_settlement_id',
+  as: 'ownerVehicles'
+});
+GeoNeighborhood.hasMany(DriverVehicle, {
+  foreignKey: 'owner_address_neighborhood_id',
+  as: 'ownerVehicles'
+});
+
+// Vehicle associations
+VehicleMake.hasMany(VehicleModel, { foreignKey: 'vehicle_make_id', as: 'models' });
+VehicleModel.belongsTo(VehicleMake, { foreignKey: 'vehicle_make_id', as: 'make' });
+
+DriverVehicle.belongsTo(VehicleType, { foreignKey: 'vehicle_type_id', as: 'type' });
+DriverVehicle.belongsTo(VehicleMake, { foreignKey: 'vehicle_make_id', as: 'make' });
+DriverVehicle.belongsTo(VehicleModel, { foreignKey: 'vehicle_model_id', as: 'model' });
+DriverVehicle.belongsTo(VehicleBodyType, { foreignKey: 'vehicle_body_type_id', as: 'bodyType' });
+DriverVehicle.belongsTo(VehicleColor, { foreignKey: 'vehicle_color_id', as: 'color' });
+
+VehicleType.hasMany(DriverVehicle, { foreignKey: 'vehicle_type_id', as: 'vehicles' });
+VehicleMake.hasMany(DriverVehicle, { foreignKey: 'vehicle_make_id', as: 'vehicles' });
+VehicleModel.hasMany(DriverVehicle, { foreignKey: 'vehicle_model_id', as: 'vehicles' });
+VehicleBodyType.hasMany(DriverVehicle, { foreignKey: 'vehicle_body_type_id', as: 'vehicles' });
+VehicleColor.hasMany(DriverVehicle, { foreignKey: 'vehicle_color_id', as: 'vehicles' });
 
 DriverProfile.hasOne(DriverTaxiLicense, { foreignKey: 'driver_profile_id', as: 'taxiLicense' });
 DriverTaxiLicense.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
@@ -182,6 +313,17 @@ export {
   Role,
   UserRole,
   Country,
+  GeoCountry,
+  GeoProvince,
+  GeoCityDistrict,
+  GeoAdministrativeArea,
+  GeoSettlement,
+  GeoNeighborhood,
+  VehicleMake,
+  VehicleModel,
+  VehicleBodyType,
+  VehicleColor,
+  VehicleType,
 };
 
 export default sequelize;

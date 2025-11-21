@@ -17,11 +17,12 @@ export interface DriverProfileAttributes {
   birth_date?: Date | null;
   email?: string | null;
   // Current Residence Address
-  address_country?: string | null;
-  address_region?: string | null;
-  address_city?: string | null;
-  address_settlement_type?: string | null;
-  address_mahalla?: string | null;
+  address_country_id?: number | null;
+  address_province_id?: number | null;
+  address_city_district_id?: number | null;
+  address_administrative_area_id?: number | null;
+  address_settlement_id?: number | null;
+  address_neighborhood_id?: number | null;
   address_street?: string | null;
   // Photo Uploads
   photo_face_url?: string | null;
@@ -38,7 +39,31 @@ export interface DriverProfileAttributes {
 
 // Creation attributes
 export interface DriverProfileCreationAttributes
-  extends Optional<DriverProfileAttributes, 'id' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'email' | 'address_country' | 'address_region' | 'address_city' | 'address_settlement_type' | 'address_mahalla' | 'address_street' | 'photo_face_url' | 'photo_body_url' | 'vehicle_owner_type' | 'vehicle_usage_type' | 'registration_step' | 'is_complete' | 'created_at' | 'updated_at'> {
+  extends Optional<
+    DriverProfileAttributes,
+    | 'id'
+    | 'first_name'
+    | 'last_name'
+    | 'father_name'
+    | 'gender'
+    | 'birth_date'
+    | 'email'
+    | 'address_country_id'
+    | 'address_province_id'
+    | 'address_city_district_id'
+    | 'address_administrative_area_id'
+    | 'address_settlement_id'
+    | 'address_neighborhood_id'
+    | 'address_street'
+    | 'photo_face_url'
+    | 'photo_body_url'
+    | 'vehicle_owner_type'
+    | 'vehicle_usage_type'
+    | 'registration_step'
+    | 'is_complete'
+    | 'created_at'
+    | 'updated_at'
+  > {
   user_id: string;
 }
 
@@ -52,11 +77,12 @@ export class DriverProfile extends Model<DriverProfileAttributes, DriverProfileC
   declare gender?: 'male' | 'female' | null;
   declare birth_date?: Date | null;
   declare email?: string | null;
-  declare address_country?: string | null;
-  declare address_region?: string | null;
-  declare address_city?: string | null;
-  declare address_settlement_type?: string | null;
-  declare address_mahalla?: string | null;
+  declare address_country_id?: number | null;
+  declare address_province_id?: number | null;
+  declare address_city_district_id?: number | null;
+  declare address_administrative_area_id?: number | null;
+  declare address_settlement_id?: number | null;
+  declare address_neighborhood_id?: number | null;
   declare address_street?: string | null;
   declare photo_face_url?: string | null;
   declare photo_body_url?: string | null;
@@ -118,25 +144,65 @@ export function initDriverProfile(sequelize: Sequelize) {
           isEmail: true
         }
       },
-      address_country: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      address_country_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_countries',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_region: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      address_province_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_provinces',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_city: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      address_city_district_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_city_districts',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_settlement_type: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      address_administrative_area_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_administrative_areas',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_mahalla: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      address_settlement_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_settlements',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      address_neighborhood_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_neighborhoods',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
       address_street: {
         type: DataTypes.TEXT,

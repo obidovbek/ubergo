@@ -187,29 +187,47 @@ export const DriverDetailPage = () => {
             </div>
 
             {/* Address */}
-            {(profile.address_country || profile.address_region || profile.address_city) && (
+            {(
+              profile.addressCountry ||
+              profile.addressProvince ||
+              profile.addressCityDistrict ||
+              profile.addressAdministrativeArea ||
+              profile.addressSettlement ||
+              profile.addressNeighborhood ||
+              profile.address_street
+            ) && (
               <div className="address-section">
                 <h3>Manzil</h3>
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Davlat</label>
-                    <span>{profile.address_country || '-'}</span>
+                    <span>{profile.addressCountry?.name || '-'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Viloyat</label>
-                    <span>{profile.address_region || '-'}</span>
+                    <span>{profile.addressProvince?.name || '-'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Shahar</label>
-                    <span>{profile.address_city || '-'}</span>
+                    <span>{profile.addressCityDistrict?.name || '-'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Ma'muriy hudud</label>
+                    <span>{profile.addressAdministrativeArea?.name || '-'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Turar joy turi</label>
-                    <span>{profile.address_settlement_type || '-'}</span>
+                    <span>
+                      {profile.addressSettlement
+                        ? `${profile.addressSettlement.name}${
+                            profile.addressSettlement.type ? ` (${profile.addressSettlement.type})` : ''
+                          }`
+                        : '-'}
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label>Mahalla</label>
-                    <span>{profile.address_mahalla || '-'}</span>
+                    <span>{profile.addressNeighborhood?.name || '-'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Ko'cha</label>

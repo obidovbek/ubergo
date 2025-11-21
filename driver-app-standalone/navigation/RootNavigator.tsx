@@ -48,10 +48,10 @@ export const RootNavigator: React.FC = () => {
     }
   }, [isAuthenticated, token]);
 
-  // Check driver profile status when authenticated or when refresh is triggered
+  // Check driver profile status when authenticated, when refresh is triggered, or when user changes
   useEffect(() => {
     checkDriverProfile();
-  }, [checkDriverProfile, refreshTrigger]);
+  }, [checkDriverProfile, refreshTrigger, user]);
 
   // Profile status is checked:
   // 1. On initial mount (useEffect above)

@@ -489,6 +489,7 @@ export const UserDetailsScreen: React.FC = () => {
                 style={[
                   styles.genderButton,
                   gender === 'male' && styles.genderButtonActive,
+                  errors.gender && styles.genderButtonError,
                 ]}
                 onPress={() => {
                   setGender('male');
@@ -502,6 +503,7 @@ export const UserDetailsScreen: React.FC = () => {
                   style={[
                     styles.radio,
                     gender === 'male' && styles.radioActive,
+                    errors.gender && styles.radioError,
                   ]}
                 />
                 <Text
@@ -518,6 +520,7 @@ export const UserDetailsScreen: React.FC = () => {
                 style={[
                   styles.genderButton,
                   gender === 'female' && styles.genderButtonActive,
+                  errors.gender && styles.genderButtonError,
                 ]}
                 onPress={() => {
                   setGender('female');
@@ -531,6 +534,7 @@ export const UserDetailsScreen: React.FC = () => {
                   style={[
                     styles.radio,
                     gender === 'female' && styles.radioActive,
+                    errors.gender && styles.radioError,
                   ]}
                 />
                 <Text
@@ -997,6 +1001,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#4CAF50',
     backgroundColor: 'transparent',
   },
+  genderButtonError: {
+    borderBottomColor: theme.palette.error.main,
+  },
   radio: {
     width: 20,
     height: 20,
@@ -1008,6 +1015,9 @@ const styles = StyleSheet.create({
   radioActive: {
     borderColor: '#4CAF50',
     backgroundColor: '#4CAF50',
+  },
+  radioError: {
+    borderColor: theme.palette.error.main,
   },
   genderText: {
     ...theme.typography.body1,

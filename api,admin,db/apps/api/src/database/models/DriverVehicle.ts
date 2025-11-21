@@ -17,17 +17,26 @@ export interface DriverVehicleAttributes {
   owner_last_name?: string | null;
   owner_father_name?: string | null;
   owner_pinfl?: string | null;
+  // Owner Address (Geo IDs)
+  owner_address_country_id?: number | null;
+  owner_address_province_id?: number | null;
+  owner_address_city_district_id?: number | null;
+  owner_address_administrative_area_id?: number | null;
+  owner_address_settlement_id?: number | null;
+  owner_address_neighborhood_id?: number | null;
+  owner_address_street?: string | null;
+  // Legacy string fields (kept for backward compatibility)
   owner_address_country?: string | null;
   owner_address_region?: string | null;
   owner_address_city?: string | null;
   owner_address_mahalla?: string | null;
-  owner_address_street?: string | null;
   // Vehicle Identification
-  vehicle_type?: 'light' | 'cargo' | null;
-  body_type?: string | null; // Sedan, etc.
-  make?: string | null; // Chevrolet, etc.
-  model?: string | null; // Cobalt, etc.
-  color?: string | null;
+  vehicle_type?: 'light' | 'cargo' | null; // Legacy enum field (kept for backward compatibility)
+  vehicle_type_id?: string | null;
+  vehicle_make_id?: string | null;
+  vehicle_model_id?: string | null;
+  vehicle_body_type_id?: string | null;
+  vehicle_color_id?: string | null;
   license_plate?: string | null; // Davlat raqami
   year?: number | null;
   // Technical Specifications
@@ -52,7 +61,7 @@ export interface DriverVehicleAttributes {
 
 // Creation attributes
 export interface DriverVehicleCreationAttributes
-  extends Optional<DriverVehicleAttributes, 'id' | 'company_name' | 'company_tax_id' | 'owner_first_name' | 'owner_last_name' | 'owner_father_name' | 'owner_pinfl' | 'owner_address_country' | 'owner_address_region' | 'owner_address_city' | 'owner_address_mahalla' | 'owner_address_street' | 'vehicle_type' | 'body_type' | 'make' | 'model' | 'color' | 'license_plate' | 'year' | 'gross_weight' | 'unladen_weight' | 'fuel_types' | 'seating_capacity' | 'tech_passport_series' | 'tech_passport_front_url' | 'tech_passport_back_url' | 'photo_front_url' | 'photo_back_url' | 'photo_right_url' | 'photo_left_url' | 'photo_angle_45_url' | 'photo_interior_url' | 'created_at' | 'updated_at'> {
+  extends Optional<DriverVehicleAttributes, 'id' | 'company_name' | 'company_tax_id' | 'owner_first_name' | 'owner_last_name' | 'owner_father_name' | 'owner_pinfl' | 'owner_address_country_id' | 'owner_address_province_id' | 'owner_address_city_district_id' | 'owner_address_administrative_area_id' | 'owner_address_settlement_id' | 'owner_address_neighborhood_id' | 'owner_address_street' | 'owner_address_country' | 'owner_address_region' | 'owner_address_city' | 'owner_address_mahalla' | 'vehicle_type' | 'vehicle_type_id' | 'vehicle_make_id' | 'vehicle_model_id' | 'vehicle_body_type_id' | 'vehicle_color_id' | 'license_plate' | 'year' | 'gross_weight' | 'unladen_weight' | 'fuel_types' | 'seating_capacity' | 'tech_passport_series' | 'tech_passport_front_url' | 'tech_passport_back_url' | 'photo_front_url' | 'photo_back_url' | 'photo_right_url' | 'photo_left_url' | 'photo_angle_45_url' | 'photo_interior_url' | 'created_at' | 'updated_at'> {
   driver_profile_id: string;
 }
 
@@ -66,16 +75,24 @@ export class DriverVehicle extends Model<DriverVehicleAttributes, DriverVehicleC
   declare owner_last_name?: string | null;
   declare owner_father_name?: string | null;
   declare owner_pinfl?: string | null;
+  declare owner_address_country_id?: number | null;
+  declare owner_address_province_id?: number | null;
+  declare owner_address_city_district_id?: number | null;
+  declare owner_address_administrative_area_id?: number | null;
+  declare owner_address_settlement_id?: number | null;
+  declare owner_address_neighborhood_id?: number | null;
+  declare owner_address_street?: string | null;
+  // Legacy string fields
   declare owner_address_country?: string | null;
   declare owner_address_region?: string | null;
   declare owner_address_city?: string | null;
   declare owner_address_mahalla?: string | null;
-  declare owner_address_street?: string | null;
-  declare vehicle_type?: 'light' | 'cargo' | null;
-  declare body_type?: string | null;
-  declare make?: string | null;
-  declare model?: string | null;
-  declare color?: string | null;
+  declare vehicle_type?: 'light' | 'cargo' | null; // Legacy enum field
+  declare vehicle_type_id?: string | null;
+  declare vehicle_make_id?: string | null;
+  declare vehicle_model_id?: string | null;
+  declare vehicle_body_type_id?: string | null;
+  declare vehicle_color_id?: string | null;
   declare license_plate?: string | null;
   declare year?: number | null;
   declare gross_weight?: number | null;
@@ -142,6 +159,71 @@ export function initDriverVehicle(sequelize: Sequelize) {
         type: DataTypes.TEXT,
         allowNull: true
       },
+      owner_address_country_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_countries',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_province_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_provinces',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_city_district_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_city_districts',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_administrative_area_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_administrative_areas',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_settlement_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_settlements',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_neighborhood_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+          model: 'geo_neighborhoods',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      owner_address_street: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      // Legacy string fields (kept for backward compatibility)
       owner_address_country: {
         type: DataTypes.TEXT,
         allowNull: true
@@ -158,29 +240,59 @@ export function initDriverVehicle(sequelize: Sequelize) {
         type: DataTypes.TEXT,
         allowNull: true
       },
-      owner_address_street: {
-        type: DataTypes.TEXT,
-        allowNull: true
-      },
       vehicle_type: {
         type: DataTypes.ENUM('light', 'cargo'),
         allowNull: true
       },
-      body_type: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      vehicle_type_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'vehicle_types',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      make: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      vehicle_make_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'vehicle_makes',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      model: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      vehicle_model_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'vehicle_models',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      color: {
-        type: DataTypes.TEXT,
-        allowNull: true
+      vehicle_body_type_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'vehicle_body_types',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      vehicle_color_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'vehicle_colors',
+          key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
       license_plate: {
         type: DataTypes.TEXT,
@@ -271,6 +383,39 @@ export function initDriverVehicle(sequelize: Sequelize) {
         },
         {
           fields: ['tech_passport_series']
+        },
+        {
+          fields: ['vehicle_type_id']
+        },
+        {
+          fields: ['owner_address_country_id']
+        },
+        {
+          fields: ['owner_address_province_id']
+        },
+        {
+          fields: ['owner_address_city_district_id']
+        },
+        {
+          fields: ['owner_address_administrative_area_id']
+        },
+        {
+          fields: ['owner_address_settlement_id']
+        },
+        {
+          fields: ['owner_address_neighborhood_id']
+        },
+        {
+          fields: ['vehicle_make_id']
+        },
+        {
+          fields: ['vehicle_model_id']
+        },
+        {
+          fields: ['vehicle_body_type_id']
+        },
+        {
+          fields: ['vehicle_color_id']
         }
       ]
     }

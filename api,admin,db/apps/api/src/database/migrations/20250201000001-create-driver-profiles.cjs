@@ -56,25 +56,47 @@ module.exports = {
         type: 'CITEXT',
         allowNull: true
       },
-      address_country: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      address_country_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_countries', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_region: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      address_province_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_provinces', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_city: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      address_city_district_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_city_districts', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_settlement_type: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      address_administrative_area_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_administrative_areas', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
-      address_mahalla: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      address_settlement_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_settlements', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      },
+      address_neighborhood_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        references: { model: 'geo_neighborhoods', key: 'id' },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
       address_street: {
         type: Sequelize.TEXT,
@@ -125,6 +147,28 @@ module.exports = {
     });
     await queryInterface.addIndex('driver_profiles', ['registration_step'], {
       name: 'idx_driver_profiles_registration_step'
+    });
+    await queryInterface.addIndex('driver_profiles', ['address_country_id'], {
+      name: 'idx_driver_profiles_address_country_id'
+    });
+    await queryInterface.addIndex('driver_profiles', ['address_province_id'], {
+      name: 'idx_driver_profiles_address_province_id'
+    });
+    await queryInterface.addIndex('driver_profiles', ['address_city_district_id'], {
+      name: 'idx_driver_profiles_address_city_district_id'
+    });
+    await queryInterface.addIndex(
+      'driver_profiles',
+      ['address_administrative_area_id'],
+      {
+        name: 'idx_driver_profiles_address_administrative_area_id'
+      }
+    );
+    await queryInterface.addIndex('driver_profiles', ['address_settlement_id'], {
+      name: 'idx_driver_profiles_address_settlement_id'
+    });
+    await queryInterface.addIndex('driver_profiles', ['address_neighborhood_id'], {
+      name: 'idx_driver_profiles_address_neighborhood_id'
     });
   },
 
