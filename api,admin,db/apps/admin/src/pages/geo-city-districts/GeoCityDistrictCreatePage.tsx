@@ -28,8 +28,8 @@ export const GeoCityDistrictCreatePage = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getGeoProvinces(token, null);
-        setProvinces(data);
+        const response = await getGeoProvinces(token, null, 1, 1000); // Get all provinces for dropdown
+        setProvinces(response.data);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : translations.errors.geoProvincesLoadFailed;

@@ -33,11 +33,11 @@ export const GeoAdministrativeAreaEditPage = () => {
       setError(null);
       try {
         const [districtList, areaList] = await Promise.all([
-          getGeoCityDistricts(token, null),
-          getGeoAdministrativeAreas(token, null),
+          getGeoCityDistricts(token, null, 1, 1000), // Get all districts for dropdown
+          getGeoAdministrativeAreas(token, null, 1, 1000), // Get all areas to find the one we need
         ]);
-        setCityDistricts(districtList);
-        const found = areaList.find((item) => item.id === Number(id)) || null;
+        setCityDistricts(districtList.data);
+        const found = areaList.data.find((item: GeoAdministrativeArea) => item.id === Number(id)) || null;
         setArea(found);
         if (!found) {
           setError(translations.errors.geoAdministrativeAreasLoadFailed);

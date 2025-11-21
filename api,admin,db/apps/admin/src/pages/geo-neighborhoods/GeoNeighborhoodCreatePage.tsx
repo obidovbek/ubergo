@@ -28,8 +28,8 @@ export const GeoNeighborhoodCreatePage = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getGeoCityDistricts(token, null);
-        setCityDistricts(data);
+        const response = await getGeoCityDistricts(token, null, 1, 1000); // Get all districts for dropdown
+        setCityDistricts(response.data);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : translations.errors.geoDistrictsLoadFailed;

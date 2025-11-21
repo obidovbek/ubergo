@@ -33,11 +33,11 @@ export const GeoCityDistrictEditPage = () => {
       setError(null);
       try {
         const [provinceList, districtList] = await Promise.all([
-          getGeoProvinces(token, null),
-          getGeoCityDistricts(token, null),
+          getGeoProvinces(token, null, 1, 1000), // Get all provinces for dropdown
+          getGeoCityDistricts(token, null, 1, 1000), // Get all districts to find the one we need
         ]);
-        setProvinces(provinceList);
-        const found = districtList.find((item) => item.id === Number(id)) || null;
+        setProvinces(provinceList.data);
+        const found = districtList.data.find((item: GeoCityDistrict) => item.id === Number(id)) || null;
         setDistrict(found);
         if (!found) {
           setError(translations.errors.geoDistrictsLoadFailed);

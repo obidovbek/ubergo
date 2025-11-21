@@ -33,11 +33,11 @@ export const GeoSettlementEditPage = () => {
       setError(null);
       try {
         const [districtList, settlementList] = await Promise.all([
-          getGeoCityDistricts(token, null),
-          getGeoSettlements(token, null),
+          getGeoCityDistricts(token, null, 1, 1000), // Get all districts for dropdown
+          getGeoSettlements(token, null, 1, 1000), // Get all settlements to find the one we need
         ]);
-        setCityDistricts(districtList);
-        const found = settlementList.find((item) => item.id === Number(id)) || null;
+        setCityDistricts(districtList.data);
+        const found = settlementList.data.find((item: GeoSettlement) => item.id === Number(id)) || null;
         setSettlement(found);
         if (!found) {
           setError(translations.errors.geoSettlementsLoadFailed);

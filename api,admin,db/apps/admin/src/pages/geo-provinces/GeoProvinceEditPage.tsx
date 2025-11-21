@@ -33,10 +33,10 @@ export const GeoProvinceEditPage = () => {
       setError(null);
       try {
         const [countryList, provinceData] = await Promise.all([
-          getGeoCountries(token),
+          getGeoCountries(token, 1, 1000), // Get all countries for dropdown
           getGeoProvinceById(token, Number(id)),
         ]);
-        setCountries(countryList);
+        setCountries(countryList.data);
         setProvince(provinceData);
       } catch (err) {
         const message =
