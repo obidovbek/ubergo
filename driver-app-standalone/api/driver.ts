@@ -132,12 +132,25 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    // Ensure base64 string is properly formatted
-    // Remove data URL prefix if present (API will handle it, but we send it for compatibility)
+    // Validate base64 string
+    if (!imageBase64 || imageBase64.trim().length === 0) {
+      throw new Error('Image data is empty');
+    }
+
+    // Extract base64 data (remove data URL prefix if present)
     let base64Data = imageBase64;
     if (base64Data.includes(',')) {
       // Keep the full data URL format as the API expects it
       base64Data = imageBase64;
+    }
+
+    // Estimate image size from base64 string (base64 is ~33% larger than binary)
+    // This is a rough estimate to catch obviously too large images before upload
+    const estimatedSize = (base64Data.length * 3) / 4;
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    
+    if (estimatedSize > maxSize) {
+      throw new Error(`Rasm hajmi juda katta. Maksimal hajm: 5MB`);
     }
 
     const response = await fetch(
@@ -156,20 +169,36 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = 'Failed to upload image';
+      let errorText = '';
+      let errorMessage = 'Rasmni yuklashda xatolik';
       
       try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch {
+        errorText = await response.text();
+        if (errorText) {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        }
+      } catch (parseError) {
+        // If parsing fails, use the raw text or status
         errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      // Provide more specific error messages based on status code
+      if (response.status === 400) {
+        errorMessage = errorMessage || 'Rasm formati noto\'g\'ri yoki hajmi juda katta';
+      } else if (response.status === 401) {
+        errorMessage = 'Autentifikatsiya xatosi. Iltimos, qayta kirish';
+      } else if (response.status === 413) {
+        errorMessage = 'Rasm hajmi juda katta. Maksimal hajm: 5MB';
+      } else if (response.status >= 500) {
+        errorMessage = 'Server xatosi. Iltimos, keyinroq qayta urinib ko\'ring';
       }
       
       console.error('Image upload error:', {
         status: response.status,
         statusText: response.statusText,
         error: errorMessage,
+        errorText: errorText.substring(0, 200), // Log first 200 chars
       });
       
       throw new Error(errorMessage);
@@ -178,7 +207,7 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
     const result = await response.json();
 
     if (!result.data || !result.data.url) {
-      throw new Error('Invalid response from server: missing image URL');
+      throw new Error('Server javobi noto\'g\'ri: rasm URL topilmadi');
     }
 
     // Return full URL
@@ -187,9 +216,14 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error) {
-      throw error;
+      // If it's already a user-friendly error, throw it as is
+      if (error.message.includes('Rasm') || error.message.includes('hajmi') || error.message.includes('xatolik')) {
+        throw error;
+      }
+      // Otherwise, wrap it in a user-friendly message
+      throw new Error(`Rasmni yuklashda xatolik: ${error.message}`);
     }
-    throw new Error('Unknown error occurred during image upload');
+    throw new Error('Rasmni yuklashda noma\'lum xatolik');
   }
 };
 

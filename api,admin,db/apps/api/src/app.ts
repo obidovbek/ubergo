@@ -42,9 +42,9 @@ if (config.server.env === 'development') {
   app.use(morgan('dev'));
 }
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing - increased limit for base64 image uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(config.upload.uploadPath));

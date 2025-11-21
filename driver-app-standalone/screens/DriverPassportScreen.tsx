@@ -306,6 +306,7 @@ export const DriverPassportScreen: React.FC = () => {
         allowsEditing: true,
         aspect: [3, 4],
         quality: 0.8,
+        base64: true, // Request base64 encoding directly from expo-image-picker
       };
 
       let result: ImagePicker.ImagePickerResult;
@@ -323,49 +324,84 @@ export const DriverPassportScreen: React.FC = () => {
 
       const asset = result.assets[0];
       
-      // Convert to base64
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      reader.onloadend = async () => {
-        try {
-          const base64 = reader.result as string;
-          
-          // Extract file extension from URI
-          const uriParts = asset.uri.split('.');
-          const fileExtension = uriParts[uriParts.length - 1] || 'jpg';
-          
-          // Upload to server
-          if (!token) {
-            throw new Error('Token is required');
-          }
-          const imageUrl = await uploadImage(token, base64, fileExtension);
-          
-          // Update state and form data
-          if (photoType === 'front') {
-            setPhotoFrontUri(asset.uri);
-            updateField('passport_front_url', imageUrl);
+      try {
+        // Use base64 from expo-image-picker if available, otherwise fallback
+        let base64: string;
+        
+        if (asset.base64) {
+          // expo-image-picker provides base64 directly (without data URL prefix)
+          // The API expects the full data URL format, so we add the prefix
+          const mimeType = asset.type || 'image/jpeg';
+          base64 = `data:${mimeType};base64,${asset.base64}`;
+        } else {
+          // Fallback: read from URI (for web platforms)
+          if (Platform.OS === 'web') {
+            const response = await fetch(asset.uri);
+            const blob = await response.blob();
+            
+            base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                if (typeof reader.result === 'string') {
+                  resolve(reader.result);
+                } else {
+                  reject(new Error('Failed to read image as base64'));
+                }
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
           } else {
-            setPhotoBackUri(asset.uri);
-            updateField('passport_back_url', imageUrl);
+            // For native platforms without base64, we need to use expo-file-system
+            throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
-          
-          showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
-        } catch (error) {
-          console.error('Failed to upload image:', error);
-          showToast.error(t('common.error'), 'Rasmni yuklashda xatolik');
-        } finally {
-          setUploadingPhoto(null);
         }
-      };
-      
-      reader.onerror = () => {
+        
+        // Extract file extension from mime type or URI
+        let fileExtension = 'jpg'; // Default to jpg
+        if (asset.type) {
+          // Prefer mime type as it's more reliable
+          const mimeParts = asset.type.split('/');
+          if (mimeParts.length > 1) {
+            const mimeExt = mimeParts[1].toLowerCase();
+            if (mimeExt === 'jpeg' || mimeExt === 'jpg') {
+              fileExtension = 'jpg';
+            } else if (['png', 'webp', 'gif'].includes(mimeExt)) {
+              fileExtension = mimeExt;
+            }
+          }
+        } else if (asset.uri) {
+          // Fallback to URI parsing
+          const uriParts = asset.uri.split('.');
+          const ext = uriParts[uriParts.length - 1]?.toLowerCase().split('?')[0]; // Remove query params
+          if (ext && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+            fileExtension = ext === 'jpeg' ? 'jpg' : ext;
+          }
+        }
+        
+        // Upload to server
+        if (!token) {
+          throw new Error('Token is required');
+        }
+        const imageUrl = await uploadImage(token, base64, fileExtension);
+        
+        // Update state and form data
+        if (photoType === 'front') {
+          setPhotoFrontUri(asset.uri);
+          updateField('passport_front_url', imageUrl);
+        } else {
+          setPhotoBackUri(asset.uri);
+          updateField('passport_back_url', imageUrl);
+        }
+        
+        showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Rasmni yuklashda xatolik';
+        showToast.error(t('common.error'), errorMessage);
+      } finally {
         setUploadingPhoto(null);
-        showToast.error(t('common.error'), 'Rasmni o\'qishda xatolik');
-      };
-      
-      reader.readAsDataURL(blob);
+      }
     } catch (error) {
       console.error('Image picker error:', error);
       setUploadingPhoto(null);

@@ -98,7 +98,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
 
   // Driver types shown as radio options in the mock
   const driverTypes = [
-    { id: 'driver', label: 'Haydovchi' },
+    { id: 'driver', label: t('phoneRegistration.driverType') },
     // { id: 'dispatcher', label: 'Dispetcher' },
     // { id: 'special', label: 'Maxsus transport' },
     // { id: 'logist', label: 'Logist' },
@@ -186,8 +186,8 @@ export const PhoneRegistrationScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>Driver registration</Text>
+            <Text style={styles.brand}>{t('phoneRegistration.brand')}</Text>
+            <Text style={styles.title}>{t('phoneRegistration.title')}</Text>
           </View>
 
           {/* Driver type selection */}
@@ -209,7 +209,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
 
           {/* Instruction */}
           <Text style={styles.infoText}>
-            UbexGo dasturida ro’yxatdan o’tgan telefon raqamingizni kiriting
+            {t('phoneRegistration.instruction')}
           </Text>
 
           {/* Country Selector */}
@@ -273,15 +273,15 @@ export const PhoneRegistrationScreen: React.FC = () => {
           </View>
 
           {/* Or ID line */}
-          <Text style={styles.orText}>yoki UbexGo ID raqamingiz</Text>
+          <Text style={styles.orText}>{t('phoneRegistration.orIdText')}</Text>
 
           {/* ID Input */}
           <View style={styles.idInputContainer}>
-            <Text style={styles.idLabel}>ID:</Text>
+            <Text style={styles.idLabel}>{t('userDetails.userId')}</Text>
             <View style={styles.idFieldWrapper}>
               <TextInput
                 style={styles.idInput}
-                placeholder="1 001 117"
+                placeholder={t('userDetails.userIdPlaceholder')}
                 placeholderTextColor={theme.palette.text.secondary}
                 value={userId}
                 onChangeText={setUserId}
@@ -294,7 +294,9 @@ export const PhoneRegistrationScreen: React.FC = () => {
           {/* Terms and Conditions */}
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
-              “Keyingi” tugmasini bosish orqali <Text style={styles.termsLink}>foydalanuvchi shartnomasi</Text> shartlarini qabul qilaman
+              {t('phoneRegistration.termsText')}
+              <Text style={styles.termsLink}>{t('phoneRegistration.termsLink')}</Text>
+              {t('phoneRegistration.termsText2')}
             </Text>
           </View>
 
@@ -311,7 +313,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
                 !(userId && userId.trim().length > 0))
             }
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -76,7 +76,7 @@ export const OTPVerificationScreen: React.FC = () => {
     const otpCode = code || otp.join('');
     
     if (otpCode.length < 4) {
-      showToast.warning(t('common.error'), 'Iltimos kodni to\'ldiring');
+      showToast.warning(t('common.error'), t('otpVerification.errorIncomplete'));
       return;
     }
 
@@ -91,7 +91,7 @@ export const OTPVerificationScreen: React.FC = () => {
       await verifyOtp(phoneNumber, otpCode, { userId: routeUserId });
       
       console.log('OTP verified successfully');
-      showToast.success(t('common.success'), 'Telefon tasdiqlandi');
+      showToast.success(t('common.success'), t('otpVerification.phoneVerified'));
       
       // Auth context will update and RootNavigator will automatically check
       // driver profile status and route accordingly:
@@ -115,13 +115,13 @@ export const OTPVerificationScreen: React.FC = () => {
         // Show error with remaining attempts
         showToast.error(
           t('common.error'),
-          `Noto'g'ri kod. Qolgan urinishlar: ${newRemainingAttempts}`
+          `${t('otpVerification.errorIncorrect')}${newRemainingAttempts}`
         );
       } else {
         // No more attempts left, redirect to phone registration
         showToast.error(
-          'Xatolik',
-          'Urinishlar tugadi. Iltimos qaytadan urinib ko\'ring'
+          t('otpVerification.errorNoAttempts'),
+          t('otpVerification.errorNoAttemptsMessage')
         );
         
         setTimeout(() => {
@@ -141,7 +141,7 @@ export const OTPVerificationScreen: React.FC = () => {
     try {
       console.log('Resending OTP via push notification...');
       await sendOtp(phoneNumber, 'push', { userId: routeUserId });
-      showToast.success(t('common.success'), 'Yangi kod push notification orqali yuborildi');
+      showToast.success(t('common.success'), t('otpVerification.newCodeSent'));
       
       // Reset attempts when resending code
       setAttempts(0);
@@ -162,16 +162,16 @@ export const OTPVerificationScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>UbexGo Driver</Text>
-          <Text style={styles.title}>Kodni kiriting</Text>
+          <Text style={styles.logo}>{t('otpVerification.brand')}</Text>
+          <Text style={styles.title}>{t('otpVerification.title')}</Text>
           <Text style={styles.subtitle}>
-            UbexGo dasturida quyidagi akkauntga kelgan Tasdiqlash kodini kiriting
+            {t('otpVerification.subtitle')}
           </Text>
         </View>
 
         {/* Phone Number Display */}
         <View style={styles.infoRow}>
-          <Text style={styles.label}>Tel.:</Text>
+          <Text style={styles.label}>{t('userDetails.phone')}</Text>
           <View style={styles.infoValueContainer}>
             <Text style={styles.infoValue}>{phoneNumber}</Text>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -183,7 +183,7 @@ export const OTPVerificationScreen: React.FC = () => {
         {/* Driver ID Display */}
         {driverId && (
           <View style={styles.infoRow}>
-            <Text style={styles.label}>ID:</Text>
+            <Text style={styles.label}>{t('userDetails.userId')}</Text>
             <View style={styles.infoValueContainer}>
               <Text style={styles.infoValue}>{driverId}</Text>
             </View>
@@ -195,7 +195,7 @@ export const OTPVerificationScreen: React.FC = () => {
           {otp.map((digit, index) => (
             <View key={index} style={styles.otpInputWrapper}>
               <TextInput
-                ref={(ref) => (inputRefs.current[index] = ref)}
+                ref={(ref) => { inputRefs.current[index] = ref; }}
                 style={styles.otpInput}
                 value={digit}
                 onChangeText={(text) => handleOtpChange(text, index)}
@@ -225,14 +225,15 @@ export const OTPVerificationScreen: React.FC = () => {
           disabled={isLoading || otp.join('').length < 4}
         >
           <Text style={styles.continueButtonText}>
-            {isLoading ? 'Tekshirilmoqda...' : 'Continue'}
+            {isLoading ? t('otpVerification.verifying') : t('common.continue')}
           </Text>
         </TouchableOpacity>
 
         {/* Resend Code */}
         <TouchableOpacity style={styles.resendContainer} onPress={handleResendCode}>
           <Text style={styles.resendText}>
-            Kod kelmadimi? <Text style={styles.resendLink}>Qayta yuborish</Text>
+            {t('otpVerification.resendQuestion')}
+            <Text style={styles.resendLink}>{t('otpVerification.resendLink')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

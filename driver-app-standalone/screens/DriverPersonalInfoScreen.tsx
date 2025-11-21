@@ -772,8 +772,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: photoType === 'face' ? [1, 1] : [3, 4],
-        quality: 0.8,
+        quality: 0.7, // Reduced quality to ensure smaller file size (max 5MB)
         base64: true, // Request base64 encoding directly from expo-image-picker
+        exif: false, // Disable EXIF data to reduce size
       };
 
       let result: ImagePicker.ImagePickerResult;
@@ -846,10 +847,16 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           }
         }
         
+        // Validate base64 before upload
+        if (!base64 || base64.trim().length === 0) {
+          throw new Error('Rasm ma\'lumotlari topilmadi');
+        }
+
         // Upload to server
         if (!token) {
-          throw new Error('Token is required');
+          throw new Error('Autentifikatsiya xatosi. Iltimos, qayta kirish');
         }
+        
         const imageUrl = await uploadImage(token, base64, fileExtension);
         
         // Update state and form data
@@ -864,7 +871,20 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
       } catch (error) {
         console.error('Failed to upload image:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Rasmni yuklashda xatolik';
+        let errorMessage = 'Rasmni yuklashda xatolik';
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          // Provide more specific error messages
+          if (error.message.includes('hajmi juda katta') || error.message.includes('size')) {
+            errorMessage = 'Rasm hajmi juda katta. Iltimos, kichikroq rasm tanlang (maksimal 5MB)';
+          } else if (error.message.includes('Server xatosi') || error.message.includes('500')) {
+            errorMessage = 'Server xatosi. Iltimos, keyinroq qayta urinib ko\'ring';
+          } else if (error.message.includes('Autentifikatsiya') || error.message.includes('401')) {
+            errorMessage = 'Autentifikatsiya xatosi. Iltimos, qayta kirish';
+          }
+        }
+        
         showToast.error(t('common.error'), errorMessage);
       } finally {
         setUploadingPhoto(null);
