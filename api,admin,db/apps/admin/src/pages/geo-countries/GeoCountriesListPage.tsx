@@ -20,14 +20,18 @@ export const GeoCountriesListPage = () => {
   const [countries, setCountries] = useState<GeoCountry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [total, setTotal] = useState(0);
 
   const fetchCountries = async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await getGeoCountries(token);
-      setCountries(response);
+      const response = await getGeoCountries(token, page, pageSize);
+      setCountries(response.data);
+      setTotal(response.total);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : translations.errors.geoCountriesLoadFailed;
@@ -40,7 +44,7 @@ export const GeoCountriesListPage = () => {
   useEffect(() => {
     fetchCountries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, page]);
 
   const handleDelete = async (country: GeoCountry) => {
     if (!token) return;
@@ -169,6 +173,27 @@ export const GeoCountriesListPage = () => {
             </table>
           )}
         </div>
+        {total > pageSize && (
+          <div className="geo-pagination" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <Button
+              variant="outlined"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              {translations.common.previous || 'Previous'}
+            </Button>
+            <span style={{ fontSize: '14px' }}>
+              {translations.common.page || 'Page'} {page} {translations.common.of || 'of'} {Math.ceil(total / pageSize)}
+            </span>
+            <Button
+              variant="outlined"
+              disabled={page >= Math.ceil(total / pageSize)}
+              onClick={() => setPage(page + 1)}
+            >
+              {translations.common.next || 'Next'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

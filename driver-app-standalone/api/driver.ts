@@ -132,13 +132,21 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    // Ensure base64 string is properly formatted
+    // Remove data URL prefix if present (API will handle it, but we send it for compatibility)
+    let base64Data = imageBase64;
+    if (base64Data.includes(',')) {
+      // Keep the full data URL format as the API expects it
+      base64Data = imageBase64;
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/upload/image`,
       {
         method: 'POST',
         headers: getHeaders(token),
         body: JSON.stringify({
-          image: imageBase64,
+          image: base64Data,
           type: imageType,
         }),
         signal: controller.signal,
@@ -147,10 +155,30 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
 
     clearTimeout(timeoutId);
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = 'Failed to upload image';
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.message || errorJson.error || errorMessage;
+      } catch {
+        errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      console.error('Image upload error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorMessage,
+      });
+      
+      throw new Error(errorMessage);
+    }
+
     const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to upload image');
+    if (!result.data || !result.data.url) {
+      throw new Error('Invalid response from server: missing image URL');
     }
 
     // Return full URL
@@ -158,7 +186,10 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
     return `${baseUrl}${result.data.url}`;
   } catch (error) {
     clearTimeout(timeoutId);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unknown error occurred during image upload');
   }
 };
 

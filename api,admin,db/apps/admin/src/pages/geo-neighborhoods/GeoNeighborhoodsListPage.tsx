@@ -29,6 +29,9 @@ export const GeoNeighborhoodsListPage = () => {
   const [neighborhoods, setNeighborhoods] = useState<GeoNeighborhood[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [total, setTotal] = useState(0);
 
   const fetchData = async () => {
     if (!token) return;
@@ -36,16 +39,17 @@ export const GeoNeighborhoodsListPage = () => {
     setError(null);
     try {
       const [countryList, provinceList, districtList, neighborhoodList] = await Promise.all([
-        getGeoCountries(token),
-        getGeoProvinces(token, null),
-        getGeoCityDistricts(token, null),
-        getGeoNeighborhoods(token, null),
+        getGeoCountries(token, 1, 1000),
+        getGeoProvinces(token, null, 1, 1000),
+        getGeoCityDistricts(token, null, 1, 1000),
+        getGeoNeighborhoods(token, null, page, pageSize),
       ]);
 
-      setCountries(countryList);
-      setProvinces(provinceList);
-      setCityDistricts(districtList);
-      setNeighborhoods(neighborhoodList);
+      setCountries(countryList.data);
+      setProvinces(provinceList.data);
+      setCityDistricts(districtList.data);
+      setNeighborhoods(neighborhoodList.data);
+      setTotal(neighborhoodList.total);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : translations.errors.geoNeighborhoodsLoadFailed;
@@ -58,7 +62,7 @@ export const GeoNeighborhoodsListPage = () => {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, page]);
 
   const handleDelete = async (neighborhood: GeoNeighborhood) => {
     if (!token) return;
@@ -230,6 +234,27 @@ export const GeoNeighborhoodsListPage = () => {
             </table>
           )}
         </div>
+        {total > pageSize && (
+          <div className="geo-pagination" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <Button
+              variant="outlined"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              {translations.common.previous || 'Previous'}
+            </Button>
+            <span style={{ fontSize: '14px' }}>
+              {translations.common.page || 'Page'} {page} {translations.common.of || 'of'} {Math.ceil(total / pageSize)}
+            </span>
+            <Button
+              variant="outlined"
+              disabled={page >= Math.ceil(total / pageSize)}
+              onClick={() => setPage(page + 1)}
+            >
+              {translations.common.next || 'Next'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

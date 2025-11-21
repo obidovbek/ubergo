@@ -124,13 +124,31 @@ export interface GeoNeighborhoodInput {
   longitude?: number | null;
 }
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export class AdminGeoService {
   /* Countries */
-  static async listCountries(): Promise<ReturnType<typeof mapCountry>[]> {
-    const countries = await GeoCountry.findAll({
+  static async listCountries(
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapCountry>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoCountry.findAndCountAll({
       order: [['name', 'ASC']],
+      limit: pageSize,
+      offset: offset,
     });
-    return countries.map(mapCountry);
+    return {
+      data: rows.map(mapCountry),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async getCountry(id: number): Promise<ReturnType<typeof mapCountry>> {
@@ -199,16 +217,26 @@ export class AdminGeoService {
 
   /* Provinces */
   static async listProvinces(
-    countryId?: number
-  ): Promise<ReturnType<typeof mapProvince>[]> {
-    const provinces = await GeoProvince.findAll({
+    countryId?: number,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapProvince>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoProvince.findAndCountAll({
       where: countryId ? { country_id: countryId } : undefined,
       order: [
         ['country_id', 'ASC'],
         ['name', 'ASC'],
       ],
+      limit: pageSize,
+      offset: offset,
     });
-    return provinces.map(mapProvince);
+    return {
+      data: rows.map(mapProvince),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async getProvince(id: number): Promise<ReturnType<typeof mapProvince>> {
@@ -293,16 +321,26 @@ export class AdminGeoService {
 
   /* City Districts */
   static async listCityDistricts(
-    provinceId?: number
-  ): Promise<ReturnType<typeof mapCityDistrict>[]> {
-    const districts = await GeoCityDistrict.findAll({
+    provinceId?: number,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapCityDistrict>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoCityDistrict.findAndCountAll({
       where: provinceId ? { province_id: provinceId } : undefined,
       order: [
         ['province_id', 'ASC'],
         ['name', 'ASC'],
       ],
+      limit: pageSize,
+      offset: offset,
     });
-    return districts.map(mapCityDistrict);
+    return {
+      data: rows.map(mapCityDistrict),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async createCityDistrict(
@@ -381,16 +419,26 @@ export class AdminGeoService {
 
   /* Administrative Areas */
   static async listAdministrativeAreas(
-    cityDistrictId?: number
-  ): Promise<ReturnType<typeof mapAdministrativeArea>[]> {
-    const areas = await GeoAdministrativeArea.findAll({
+    cityDistrictId?: number,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapAdministrativeArea>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoAdministrativeArea.findAndCountAll({
       where: cityDistrictId ? { city_district_id: cityDistrictId } : undefined,
       order: [
         ['city_district_id', 'ASC'],
         ['name', 'ASC'],
       ],
+      limit: pageSize,
+      offset: offset,
     });
-    return areas.map(mapAdministrativeArea);
+    return {
+      data: rows.map(mapAdministrativeArea),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async createAdministrativeArea(
@@ -469,16 +517,26 @@ export class AdminGeoService {
 
   /* Settlements */
   static async listSettlements(
-    cityDistrictId?: number
-  ): Promise<ReturnType<typeof mapSettlement>[]> {
-    const settlements = await GeoSettlement.findAll({
+    cityDistrictId?: number,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapSettlement>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoSettlement.findAndCountAll({
       where: cityDistrictId ? { city_district_id: cityDistrictId } : undefined,
       order: [
         ['city_district_id', 'ASC'],
         ['name', 'ASC'],
       ],
+      limit: pageSize,
+      offset: offset,
     });
-    return settlements.map(mapSettlement);
+    return {
+      data: rows.map(mapSettlement),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async createSettlement(
@@ -561,16 +619,26 @@ export class AdminGeoService {
 
   /* Neighborhoods */
   static async listNeighborhoods(
-    cityDistrictId?: number
-  ): Promise<ReturnType<typeof mapNeighborhood>[]> {
-    const neighborhoods = await GeoNeighborhood.findAll({
+    cityDistrictId?: number,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<PaginatedResult<ReturnType<typeof mapNeighborhood>>> {
+    const offset = (page - 1) * pageSize;
+    const { count, rows } = await GeoNeighborhood.findAndCountAll({
       where: cityDistrictId ? { city_district_id: cityDistrictId } : undefined,
       order: [
         ['city_district_id', 'ASC'],
         ['name', 'ASC'],
       ],
+      limit: pageSize,
+      offset: offset,
     });
-    return neighborhoods.map(mapNeighborhood);
+    return {
+      data: rows.map(mapNeighborhood),
+      total: count,
+      page,
+      pageSize,
+    };
   }
 
   static async createNeighborhood(

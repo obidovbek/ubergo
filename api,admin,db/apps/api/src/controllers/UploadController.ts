@@ -26,10 +26,36 @@ export class UploadController {
 
       // Handle base64 image
       if (req.body.image) {
-        const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, '');
+        let base64Data = req.body.image;
+        
+        // Remove data URL prefix if present (data:image/jpeg;base64, or data:image/png;base64, etc.)
+        if (base64Data.includes(',')) {
+          base64Data = base64Data.split(',')[1];
+        } else if (base64Data.match(/^data:image\/\w+;base64,/)) {
+          base64Data = base64Data.replace(/^data:image\/\w+;base64,/, '');
+        }
+        
+        // Validate base64 string
+        if (!base64Data || base64Data.trim().length === 0) {
+          throw new AppError('Invalid base64 image data', 400);
+        }
+        
+        // Validate file size (max 5MB)
         const buffer = Buffer.from(base64Data, 'base64');
-        const fileExtension = req.body.type || 'jpg';
-        const fileName = `${crypto.randomUUID()}.${fileExtension}`;
+        if (buffer.length > config.upload.maxFileSize) {
+          throw new AppError(`Image size exceeds maximum allowed size of ${config.upload.maxFileSize / 1024 / 1024}MB`, 400);
+        }
+        
+        // Validate file extension
+        const fileExtension = (req.body.type || 'jpg').toLowerCase();
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        const normalizedExt = fileExtension === 'jpeg' ? 'jpg' : fileExtension;
+        
+        if (!allowedExtensions.includes(normalizedExt)) {
+          throw new AppError(`Invalid file type. Allowed types: ${allowedExtensions.join(', ')}`, 400);
+        }
+        
+        const fileName = `${crypto.randomUUID()}.${normalizedExt}`;
         const filePath = path.join(config.upload.uploadPath, 'driver-photos', fileName);
 
         // Ensure directory exists

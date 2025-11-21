@@ -109,17 +109,38 @@ const createController = () => {
   return { controller, timeoutId };
 };
 
+export interface PaginatedGeoResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /* Countries */
-export const getGeoCountries = async (token: string): Promise<GeoCountry[]> => {
+export const getGeoCountries = async (
+  token: string,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoCountry>> => {
   const { controller, timeoutId } = createController();
   try {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.geo.countries.list}`, {
-      method: 'GET',
-      headers: getHeaders(token),
-      signal: controller.signal,
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
     });
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.geo.countries.list}?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: getHeaders(token),
+        signal: controller.signal,
+      }
+    );
     clearTimeout(timeoutId);
-    return handleResponse<GeoCountry[]>(response, 'Mamlakatlarni yuklashda xatolik');
+    return handleResponse<PaginatedGeoResponse<GeoCountry>>(
+      response,
+      'Mamlakatlarni yuklashda xatolik'
+    );
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -207,18 +228,21 @@ export const deleteGeoCountry = async (token: string, id: number): Promise<void>
 /* Provinces */
 export const getGeoProvinces = async (
   token: string,
-  countryId?: number | null
-): Promise<GeoProvince[]> => {
+  countryId?: number | null,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoProvince>> => {
   const { controller, timeoutId } = createController();
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
     if (countryId) {
       params.set('countryId', String(countryId));
     }
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.geo.provinces.list}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
+      `${API_BASE_URL}${API_ENDPOINTS.geo.provinces.list}?${params.toString()}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -226,7 +250,10 @@ export const getGeoProvinces = async (
       }
     );
     clearTimeout(timeoutId);
-    return handleResponse<GeoProvince[]>(response, 'Viloyatlarni yuklashda xatolik');
+    return handleResponse<PaginatedGeoResponse<GeoProvince>>(
+      response,
+      'Viloyatlarni yuklashda xatolik'
+    );
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -314,18 +341,21 @@ export const deleteGeoProvince = async (token: string, id: number): Promise<void
 /* City Districts */
 export const getGeoCityDistricts = async (
   token: string,
-  provinceId?: number | null
-): Promise<GeoCityDistrict[]> => {
+  provinceId?: number | null,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoCityDistrict>> => {
   const { controller, timeoutId } = createController();
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
     if (provinceId) {
       params.set('provinceId', String(provinceId));
     }
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.geo.cityDistricts.list}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
+      `${API_BASE_URL}${API_ENDPOINTS.geo.cityDistricts.list}?${params.toString()}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -333,7 +363,10 @@ export const getGeoCityDistricts = async (
       }
     );
     clearTimeout(timeoutId);
-    return handleResponse<GeoCityDistrict[]>(response, 'Tumanlarni yuklashda xatolik');
+    return handleResponse<PaginatedGeoResponse<GeoCityDistrict>>(
+      response,
+      'Tumanlarni yuklashda xatolik'
+    );
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -405,18 +438,21 @@ export const deleteGeoCityDistrict = async (token: string, id: number): Promise<
 /* Administrative Areas */
 export const getGeoAdministrativeAreas = async (
   token: string,
-  cityDistrictId?: number | null
-): Promise<GeoAdministrativeArea[]> => {
+  cityDistrictId?: number | null,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoAdministrativeArea>> => {
   const { controller, timeoutId } = createController();
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
     if (cityDistrictId) {
       params.set('cityDistrictId', String(cityDistrictId));
     }
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.geo.administrativeAreas.list}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
+      `${API_BASE_URL}${API_ENDPOINTS.geo.administrativeAreas.list}?${params.toString()}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -424,7 +460,7 @@ export const getGeoAdministrativeAreas = async (
       }
     );
     clearTimeout(timeoutId);
-    return handleResponse<GeoAdministrativeArea[]>(
+    return handleResponse<PaginatedGeoResponse<GeoAdministrativeArea>>(
       response,
       'Ma\'muriy hududlarni yuklashda xatolik'
     );
@@ -517,18 +553,21 @@ export const deleteGeoAdministrativeArea = async (
 /* Settlements */
 export const getGeoSettlements = async (
   token: string,
-  cityDistrictId?: number | null
-): Promise<GeoSettlement[]> => {
+  cityDistrictId?: number | null,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoSettlement>> => {
   const { controller, timeoutId } = createController();
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
     if (cityDistrictId) {
       params.set('cityDistrictId', String(cityDistrictId));
     }
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.geo.settlements.list}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
+      `${API_BASE_URL}${API_ENDPOINTS.geo.settlements.list}?${params.toString()}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -536,7 +575,10 @@ export const getGeoSettlements = async (
       }
     );
     clearTimeout(timeoutId);
-    return handleResponse<GeoSettlement[]>(response, 'Aholi punktlarini yuklashda xatolik');
+    return handleResponse<PaginatedGeoResponse<GeoSettlement>>(
+      response,
+      'Aholi punktlarini yuklashda xatolik'
+    );
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -608,18 +650,21 @@ export const deleteGeoSettlement = async (token: string, id: number): Promise<vo
 /* Neighborhoods */
 export const getGeoNeighborhoods = async (
   token: string,
-  cityDistrictId?: number | null
-): Promise<GeoNeighborhood[]> => {
+  cityDistrictId?: number | null,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<PaginatedGeoResponse<GeoNeighborhood>> => {
   const { controller, timeoutId } = createController();
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
     if (cityDistrictId) {
       params.set('cityDistrictId', String(cityDistrictId));
     }
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.geo.neighborhoods.list}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
+      `${API_BASE_URL}${API_ENDPOINTS.geo.neighborhoods.list}?${params.toString()}`,
       {
         method: 'GET',
         headers: getHeaders(token),
@@ -627,7 +672,10 @@ export const getGeoNeighborhoods = async (
       }
     );
     clearTimeout(timeoutId);
-    return handleResponse<GeoNeighborhood[]>(response, 'Mahallalarni yuklashda xatolik');
+    return handleResponse<PaginatedGeoResponse<GeoNeighborhood>>(
+      response,
+      'Mahallalarni yuklashda xatolik'
+    );
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

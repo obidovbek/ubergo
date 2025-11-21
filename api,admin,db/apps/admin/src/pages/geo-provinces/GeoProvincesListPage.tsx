@@ -23,6 +23,9 @@ export const GeoProvincesListPage = () => {
   const [provinces, setProvinces] = useState<GeoProvince[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [total, setTotal] = useState(0);
 
   const fetchData = async () => {
     if (!token) return;
@@ -30,11 +33,12 @@ export const GeoProvincesListPage = () => {
     setError(null);
     try {
       const [countryList, provinceList] = await Promise.all([
-        getGeoCountries(token),
-        getGeoProvinces(token, null),
+        getGeoCountries(token, 1, 1000), // Get all countries for dropdown
+        getGeoProvinces(token, null, page, pageSize),
       ]);
-      setCountries(countryList);
-      setProvinces(provinceList);
+      setCountries(countryList.data);
+      setProvinces(provinceList.data);
+      setTotal(provinceList.total);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : translations.errors.geoProvincesLoadFailed;
@@ -47,7 +51,7 @@ export const GeoProvincesListPage = () => {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, page]);
 
   const handleDelete = async (province: GeoProvince) => {
     if (!token) return;
@@ -181,6 +185,27 @@ export const GeoProvincesListPage = () => {
             </table>
           )}
         </div>
+        {total > pageSize && (
+          <div className="geo-pagination" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <Button
+              variant="outlined"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              {translations.common.previous || 'Previous'}
+            </Button>
+            <span style={{ fontSize: '14px' }}>
+              {translations.common.page || 'Page'} {page} {translations.common.of || 'of'} {Math.ceil(total / pageSize)}
+            </span>
+            <Button
+              variant="outlined"
+              disabled={page >= Math.ceil(total / pageSize)}
+              onClick={() => setPage(page + 1)}
+            >
+              {translations.common.next || 'Next'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

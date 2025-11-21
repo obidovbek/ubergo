@@ -20,8 +20,10 @@ export class AdminGeoController {
   /* Countries */
   static async listCountries(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const countries = await AdminGeoService.listCountries();
-      successResponse(res, countries);
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listCountries(page, pageSize);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
@@ -70,10 +72,14 @@ export class AdminGeoController {
   static async listProvinces(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const countryId = req.query.countryId ? Number(req.query.countryId) : undefined;
-      const provinces = await AdminGeoService.listProvinces(
-        countryId !== undefined && !Number.isNaN(countryId) ? countryId : undefined
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listProvinces(
+        countryId !== undefined && !Number.isNaN(countryId) ? countryId : undefined,
+        page,
+        pageSize
       );
-      successResponse(res, provinces);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
@@ -129,10 +135,14 @@ export class AdminGeoController {
   static async listCityDistricts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const provinceId = req.query.provinceId ? Number(req.query.provinceId) : undefined;
-      const districts = await AdminGeoService.listCityDistricts(
-        provinceId !== undefined && !Number.isNaN(provinceId) ? provinceId : undefined
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listCityDistricts(
+        provinceId !== undefined && !Number.isNaN(provinceId) ? provinceId : undefined,
+        page,
+        pageSize
       );
-      successResponse(res, districts);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
@@ -184,12 +194,16 @@ export class AdminGeoController {
       const cityDistrictId = req.query.cityDistrictId
         ? Number(req.query.cityDistrictId)
         : undefined;
-      const areas = await AdminGeoService.listAdministrativeAreas(
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listAdministrativeAreas(
         cityDistrictId !== undefined && !Number.isNaN(cityDistrictId)
           ? cityDistrictId
-          : undefined
+          : undefined,
+        page,
+        pageSize
       );
-      successResponse(res, areas);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
@@ -251,12 +265,16 @@ export class AdminGeoController {
       const cityDistrictId = req.query.cityDistrictId
         ? Number(req.query.cityDistrictId)
         : undefined;
-      const settlements = await AdminGeoService.listSettlements(
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listSettlements(
         cityDistrictId !== undefined && !Number.isNaN(cityDistrictId)
           ? cityDistrictId
-          : undefined
+          : undefined,
+        page,
+        pageSize
       );
-      successResponse(res, settlements);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
@@ -306,12 +324,16 @@ export class AdminGeoController {
       const cityDistrictId = req.query.cityDistrictId
         ? Number(req.query.cityDistrictId)
         : undefined;
-      const neighborhoods = await AdminGeoService.listNeighborhoods(
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+      const result = await AdminGeoService.listNeighborhoods(
         cityDistrictId !== undefined && !Number.isNaN(cityDistrictId)
           ? cityDistrictId
-          : undefined
+          : undefined,
+        page,
+        pageSize
       );
-      successResponse(res, neighborhoods);
+      successResponse(res, result);
     } catch (error) {
       next(error);
     }
