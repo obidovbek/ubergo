@@ -38,7 +38,7 @@ export interface AuthAction {
 
 export const initialAuthState: AuthState = {
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start with loading true to prevent premature redirects during initialization
   user: null,
   token: null,
   error: null,
