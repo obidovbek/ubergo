@@ -10,7 +10,7 @@ import {
   type GeoCountry,
 } from '../../api/geo';
 import { translations } from '../../utils/translations';
-import { downloadExcelTemplate } from '../../utils/excelUpload';
+import { downloadExcelTemplate, type ExcelRow } from '../../utils/excelUpload';
 import '../geo-common/GeoEntityStyles.css';
 
 export const GeoCountriesListPage = () => {
