@@ -3,7 +3,7 @@
  * Admin endpoints for managing geo locations
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export interface GeoCountry {
   id: number;
@@ -100,15 +100,8 @@ export type GeoNeighborhoodPayload = {
   city_district_id: number;
 } & CoordinatePayload;
 
-const handleResponse = async <T>(response: Response, defaultError: string): Promise<T> => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.message || errorData.error || defaultError;
-    throw new Error(errorMessage);
-  }
-  const data = await response.json();
-  return data.data as T;
-};
+// Use shared handleApiResponse from config/api
+const handleResponse = handleApiResponse;
 
 const createController = () => {
   const controller = new AbortController();

@@ -3,7 +3,7 @@
  * Admin endpoints for managing country metadata
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export type CountryPattern = 'uz' | 'ru' | 'generic';
 
@@ -51,14 +51,7 @@ export const getCountries = async (token: string, includeInactive: boolean = tru
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Mamlakatlarni yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as Country[];
+    return handleApiResponse<Country[]>(response, 'Mamlakatlarni yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -81,14 +74,7 @@ export const getCountryById = async (token: string, id: string): Promise<Country
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Mamlakatni yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as Country;
+    return handleApiResponse<Country>(response, 'Mamlakatni yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -112,14 +98,7 @@ export const createCountry = async (token: string, payload: CountryPayload): Pro
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Mamlakatni yaratishda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as Country;
+    return handleApiResponse<Country>(response, 'Mamlakatni yaratishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -143,14 +122,7 @@ export const updateCountry = async (token: string, id: string, payload: Partial<
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Mamlakatni yangilashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as Country;
+    return handleApiResponse<Country>(response, 'Mamlakatni yangilashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -173,11 +145,7 @@ export const deleteCountry = async (token: string, id: string): Promise<void> =>
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Mamlakatni o\'chirishda xatolik';
-      throw new Error(errorMessage);
-    }
+    await handleApiResponse<void>(response, 'Mamlakatni o\'chirishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

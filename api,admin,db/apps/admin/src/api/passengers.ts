@@ -3,7 +3,7 @@
  * Handles all passenger-related API requests
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleAuthError, isAuthError } from '../config/api';
 
 export interface Passenger {
   id: string;
@@ -84,6 +84,10 @@ export const getPassengers = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch passengers: ${response.statusText}`);
     }
 
@@ -128,6 +132,10 @@ export const getPassengerById = async (token: string, id: string): Promise<Passe
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch passenger: ${response.statusText}`);
     }
 
@@ -164,6 +172,10 @@ export const updatePassenger = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to update passenger: ${response.statusText}`);
     }
 
@@ -195,6 +207,10 @@ export const deletePassenger = async (token: string, id: string): Promise<void> 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to delete passenger: ${response.statusText}`);
     }
   } catch (error) {

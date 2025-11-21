@@ -3,7 +3,7 @@
  * Handles all user-related API requests
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleAuthError, isAuthError } from '../config/api';
 
 export interface User {
   id: string;
@@ -47,6 +47,10 @@ export const getUsers = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch users: ${response.statusText}`);
     }
 
@@ -77,6 +81,10 @@ export const getUserById = async (token: string, id: string): Promise<User> => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch user: ${response.statusText}`);
     }
 
@@ -111,6 +119,10 @@ export const createUser = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to create user: ${response.statusText}`);
     }
 
@@ -146,6 +158,10 @@ export const updateUser = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to update user: ${response.statusText}`);
     }
 
@@ -176,6 +192,10 @@ export const deleteUser = async (token: string, id: string): Promise<void> => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to delete user: ${response.statusText}`);
     }
   } catch (error) {

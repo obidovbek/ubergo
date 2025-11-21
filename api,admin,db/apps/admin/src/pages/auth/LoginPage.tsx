@@ -16,7 +16,7 @@ export const LoginPage = () => {
   const { login, isLoading, error } = useAuth();
   
   const [email, setEmail] = useState('admin@ubexgo.com');
-  const [password, setPassword] = useState('UbexGo@2024');
+  const [password, setPassword] = useState('UbexGo@2025');
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});

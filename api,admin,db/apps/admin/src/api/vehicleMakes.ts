@@ -3,7 +3,7 @@
  * Admin endpoints for managing vehicle makes
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export interface VehicleMake {
   id: string;
@@ -47,14 +47,7 @@ export const getVehicleMakes = async (token: string, includeInactive: boolean = 
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Vehicle makes yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as VehicleMake[];
+    return handleApiResponse<VehicleMake[]>(response, 'Vehicle makes yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -77,14 +70,7 @@ export const getVehicleMakeById = async (token: string, id: string): Promise<Veh
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Vehicle make yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as VehicleMake;
+    return handleApiResponse<VehicleMake>(response, 'Vehicle make yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -108,14 +94,7 @@ export const createVehicleMake = async (token: string, payload: VehicleMakePaylo
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Vehicle make yaratishda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as VehicleMake;
+    return handleApiResponse<VehicleMake>(response, 'Vehicle make yaratishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -139,14 +118,7 @@ export const updateVehicleMake = async (token: string, id: string, payload: Part
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Vehicle make yangilashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data as VehicleMake;
+    return handleApiResponse<VehicleMake>(response, 'Vehicle make yangilashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -169,11 +141,7 @@ export const deleteVehicleMake = async (token: string, id: string): Promise<void
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Vehicle make o\'chirishda xatolik';
-      throw new Error(errorMessage);
-    }
+    await handleApiResponse<void>(response, 'Vehicle make o\'chirishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

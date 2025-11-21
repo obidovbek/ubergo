@@ -3,7 +3,7 @@
  * Handles authentication-related API requests
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export interface LoginCredentials {
   email: string;
@@ -120,13 +120,7 @@ export const getCurrentUser = async (token: string): Promise<AuthResponse['user'
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Foydalanuvchi ma\'lumotlarini yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
+    return handleApiResponse<AuthResponse['user']>(response, 'Foydalanuvchi ma\'lumotlarini yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

@@ -157,3 +157,56 @@ export const HTTP_METHODS = {
   DELETE: 'DELETE',
 } as const;
 
+/**
+ * Handle authentication errors (401/403)
+ * Clears auth data and redirects to login page
+ */
+export const handleAuthError = (): void => {
+  // Clear authentication data from localStorage
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  
+  // Redirect to login page
+  // Use window.location for redirect since we can't use React Router hooks here
+  const currentPath = window.location.pathname;
+  if (currentPath !== '/login') {
+    window.location.href = '/login';
+  }
+};
+
+/**
+ * Check if response indicates authentication error
+ */
+export const isAuthError = (response: Response): boolean => {
+  return response.status === 401 || response.status === 403;
+};
+
+/**
+ * Handle API response with authentication error checking
+ * Use this helper in all API files to ensure consistent error handling
+ */
+export const handleApiResponse = async <T>(
+  response: Response,
+  defaultError: string
+): Promise<T> => {
+  if (!response.ok) {
+    // Check for authentication errors (401/403)
+    if (isAuthError(response)) {
+      handleAuthError();
+      throw new Error('Your session has expired. Please log in again.');
+    }
+    
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.message || errorData.error || defaultError;
+    throw new Error(errorMessage);
+  }
+  
+  const data = await response.json();
+  // Handle API response format (successResponse wrapper)
+  if (data.success !== undefined && data.data !== undefined) {
+    return data.data as T;
+  }
+  
+  return data as T;
+};
+

@@ -3,7 +3,7 @@
  * Admin endpoints for managing vehicle body types
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export interface VehicleBodyType {
   id: string;

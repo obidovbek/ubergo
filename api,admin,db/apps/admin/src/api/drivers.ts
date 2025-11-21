@@ -3,7 +3,7 @@
  * Handles all driver-related API requests
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT, handleAuthError, isAuthError } from '../config/api';
 
 export interface GeoLocation {
   id: number;
@@ -233,6 +233,10 @@ export const getDrivers = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch drivers: ${response.statusText}`);
     }
 
@@ -277,6 +281,10 @@ export const getDriverById = async (token: string, id: string): Promise<Driver> 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to fetch driver: ${response.statusText}`);
     }
 
@@ -313,6 +321,10 @@ export const updateDriver = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to update driver: ${response.statusText}`);
     }
 
@@ -344,6 +356,10 @@ export const deleteDriver = async (token: string, id: string): Promise<void> => 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       throw new Error(`Failed to delete driver: ${response.statusText}`);
     }
   } catch (error) {

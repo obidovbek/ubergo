@@ -3,7 +3,7 @@
  * Handles all admin user-related API requests
  */
 
-import { API_BASE_URL, getHeaders, API_TIMEOUT } from '../config/api';
+import { API_BASE_URL, getHeaders, API_TIMEOUT, handleApiResponse } from '../config/api';
 
 export interface AdminUser {
   id: string;
@@ -83,14 +83,7 @@ export const getAdminUsers = async (
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Admin foydalanuvchilarni yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data;
+    return handleApiResponse<AdminUserListResponse>(response, 'Admin foydalanuvchilarni yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -116,14 +109,7 @@ export const getAdminUserById = async (token: string, id: string): Promise<Admin
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Admin foydalanuvchini yuklashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data;
+    return handleApiResponse<AdminUser>(response, 'Admin foydalanuvchini yuklashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -153,14 +139,7 @@ export const createAdminUser = async (
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Admin foydalanuvchi yaratishda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data;
+    return handleApiResponse<AdminUser>(response, 'Admin foydalanuvchi yaratishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -191,14 +170,7 @@ export const updateAdminUser = async (
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Admin foydalanuvchini yangilashda xatolik';
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data;
+    return handleApiResponse<AdminUser>(response, 'Admin foydalanuvchini yangilashda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -224,11 +196,7 @@ export const deleteAdminUser = async (token: string, id: string): Promise<void> 
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.message || errorData.error || 'Admin foydalanuvchini o\'chirishda xatolik';
-      throw new Error(errorMessage);
-    }
+    await handleApiResponse<void>(response, 'Admin foydalanuvchini o\'chirishda xatolik');
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
