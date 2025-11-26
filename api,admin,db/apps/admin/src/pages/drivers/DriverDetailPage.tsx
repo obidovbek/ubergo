@@ -369,7 +369,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.passport.passport_front_url} 
                         alt="Pasport old" 
-                        onClick={() => setSelectedImage(profile.passport.passport_front_url || null)}
+                        onClick={() => setSelectedImage(profile.passport?.passport_front_url || null)}
                       />
                     </div>
                   )}
@@ -379,7 +379,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.passport.passport_back_url} 
                         alt="Pasport orqa" 
-                        onClick={() => setSelectedImage(profile.passport.passport_back_url || null)}
+                        onClick={() => setSelectedImage(profile.passport?.passport_back_url || null)}
                       />
                     </div>
                   )}
@@ -434,7 +434,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.license.license_front_url} 
                         alt="Guvohnoma old" 
-                        onClick={() => setSelectedImage(profile.license.license_front_url || null)}
+                        onClick={() => setSelectedImage(profile.license?.license_front_url || null)}
                       />
                     </div>
                   )}
@@ -444,7 +444,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.license.license_back_url} 
                         alt="Guvohnoma orqa" 
-                        onClick={() => setSelectedImage(profile.license.license_back_url || null)}
+                        onClick={() => setSelectedImage(profile.license?.license_back_url || null)}
                       />
                     </div>
                   )}
@@ -583,7 +583,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.tech_passport_front_url} 
                         alt="Texnik pasport old" 
-                        onClick={() => setSelectedImage(profile.vehicle.tech_passport_front_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.tech_passport_front_url || null)}
                       />
                     </div>
                   )}
@@ -593,7 +593,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.tech_passport_back_url} 
                         alt="Texnik pasport orqa" 
-                        onClick={() => setSelectedImage(profile.vehicle.tech_passport_back_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.tech_passport_back_url || null)}
                       />
                     </div>
                   )}
@@ -614,7 +614,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_front_url} 
                         alt="Old" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_front_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_front_url || null)}
                       />
                     </div>
                   )}
@@ -624,7 +624,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_back_url} 
                         alt="Orqa" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_back_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_back_url || null)}
                       />
                     </div>
                   )}
@@ -634,7 +634,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_right_url} 
                         alt="O'ng" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_right_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_right_url || null)}
                       />
                     </div>
                   )}
@@ -644,7 +644,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_left_url} 
                         alt="Chap" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_left_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_left_url || null)}
                       />
                     </div>
                   )}
@@ -654,7 +654,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_angle_45_url} 
                         alt="45° burchak" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_angle_45_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_angle_45_url || null)}
                       />
                     </div>
                   )}
@@ -664,7 +664,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.vehicle.photo_interior_url} 
                         alt="Salon" 
-                        onClick={() => setSelectedImage(profile.vehicle.photo_interior_url || null)}
+                        onClick={() => setSelectedImage(profile.vehicle?.photo_interior_url || null)}
                       />
                     </div>
                   )}
@@ -727,7 +727,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.taxiLicense.license_document_url} 
                         alt="Litsenziya hujjati" 
-                        onClick={() => setSelectedImage(profile.taxiLicense.license_document_url || null)}
+                        onClick={() => setSelectedImage(profile.taxiLicense?.license_document_url || null)}
                       />
                     </div>
                   )}
@@ -737,7 +737,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.taxiLicense.license_sheet_document_url} 
                         alt="Litsenziya varaqasi" 
-                        onClick={() => setSelectedImage(profile.taxiLicense.license_sheet_document_url || null)}
+                        onClick={() => setSelectedImage(profile.taxiLicense?.license_sheet_document_url || null)}
                       />
                     </div>
                   )}
@@ -747,7 +747,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.taxiLicense.self_employment_document_url} 
                         alt="O'zini o'zi band qilish" 
-                        onClick={() => setSelectedImage(profile.taxiLicense.self_employment_document_url || null)}
+                        onClick={() => setSelectedImage(profile.taxiLicense?.self_employment_document_url || null)}
                       />
                     </div>
                   )}
@@ -757,7 +757,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.taxiLicense.power_of_attorney_document_url} 
                         alt="Ishonchnoma" 
-                        onClick={() => setSelectedImage(profile.taxiLicense.power_of_attorney_document_url || null)}
+                        onClick={() => setSelectedImage(profile.taxiLicense?.power_of_attorney_document_url || null)}
                       />
                     </div>
                   )}
@@ -767,7 +767,7 @@ export const DriverDetailPage = () => {
                       <img 
                         src={profile.taxiLicense.insurance_document_url} 
                         alt="Sugurta" 
-                        onClick={() => setSelectedImage(profile.taxiLicense.insurance_document_url || null)}
+                        onClick={() => setSelectedImage(profile.taxiLicense?.insurance_document_url || null)}
                       />
                     </div>
                   )}
