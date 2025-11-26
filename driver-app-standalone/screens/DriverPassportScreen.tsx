@@ -26,6 +26,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { validateField, isValidDate } from '../utils/validation';
 import { updatePassport, getDriverProfile, fetchGeoCountries, fetchGeoProvinces, fetchGeoCityDistricts, uploadImage, type GeoOption } from '../api/driver';
 
 const theme = createTheme('light');
@@ -161,6 +162,7 @@ export const DriverPassportScreen: React.FC = () => {
         case 'citizenship':
           updateField('citizenship', option.name);
           setSelectedCitizenship(option);
+          handleFieldBlur('citizenship', option.name);
           break;
         case 'birth_country':
           if (selectedBirthCountry?.id !== option.id) {
@@ -688,6 +690,122 @@ export const DriverPassportScreen: React.FC = () => {
     });
   };
 
+  const handleFieldBlur = (field: string, value: any) => {
+    let error: string | null = null;
+
+    switch (field) {
+      case 'first_name':
+        if (!value || value.trim() === '') {
+          error = 'Ismni kiriting';
+        }
+        break;
+      case 'last_name':
+        if (!value || value.trim() === '') {
+          error = 'Familiyani kiriting';
+        }
+        break;
+      case 'gender':
+        if (!value) {
+          error = 'Jinsni tanlang';
+        }
+        break;
+      case 'birth_date':
+        if (!value) {
+          error = 'Tug\'ilgan sanani kiriting';
+        } else if (!isValidDate(value)) {
+          error = 'Noto\'g\'ri sana formati';
+        }
+        break;
+      case 'citizenship':
+        if (!value) {
+          error = 'Fuqarolikni kiriting';
+        }
+        break;
+      case 'id_card_number':
+        if (!value || value.trim() === '') {
+          error = 'ID karta raqamini kiriting';
+        }
+        break;
+      case 'pinfl':
+        if (!value || value.trim() === '') {
+          error = 'JSHSHIR (PINFL) raqamini kiriting';
+        } else if (!/^\d{14}$/.test(value.trim())) {
+          error = 'JSHSHIR (PINFL) 14 raqamdan iborat bo\'lishi kerak';
+        }
+        break;
+      case 'issue_date':
+        if (!value) {
+          error = 'Berilgan sanani kiriting';
+        } else if (!isValidDate(value)) {
+          error = 'Noto\'g\'ri sana formati';
+        } else {
+          const issueDate = parseDate(value);
+          const currentDate = new Date();
+          currentDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
+          if (issueDate) {
+            issueDate.setHours(0, 0, 0, 0);
+            if (issueDate > currentDate) {
+              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+            } else {
+              // Also validate expiry_date if it exists (expiry should be after issue)
+              if (formData.expiry_date) {
+                const expiryDate = parseDate(formData.expiry_date);
+                if (expiryDate) {
+                  expiryDate.setHours(0, 0, 0, 0);
+                  if (expiryDate <= issueDate) {
+                    // Set error for expiry_date (preserve existing errors)
+                    setFieldErrors(prev => ({ 
+                      ...prev, 
+                      expiry_date: 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak' 
+                    }));
+                  } else if (fieldErrors.expiry_date === 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak') {
+                    // Clear this specific error if it was set due to date relationship
+                    setFieldErrors(prev => {
+                      const { expiry_date: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+        break;
+      case 'expiry_date':
+        if (!value) {
+          error = 'Amal qilish muddatini kiriting';
+        } else {
+          // Use parseDate instead of isValidDate because expiry dates can be in the future
+          const expiryDate = parseDate(value);
+          if (!expiryDate) {
+            error = 'Noto\'g\'ri sana formati';
+          } else {
+            expiryDate.setHours(0, 0, 0, 0);
+            // Validate that expiry date is after issue date
+            if (formData.issue_date) {
+              const issueDate = parseDate(formData.issue_date);
+              if (issueDate) {
+                issueDate.setHours(0, 0, 0, 0);
+                if (expiryDate <= issueDate) {
+                  error = 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak';
+                }
+              }
+            }
+          }
+        }
+        break;
+    }
+
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [field]: error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
   const handleContinue = async () => {
     // Frontend validation
     const validationErrors: Record<string, string> = {};
@@ -722,10 +840,40 @@ export const DriverPassportScreen: React.FC = () => {
 
     if (!formData.issue_date) {
       validationErrors.issue_date = 'Berilgan sanani kiriting';
+    } else if (!isValidDate(formData.issue_date)) {
+      validationErrors.issue_date = 'Noto\'g\'ri sana formati';
+    } else {
+      const issueDate = parseDate(formData.issue_date);
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      if (issueDate) {
+        issueDate.setHours(0, 0, 0, 0);
+        if (issueDate > currentDate) {
+          validationErrors.issue_date = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+        }
+      }
     }
 
     if (!formData.expiry_date) {
       validationErrors.expiry_date = 'Amal qilish muddatini kiriting';
+    } else {
+      // Use parseDate instead of isValidDate because expiry dates can be in the future
+      const expiryDate = parseDate(formData.expiry_date);
+      if (!expiryDate) {
+        validationErrors.expiry_date = 'Noto\'g\'ri sana formati';
+      } else {
+        expiryDate.setHours(0, 0, 0, 0);
+        // Validate that expiry date is after issue date
+        if (formData.issue_date) {
+          const issueDate = parseDate(formData.issue_date);
+          if (issueDate) {
+            issueDate.setHours(0, 0, 0, 0);
+            if (expiryDate <= issueDate) {
+              validationErrors.expiry_date = 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak';
+            }
+          }
+        }
+      }
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -757,18 +905,21 @@ export const DriverPassportScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save passport info:', error);
       
-      // Check if it's a validation error from backend
-      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+      // Check if it's a validation error from backend (422 status)
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
         
-        // Set field errors to display under each field
-        setFieldErrors(apiErrors);
+        // Merge with existing errors and set field errors to display under each field
+        setFieldErrors(prev => ({ ...prev, ...apiErrors }));
         
         // Also show a general error toast
         const firstError = Object.values(apiErrors)[0];
         if (firstError) {
           showToast.error(t('common.error'), firstError);
+        } else {
+          showToast.error(t('common.error'), t('formValidation.fixErrors'));
         }
       } else {
         // For non-validation errors, show general error
@@ -836,6 +987,7 @@ export const DriverPassportScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.first_name}
                 onChangeText={(value) => updateField('first_name', value)}
+                onBlur={() => handleFieldBlur('first_name', formData.first_name)}
                 editable={!isLoading}
               />
               {fieldErrors.first_name && (
@@ -853,6 +1005,7 @@ export const DriverPassportScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.last_name}
                 onChangeText={(value) => updateField('last_name', value)}
+                onBlur={() => handleFieldBlur('last_name', formData.last_name)}
                 editable={!isLoading}
               />
               {fieldErrors.last_name && (
@@ -885,7 +1038,10 @@ export const DriverPassportScreen: React.FC = () => {
               <View style={styles.genderContainer}>
                 <TouchableOpacity
                   style={styles.genderOption}
-                  onPress={() => updateField('gender', 'male')}
+                  onPress={() => {
+                    updateField('gender', 'male');
+                    handleFieldBlur('gender', 'male');
+                  }}
                   disabled={isLoading}
                 >
                   <View style={[styles.radio, formData.gender === 'male' && styles.radioActive]} />
@@ -894,7 +1050,10 @@ export const DriverPassportScreen: React.FC = () => {
 
                 <TouchableOpacity
                   style={styles.genderOption}
-                  onPress={() => updateField('gender', 'female')}
+                  onPress={() => {
+                    updateField('gender', 'female');
+                    handleFieldBlur('gender', 'female');
+                  }}
                   disabled={isLoading}
                 >
                   <View style={[styles.radio, formData.gender === 'female' && styles.radioActive]} />
@@ -916,6 +1075,7 @@ export const DriverPassportScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.birth_date}
                   onChangeText={(value) => handleDateInputChange('birth_date', value)}
+                  onBlur={() => handleFieldBlur('birth_date', formData.birth_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -944,6 +1104,7 @@ export const DriverPassportScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.issue_date}
                   onChangeText={(value) => handleDateInputChange('issue_date', value)}
+                  onBlur={() => handleFieldBlur('issue_date', formData.issue_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -972,6 +1133,7 @@ export const DriverPassportScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.expiry_date}
                   onChangeText={(value) => handleDateInputChange('expiry_date', value)}
+                  onBlur={() => handleFieldBlur('expiry_date', formData.expiry_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -1026,6 +1188,7 @@ export const DriverPassportScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.id_card_number}
                 onChangeText={(value) => updateField('id_card_number', value)}
+                onBlur={() => handleFieldBlur('id_card_number', formData.id_card_number)}
                 editable={!isLoading}
               />
               {fieldErrors.id_card_number && (
@@ -1044,6 +1207,7 @@ export const DriverPassportScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.pinfl}
                 onChangeText={(value) => updateField('pinfl', value)}
+                onBlur={() => handleFieldBlur('pinfl', formData.pinfl)}
                 keyboardType="numeric"
                 editable={!isLoading}
               />

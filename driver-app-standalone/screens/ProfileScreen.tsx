@@ -17,12 +17,14 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { useNavigation } from '@react-navigation/native';
 
 const theme = createTheme('light');
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const navigation = useNavigation();
 
   // Get user display data
   const displayName = (user as any)?.display_name || (user as any)?.name || t('menu.guest');
@@ -64,6 +66,7 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const menuItems = [
+    { id: 'notifications', title: t('profile.notifications'), icon: '🔔', navigate: 'Notifications' },
     { id: 'edit', title: t('profile.editProfile'), icon: '✏️' },
     { id: 'payment', title: t('profile.paymentMethods'), icon: '💳' },
     { id: 'history', title: t('profile.tripHistory'), icon: '📜' },
@@ -82,6 +85,12 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.email}>{userEmail}</Text>
           <Text style={styles.phone}>{userPhone}</Text>
+          {user?.id && (
+            <View style={styles.idContainer}>
+              <Text style={styles.idLabel}>{t('profile.driverId')}:</Text>
+              <Text style={styles.idValue}>{user.id}</Text>
+            </View>
+          )}
         </View>
 
         {/* Menu Items */}
@@ -90,7 +99,13 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
-              onPress={() => console.log(`Navigate to ${item.id}`)}
+              onPress={() => {
+                if (item.navigate) {
+                  (navigation as any).navigate(item.navigate);
+                } else {
+                  console.log(`Navigate to ${item.id}`);
+                }
+              }}
             >
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text style={styles.menuTitle}>{item.title}</Text>
@@ -168,6 +183,25 @@ const styles = StyleSheet.create({
   phone: {
     ...theme.typography.body2,
     color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(1),
+  },
+  idContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1),
+    backgroundColor: theme.palette.background.default,
+    borderRadius: theme.borderRadius.sm,
+  },
+  idLabel: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
+    marginRight: theme.spacing(1),
+  },
+  idValue: {
+    ...theme.typography.body2,
+    color: theme.palette.text.primary,
+    fontFamily: 'monospace',
   },
   menuSection: {
     backgroundColor: theme.palette.background.card,

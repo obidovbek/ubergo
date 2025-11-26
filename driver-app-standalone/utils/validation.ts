@@ -129,3 +129,17 @@ export const validateForm = (
 
   return errors;
 };
+
+/**
+ * Validate a single field
+ * Returns error message or null if valid
+ */
+export const validateField = (
+  field: string,
+  value: any,
+  rules: ValidationRule['rules'],
+  t: (key: string) => string
+): string | null => {
+  const validationErrors = validateForm([{ field, value, rules }], t);
+  return validationErrors.length > 0 ? validationErrors[0].message : null;
+};

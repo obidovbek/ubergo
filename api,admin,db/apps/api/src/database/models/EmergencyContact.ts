@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Emergency Contact attributes
 export interface EmergencyContactAttributes {
   id: string;
-  driver_profile_id: string;
+  driver_profile_id: number;
   phone_country_code?: string | null;
   phone_number?: string | null;
   relationship?: string | null; // Ota, Ona, Aka, etc.
@@ -19,13 +19,13 @@ export interface EmergencyContactAttributes {
 // Creation attributes
 export interface EmergencyContactCreationAttributes
   extends Optional<EmergencyContactAttributes, 'id' | 'phone_country_code' | 'phone_number' | 'relationship' | 'created_at' | 'updated_at'> {
-  driver_profile_id: string;
+  driver_profile_id: number;
 }
 
 // Emergency Contact model class
 export class EmergencyContact extends Model<EmergencyContactAttributes, EmergencyContactCreationAttributes> implements EmergencyContactAttributes {
   declare id: string;
-  declare driver_profile_id: string;
+  declare driver_profile_id: number;
   declare phone_country_code?: string | null;
   declare phone_number?: string | null;
   declare relationship?: string | null;
@@ -47,7 +47,7 @@ export function initEmergencyContact(sequelize: Sequelize) {
         allowNull: false
       },
       driver_profile_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'driver_profiles',

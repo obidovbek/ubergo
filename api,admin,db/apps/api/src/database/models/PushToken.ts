@@ -2,7 +2,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 
 export interface PushTokenAttributes {
   id: string;
-  user_id: string;
+  user_id: number;
   token: string;
   platform: 'android' | 'ios';
   app: 'user' | 'driver';
@@ -15,7 +15,7 @@ export interface PushTokenCreationAttributes
 
 export class PushToken extends Model<PushTokenAttributes, PushTokenCreationAttributes> implements PushTokenAttributes {
   declare id: string;
-  declare user_id: string;
+  declare user_id: number;
   declare token: string;
   declare platform: 'android' | 'ios';
   declare app: 'user' | 'driver';
@@ -36,8 +36,12 @@ export function initPushToken(sequelize: Sequelize) {
         allowNull: false,
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id'
+        }
       },
       token: {
         type: DataTypes.TEXT,

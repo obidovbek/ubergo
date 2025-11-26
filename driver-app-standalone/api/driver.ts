@@ -82,7 +82,10 @@ export const getDriverProfileStatus = async (token: string): Promise<DriverProfi
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to get driver profile status');
+      const error: any = new Error(result.message || 'Failed to get driver profile status');
+      error.status = response.status;
+      error.response = { status: response.status, data: result };
+      throw error;
     }
 
     return result.data;

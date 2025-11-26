@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Driver License attributes
 export interface DriverLicenseAttributes {
   id: string;
-  driver_profile_id: string;
+  driver_profile_id: number;
   // Personal Information (from license)
   first_name?: string | null;
   last_name?: string | null;
@@ -35,7 +35,7 @@ export interface DriverLicenseAttributes {
 // Creation attributes
 export interface DriverLicenseCreationAttributes
   extends Optional<DriverLicenseAttributes, 'id' | 'first_name' | 'last_name' | 'father_name' | 'birth_date' | 'category_a' | 'category_b' | 'category_c' | 'category_d' | 'category_be' | 'category_ce' | 'category_de' | 'license_front_url' | 'license_back_url' | 'created_at' | 'updated_at'> {
-  driver_profile_id: string;
+  driver_profile_id: number;
   license_number: string;
   issue_date: Date;
 }
@@ -43,7 +43,7 @@ export interface DriverLicenseCreationAttributes
 // Driver License model class
 export class DriverLicense extends Model<DriverLicenseAttributes, DriverLicenseCreationAttributes> implements DriverLicenseAttributes {
   declare id: string;
-  declare driver_profile_id: string;
+  declare driver_profile_id: number;
   declare first_name?: string | null;
   declare last_name?: string | null;
   declare father_name?: string | null;
@@ -77,7 +77,7 @@ export function initDriverLicense(sequelize: Sequelize) {
         allowNull: false
       },
       driver_profile_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'driver_profiles',

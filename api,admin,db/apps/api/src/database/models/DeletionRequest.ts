@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // DeletionRequest attributes
 export interface DeletionRequestAttributes {
   id: string;
-  user_id: string;
+  user_id: number;
   requested_at: Date;
   deadline_at: Date;
   status: 'pending' | 'done' | 'cancelled';
@@ -23,7 +23,7 @@ export class DeletionRequest
   extends Model<DeletionRequestAttributes, DeletionRequestCreationAttributes>
   implements DeletionRequestAttributes {
   declare id: string;
-  declare user_id: string;
+  declare user_id: number;
   declare requested_at: Date;
   declare deadline_at: Date;
   declare status: 'pending' | 'done' | 'cancelled';
@@ -39,7 +39,7 @@ export function initDeletionRequest(sequelize: Sequelize) {
         allowNull: false
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'users',

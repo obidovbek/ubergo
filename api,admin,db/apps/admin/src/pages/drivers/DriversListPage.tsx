@@ -61,6 +61,25 @@ export const DriversListPage = () => {
     loadDrivers();
   };
 
+  const handleStatusChange = async (id: string, newStatus: 'active' | 'blocked' | 'pending_delete') => {
+    if (!token) return;
+    
+    const statusText = {
+      active: 'faollashtirish',
+      blocked: 'bloklash',
+      pending_delete: 'o\'chirish kutilmoqda holatiga o\'tkazish'
+    }[newStatus];
+    
+    if (!confirm(`Bu haydovchini ${statusText}ni xohlaysizmi?`)) return;
+
+    try {
+      await driversApi.updateDriverStatus(token, id, newStatus);
+      loadDrivers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : translations.errors.updateFailed || 'Status yangilashda xatolik');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!token) return;
     if (!confirm('Bu haydovchini o\'chirishni xohlaysizmi?')) return;
@@ -214,6 +233,22 @@ export const DriversListPage = () => {
                   </td>
                   <td>
                     <div className="action-buttons">
+                      <select
+                        value={driver.status}
+                        onChange={(e) => handleStatusChange(driver.id, e.target.value as 'active' | 'blocked' | 'pending_delete')}
+                        className="status-select"
+                        style={{
+                          padding: '4px 8px',
+                          marginRight: '8px',
+                          borderRadius: '4px',
+                          border: '1px solid #ddd',
+                          fontSize: '14px',
+                        }}
+                      >
+                        <option value="active">Faol</option>
+                        <option value="blocked">Bloklangan</option>
+                        <option value="pending_delete">O'chirish kutilmoqda</option>
+                      </select>
                       <Button
                         variant="outlined"
                         size="small"

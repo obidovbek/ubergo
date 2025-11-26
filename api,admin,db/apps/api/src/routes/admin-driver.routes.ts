@@ -22,6 +22,9 @@ router.get('/:id', AdminDriverController.getById);
 // Update driver
 router.put('/:id', AdminDriverController.update);
 
+// Update driver status
+router.patch('/:id/status', AdminDriverController.updateStatus);
+
 // Delete driver
 router.delete('/:id', AdminDriverController.delete);
 

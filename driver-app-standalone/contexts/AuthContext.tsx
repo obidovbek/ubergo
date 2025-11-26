@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useReducer, useEffect, ReactNode } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authReducer, initialAuthState, AuthState } from './auth-reducer/auth.reducer';
 import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
@@ -27,7 +28,7 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (user: User) => void;
+  updateUser: (user: User) => Promise<void>;
   // Social auth methods
   googleSignIn: (idToken: string) => Promise<void>;
   appleSignIn: (idToken: string) => Promise<void>;
@@ -56,6 +57,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // Refresh user data when app comes to foreground
+  useEffect(() => {
+    let isMounted = true;
+    
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && isMounted) {
+        // Get current state from reducer (not from closure)
+        const currentState = state;
+        if (currentState.isAuthenticated && currentState.token) {
+          // App came to foreground, refresh user data to get latest status
+          try {
+            console.log('AuthContext: App came to foreground, refreshing user data...');
+            const currentUserResponse = await AuthAPI.getCurrentUser(currentState.token);
+            
+            // Handle different response formats
+            let serverUser = null;
+            if (currentUserResponse.data) {
+              serverUser = currentUserResponse.data;
+            } else if (currentUserResponse.user) {
+              serverUser = currentUserResponse.user;
+            } else if (currentUserResponse.id) {
+              // Response is the user object directly
+              serverUser = currentUserResponse;
+            }
+            
+            if (serverUser && isMounted) {
+              console.log('AuthContext: Refreshed user data on foreground:', { 
+                id: serverUser.id, 
+                status: serverUser.status 
+              });
+              // Update user with latest status from server
+              await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
+              dispatch({
+                type: AUTH_ACTIONS.UPDATE_USER,
+                payload: serverUser,
+              });
+            }
+          } catch (error) {
+            console.warn('AuthContext: Failed to refresh user data on foreground:', error);
+            // Don't throw error, just log it - app can continue with existing user data
+          }
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, [state.isAuthenticated, state.token, state]);
+
   const initializeAuth = async () => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
@@ -67,10 +121,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (token && userJson) {
         const user = JSON.parse(userJson);
-        dispatch({
-          type: AUTH_ACTIONS.LOGIN,
-          payload: { user, token },
-        });
+        
+        // Verify user status with server to get latest status
+        try {
+          const currentUserResponse = await AuthAPI.getCurrentUser(token);
+          
+          // Handle different response formats
+          let serverUser = null;
+          if (currentUserResponse.data) {
+            serverUser = currentUserResponse.data;
+          } else if (currentUserResponse.user) {
+            serverUser = currentUserResponse.user;
+          } else if (currentUserResponse.id) {
+            // Response is the user object directly
+            serverUser = currentUserResponse;
+          }
+          
+          if (serverUser) {
+            console.log('AuthContext: Fetched user from server on init:', { 
+              id: serverUser.id, 
+              status: serverUser.status 
+            });
+            // Update user with latest status from server
+            // This ensures we get the updated status if admin changed the driver status
+            await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN,
+              payload: { user: serverUser, token },
+            });
+          } else {
+            console.warn('AuthContext: Unexpected response format, using stored user');
+            // Fallback to stored user if server response is unexpected
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN,
+              payload: { user, token },
+            });
+          }
+        } catch (apiError) {
+          console.warn('AuthContext: Failed to fetch current user from server, using stored user:', apiError);
+          // If API call fails, use stored user (might be offline)
+          dispatch({
+            type: AUTH_ACTIONS.LOGIN,
+            payload: { user, token },
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);
@@ -199,9 +293,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = (user: User) => {
-    AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
+  const updateUser = async (user: User) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
+      console.log('AuthContext: User updated:', { id: user.id, status: (user as any)?.status });
+    } catch (error) {
+      console.error('AuthContext: Failed to update user in storage:', error);
+      // Still dispatch the update even if storage fails
+      dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
+    }
   };
 
   const sendOtp = async (phone?: string, channel: 'sms' | 'call' | 'push' = 'sms', opts?: { userId?: string }) => {

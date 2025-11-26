@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Driver Passport attributes
 export interface DriverPassportAttributes {
   id: string;
-  driver_profile_id: string;
+  driver_profile_id: number;
   // Personal Information (from passport)
   first_name: string;
   last_name: string;
@@ -34,7 +34,7 @@ export interface DriverPassportAttributes {
 // Creation attributes
 export interface DriverPassportCreationAttributes
   extends Optional<DriverPassportAttributes, 'id' | 'father_name' | 'birth_place_country' | 'birth_place_region' | 'birth_place_city' | 'passport_front_url' | 'passport_back_url' | 'created_at' | 'updated_at'> {
-  driver_profile_id: string;
+  driver_profile_id: number;
   first_name: string;
   last_name: string;
   gender: 'male' | 'female';
@@ -49,7 +49,7 @@ export interface DriverPassportCreationAttributes
 // Driver Passport model class
 export class DriverPassport extends Model<DriverPassportAttributes, DriverPassportCreationAttributes> implements DriverPassportAttributes {
   declare id: string;
-  declare driver_profile_id: string;
+  declare driver_profile_id: number;
   declare first_name: string;
   declare last_name: string;
   declare father_name?: string | null;
@@ -83,7 +83,7 @@ export function initDriverPassport(sequelize: Sequelize) {
         allowNull: false
       },
       driver_profile_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'driver_profiles',

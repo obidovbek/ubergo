@@ -176,6 +176,25 @@ export class AdminDriverService {
   }
 
   /**
+   * Update driver status
+   */
+  static async updateStatus(id: string, status: 'active' | 'blocked' | 'pending_delete') {
+    const user = await User.findOne({
+      where: {
+        id,
+        role: 'driver'
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundError(ERROR_MESSAGES.NOT_FOUND);
+    }
+
+    await user.update({ status });
+    return user;
+  }
+
+  /**
    * Delete driver
    */
   static async delete(id: string) {

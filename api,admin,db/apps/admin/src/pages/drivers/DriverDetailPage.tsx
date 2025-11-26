@@ -41,6 +41,26 @@ export const DriverDetailPage = () => {
     }
   };
 
+  const handleStatusChange = async (newStatus: 'active' | 'blocked' | 'pending_delete') => {
+    if (!token || !id || !driver) return;
+    
+    const statusText = {
+      active: 'faollashtirish',
+      blocked: 'bloklash',
+      pending_delete: 'o\'chirish kutilmoqda holatiga o\'tkazish'
+    }[newStatus];
+    
+    if (!confirm(`Bu haydovchini ${statusText}ni xohlaysizmi?`)) return;
+
+    try {
+      const updatedDriver = await driversApi.updateDriverStatus(token, id, newStatus);
+      setDriver(updatedDriver);
+      alert('Status muvaffaqiyatli yangilandi');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Status yangilashda xatolik');
+    }
+  };
+
   const getRegistrationStepLabel = (step?: string) => {
     switch (step) {
       case 'personal': return 'Shaxsiy ma\'lumotlar';
@@ -117,11 +137,29 @@ export const DriverDetailPage = () => {
             </div>
             <div className="detail-item">
               <label>Holat</label>
-              <span className={`status-badge status-${driver.status}`}>
-                {driver.status === 'active' ? 'Faol' : 
-                 driver.status === 'blocked' ? 'Bloklangan' : 
-                 'O\'chirish kutilmoqda'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className={`status-badge status-${driver.status}`}>
+                  {driver.status === 'active' ? 'Faol' : 
+                   driver.status === 'blocked' ? 'Bloklangan' : 
+                   'O\'chirish kutilmoqda'}
+                </span>
+                <select
+                  value={driver.status}
+                  onChange={(e) => handleStatusChange(e.target.value as 'active' | 'blocked' | 'pending_delete')}
+                  className="status-select"
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="active">Faol</option>
+                  <option value="blocked">Bloklangan</option>
+                  <option value="pending_delete">O'chirish kutilmoqda</option>
+                </select>
+              </div>
             </div>
             <div className="detail-item">
               <label>Ro'yxatdan o'tish bosqichi</label>

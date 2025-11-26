@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Phone attributes
 export interface PhoneAttributes {
   id: string;
-  user_id: string;
+  user_id: number;
   label: 'primary' | 'trusted' | 'extra';
   e164: string;
   is_verified: boolean;
@@ -22,7 +22,7 @@ export interface PhoneCreationAttributes
 // Phone model class
 export class Phone extends Model<PhoneAttributes, PhoneCreationAttributes> implements PhoneAttributes {
   declare id: string;
-  declare user_id: string;
+  declare user_id: number;
   declare label: 'primary' | 'trusted' | 'extra';
   declare e164: string;
   declare is_verified: boolean;
@@ -42,7 +42,7 @@ export function initPhone(sequelize: Sequelize) {
         allowNull: false
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'users',

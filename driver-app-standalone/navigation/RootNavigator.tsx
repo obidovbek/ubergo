@@ -9,19 +9,31 @@ import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ProfileCompletionNavigator } from './ProfileCompletionNavigator';
+import { BlockedScreen } from '../screens/BlockedScreen';
 import { SplashScreen } from '../components/SplashScreen';
 import { getDriverProfileStatus } from '../api/driver';
+import * as AuthAPI from '../api/auth';
 
 export const RootNavigator: React.FC = () => {
-  const { isAuthenticated, user, isLoading, token } = useAuth();
+  const { isAuthenticated, user, isLoading, token, logout, updateUser } = useAuth();
   const [checkingProfile, setCheckingProfile] = useState(false);
   const [driverProfileComplete, setDriverProfileComplete] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [userStatus, setUserStatus] = useState<string | undefined>((user as any)?.status);
   const navigationRef = useNavigationContainerRef();
 
-  console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading });
+  // Update userStatus state when user object changes
+  useEffect(() => {
+    const currentStatus = (user as any)?.status;
+    if (currentStatus !== userStatus) {
+      console.log('RootNavigator: User status changed from', userStatus, 'to', currentStatus);
+      setUserStatus(currentStatus);
+    }
+  }, [(user as any)?.status, user]);
 
-  // Function to check driver profile status
+  console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading, userStatus: (user as any)?.status });
+
+  // Function to check driver profile status and refresh user data
   const checkDriverProfile = useCallback(async () => {
     if (!isAuthenticated || !token) {
       setDriverProfileComplete(false);
@@ -32,23 +44,84 @@ export const RootNavigator: React.FC = () => {
       setCheckingProfile(true);
       console.log('RootNavigator: Checking driver profile status...');
       
+      // Refresh user data from server to get latest status (in case admin changed the driver status)
+      try {
+        const currentUserResponse = await AuthAPI.getCurrentUser(token);
+        
+        // Handle different response formats
+        let serverUser = null;
+        if (currentUserResponse.data) {
+          serverUser = currentUserResponse.data;
+        } else if (currentUserResponse.user) {
+          serverUser = currentUserResponse.user;
+        } else if (currentUserResponse.id) {
+          // Response is the user object directly
+          serverUser = currentUserResponse;
+        }
+        
+        if (serverUser) {
+          console.log('RootNavigator: Refreshed user data from server:', { 
+            id: serverUser.id, 
+            status: serverUser.status,
+            previousStatus: (user as any)?.status
+          });
+          // Update user in context with latest status (this also updates AsyncStorage)
+          await updateUser(serverUser);
+          // Update local status state immediately to trigger re-evaluation
+          setUserStatus(serverUser.status);
+        } else {
+          console.warn('RootNavigator: Unexpected response format from getCurrentUser');
+        }
+      } catch (userError) {
+        console.warn('RootNavigator: Failed to refresh user data, continuing with existing user:', userError);
+        // Continue with existing user if refresh fails
+      }
+      
       const status = await getDriverProfileStatus(token);
       console.log('RootNavigator: Driver profile status:', status);
       
       setDriverProfileComplete(status.isComplete);
-    } catch (error) {
+    } catch (error: any) {
       console.error('RootNavigator: Failed to check driver profile:', error);
-      // If API fails, assume profile is incomplete to be safe
+      
+      // Check if error is 401 (Unauthorized) - user was deleted or token is invalid
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 401) {
+        console.log('RootNavigator: 401 error detected - user deleted or token invalid, logging out...');
+        // Logout user to clear token and redirect to AuthNavigator
+        try {
+          await logout();
+        } catch (logoutError) {
+          console.error('RootNavigator: Failed to logout:', logoutError);
+        }
+        return;
+      }
+      
+      // For other errors, assume profile is incomplete to be safe
       setDriverProfileComplete(false);
     } finally {
       setCheckingProfile(false);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, logout, updateUser]);
 
   // Check driver profile status when authenticated, when refresh is triggered, or when user changes
   useEffect(() => {
-    checkDriverProfile();
-  }, [checkDriverProfile, refreshTrigger, user]);
+    if (isAuthenticated && token) {
+      checkDriverProfile();
+    }
+  }, [isAuthenticated, token, refreshTrigger]);
+  
+  // Also check when user status changes (separate effect to ensure status changes trigger re-evaluation)
+  useEffect(() => {
+    if (isAuthenticated && token && user) {
+      // When user object changes (e.g., status updated), re-check profile
+      // This ensures we re-evaluate navigation after status update
+      const userStatus = (user as any)?.status;
+      console.log('RootNavigator: User status changed, current status:', userStatus);
+      // Don't call checkDriverProfile again here to avoid double API calls
+      // The status check in getNavigator() will handle the navigation change
+    }
+  }, [(user as any)?.status, user?.id]); // Trigger when status or user ID changes
 
   // Profile status is checked:
   // 1. On initial mount (useEffect above)
@@ -67,6 +140,20 @@ export const RootNavigator: React.FC = () => {
       // User is not authenticated, show auth screens
       console.log('RootNavigator: User not authenticated, showing AuthNavigator');
       return <AuthNavigator />;
+    }
+
+    // Check user status (use state variable to ensure we have latest value)
+    const currentUserStatus = (user as any)?.status || userStatus;
+    console.log('RootNavigator: Checking user status:', { 
+      currentUserStatus, 
+      userStatusState: userStatus,
+      user: user ? { id: user.id, status: (user as any)?.status } : null 
+    });
+    
+    if (currentUserStatus === 'blocked' || currentUserStatus === 'pending_delete') {
+      // User is blocked or pending deletion, show blocked screen
+      console.log('RootNavigator: User status is', currentUserStatus, ', showing BlockedScreen');
+      return <BlockedScreen />;
     }
 
     // User is authenticated, check if driver profile is complete

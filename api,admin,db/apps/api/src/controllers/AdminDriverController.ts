@@ -65,6 +65,27 @@ export class AdminDriverController {
     }
   }
 
+  static async updateStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !['active', 'blocked', 'pending_delete'].includes(status)) {
+        throw new Error('Invalid status. Must be one of: active, blocked, pending_delete');
+      }
+
+      const driver = await AdminDriverService.updateStatus(id, status);
+
+      successResponse(res, driver, SuccessMessages.USER_UPDATED || 'Status updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async delete(
     req: Request,
     res: Response,

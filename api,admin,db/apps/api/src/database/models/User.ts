@@ -6,7 +6,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 
 // User attributes
 export interface UserAttributes {
-  id: string;
+  id: number;
   phone_e164?: string | null;
   email?: string | null;
   password_hash?: string | null;
@@ -30,11 +30,11 @@ export interface UserAttributes {
 
 // Creation attributes (optional fields during creation)
 export interface UserCreationAttributes
-  extends Optional<UserAttributes, 'id' | 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'profile_complete' | 'created_at' | 'updated_at'> {}
+  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'profile_complete' | 'created_at' | 'updated_at'> {}
 
 // User model class
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  declare id: string;
+  declare id: number;
   declare phone_e164?: string | null;
   declare email?: string | null;
   declare password_hash?: string | null;
@@ -64,9 +64,9 @@ export function initUser(sequelize: Sequelize) {
   User.init(
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
         primaryKey: true,
+        autoIncrement: true,
         allowNull: false
       },
       phone_e164: {

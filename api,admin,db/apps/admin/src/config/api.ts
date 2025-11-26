@@ -39,6 +39,7 @@ export const API_ENDPOINTS = {
     list: '/admin/drivers',
     detail: (id: string) => `/admin/drivers/${id}`,
     update: (id: string) => `/admin/drivers/${id}`,
+    updateStatus: (id: string) => `/admin/drivers/${id}/status`,
     delete: (id: string) => `/admin/drivers/${id}`,
     approve: (id: string) => `/drivers/${id}/approve`,
     reject: (id: string) => `/drivers/${id}/reject`,

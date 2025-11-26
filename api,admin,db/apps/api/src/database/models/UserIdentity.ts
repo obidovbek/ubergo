@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // UserIdentity attributes
 export interface UserIdentityAttributes {
   id: string;
-  user_id: string;
+  user_id: number;
   provider: 'google' | 'apple' | 'facebook' | 'microsoft' | 'telegram' | 'oneid';
   provider_uid: string;
   meta: Record<string, any>;
@@ -24,7 +24,7 @@ export class UserIdentity
   extends Model<UserIdentityAttributes, UserIdentityCreationAttributes>
   implements UserIdentityAttributes {
   declare id: string;
-  declare user_id: string;
+  declare user_id: number;
   declare provider: 'google' | 'apple' | 'facebook' | 'microsoft' | 'telegram' | 'oneid';
   declare provider_uid: string;
   declare meta: Record<string, any>;
@@ -44,7 +44,7 @@ export function initUserIdentity(sequelize: Sequelize) {
         allowNull: false
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'users',

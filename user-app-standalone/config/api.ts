@@ -62,6 +62,12 @@ export const API_ENDPOINTS = {
   support: {
     contact: '/support-contacts',
   },
+  notifications: {
+    list: '/notifications',
+    markRead: (id: string) => `/notifications/${id}/read`,
+    markAllRead: '/notifications/read-all',
+    delete: (id: string) => `/notifications/${id}`,
+  },
 };
 
 // API Timeout

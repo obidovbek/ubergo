@@ -337,6 +337,46 @@ export const updateDriver = async (
 };
 
 /**
+ * Update driver status
+ */
+export const updateDriverStatus = async (
+  token: string,
+  id: string,
+  status: 'active' | 'blocked' | 'pending_delete'
+): Promise<Driver> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.drivers.updateStatus(id)}`,
+      {
+        method: 'PATCH',
+        headers: getHeaders(token),
+        body: JSON.stringify({ status }),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
+      throw new Error(`Failed to update driver status: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.data || result;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
  * Delete driver
  */
 export const deleteDriver = async (token: string, id: string): Promise<void> => {

@@ -1,11 +1,12 @@
 /**
  * Loading Spinner Component
- * Extended loading component with custom styling
+ * Extended loading component with custom styling and multilingual support
  */
 
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { createTheme } from '../../themes';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const theme = createTheme('light');
 
@@ -13,6 +14,7 @@ interface LoadingSpinnerProps {
   size?: 'small' | 'large';
   color?: string;
   message?: string;
+  useTranslation?: boolean;
   fullScreen?: boolean;
 }
 
@@ -20,14 +22,20 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'large',
   color = theme.palette.secondary.main,
   message,
+  useTranslation: useTranslationProp = false,
   fullScreen = false,
 }) => {
+  const { t } = useTranslation();
   const containerStyle = fullScreen ? styles.fullScreenContainer : styles.container;
+  
+  const displayMessage = useTranslationProp && !message 
+    ? t('common.loading') 
+    : message;
 
   return (
     <View style={containerStyle}>
       <ActivityIndicator size={size} color={color} />
-      {message && <Text style={styles.message}>{message}</Text>}
+      {displayMessage && <Text style={styles.message}>{displayMessage}</Text>}
     </View>
   );
 };

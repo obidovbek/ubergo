@@ -37,8 +37,28 @@ export default {
     monthDecember: 'Декабрь',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Водите и зарабатывайте',
+    loading: 'Загрузка...',
+  },
+
   auth: {
     appName: 'UbexGo',
+    logout: 'Выйти',
+    accountBlocked: 'Аккаунт заблокирован',
+    accountBlockedDescription: 'К сожалению, ваш аккаунт заблокирован. Пожалуйста, свяжитесь со службой поддержки или попробуйте позже.',
+    accountPendingDelete: 'Удаление аккаунта',
+    accountPendingDeleteDescription: 'Ваш аккаунт находится в процессе удаления. Если это ошибка, пожалуйста, свяжитесь со службой поддержки.',
+    accountSuspended: 'Аккаунт приостановлен',
+    accountSuspendedDescription: 'Ваш аккаунт временно приостановлен. Пожалуйста, свяжитесь со службой поддержки для получения помощи.',
+    contactSupport: 'Связаться с поддержкой',
+    supportEmail: 'Email: support@ubexgo.uz',
+    supportPhone: 'Телефон: +998 XX XXX XX XX',
+    emailNotAvailable: 'Почтовый клиент недоступен на этом устройстве',
+    emailError: 'Не удалось открыть почтовый клиент',
+    phoneNotAvailable: 'Телефон недоступен на этом устройстве',
+    phoneError: 'Не удалось открыть телефон',
   },
 
   phoneRegistration: {
@@ -171,7 +191,9 @@ export default {
     logoutError: 'Ошибка выхода. Пожалуйста, попробуйте снова.',
     noEmail: 'Нет email',
     noPhone: 'Нет телефона',
+    driverId: 'ID водителя',
     appVersion: 'UbexGo v1.0.0',
+    notifications: 'Уведомления',
     editProfile: 'Редактировать профиль',
     paymentMethods: 'Способы оплаты',
     tripHistory: 'История поездок',
@@ -368,6 +390,27 @@ export default {
     errorUpdate: 'Ошибка сохранения данных',
     licenseNumberRequired: 'Пожалуйста, введите номер прав',
     issueDateRequired: 'Пожалуйста, введите дату выдачи',
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Уведомления',
+    noNotifications: 'Нет уведомлений',
+    markAllRead: 'Отметить все как прочитанные',
+    markAllReadConfirm: 'Вы хотите отметить все уведомления как прочитанные?',
+    allMarkedRead: 'Все уведомления отмечены как прочитанные',
+    markReadError: 'Не удалось отметить уведомление как прочитанное',
+    markAllReadError: 'Не удалось отметить все уведомления как прочитанные',
+    delete: 'Удалить',
+    deleteConfirm: 'Вы хотите удалить это уведомление?',
+    deleted: 'Уведомление удалено',
+    deleteError: 'Не удалось удалить уведомление',
+    loadError: 'Не удалось загрузить уведомления',
+    loadErrorDescription: 'Произошла ошибка при загрузке уведомлений',
+    justNow: 'Только что',
+    minutesAgo: '{count} минут назад',
+    hoursAgo: '{count} часов назад',
+    daysAgo: '{count} дней назад',
   },
 };
 

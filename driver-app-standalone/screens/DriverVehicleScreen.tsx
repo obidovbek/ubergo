@@ -26,7 +26,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
-import { validateForm, type ValidationRule } from '../utils/validation';
+import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import {
   updateVehicle,
   getDriverProfile,
@@ -1298,9 +1298,203 @@ export const DriverVehicleScreen: React.FC = () => {
     // }
   };
 
-  const handleFieldBlur = (field: string) => {
-    // Field-level validation can be added here if needed
-    // For now, we validate on submit only
+  const handleFieldBlur = (field: string, value: any) => {
+    let error: string | null = null;
+    
+    // Validate this specific field based on field name
+    switch (field) {
+        case 'vehicle_type_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.vehicleTypeRequired' }],
+            t
+          );
+          break;
+        case 'vehicle_make_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.vehicleMakeRequired' }],
+            t
+          );
+          break;
+        case 'vehicle_model_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.vehicleModelRequired' }],
+            t
+          );
+          break;
+        case 'vehicle_body_type_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.vehicleBodyTypeRequired' }],
+            t
+          );
+          break;
+        case 'vehicle_color_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.vehicleColorRequired' }],
+            t
+          );
+          break;
+        case 'tech_passport_series':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.techPassportSeriesRequired' },
+              { type: 'minLength', errorKey: 'formValidation.techPassportSeriesTooShort', params: { min: 3 } },
+            ],
+            t
+          );
+          break;
+        case 'license_plate':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.licensePlateRequired' },
+              { type: 'minLength', errorKey: 'formValidation.licensePlateTooShort', params: { min: 3 } },
+            ],
+            t
+          );
+          break;
+        case 'model':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.modelRequired' }],
+            t
+          );
+          break;
+        case 'owner_first_name':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.ownerFirstNameRequired' },
+              { type: 'minLength', errorKey: 'formValidation.ownerFirstNameTooShort', params: { min: 2 } },
+            ],
+            t
+          );
+          break;
+        case 'owner_last_name':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.ownerLastNameRequired' },
+              { type: 'minLength', errorKey: 'formValidation.ownerLastNameTooShort', params: { min: 2 } },
+            ],
+            t
+          );
+          break;
+        case 'owner_father_name':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.ownerFatherNameRequired' },
+              { type: 'minLength', errorKey: 'formValidation.ownerFatherNameTooShort', params: { min: 2 } },
+            ],
+            t
+          );
+          break;
+        case 'owner_pinfl':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.ownerPinflRequired' },
+              {
+                type: 'custom',
+                errorKey: 'formValidation.ownerPinflInvalid',
+                customValidator: (val) => !val || /^\d{14}$/.test(val.trim()),
+              },
+            ],
+            t
+          );
+          break;
+        case 'owner_address_country_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.ownerAddressCountryRequired' }],
+            t
+          );
+          break;
+        case 'owner_address_province_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.ownerAddressProvinceRequired' }],
+            t
+          );
+          break;
+        case 'owner_address_city_district_id':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.ownerAddressCityDistrictRequired' }],
+            t
+          );
+          break;
+        case 'owner_address_street':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.ownerAddressStreetRequired' },
+              { type: 'minLength', errorKey: 'formValidation.ownerAddressStreetTooShort', params: { min: 5 } },
+            ],
+            t
+          );
+          break;
+        case 'year':
+          error = validateField(
+            field,
+            value,
+            [
+              { type: 'required', errorKey: 'formValidation.yearRequired' },
+              {
+                type: 'custom',
+                errorKey: 'formValidation.yearInvalid',
+                customValidator: (val) => {
+                  if (!val || val.trim() === '') return false;
+                  const yearNum = parseInt(val);
+                  if (isNaN(yearNum)) return false;
+                  const currentYear = new Date().getFullYear();
+                  return yearNum >= 1900 && yearNum <= currentYear + 1;
+                },
+              },
+            ],
+            t
+          );
+          break;
+        case 'fuel_types':
+          error = validateField(
+            field,
+            value,
+            [{ type: 'required', errorKey: 'formValidation.fuelTypesRequired' }],
+            t
+          );
+          break;
+    }
+    
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [field]: error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      });
+    }
   };
 
   const handleContinue = async () => {
@@ -1384,18 +1578,21 @@ export const DriverVehicleScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save vehicle info:', error);
       
-      // Check if it's a validation error from backend
-      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+      // Check if it's a validation error from backend (422 status)
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
         
-        // Set field errors to display under each field
-        setFieldErrors(apiErrors);
+        // Merge with existing errors and set field errors to display under each field
+        setFieldErrors(prev => ({ ...prev, ...apiErrors }));
         
         // Also show a general error toast
         const firstError = Object.values(apiErrors)[0];
         if (firstError) {
           showToast.error(t('common.error'), firstError);
+        } else {
+          showToast.error(t('common.error'), t('formValidation.fixErrors'));
         }
       } else {
         // For non-validation errors, show general error
@@ -1587,7 +1784,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.tech_passport_series}
                 onChangeText={(value: string) => handleFieldChange('tech_passport_series', value)}
-                onBlur={() => handleFieldBlur('tech_passport_series')}
+                onBlur={() => handleFieldBlur('tech_passport_series', formData.tech_passport_series)}
                 editable={!isLoading}
               />
               {fieldErrors.tech_passport_series && (
@@ -1605,7 +1802,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.license_plate}
                 onChangeText={(value: string) => handleFieldChange('license_plate', value)}
-                onBlur={() => handleFieldBlur('license_plate')}
+                onBlur={() => handleFieldBlur('license_plate', formData.license_plate)}
                 editable={!isLoading}
               />
               {fieldErrors.license_plate && (
@@ -1623,7 +1820,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.model}
                 onChangeText={(value: string) => handleFieldChange('model', value)}
-                onBlur={() => handleFieldBlur('model')}
+                onBlur={() => handleFieldBlur('model', formData.model)}
                 editable={!isLoading}
               />
               {fieldErrors.model && (
@@ -1671,7 +1868,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.company_name}
                 onChangeText={(value: string) => handleFieldChange('company_name', value)}
-                onBlur={() => handleFieldBlur('company_name')}
+                onBlur={() => handleFieldBlur('company_name', formData.company_name)}
                 editable={!isLoading}
               />
               {fieldErrors.company_name && (
@@ -1692,7 +1889,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.owner_first_name}
                 onChangeText={(value) => handleFieldChange('owner_first_name', value)}
-                onBlur={() => handleFieldBlur('owner_first_name')}
+                onBlur={() => handleFieldBlur('owner_first_name', formData.owner_first_name)}
                 editable={!isLoading}
               />
               {fieldErrors.owner_first_name && (
@@ -1710,7 +1907,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.owner_last_name}
                 onChangeText={(value) => handleFieldChange('owner_last_name', value)}
-                onBlur={() => handleFieldBlur('owner_last_name')}
+                onBlur={() => handleFieldBlur('owner_last_name', formData.owner_last_name)}
                 editable={!isLoading}
               />
               {fieldErrors.owner_last_name && (
@@ -1728,7 +1925,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.owner_father_name}
                 onChangeText={(value) => handleFieldChange('owner_father_name', value)}
-                onBlur={() => handleFieldBlur('owner_father_name')}
+                onBlur={() => handleFieldBlur('owner_father_name', formData.owner_father_name)}
                 editable={!isLoading}
               />
               {fieldErrors.owner_father_name && (
@@ -1898,7 +2095,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.owner_address_street}
                 onChangeText={(value) => handleFieldChange('owner_address_street', value)}
-                onBlur={() => handleFieldBlur('owner_address_street')}
+                onBlur={() => handleFieldBlur('owner_address_street', formData.owner_address_street)}
                 editable={!isLoading}
               />
               {fieldErrors.owner_address_street && (
@@ -1930,7 +2127,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.owner_pinfl}
                 onChangeText={(value: string) => handleFieldChange('owner_pinfl', value)}
-                onBlur={() => handleFieldBlur('owner_pinfl')}
+                onBlur={() => handleFieldBlur('owner_pinfl', formData.owner_pinfl)}
                 keyboardType="numeric"
                 maxLength={14}
                 editable={!isLoading}
@@ -1951,7 +2148,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.year}
                 onChangeText={(value: string) => handleFieldChange('year', value)}
-                onBlur={() => handleFieldBlur('year')}
+                onBlur={() => handleFieldBlur('year', formData.year)}
                 keyboardType="numeric"
                 editable={!isLoading}
               />
@@ -1993,7 +2190,7 @@ export const DriverVehicleScreen: React.FC = () => {
                   placeholderTextColor={theme.palette.text.disabled}
                   value={formData.gross_weight}
                   onChangeText={(value: string) => handleFieldChange('gross_weight', value)}
-                  onBlur={() => handleFieldBlur('gross_weight')}
+                  onBlur={() => handleFieldBlur('gross_weight', formData.gross_weight)}
                   keyboardType="numeric"
                   editable={!isLoading}
                 />
@@ -2016,7 +2213,7 @@ export const DriverVehicleScreen: React.FC = () => {
                   placeholderTextColor={theme.palette.text.disabled}
                   value={formData.unladen_weight}
                   onChangeText={(value: string) => handleFieldChange('unladen_weight', value)}
-                  onBlur={() => handleFieldBlur('unladen_weight')}
+                  onBlur={() => handleFieldBlur('unladen_weight', formData.unladen_weight)}
                   keyboardType="numeric"
                   editable={!isLoading}
                 />
@@ -2081,7 +2278,7 @@ export const DriverVehicleScreen: React.FC = () => {
                   placeholderTextColor={theme.palette.text.disabled}
                   value={formData.seating_capacity}
                   onChangeText={(value: string) => handleFieldChange('seating_capacity', value)}
-                  onBlur={() => handleFieldBlur('seating_capacity')}
+                  onBlur={() => handleFieldBlur('seating_capacity', formData.seating_capacity)}
                   keyboardType="numeric"
                   editable={!isLoading}
                 />

@@ -25,6 +25,7 @@ import adminAppStoreUrlRoutes from './admin-app-store-url.routes.js';
 import adminSupportContactRoutes from './admin-support-contact.routes.js';
 import supportContactRoutes from './support-contact.routes.js';
 import vehicleRoutes from './vehicle.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -95,6 +96,9 @@ router.use('/driver', driverRoutes);
 
 // Upload routes
 router.use('/upload', uploadRoutes);
+
+// Notification routes
+router.use('/notifications', notificationRoutes);
 
 // TODO: Add more route modules
 // import rideRoutes from './ride.routes';

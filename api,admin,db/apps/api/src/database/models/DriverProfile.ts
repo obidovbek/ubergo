@@ -7,8 +7,8 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 
 // Driver Profile attributes
 export interface DriverProfileAttributes {
-  id: string;
-  user_id: string;
+  id: number;
+  user_id: number;
   // Personal Information
   first_name?: string | null;
   last_name?: string | null;
@@ -41,7 +41,6 @@ export interface DriverProfileAttributes {
 export interface DriverProfileCreationAttributes
   extends Optional<
     DriverProfileAttributes,
-    | 'id'
     | 'first_name'
     | 'last_name'
     | 'father_name'
@@ -64,13 +63,13 @@ export interface DriverProfileCreationAttributes
     | 'created_at'
     | 'updated_at'
   > {
-  user_id: string;
+  user_id: number;
 }
 
 // Driver Profile model class
 export class DriverProfile extends Model<DriverProfileAttributes, DriverProfileCreationAttributes> implements DriverProfileAttributes {
-  declare id: string;
-  declare user_id: string;
+  declare id: number;
+  declare user_id: number;
   declare first_name?: string | null;
   declare last_name?: string | null;
   declare father_name?: string | null;
@@ -102,13 +101,13 @@ export function initDriverProfile(sequelize: Sequelize) {
   DriverProfile.init(
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
         primaryKey: true,
+        autoIncrement: true,
         allowNull: false
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'users',

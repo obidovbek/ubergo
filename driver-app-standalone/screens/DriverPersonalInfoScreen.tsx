@@ -40,13 +40,13 @@ import {
   type GeoOption,
   type DriverProfile,
 } from '../api/driver';
-import { validateForm, isValidEmail, type ValidationRule } from '../utils/validation';
+import { validateForm, validateField, isValidEmail, type ValidationRule } from '../utils/validation';
 
 const theme = createTheme('light');
 
 export const DriverPersonalInfoScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const { t } = useTranslation();
 
   type GeoFieldType =
@@ -207,6 +207,90 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       const { [field]: _, ...rest } = prev;
       return rest;
     });
+  };
+
+  const handleFieldBlur = (field: string, value: any) => {
+    let error: string | null = null;
+
+    switch (field) {
+      case 'first_name':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.firstNameRequired' },
+            { type: 'minLength', errorKey: 'formValidation.firstNameTooShort', params: { min: 2 } },
+          ],
+          t
+        );
+        break;
+      case 'last_name':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.lastNameRequired' },
+            { type: 'minLength', errorKey: 'formValidation.lastNameTooShort', params: { min: 2 } },
+          ],
+          t
+        );
+        break;
+      case 'gender':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.genderRequired' },
+            { type: 'in', errorKey: 'formValidation.genderInvalid', params: { values: ['male', 'female'] } },
+          ],
+          t
+        );
+        break;
+      case 'birth_date':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'date', errorKey: 'formValidation.birthDateInvalid' }],
+            t
+          );
+        }
+        break;
+      case 'email':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'email', errorKey: 'formValidation.emailInvalid' }],
+            t
+          );
+        }
+        break;
+      case 'address_country_id':
+        if (!value) {
+          error = 'Mamlakatni tanlang';
+        }
+        break;
+      case 'address_province_id':
+        if (!value) {
+          error = 'Viloyatni tanlang';
+        }
+        break;
+      case 'address_city_district_id':
+        if (!value) {
+          error = 'Shahar yoki tumanni tanlang';
+        }
+        break;
+    }
+
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [field]: error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      });
+    }
   };
 
   const handleDateConfirm = () => {
@@ -589,6 +673,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
   const handleGeoSelection = async (type: GeoFieldType, option: GeoOption) => {
     const fieldName = geoFieldMap[type] as string;
+    // Clear error when selection is made
     setFieldErrors((prev) => {
       if (!prev[fieldName]) {
         return prev;
@@ -1039,8 +1124,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save personal info:', error);
       
-      // Check if it's a validation error from backend
-      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+      // Check if it's a validation error from backend (422 status)
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
         
@@ -1069,13 +1155,15 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           mappedErrors[formField] = apiErrors[apiField];
         });
         
-        // Set field errors to display under each field
-        setFieldErrors(mappedErrors);
+        // Merge with existing errors and set field errors to display under each field
+        setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
         
         // Also show a general error toast
         const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
           showToast.error(t('common.error'), firstError);
+        } else {
+          showToast.error(t('common.error'), t('formValidation.fixErrors'));
         }
       } else {
         // For non-validation errors, show general error
@@ -1103,7 +1191,22 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => navigation.navigate('PhoneRegistration' as any)}
+              onPress={async () => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  // If can't go back, logout to return to PhoneRegistration screen
+                  // This is needed because DriverPersonalInfoScreen is in ProfileCompletionNavigator
+                  // while PhoneRegistration is in AuthNavigator (different navigator stacks)
+                  try {
+                    await logout();
+                  } catch (error) {
+                    console.error('Failed to logout:', error);
+                    // Even if logout fails, try to navigate
+                    navigation.navigate('PhoneRegistration' as any);
+                  }
+                }
+              }}
               disabled={isLoading || initialLoading}
             >
               <View style={styles.backButtonContent}>
@@ -1133,6 +1236,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               placeholderTextColor={theme.palette.text.disabled}
               value={formData.first_name}
               onChangeText={(value) => updateField('first_name', value)}
+              onBlur={() => handleFieldBlur('first_name', formData.first_name)}
               editable={!isLoading}
             />
             {fieldErrors.first_name && <Text style={styles.errorText}>{fieldErrors.first_name}</Text>}
@@ -1148,6 +1252,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               placeholderTextColor={theme.palette.text.disabled}
                 value={formData.last_name}
                 onChangeText={(value) => updateField('last_name', value)}
+                onBlur={() => handleFieldBlur('last_name', formData.last_name)}
                 editable={!isLoading}
               />
               {fieldErrors.last_name && <Text style={styles.errorText}>{fieldErrors.last_name}</Text>}
@@ -1163,6 +1268,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               placeholderTextColor={theme.palette.text.disabled}
                 value={formData.father_name}
                 onChangeText={(value) => updateField('father_name', value)}
+                onBlur={() => handleFieldBlur('father_name', formData.father_name)}
                 editable={!isLoading}
               />
               {fieldErrors.father_name && <Text style={styles.errorText}>{fieldErrors.father_name}</Text>}
@@ -1176,7 +1282,10 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               <View style={styles.genderContainer}>
                 <TouchableOpacity
                   style={styles.genderOption}
-                  onPress={() => updateField('gender', 'male')}
+                  onPress={() => {
+                    updateField('gender', 'male');
+                    handleFieldBlur('gender', 'male');
+                  }}
                   disabled={isLoading}
                 >
                   <View style={[styles.radio, formData.gender === 'male' && styles.radioActive]} />
@@ -1185,7 +1294,10 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
                 <TouchableOpacity
                   style={styles.genderOption}
-                  onPress={() => updateField('gender', 'female')}
+                  onPress={() => {
+                    updateField('gender', 'female');
+                    handleFieldBlur('gender', 'female');
+                  }}
                   disabled={isLoading}
                 >
                   <View style={[styles.radio, formData.gender === 'female' && styles.radioActive]} />
@@ -1206,6 +1318,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.birth_date}
                   onChangeText={handleDateInputChange}
+                  onBlur={() => handleFieldBlur('birth_date', formData.birth_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -1348,6 +1461,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.email}
                 onChangeText={(value) => updateField('email', value)}
+                onBlur={() => handleFieldBlur('email', formData.email)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 editable={!isLoading}
@@ -1518,6 +1632,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
                 placeholder=""
                 value={formData.address_street}
                 onChangeText={(value) => updateField('address_street', value)}
+                onBlur={() => handleFieldBlur('address_street', formData.address_street)}
                 editable={!isLoading}
               />
               {fieldErrors.address_street && (

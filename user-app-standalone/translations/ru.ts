@@ -14,6 +14,12 @@ export default {
     retry: 'Повторить',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Ваша поездка, ваш путь',
+    loading: 'Загрузка...',
+  },
+
   auth: {
     appName: 'UbexGo',
     logout: 'Выйти',
@@ -145,7 +151,9 @@ export default {
     logoutError: 'Ошибка выхода. Пожалуйста, попробуйте снова.',
     noEmail: 'Нет email',
     noPhone: 'Нет телефона',
+    userId: 'ID пользователя',
     appVersion: 'UbexGo v1.0.0',
+    notifications: 'Уведомления',
     editProfile: 'Редактировать профиль',
     paymentMethods: 'Способы оплаты',
     tripHistory: 'История поездок',
@@ -191,6 +199,27 @@ export default {
     retry: 'Попробовать снова',
     tip1: 'Проверьте настройки Wi-Fi или мобильных данных',
     tip2: 'Потяните вниз для обновления после подключения',
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Уведомления',
+    noNotifications: 'Нет уведомлений',
+    markAllRead: 'Отметить все как прочитанные',
+    markAllReadConfirm: 'Вы хотите отметить все уведомления как прочитанные?',
+    allMarkedRead: 'Все уведомления отмечены как прочитанные',
+    markReadError: 'Не удалось отметить уведомление как прочитанное',
+    markAllReadError: 'Не удалось отметить все уведомления как прочитанные',
+    delete: 'Удалить',
+    deleteConfirm: 'Вы хотите удалить это уведомление?',
+    deleted: 'Уведомление удалено',
+    deleteError: 'Не удалось удалить уведомление',
+    loadError: 'Не удалось загрузить уведомления',
+    loadErrorDescription: 'Произошла ошибка при загрузке уведомлений',
+    justNow: 'Только что',
+    minutesAgo: '{count} минут назад',
+    hoursAgo: '{count} часов назад',
+    daysAgo: '{count} дней назад',
   },
 };
 

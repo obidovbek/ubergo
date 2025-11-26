@@ -53,6 +53,12 @@ export const API_ENDPOINTS = {
   devices: {
     register: '/devices/register',
   },
+  notifications: {
+    list: '/notifications',
+    markRead: (id: string) => `/notifications/${id}/read`,
+    markAllRead: '/notifications/read-all',
+    delete: (id: string) => `/notifications/${id}`,
+  },
 };
 
 // API Timeout

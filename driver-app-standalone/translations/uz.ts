@@ -38,8 +38,28 @@ export default {
     monthDecember: 'Dekabr',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Haydang va daromad oling',
+    loading: 'Yuklanmoqda...',
+  },
+
   auth: {
     appName: 'UbexGo',
+    logout: 'Chiqish',
+    accountBlocked: 'Hisobingiz bloklangan',
+    accountBlockedDescription: 'Afsuski, sizning hisobingiz bloklangan. Iltimos, qo\'llab-quvvatlash xizmati bilan bog\'laning yoki keyinroq qayta urinib ko\'ring.',
+    accountPendingDelete: 'Hisobingiz o\'chirilmoqda',
+    accountPendingDeleteDescription: 'Sizning hisobingiz o\'chirish jarayonida. Agar bu xato bo\'lsa, qo\'llab-quvvatlash xizmati bilan bog\'laning.',
+    accountSuspended: 'Hisobingiz to\'xtatilgan',
+    accountSuspendedDescription: 'Sizning hisobingiz vaqtincha to\'xtatilgan. Iltimos, qo\'llab-quvvatlash xizmati bilan bog\'laning.',
+    contactSupport: 'Qo\'llab-quvvatlash bilan bog\'lanish',
+    supportEmail: 'Email: support@ubexgo.uz',
+    supportPhone: 'Telefon: +998 XX XXX XX XX',
+    emailNotAvailable: 'Email dasturi mavjud emas',
+    emailError: 'Email dasturini ochib bo\'lmadi',
+    phoneNotAvailable: 'Telefon dasturi mavjud emas',
+    phoneError: 'Telefon dasturini ochib bo\'lmadi',
   },
 
   // Phone Registration Screen
@@ -178,8 +198,10 @@ export default {
     logoutError: "Chiqishda xatolik yuz berdi. Iltimos qayta urinib ko'ring.",
     noEmail: 'No email',
     noPhone: 'No phone',
+    driverId: 'Haydovchi ID',
     appVersion: 'UbexGo v1.0.0',
     // Menu items
+    notifications: 'Xabarnomalar',
     editProfile: 'Profilni tahrirlash',
     paymentMethods: "To'lov usullari",
     tripHistory: 'Sayohatlar tarixi',
@@ -377,6 +399,27 @@ export default {
     errorUpdate: "Ma'lumotlarni saqlashda xatolik",
     licenseNumberRequired: 'Guvohnoma raqamini kiriting',
     issueDateRequired: 'Berilgan sanani kiriting',
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Xabarnomalar',
+    noNotifications: 'Xabarnomalar yo\'q',
+    markAllRead: 'Barchasini o\'qilgan deb belgilash',
+    markAllReadConfirm: 'Barcha xabarnomalarni o\'qilgan deb belgilashni xohlaysizmi?',
+    allMarkedRead: 'Barcha xabarnomalar o\'qilgan deb belgilandi',
+    markReadError: 'Xabarnomani o\'qilgan deb belgilab bo\'lmadi',
+    markAllReadError: 'Barcha xabarnomalarni o\'qilgan deb belgilab bo\'lmadi',
+    delete: 'O\'chirish',
+    deleteConfirm: 'Bu xabarnomani o\'chirishni xohlaysizmi?',
+    deleted: 'Xabarnoma o\'chirildi',
+    deleteError: 'Xabarnomani o\'chirib bo\'lmadi',
+    loadError: 'Xabarnomalarni yuklab bo\'lmadi',
+    loadErrorDescription: 'Xabarnomalarni yuklashda xatolik yuz berdi',
+    justNow: 'Hozir',
+    minutesAgo: '{count} daqiqa oldin',
+    hoursAgo: '{count} soat oldin',
+    daysAgo: '{count} kun oldin',
   },
 };
 

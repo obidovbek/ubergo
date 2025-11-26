@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Driver Vehicle attributes
 export interface DriverVehicleAttributes {
   id: string;
-  driver_profile_id: string;
+  driver_profile_id: number;
   // Company Information (if vehicle belongs to company)
   company_name?: string | null;
   company_tax_id?: string | null;
@@ -62,13 +62,13 @@ export interface DriverVehicleAttributes {
 // Creation attributes
 export interface DriverVehicleCreationAttributes
   extends Optional<DriverVehicleAttributes, 'id' | 'company_name' | 'company_tax_id' | 'owner_first_name' | 'owner_last_name' | 'owner_father_name' | 'owner_pinfl' | 'owner_address_country_id' | 'owner_address_province_id' | 'owner_address_city_district_id' | 'owner_address_administrative_area_id' | 'owner_address_settlement_id' | 'owner_address_neighborhood_id' | 'owner_address_street' | 'owner_address_country' | 'owner_address_region' | 'owner_address_city' | 'owner_address_mahalla' | 'vehicle_type' | 'vehicle_type_id' | 'vehicle_make_id' | 'vehicle_model_id' | 'vehicle_body_type_id' | 'vehicle_color_id' | 'license_plate' | 'year' | 'gross_weight' | 'unladen_weight' | 'fuel_types' | 'seating_capacity' | 'tech_passport_series' | 'tech_passport_front_url' | 'tech_passport_back_url' | 'photo_front_url' | 'photo_back_url' | 'photo_right_url' | 'photo_left_url' | 'photo_angle_45_url' | 'photo_interior_url' | 'created_at' | 'updated_at'> {
-  driver_profile_id: string;
+  driver_profile_id: number;
 }
 
 // Driver Vehicle model class
 export class DriverVehicle extends Model<DriverVehicleAttributes, DriverVehicleCreationAttributes> implements DriverVehicleAttributes {
   declare id: string;
-  declare driver_profile_id: string;
+  declare driver_profile_id: number;
   declare company_name?: string | null;
   declare company_tax_id?: string | null;
   declare owner_first_name?: string | null;
@@ -126,7 +126,7 @@ export function initDriverVehicle(sequelize: Sequelize) {
         allowNull: false
       },
       driver_profile_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'driver_profiles',

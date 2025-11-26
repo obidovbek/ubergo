@@ -14,6 +14,12 @@ export default {
     retry: 'Retry',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Your Ride, Your Way',
+    loading: 'Loading...',
+  },
+
   auth: {
     appName: 'UbexGo',
     logout: 'Logout',
@@ -145,7 +151,9 @@ export default {
     logoutError: 'Error logging out. Please try again.',
     noEmail: 'No email',
     noPhone: 'No phone',
+    userId: 'User ID',
     appVersion: 'UbexGo v1.0.0',
+    notifications: 'Notifications',
     editProfile: 'Edit Profile',
     paymentMethods: 'Payment Methods',
     tripHistory: 'Trip History',
@@ -191,6 +199,27 @@ export default {
     retry: 'Try Again',
     tip1: 'Check your Wi-Fi or mobile data settings',
     tip2: 'Pull down to refresh once connected',
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Notifications',
+    noNotifications: 'No notifications',
+    markAllRead: 'Mark all as read',
+    markAllReadConfirm: 'Do you want to mark all notifications as read?',
+    allMarkedRead: 'All notifications marked as read',
+    markReadError: 'Failed to mark notification as read',
+    markAllReadError: 'Failed to mark all notifications as read',
+    delete: 'Delete',
+    deleteConfirm: 'Do you want to delete this notification?',
+    deleted: 'Notification deleted',
+    deleteError: 'Failed to delete notification',
+    loadError: 'Failed to load notifications',
+    loadErrorDescription: 'An error occurred while loading notifications',
+    justNow: 'Just now',
+    minutesAgo: '{count} minutes ago',
+    hoursAgo: '{count} hours ago',
+    daysAgo: '{count} days ago',
   },
 };
 

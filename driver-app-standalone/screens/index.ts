@@ -10,6 +10,7 @@ export { DriverDetailsScreen } from './DriverDetailsScreen';
 export { MenuScreen } from './MenuScreen';
 export { HomeScreen } from './HomeScreen';
 export { ProfileScreen } from './ProfileScreen';
+export { BlockedScreen } from './BlockedScreen';
 
 // Driver Registration Screens
 export { DriverPersonalInfoScreen } from './DriverPersonalInfoScreen';

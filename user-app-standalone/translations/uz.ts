@@ -15,6 +15,12 @@ export default {
     retry: 'Qayta urinish',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Sizning safaringiz, sizning usulingiz',
+    loading: 'Yuklanmoqda...',
+  },
+
   auth: {
     appName: 'UbexGo',
     logout: 'Chiqish',
@@ -152,8 +158,10 @@ export default {
     logoutError: "Chiqishda xatolik yuz berdi. Iltimos qayta urinib ko'ring.",
     noEmail: 'No email',
     noPhone: 'No phone',
+    userId: 'Foydalanuvchi ID',
     appVersion: 'UbexGo v1.0.0',
     // Menu items
+    notifications: 'Xabarnomalar',
     editProfile: 'Profilni tahrirlash',
     paymentMethods: "To'lov usullari",
     tripHistory: 'Sayohatlar tarixi',
@@ -200,6 +208,27 @@ export default {
     retry: "Qayta urinib ko'ring",
     tip1: "Wi-Fi yoki mobil ma'lumotlar sozlamalarini tekshiring",
     tip2: "Ulanganingizdan keyin yangilash uchun pastga torting",
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Xabarnomalar',
+    noNotifications: 'Xabarnomalar yo\'q',
+    markAllRead: 'Barchasini o\'qilgan deb belgilash',
+    markAllReadConfirm: 'Barcha xabarnomalarni o\'qilgan deb belgilashni xohlaysizmi?',
+    allMarkedRead: 'Barcha xabarnomalar o\'qilgan deb belgilandi',
+    markReadError: 'Xabarnomani o\'qilgan deb belgilab bo\'lmadi',
+    markAllReadError: 'Barcha xabarnomalarni o\'qilgan deb belgilab bo\'lmadi',
+    delete: 'O\'chirish',
+    deleteConfirm: 'Bu xabarnomani o\'chirishni xohlaysizmi?',
+    deleted: 'Xabarnoma o\'chirildi',
+    deleteError: 'Xabarnomani o\'chirib bo\'lmadi',
+    loadError: 'Xabarnomalarni yuklab bo\'lmadi',
+    loadErrorDescription: 'Xabarnomalarni yuklashda xatolik yuz berdi',
+    justNow: 'Hozir',
+    minutesAgo: '{count} daqiqa oldin',
+    hoursAgo: '{count} soat oldin',
+    daysAgo: '{count} kun oldin',
   },
 };
 

@@ -27,7 +27,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
-import { validateForm, isValidDate, type ValidationRule } from '../utils/validation';
+import { validateForm, validateField, isValidDate, type ValidationRule } from '../utils/validation';
 import { updateLicense, getDriverProfile, uploadImage, fetchCountries, type CountryOption } from '../api/driver';
 
 const theme = createTheme('light');
@@ -234,6 +234,65 @@ export const DriverLicenseScreen: React.FC = () => {
     });
   };
 
+  const handleFieldBlur = (field: string, value: any) => {
+    let error: string | null = null;
+
+    switch (field) {
+      case 'license_number':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'driverLicense.licenseNumberRequired' }],
+          t
+        );
+        break;
+      case 'issue_date':
+        if (!value) {
+          error = t('driverLicense.issueDateRequired');
+        } else {
+          // Use parseDate to validate format, then check if it's not in the future
+          const issueDate = parseDate(value);
+          if (!issueDate) {
+            error = t('formValidation.dateInvalid');
+          } else {
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
+            issueDate.setHours(0, 0, 0, 0);
+            if (issueDate > currentDate) {
+              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+            }
+          }
+        }
+        break;
+      default:
+        // For category dates (given dates - cannot be in the future)
+        if (field.startsWith('category_') && value) {
+          // Use parseDate to validate format, then check if it's not in the future
+          const categoryDate = parseDate(value);
+          if (!categoryDate) {
+            error = t('formValidation.dateInvalid');
+          } else {
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
+            categoryDate.setHours(0, 0, 0, 0);
+            if (categoryDate > currentDate) {
+              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+            }
+          }
+        }
+        break;
+    }
+
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [field]: error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
   const updateEmergencyContact = (index: number, field: string, value: string) => {
     const newContacts = [...emergencyContacts];
     newContacts[index] = { ...newContacts[index], [field]: value };
@@ -279,6 +338,19 @@ export const DriverLicenseScreen: React.FC = () => {
   const handleDateConfirm = () => {
     if (!datePickerField) return;
     
+    // Validate issue_date and category dates cannot be in the future
+    if (datePickerField === 'issue_date' || datePickerField.startsWith('category_')) {
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(tempDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate > currentDate) {
+        showToast.error(t('common.error'), 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas');
+        return;
+      }
+    }
+    
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
     updateLicenseField(datePickerField, formattedDate);
@@ -304,14 +376,28 @@ export const DriverLicenseScreen: React.FC = () => {
   const generateDays = () => {
     const days = [];
     const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
-    for (let i = 1; i <= maxDay; i++) {
+    
+    // For issue_date and category dates, if current year and month are selected, restrict days to current day and earlier
+    let maxAllowedDay = maxDay;
+    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      const currentDay = currentDate.getDate();
+      
+      if (tempDate.getFullYear() === currentYear && tempDate.getMonth() === currentMonth) {
+        maxAllowedDay = currentDay;
+      }
+    }
+    
+    for (let i = 1; i <= maxAllowedDay; i++) {
       days.push(i);
     }
     return days;
   };
 
   const generateMonths = () => {
-    return [
+    const allMonths = [
       { value: 0, label: t('common.monthJanuary') },
       { value: 1, label: t('common.monthFebruary') },
       { value: 2, label: t('common.monthMarch') },
@@ -325,23 +411,36 @@ export const DriverLicenseScreen: React.FC = () => {
       { value: 10, label: t('common.monthNovember') },
       { value: 11, label: t('common.monthDecember') },
     ];
+    
+    // For issue_date and category dates, if current year is selected, restrict months to current month and earlier
+    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      if (tempDate.getFullYear() === currentYear) {
+        return allMonths.filter(month => month.value <= currentMonth);
+      }
+    }
+    
+    return allMonths;
   };
 
   const generateYears = () => {
     const years = [];
     const currentYear = new Date().getFullYear();
-    // For issue_date and category dates, go from past to future
-    // For issue_date, start from 10 years ago, for categories start from 1990
-    const startYear = datePickerField === 'issue_date' ? currentYear - 10 : 1990;
-    const endYear = currentYear + 10;
     
-    if (datePickerField === 'issue_date') {
-      // For issue date, show from past to future
+    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+      // For issue date and category dates, only show past and current year (not future)
+      const startYear = currentYear - 10;
+      const endYear = currentYear; // Only up to current year
       for (let year = startYear; year <= endYear; year++) {
         years.push(year);
       }
     } else {
-      // For category dates, show from 1990 to future
+      // For other dates, show from 1990 to future (up to 10 years ahead)
+      const startYear = 1990;
+      const endYear = currentYear + 10;
       for (let year = startYear; year <= endYear; year++) {
         years.push(year);
       }
@@ -536,25 +635,9 @@ export const DriverLicenseScreen: React.FC = () => {
         value: licenseData.issue_date,
         rules: [
           { type: 'required', errorKey: 'driverLicense.issueDateRequired' },
-          { type: 'date', errorKey: 'formValidation.dateInvalid' },
         ],
       },
     ];
-
-    // Validate category dates if provided
-    categories.forEach(category => {
-      const fieldKey = `category_${category.toLowerCase()}`;
-      const dateValue = licenseData[fieldKey as keyof typeof licenseData];
-      if (dateValue) {
-        validationRules.push({
-          field: fieldKey,
-          value: dateValue,
-          rules: [
-            { type: 'date', errorKey: 'formValidation.dateInvalid' },
-          ],
-        });
-      }
-    });
 
     const validationErrors = validateForm(validationRules, t);
 
@@ -562,6 +645,40 @@ export const DriverLicenseScreen: React.FC = () => {
       acc[error.field] = error.message;
       return acc;
     }, {});
+
+    // Additional validation for issue_date (not in future and valid format)
+    if (licenseData.issue_date && !errorsMap.issue_date) {
+      const issueDate = parseDate(licenseData.issue_date);
+      if (!issueDate) {
+        errorsMap.issue_date = t('formValidation.dateInvalid');
+      } else {
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        issueDate.setHours(0, 0, 0, 0);
+        if (issueDate > currentDate) {
+          errorsMap.issue_date = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+        }
+      }
+    }
+
+    // Additional validation for category dates (cannot be in future and valid format)
+    categories.forEach(category => {
+      const fieldKey = `category_${category.toLowerCase()}`;
+      const dateValue = licenseData[fieldKey as keyof typeof licenseData];
+      if (dateValue && !errorsMap[fieldKey]) {
+        const categoryDate = parseDate(dateValue);
+        if (!categoryDate) {
+          errorsMap[fieldKey] = t('formValidation.dateInvalid');
+        } else {
+          const currentDate = new Date();
+          currentDate.setHours(0, 0, 0, 0);
+          categoryDate.setHours(0, 0, 0, 0);
+          if (categoryDate > currentDate) {
+            errorsMap[fieldKey] = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+          }
+        }
+      }
+    });
 
     if (Object.keys(errorsMap).length > 0) {
       setFieldErrors(errorsMap);
@@ -597,8 +714,9 @@ export const DriverLicenseScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save license info:', error);
       
-      // Check if it's a validation error from backend
-      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+      // Check if it's a validation error from backend (422 status)
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
         
@@ -618,13 +736,15 @@ export const DriverLicenseScreen: React.FC = () => {
           mappedErrors[formField] = apiErrors[apiField];
         });
         
-        // Set field errors to display under each field
-        setFieldErrors(mappedErrors);
+        // Merge with existing errors and set field errors to display under each field
+        setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
         
         // Also show a general error toast
         const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
           showToast.error(t('common.error'), firstError);
+        } else {
+          showToast.error(t('common.error'), t('formValidation.fixErrors'));
         }
       } else {
         // For non-validation errors, show general error
@@ -692,6 +812,7 @@ export const DriverLicenseScreen: React.FC = () => {
                   placeholder={t('common.datePlaceholder')}
                   value={licenseData.issue_date}
                   onChangeText={(value) => handleDateInputChange('issue_date', value)}
+                  onBlur={() => handleFieldBlur('issue_date', licenseData.issue_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -721,6 +842,7 @@ export const DriverLicenseScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={licenseData.license_number}
                 onChangeText={(value) => updateLicenseField('license_number', value)}
+                onBlur={() => handleFieldBlur('license_number', licenseData.license_number)}
                 editable={!isLoading}
               />
               {fieldErrors.license_number && (
@@ -743,6 +865,7 @@ export const DriverLicenseScreen: React.FC = () => {
                       placeholderTextColor={theme.palette.text.secondary}
                       value={licenseData[fieldKey] || ''}
                       onChangeText={(value) => handleDateInputChange(fieldKey, value)}
+                      onBlur={() => handleFieldBlur(fieldKey, licenseData[fieldKey] || '')}
                       keyboardType="numeric"
                       maxLength={10}
                       editable={!isLoading}
@@ -890,6 +1013,16 @@ export const DriverLicenseScreen: React.FC = () => {
                         ]}
                         onPress={() => {
                           const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
+                          // For issue_date and category dates, validate the date is not in the future
+                          if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+                            const currentDate = new Date();
+                            currentDate.setHours(0, 0, 0, 0);
+                            newDate.setHours(0, 0, 0, 0);
+                            if (newDate > currentDate) {
+                              // Don't allow selecting future dates
+                              return;
+                            }
+                          }
                           setTempDate(newDate);
                         }}
                       >
@@ -917,8 +1050,30 @@ export const DriverLicenseScreen: React.FC = () => {
                         ]}
                         onPress={() => {
                           const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
-                          const day = Math.min(tempDate.getDate(), maxDay);
+                          let day = Math.min(tempDate.getDate(), maxDay);
                           const newDate = new Date(tempDate.getFullYear(), month.value, day);
+                          
+                          // For issue_date and category dates, if current year and selected month is current month, restrict day
+                          if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+                            const currentDate = new Date();
+                            const currentYear = currentDate.getFullYear();
+                            const currentMonth = currentDate.getMonth();
+                            const currentDay = currentDate.getDate();
+                            
+                            if (newDate.getFullYear() === currentYear && month.value === currentMonth) {
+                              day = Math.min(day, currentDay);
+                              newDate.setDate(day);
+                            }
+                            
+                            // Validate the date is not in the future
+                            newDate.setHours(0, 0, 0, 0);
+                            currentDate.setHours(0, 0, 0, 0);
+                            if (newDate > currentDate) {
+                              // Don't allow selecting future dates
+                              return;
+                            }
+                          }
+                          
                           setTempDate(newDate);
                         }}
                       >
@@ -946,8 +1101,37 @@ export const DriverLicenseScreen: React.FC = () => {
                         ]}
                         onPress={() => {
                           const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
-                          const day = Math.min(tempDate.getDate(), maxDay);
+                          let day = Math.min(tempDate.getDate(), maxDay);
                           const newDate = new Date(year, tempDate.getMonth(), day);
+                          
+                          // For issue_date and category dates, validate the date is not in the future
+                          if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
+                            const currentDate = new Date();
+                            const currentYear = currentDate.getFullYear();
+                            const currentMonth = currentDate.getMonth();
+                            const currentDay = currentDate.getDate();
+                            
+                            // If current year is selected, restrict month and day
+                            if (year === currentYear) {
+                              // If current month is selected, restrict day
+                              if (newDate.getMonth() === currentMonth) {
+                                day = Math.min(day, currentDay);
+                                newDate.setDate(day);
+                              } else if (newDate.getMonth() > currentMonth) {
+                                // Don't allow future months in current year
+                                return;
+                              }
+                            }
+                            
+                            // Final validation: date should not be in the future
+                            newDate.setHours(0, 0, 0, 0);
+                            currentDate.setHours(0, 0, 0, 0);
+                            if (newDate > currentDate) {
+                              // Don't allow selecting future dates
+                              return;
+                            }
+                          }
+                          
                           setTempDate(newDate);
                         }}
                       >

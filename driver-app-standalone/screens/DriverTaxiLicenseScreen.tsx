@@ -26,7 +26,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
-import { validateForm, type ValidationRule } from '../utils/validation';
+import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import { updateTaxiLicense, getDriverProfile, getDriverProfileStatus, uploadImage } from '../api/driver';
 
 const theme = createTheme('light');
@@ -142,6 +142,29 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
     
     return date;
+  };
+
+  const convertDateToISO = (dateString: string): string | null => {
+    if (!dateString || dateString.trim() === '') {
+      return null;
+    }
+    
+    // If already in YYYY-MM-DD format, return as is
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString;
+    }
+    
+    // Convert DD.MM.YYYY to YYYY-MM-DD
+    const parsedDate = parseDate(dateString);
+    if (!parsedDate) {
+      return null; // Invalid date
+    }
+    
+    const year = parsedDate.getFullYear();
+    const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = parsedDate.getDate().toString().padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   };
 
   const handleDateInputChange = (field: 'license_issue_date' | 'license_sheet_valid_from' | 'license_sheet_valid_until', text: string) => {
@@ -338,8 +361,92 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
   };
 
-  const handleFieldBlur = (field: string) => {
-    // Field-level validation can be added here if needed
+  const handleFieldBlur = (field: string, value: any) => {
+    let error: string | null = null;
+
+    switch (field) {
+      case 'license_number':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.taxiLicenseRequired' },
+            { type: 'minLength', errorKey: 'formValidation.taxiLicenseTooShort', params: { min: 3 } },
+          ],
+          t
+        );
+        break;
+      case 'license_issue_date':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'date', errorKey: 'formValidation.licenseIssueDateInvalid' }],
+            t
+          );
+        }
+        break;
+      case 'license_registry_number':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'minLength', errorKey: 'formValidation.licenseRegistryNumberTooShort', params: { min: 3 } }],
+            t
+          );
+        }
+        break;
+      case 'license_sheet_number':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'minLength', errorKey: 'formValidation.licenseSheetTooShort', params: { min: 3 } }],
+            t
+          );
+        }
+        break;
+      case 'license_sheet_valid_from':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'date', errorKey: 'formValidation.validFromInvalid' }],
+            t
+          );
+        }
+        break;
+      case 'license_sheet_valid_until':
+        if (value) {
+          const validFromDate = formData.license_sheet_valid_from ? parseDate(formData.license_sheet_valid_from) : null;
+          const validUntilDate = parseDate(value);
+          if (!validUntilDate) {
+            error = t('formValidation.validUntilInvalid');
+          } else if (validFromDate && validUntilDate < validFromDate) {
+            error = t('formValidation.validUntilBeforeValidFrom');
+          }
+        }
+        break;
+      case 'self_employment_number':
+        if (value) {
+          error = validateField(
+            field,
+            value,
+            [{ type: 'minLength', errorKey: 'formValidation.selfEmploymentNumberTooShort', params: { min: 3 } }],
+            t
+          );
+        }
+        break;
+    }
+
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [field]: error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      });
+    }
   };
 
   // Validation using translation keys
@@ -601,29 +708,20 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         
         // Set preview URI
         switch (photoType) {
-          case 'tech_passport_front':
-            setTechPassportFrontUri(asset.uri);
+          case 'license_document':
+            setLicenseDocumentUri(asset.uri);
             break;
-          case 'tech_passport_back':
-            setTechPassportBackUri(asset.uri);
+          case 'license_sheet_document':
+            setLicenseSheetDocumentUri(asset.uri);
             break;
-          case 'photo_front':
-            setPhotoFrontUri(asset.uri);
+          case 'self_employment_document':
+            setSelfEmploymentDocumentUri(asset.uri);
             break;
-          case 'photo_back':
-            setPhotoBackUri(asset.uri);
+          case 'power_of_attorney_document':
+            setPowerOfAttorneyDocumentUri(asset.uri);
             break;
-          case 'photo_right':
-            setPhotoRightUri(asset.uri);
-            break;
-          case 'photo_left':
-            setPhotoLeftUri(asset.uri);
-            break;
-          case 'photo_angle_45':
-            setPhotoAngle45Uri(asset.uri);
-            break;
-          case 'photo_interior':
-            setPhotoInteriorUri(asset.uri);
+          case 'insurance_document':
+            setInsuranceDocumentUri(asset.uri);
             break;
         }
         
@@ -659,14 +757,27 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
+      // Convert dates to YYYY-MM-DD format and validate them
+      const licenseIssueDateISO = formData.license_issue_date 
+        ? convertDateToISO(formData.license_issue_date) 
+        : null;
+      
+      const licenseSheetValidFromISO = formData.license_sheet_valid_from 
+        ? convertDateToISO(formData.license_sheet_valid_from) 
+        : null;
+      
+      const licenseSheetValidUntilISO = formData.license_sheet_valid_until 
+        ? convertDateToISO(formData.license_sheet_valid_until) 
+        : null;
+
       const cleanData: any = {
         license_number: formData.license_number,
-        license_issue_date: formData.license_issue_date || undefined,
+        license_issue_date: licenseIssueDateISO || undefined,
         license_registry_number: formData.license_registry_number || undefined,
         license_document_url: formData.license_document_url || undefined,
         license_sheet_number: formData.license_sheet_number || undefined,
-        license_sheet_valid_from: formData.license_sheet_valid_from || undefined,
-        license_sheet_valid_until: formData.license_sheet_valid_until || undefined,
+        license_sheet_valid_from: licenseSheetValidFromISO || undefined,
+        license_sheet_valid_until: licenseSheetValidUntilISO || undefined,
         license_sheet_document_url: formData.license_sheet_document_url || undefined,
         self_employment_number: formData.self_employment_number || undefined,
         self_employment_document_url: formData.self_employment_document_url || undefined,
@@ -674,12 +785,31 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         insurance_document_url: formData.insurance_document_url || undefined,
       };
 
-      // Remove undefined values
+      // Remove undefined, null, or empty string values
       Object.keys(cleanData).forEach(key => {
-        if (cleanData[key] === undefined || cleanData[key] === '') {
+        if (cleanData[key] === undefined || cleanData[key] === null || cleanData[key] === '') {
           delete cleanData[key];
         }
       });
+      
+      // Validate dates before sending - if a date field had a value but conversion failed, show error
+      const dateErrors: Record<string, string> = {};
+      if (formData.license_issue_date && !licenseIssueDateISO) {
+        dateErrors.license_issue_date = 'Noto\'g\'ri sana formati';
+      }
+      if (formData.license_sheet_valid_from && !licenseSheetValidFromISO) {
+        dateErrors.license_sheet_valid_from = 'Noto\'g\'ri sana formati';
+      }
+      if (formData.license_sheet_valid_until && !licenseSheetValidUntilISO) {
+        dateErrors.license_sheet_valid_until = 'Noto\'g\'ri sana formati';
+      }
+      
+      if (Object.keys(dateErrors).length > 0) {
+        setFieldErrors(dateErrors);
+        showToast.error(t('common.error'), t('formValidation.fixErrors'));
+        setIsLoading(false);
+        return;
+      }
 
       await updateTaxiLicense(token, cleanData);
       
@@ -695,7 +825,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           // Update user in auth context to mark profile as complete
           // This will trigger RootNavigator to re-render and switch to MainNavigator
           if (user) {
-            updateUser({
+            await updateUser({
               ...user,
               profile_complete: true,
             } as any);
@@ -719,18 +849,38 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save taxi license info:', error);
       
-      // Check if it's a validation error from backend
-      if (error?.response?.status === 422 && error?.response?.data?.errors) {
+      // Check if it's a validation error from backend (422 status) or database error (500 status)
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 422 || statusCode === 500) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
         
-        // Set field errors to display under each field
-        setFieldErrors(apiErrors);
+        // Map backend field names to form field names if needed
+        // Backend may send field names like "license_sheet_valid_until" which match our form fields
+        const mappedErrors: Record<string, string> = {};
+        Object.keys(apiErrors).forEach((apiField) => {
+          // Field names should match, but ensure they're mapped correctly
+          let formField = apiField;
+          
+          // Handle any field name mappings if needed (e.g., backend sends different names)
+          mappedErrors[formField] = apiErrors[apiField];
+        });
+        
+        // Merge with existing errors and set field errors to display under each field
+        setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
         
         // Also show a general error toast
-        const firstError = Object.values(apiErrors)[0];
+        const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
           showToast.error(t('common.error'), firstError);
+        } else {
+          // Check if error message contains date-related errors
+          const errorMessage = error?.response?.data?.message || error?.message || '';
+          if (errorMessage.toLowerCase().includes('date') || errorMessage.toLowerCase().includes('sana')) {
+            showToast.error(t('common.error'), 'Sana maydonlarida xatolik bor. Iltimos, barcha sanalarni to\'g\'ri kiriting.');
+          } else {
+            showToast.error(t('common.error'), t('formValidation.fixErrors'));
+          }
         }
       } else {
         // For non-validation errors, show general error
@@ -797,7 +947,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.license_number}
                 onChangeText={(value: string) => handleFieldChange('license_number', value)}
-                onBlur={() => handleFieldBlur('license_number')}
+                onBlur={() => handleFieldBlur('license_number', formData.license_number)}
                 editable={!isLoading}
               />
               {fieldErrors.license_number && (
@@ -815,6 +965,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.license_issue_date}
                   onChangeText={(value) => handleDateInputChange('license_issue_date', value)}
+                  onBlur={() => handleFieldBlur('license_issue_date', formData.license_issue_date)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -843,7 +994,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.license_registry_number}
                 onChangeText={(value: string) => handleFieldChange('license_registry_number', value)}
-                onBlur={() => handleFieldBlur('license_registry_number')}
+                onBlur={() => handleFieldBlur('license_registry_number', formData.license_registry_number)}
                 editable={!isLoading}
               />
               {fieldErrors.license_registry_number && (
@@ -888,7 +1039,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.license_sheet_number}
                 onChangeText={(value: string) => handleFieldChange('license_sheet_number', value)}
-                onBlur={() => handleFieldBlur('license_sheet_number')}
+                onBlur={() => handleFieldBlur('license_sheet_number', formData.license_sheet_number)}
                 editable={!isLoading}
               />
               {fieldErrors.license_sheet_number && (
@@ -906,6 +1057,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.license_sheet_valid_from}
                   onChangeText={(value) => handleDateInputChange('license_sheet_valid_from', value)}
+                  onBlur={() => handleFieldBlur('license_sheet_valid_from', formData.license_sheet_valid_from)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -934,6 +1086,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                   placeholder="KK.OO.YYYY"
                   value={formData.license_sheet_valid_until}
                   onChangeText={(value) => handleDateInputChange('license_sheet_valid_until', value)}
+                  onBlur={() => handleFieldBlur('license_sheet_valid_until', formData.license_sheet_valid_until)}
                   keyboardType="numeric"
                   maxLength={10}
                   placeholderTextColor={theme.palette.text.secondary}
@@ -983,7 +1136,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 placeholderTextColor={theme.palette.text.disabled}
                 value={formData.self_employment_number}
                 onChangeText={(value: string) => handleFieldChange('self_employment_number', value)}
-                onBlur={() => handleFieldBlur('self_employment_number')}
+                onBlur={() => handleFieldBlur('self_employment_number', formData.self_employment_number)}
                 keyboardType="numeric"
                 editable={!isLoading}
               />

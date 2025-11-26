@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Driver Taxi License attributes
 export interface DriverTaxiLicenseAttributes {
   id: string;
-  driver_profile_id: string;
+  driver_profile_id: number;
   // License Information
   license_number?: string | null;
   license_issue_date?: Date | null;
@@ -33,13 +33,13 @@ export interface DriverTaxiLicenseAttributes {
 // Creation attributes
 export interface DriverTaxiLicenseCreationAttributes
   extends Optional<DriverTaxiLicenseAttributes, 'id' | 'license_number' | 'license_issue_date' | 'license_registry_number' | 'license_document_url' | 'license_sheet_number' | 'license_sheet_valid_from' | 'license_sheet_valid_until' | 'license_sheet_document_url' | 'self_employment_number' | 'self_employment_document_url' | 'power_of_attorney_document_url' | 'insurance_document_url' | 'created_at' | 'updated_at'> {
-  driver_profile_id: string;
+  driver_profile_id: number;
 }
 
 // Driver Taxi License model class
 export class DriverTaxiLicense extends Model<DriverTaxiLicenseAttributes, DriverTaxiLicenseCreationAttributes> implements DriverTaxiLicenseAttributes {
   declare id: string;
-  declare driver_profile_id: string;
+  declare driver_profile_id: number;
   declare license_number?: string | null;
   declare license_issue_date?: Date | null;
   declare license_registry_number?: string | null;
@@ -70,7 +70,7 @@ export function initDriverTaxiLicense(sequelize: Sequelize) {
         allowNull: false
       },
       driver_profile_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         references: {
           model: 'driver_profiles',

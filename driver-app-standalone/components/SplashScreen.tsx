@@ -1,6 +1,6 @@
 /**
  * Splash Screen Component
- * Creative loading screen for driver app with driver/car theme
+ * Professional loading screen for driver app with modern design
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -11,222 +11,152 @@ import {
   Animated,
   Dimensions,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from '../hooks/useTranslation';
 import { createTheme } from '../themes';
 
 const { width, height } = Dimensions.get('window');
 const theme = createTheme('light');
 
 export const SplashScreen: React.FC = () => {
+  const { t } = useTranslation();
+  
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const steeringWheelRotate = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const carScale = useRef(new Animated.Value(0.8)).current;
-  const roadLine1 = useRef(new Animated.Value(0)).current;
-  const roadLine2 = useRef(new Animated.Value(width)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Logo fade in and scale
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 50,
-        friction: 7,
+        friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Steering wheel rotation
+    // Subtle logo rotation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(steeringWheelRotate, {
+        Animated.timing(logoRotate, {
           toValue: 1,
-          duration: 2000,
+          duration: 3000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(steeringWheelRotate, {
+        Animated.timing(logoRotate, {
           toValue: 0,
-          duration: 2000,
+          duration: 3000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    // Car pulsing animation
+    // Shimmer effect
     Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(carScale, {
-            toValue: 1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(carScale, {
-            toValue: 0.9,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    ).start();
-
-    // Road lines animation
-    Animated.loop(
-      Animated.parallel([
-        Animated.timing(roadLine1, {
-          toValue: width,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.timing(roadLine2, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-      ])
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
     ).start();
   }, []);
 
-  const steeringRotation = steeringWheelRotate.interpolate({
+  const logoRotation = logoRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-30deg', '30deg'],
+    outputRange: ['0deg', '5deg'],
+  });
+
+  const shimmerTranslate = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-width, width],
   });
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background gradient effect */}
       <View style={styles.background}>
+        {/* Gradient overlay circles */}
         <View style={[styles.gradientCircle, styles.circle1]} />
         <View style={[styles.gradientCircle, styles.circle2]} />
-      </View>
+        <View style={[styles.gradientCircle, styles.circle3]} />
 
-      {/* Road lines */}
-      <View style={styles.roadContainer}>
+        {/* Shimmer overlay */}
         <Animated.View
           style={[
-            styles.roadLine,
+            styles.shimmer,
             {
-              transform: [{ translateX: roadLine1 }],
+              transform: [{ translateX: shimmerTranslate }],
             },
           ]}
         />
-        <Animated.View
-          style={[
-            styles.roadLine,
-            {
-              transform: [{ translateX: roadLine2 }],
-            },
-          ]}
-        />
-      </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Logo and branding */}
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.logo}>UbexGo</Text>
-          <Text style={styles.tagline}>Drive & Earn</Text>
-        </Animated.View>
-
-        {/* Steering wheel and car */}
-        <View style={styles.iconContainer}>
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Logo */}
           <Animated.View
             style={[
-              styles.steeringWheelContainer,
+              styles.logoContainer,
               {
-                transform: [{ rotate: steeringRotation }],
-              },
-            ]}
-          >
-            <Text style={styles.steeringWheel}>🚗</Text>
-          </Animated.View>
-          <Animated.View
-            style={[
-              styles.carContainer,
-              {
-                transform: [{ scale: carScale }],
-                opacity: pulseAnim,
-              },
-            ]}
-          >
-            <Text style={styles.carEmoji}>🚙</Text>
-          </Animated.View>
-        </View>
-
-        {/* Loading indicator */}
-        <View style={styles.loadingContainer}>
-          <Animated.View
-            style={[
-              styles.loadingDot,
-              styles.dot1,
-              {
-                transform: [{ scale: pulseAnim }],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.loadingDot,
-              styles.dot2,
-              {
+                opacity: fadeAnim,
                 transform: [
-                  {
-                    scale: pulseAnim.interpolate({
-                      inputRange: [1, 1.1],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
+                  { scale: scaleAnim },
+                  { rotate: logoRotation },
                 ],
               },
             ]}
-          />
+          >
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>{t('splash.appName')}</Text>
+            </View>
+          </Animated.View>
+
+          {/* Tagline */}
           <Animated.View
             style={[
-              styles.loadingDot,
-              styles.dot3,
+              styles.taglineContainer,
               {
-                transform: [{ scale: pulseAnim }],
+                opacity: fadeAnim,
               },
             ]}
-          />
+          >
+            <Text style={styles.tagline}>{t('splash.tagline')}</Text>
+          </Animated.View>
+
+          {/* Loading indicator */}
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color="#00D9A5"
+              style={styles.spinner}
+            />
+            <Animated.Text
+              style={[
+                styles.loadingText,
+                {
+                  opacity: fadeAnim,
+                },
+              ]}
+            >
+              {t('splash.loading')}
+            </Animated.Text>
+          </View>
         </View>
+
+        {/* Bottom accent */}
+        <View style={styles.bottomAccent} />
       </View>
     </SafeAreaView>
   );
@@ -235,48 +165,52 @@ export const SplashScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  background: {
+    flex: 1,
     backgroundColor: '#0d1b2a',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
     overflow: 'hidden',
-  },
-  background: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
   },
   gradientCircle: {
     position: 'absolute',
-    borderRadius: 500,
-    opacity: 0.1,
+    borderRadius: 1000,
+    opacity: 0.08,
   },
   circle1: {
-    width: 400,
-    height: 400,
-    backgroundColor: theme.palette.primary.main,
-    top: -100,
-    left: -100,
+    width: 500,
+    height: 500,
+    backgroundColor: '#00D9A5',
+    top: -150,
+    left: -150,
   },
   circle2: {
+    width: 400,
+    height: 400,
+    backgroundColor: '#4A90E2',
+    bottom: -100,
+    right: -100,
+  },
+  circle3: {
     width: 300,
     height: 300,
-    backgroundColor: theme.palette.secondary.main,
-    bottom: -50,
-    right: -50,
+    backgroundColor: '#00D9A5',
+    top: '50%',
+    left: '50%',
+    marginTop: -150,
+    marginLeft: -150,
   },
-  roadContainer: {
+  shimmer: {
     position: 'absolute',
-    bottom: height * 0.25,
-    width: '100%',
-    height: 4,
-    overflow: 'hidden',
-  },
-  roadLine: {
-    position: 'absolute',
-    width: 60,
-    height: 4,
-    backgroundColor: '#fff',
-    opacity: 0.3,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: width * 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    transform: [{ skewX: '-20deg' }],
   },
   content: {
     alignItems: 'center',
@@ -284,69 +218,66 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logoContainer: {
-    alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 32,
   },
-  logo: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
+  logoCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(0, 217, 165, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(0, 217, 165, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00D9A5',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 2,
-    marginBottom: 8,
+    textShadowColor: 'rgba(0, 217, 165, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  taglineContainer: {
+    marginBottom: 48,
+    paddingHorizontal: 32,
   },
   tagline: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.8,
-    letterSpacing: 1,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 30,
-    position: 'relative',
-  },
-  steeringWheelContainer: {
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
-  },
-  steeringWheel: {
-    fontSize: 80,
-  },
-  carContainer: {
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carEmoji: {
-    fontSize: 80,
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#E0E0E0',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    opacity: 0.9,
   },
   loadingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
   },
-  loadingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.palette.primary.main,
-    marginHorizontal: 6,
+  spinner: {
+    marginBottom: 16,
   },
-  dot1: {
-    backgroundColor: theme.palette.primary.main,
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#B0B0B0',
+    letterSpacing: 0.5,
   },
-  dot2: {
-    backgroundColor: theme.palette.secondary.main,
-  },
-  dot3: {
-    backgroundColor: theme.palette.primary.main,
+  bottomAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: 'rgba(0, 217, 165, 0.4)',
   },
 });
-

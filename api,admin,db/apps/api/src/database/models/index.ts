@@ -98,6 +98,7 @@ import { VehicleColor, initVehicleColor } from './VehicleColor.js';
 import { VehicleType, initVehicleType } from './VehicleType.js';
 import { AppStoreUrl, initAppStoreUrl } from './AppStoreUrl.js';
 import { SupportContact, initSupportContact } from './SupportContact.js';
+import { Notification, initNotification } from './Notification.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -130,6 +131,7 @@ initVehicleColor(sequelize);
 initVehicleType(sequelize);
 initAppStoreUrl(sequelize);
 initSupportContact(sequelize);
+initNotification(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -146,6 +148,9 @@ AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 User.hasMany(PushToken, { foreignKey: 'user_id', as: 'pushTokens' });
 PushToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' });
+Notification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 // Geo hierarchy associations
 GeoCountry.hasMany(GeoProvince, { foreignKey: 'country_id', as: 'provinces' });
@@ -330,6 +335,7 @@ export {
   VehicleType,
   AppStoreUrl,
   SupportContact,
+  Notification,
 };
 
 export default sequelize;

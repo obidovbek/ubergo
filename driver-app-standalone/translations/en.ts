@@ -37,8 +37,28 @@ export default {
     monthDecember: 'December',
   },
 
+  splash: {
+    appName: 'UbexGo',
+    tagline: 'Drive & Earn',
+    loading: 'Loading...',
+  },
+
   auth: {
     appName: 'UbexGo',
+    logout: 'Logout',
+    accountBlocked: 'Account Blocked',
+    accountBlockedDescription: 'Unfortunately, your account has been blocked. Please contact support or try again later.',
+    accountPendingDelete: 'Account Deletion in Progress',
+    accountPendingDeleteDescription: 'Your account is in the process of being deleted. If this is a mistake, please contact support.',
+    accountSuspended: 'Account Suspended',
+    accountSuspendedDescription: 'Your account has been temporarily suspended. Please contact support.',
+    contactSupport: 'Contact Support',
+    supportEmail: 'Email: support@ubexgo.uz',
+    supportPhone: 'Phone: +998 XX XXX XX XX',
+    emailNotAvailable: 'Email client is not available on this device',
+    emailError: 'Unable to open email client',
+    phoneNotAvailable: 'Phone dialer is not available on this device',
+    phoneError: 'Unable to open phone dialer',
   },
 
   phoneRegistration: {
@@ -171,7 +191,9 @@ export default {
     logoutError: 'Error logging out. Please try again.',
     noEmail: 'No email',
     noPhone: 'No phone',
+    driverId: 'Driver ID',
     appVersion: 'UbexGo v1.0.0',
+    notifications: 'Notifications',
     editProfile: 'Edit Profile',
     paymentMethods: 'Payment Methods',
     tripHistory: 'Trip History',
@@ -368,6 +390,27 @@ export default {
     errorUpdate: 'Error saving information',
     licenseNumberRequired: 'Please enter license number',
     issueDateRequired: 'Please enter issue date',
+  },
+
+  // Notifications
+  notifications: {
+    title: 'Notifications',
+    noNotifications: 'No notifications',
+    markAllRead: 'Mark all as read',
+    markAllReadConfirm: 'Do you want to mark all notifications as read?',
+    allMarkedRead: 'All notifications marked as read',
+    markReadError: 'Failed to mark notification as read',
+    markAllReadError: 'Failed to mark all notifications as read',
+    delete: 'Delete',
+    deleteConfirm: 'Do you want to delete this notification?',
+    deleted: 'Notification deleted',
+    deleteError: 'Failed to delete notification',
+    loadError: 'Failed to load notifications',
+    loadErrorDescription: 'An error occurred while loading notifications',
+    justNow: 'Just now',
+    minutesAgo: '{count} minutes ago',
+    hoursAgo: '{count} hours ago',
+    daysAgo: '{count} days ago',
   },
 };
 

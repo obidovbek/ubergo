@@ -8,7 +8,7 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // AuditLog attributes
 export interface AuditLogAttributes {
   id: string;
-  user_id?: string | null;
+  user_id?: number | null;
   action: string;
   ip?: string | null;
   ua?: string | null;
@@ -23,7 +23,7 @@ export interface AuditLogCreationAttributes
 // AuditLog model class
 export class AuditLog extends Model<AuditLogAttributes, AuditLogCreationAttributes> implements AuditLogAttributes {
   declare id: string;
-  declare user_id?: string | null;
+  declare user_id?: number | null;
   declare action: string;
   declare ip?: string | null;
   declare ua?: string | null;
@@ -44,7 +44,7 @@ export function initAuditLog(sequelize: Sequelize) {
         allowNull: false
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
