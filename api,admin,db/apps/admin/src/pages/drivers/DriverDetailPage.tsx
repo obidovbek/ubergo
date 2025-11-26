@@ -10,7 +10,40 @@ import * as driversApi from '../../api/drivers';
 import type { Driver } from '../../api/drivers';
 import { Button } from '../../components/Button';
 import { translations } from '../../utils/translations';
+import { API_BASE_URL } from '../../config/api';
 import './DriverDetailPage.css';
+
+/**
+ * Convert image URL to absolute URL using API base URL
+ * Handles both relative paths (/uploads/...) and full URLs
+ * Always uses the API_BASE_URL to ensure correct origin
+ */
+const getImageUrl = (imageUrl: string | null | undefined): string | null => {
+  if (!imageUrl) return null;
+  
+  // Extract base URL from API_BASE_URL (remove /api suffix if present)
+  const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+  
+  // If already a full URL, extract just the path part
+  let imagePath = imageUrl;
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    try {
+      const url = new URL(imageUrl);
+      imagePath = url.pathname;
+    } catch {
+      // If URL parsing fails, try to extract path manually
+      const match = imageUrl.match(/^https?:\/\/[^\/]+(\/.*)$/);
+      if (match) {
+        imagePath = match[1];
+      }
+    }
+  }
+  
+  // Ensure image URL starts with /
+  const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  return `${apiBaseUrl}${normalizedPath}`;
+};
 
 export const DriverDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +53,21 @@ export const DriverDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  
+  const handleImageError = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return;
+    setImageErrors(prev => new Set(prev).add(imageUrl));
+  };
+  
+  const handleImageLoad = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return;
+    setImageErrors(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imageUrl);
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (token && id) {
@@ -284,21 +332,37 @@ export const DriverDetailPage = () => {
                   {profile.photo_face_url && (
                     <div className="photo-item">
                       <label>Yuz rasmi</label>
-                      <img 
-                        src={profile.photo_face_url} 
-                        alt="Yuz" 
-                        onClick={() => setSelectedImage(profile.photo_face_url || null)}
-                      />
+                      {imageErrors.has(profile.photo_face_url) ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                          Rasm yuklanmadi
+                        </div>
+                      ) : (
+                        <img 
+                          src={getImageUrl(profile.photo_face_url) || ''} 
+                          alt="Yuz" 
+                          onClick={() => setSelectedImage(getImageUrl(profile.photo_face_url) || null)}
+                          onError={() => handleImageError(profile.photo_face_url)}
+                          onLoad={() => handleImageLoad(profile.photo_face_url)}
+                        />
+                      )}
                     </div>
                   )}
                   {profile.photo_body_url && (
                     <div className="photo-item">
                       <label>Tana rasmi</label>
-                      <img 
-                        src={profile.photo_body_url} 
-                        alt="Tana" 
-                        onClick={() => setSelectedImage(profile.photo_body_url || null)}
-                      />
+                      {imageErrors.has(profile.photo_body_url) ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                          Rasm yuklanmadi
+                        </div>
+                      ) : (
+                        <img 
+                          src={getImageUrl(profile.photo_body_url) || ''} 
+                          alt="Tana" 
+                          onClick={() => setSelectedImage(getImageUrl(profile.photo_body_url) || null)}
+                          onError={() => handleImageError(profile.photo_body_url)}
+                          onLoad={() => handleImageLoad(profile.photo_body_url)}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -367,9 +431,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Old tomoni</label>
                       <img 
-                        src={profile.passport.passport_front_url} 
+                        src={getImageUrl(profile.passport.passport_front_url) || ''} 
                         alt="Pasport old" 
-                        onClick={() => setSelectedImage(profile.passport?.passport_front_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.passport?.passport_front_url) || null)}
                       />
                     </div>
                   )}
@@ -377,9 +441,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Orqa tomoni</label>
                       <img 
-                        src={profile.passport.passport_back_url} 
+                        src={getImageUrl(profile.passport.passport_back_url) || ''} 
                         alt="Pasport orqa" 
-                        onClick={() => setSelectedImage(profile.passport?.passport_back_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.passport?.passport_back_url) || null)}
                       />
                     </div>
                   )}
@@ -432,9 +496,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Old tomoni</label>
                       <img 
-                        src={profile.license.license_front_url} 
+                        src={getImageUrl(profile.license.license_front_url) || ''} 
                         alt="Guvohnoma old" 
-                        onClick={() => setSelectedImage(profile.license?.license_front_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.license?.license_front_url) || null)}
                       />
                     </div>
                   )}
@@ -442,9 +506,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Orqa tomoni</label>
                       <img 
-                        src={profile.license.license_back_url} 
+                        src={getImageUrl(profile.license.license_back_url) || ''} 
                         alt="Guvohnoma orqa" 
-                        onClick={() => setSelectedImage(profile.license?.license_back_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.license?.license_back_url) || null)}
                       />
                     </div>
                   )}
@@ -581,9 +645,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Texnik pasport old tomoni</label>
                       <img 
-                        src={profile.vehicle.tech_passport_front_url} 
+                        src={getImageUrl(profile.vehicle.tech_passport_front_url) || ''} 
                         alt="Texnik pasport old" 
-                        onClick={() => setSelectedImage(profile.vehicle?.tech_passport_front_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.tech_passport_front_url) || null)}
                       />
                     </div>
                   )}
@@ -591,9 +655,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Texnik pasport orqa tomoni</label>
                       <img 
-                        src={profile.vehicle.tech_passport_back_url} 
+                        src={getImageUrl(profile.vehicle.tech_passport_back_url) || ''} 
                         alt="Texnik pasport orqa" 
-                        onClick={() => setSelectedImage(profile.vehicle?.tech_passport_back_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.tech_passport_back_url) || null)}
                       />
                     </div>
                   )}
@@ -612,9 +676,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Old tomoni</label>
                       <img 
-                        src={profile.vehicle.photo_front_url} 
+                        src={getImageUrl(profile.vehicle.photo_front_url) || ''} 
                         alt="Old" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_front_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_front_url) || null)}
                       />
                     </div>
                   )}
@@ -622,9 +686,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Orqa tomoni</label>
                       <img 
-                        src={profile.vehicle.photo_back_url} 
+                        src={getImageUrl(profile.vehicle.photo_back_url) || ''} 
                         alt="Orqa" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_back_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_back_url) || null)}
                       />
                     </div>
                   )}
@@ -632,9 +696,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>O'ng tomoni</label>
                       <img 
-                        src={profile.vehicle.photo_right_url} 
+                        src={getImageUrl(profile.vehicle.photo_right_url) || ''} 
                         alt="O'ng" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_right_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_right_url) || null)}
                       />
                     </div>
                   )}
@@ -642,9 +706,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Chap tomoni</label>
                       <img 
-                        src={profile.vehicle.photo_left_url} 
+                        src={getImageUrl(profile.vehicle.photo_left_url) || ''} 
                         alt="Chap" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_left_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_left_url) || null)}
                       />
                     </div>
                   )}
@@ -652,9 +716,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>45° burchak ko'rinishi</label>
                       <img 
-                        src={profile.vehicle.photo_angle_45_url} 
+                        src={getImageUrl(profile.vehicle.photo_angle_45_url) || ''} 
                         alt="45° burchak" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_angle_45_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_angle_45_url) || null)}
                       />
                     </div>
                   )}
@@ -662,9 +726,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Salon rasmi</label>
                       <img 
-                        src={profile.vehicle.photo_interior_url} 
+                        src={getImageUrl(profile.vehicle.photo_interior_url) || ''} 
                         alt="Salon" 
-                        onClick={() => setSelectedImage(profile.vehicle?.photo_interior_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.vehicle?.photo_interior_url) || null)}
                       />
                     </div>
                   )}
@@ -725,9 +789,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Litsenziya hujjati</label>
                       <img 
-                        src={profile.taxiLicense.license_document_url} 
+                        src={getImageUrl(profile.taxiLicense.license_document_url) || ''} 
                         alt="Litsenziya hujjati" 
-                        onClick={() => setSelectedImage(profile.taxiLicense?.license_document_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.taxiLicense?.license_document_url) || null)}
                       />
                     </div>
                   )}
@@ -735,9 +799,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Litsenziya varaqasi hujjati</label>
                       <img 
-                        src={profile.taxiLicense.license_sheet_document_url} 
+                        src={getImageUrl(profile.taxiLicense.license_sheet_document_url) || ''} 
                         alt="Litsenziya varaqasi" 
-                        onClick={() => setSelectedImage(profile.taxiLicense?.license_sheet_document_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.taxiLicense?.license_sheet_document_url) || null)}
                       />
                     </div>
                   )}
@@ -745,9 +809,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>O'zini o'zi band qilish hujjati</label>
                       <img 
-                        src={profile.taxiLicense.self_employment_document_url} 
+                        src={getImageUrl(profile.taxiLicense.self_employment_document_url) || ''} 
                         alt="O'zini o'zi band qilish" 
-                        onClick={() => setSelectedImage(profile.taxiLicense?.self_employment_document_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.taxiLicense?.self_employment_document_url) || null)}
                       />
                     </div>
                   )}
@@ -755,9 +819,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Ishonchnoma hujjati</label>
                       <img 
-                        src={profile.taxiLicense.power_of_attorney_document_url} 
+                        src={getImageUrl(profile.taxiLicense.power_of_attorney_document_url) || ''} 
                         alt="Ishonchnoma" 
-                        onClick={() => setSelectedImage(profile.taxiLicense?.power_of_attorney_document_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.taxiLicense?.power_of_attorney_document_url) || null)}
                       />
                     </div>
                   )}
@@ -765,9 +829,9 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Sugurta hujjati</label>
                       <img 
-                        src={profile.taxiLicense.insurance_document_url} 
+                        src={getImageUrl(profile.taxiLicense.insurance_document_url) || ''} 
                         alt="Sugurta" 
-                        onClick={() => setSelectedImage(profile.taxiLicense?.insurance_document_url || null)}
+                        onClick={() => setSelectedImage(getImageUrl(profile.taxiLicense?.insurance_document_url) || null)}
                       />
                     </div>
                   )}

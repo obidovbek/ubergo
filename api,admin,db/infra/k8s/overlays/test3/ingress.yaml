@@ -17,11 +17,12 @@ spec:
     - host: test3.fstu.uz
       http:
         paths:
-          - path: /
+          # Uploads must come before /api to be matched first
+          - path: /uploads
             pathType: Prefix
             backend:
               service:
-                name: admin-service-test3
+                name: api-service-test3
                 port:
                   number: 80
           - path: /api
@@ -29,6 +30,13 @@ spec:
             backend:
               service:
                 name: api-service-test3
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-service-test3
                 port:
                   number: 80
 
