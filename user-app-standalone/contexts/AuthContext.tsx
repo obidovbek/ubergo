@@ -80,10 +80,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (token && userJson) {
         const user = JSON.parse(userJson);
-        dispatch({
-          type: AUTH_ACTIONS.LOGIN,
-          payload: { user, token },
-        });
+        
+        // Verify user status with server
+        try {
+          const currentUser = await AuthAPI.getCurrentUser(token);
+          if (currentUser.data) {
+            const serverUser = currentUser.data;
+            // Update user with latest status from server
+            if (serverUser.status === 'blocked' || serverUser.status === 'pending_delete') {
+              // User is blocked, update local state but don't logout yet
+              // RootNavigator will handle showing blocked screen
+              await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
+              dispatch({
+                type: AUTH_ACTIONS.LOGIN,
+                payload: { user: serverUser, token },
+              });
+            } else {
+              // User is active, proceed normally
+              await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
+              dispatch({
+                type: AUTH_ACTIONS.LOGIN,
+                payload: { user: serverUser, token },
+              });
+            }
+          } else {
+            // Fallback to stored user if server check fails
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN,
+              payload: { user, token },
+            });
+          }
+        } catch (error) {
+          // If status check fails, use stored user
+          console.warn('Failed to verify user status, using stored user:', error);
+          dispatch({
+            type: AUTH_ACTIONS.LOGIN,
+            payload: { user, token },
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);
@@ -236,6 +270,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const response = await AuthAPI.verifyOtp(phone, code);
       const { user, access, refresh } = response.data;
+
+      // Check user status
+      if (user.status === 'blocked' || user.status === 'pending_delete') {
+        // User is blocked, but still allow login so they can see blocked screen
+        // RootNavigator will handle showing the blocked screen
+      }
 
       // Store credentials
       await Promise.all([

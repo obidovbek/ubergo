@@ -22,6 +22,9 @@ router.get('/:id', AdminPassengerController.getById);
 // Update passenger
 router.put('/:id', AdminPassengerController.update);
 
+// Update passenger status
+router.patch('/:id/status', AdminPassengerController.updateStatus);
+
 // Delete passenger
 router.delete('/:id', AdminPassengerController.delete);
 

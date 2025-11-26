@@ -71,6 +71,18 @@ export default {
     infoNotAvailable: " orqali kirish hozircha mavjud emas",
   },
 
+  // Register First Screen
+  registerFirst: {
+    title: 'Avval foydalanuvchi ilovasida ro\'yxatdan o\'ting',
+    description: 'Haydovchi sifatida ro\'yxatdan o\'tish uchun avval UbexGo foydalanuvchi ilovasida ro\'yxatdan o\'tishingiz kerak.',
+    step1: 'UbexGo foydalanuvchi ilovasini yuklab oling',
+    step2: 'Ilovada telefon raqamingiz bilan ro\'yxatdan o\'ting',
+    step3: 'Keyin haydovchi ilovasiga qaytib, shu telefon raqami bilan kirishni davom eting',
+    downloadAndroid: 'Android uchun yuklab olish',
+    downloadIOS: 'iOS uchun yuklab olish',
+    noUrlsAvailable: 'Ilova do\'kon havolalari hozircha sozlanmagan',
+  },
+
   // OTP Verification Screen
   otpVerification: {
     brand: 'UbexGo Driver',
@@ -215,6 +227,16 @@ export default {
     validation: "Ma'lumotlar noto'g'ri",
     unknown: "Noma'lum xatolik yuz berdi",
     tryAgain: "Iltimos qaytadan urinib ko'ring",
+  },
+
+  // Network Status
+  networkStatus: {
+    noInternet: "Internet bilan aloqa yo'q",
+    noInternetMessage: "Serverga ulanib bo'lmadi. Taksi buyurtmalarini olishni davom ettirish uchun internet aloqangizni tekshiring.",
+    hint: "Wi-Fi yoki mobil ma'lumotlar yoqilganligini tekshiring",
+    retry: "Qayta urinib ko'ring",
+    tip1: "Wi-Fi yoki mobil ma'lumotlar sozlamalarini tekshiring",
+    tip2: "Ulanganingizdan keyin yangilash uchun pastga torting",
   },
 
   // Form Validation Messages

@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
     list: '/admin/passengers',
     detail: (id: string) => `/admin/passengers/${id}`,
     update: (id: string) => `/admin/passengers/${id}`,
+    updateStatus: (id: string) => `/admin/passengers/${id}/status`,
     delete: (id: string) => `/admin/passengers/${id}`,
   },
   drivers: {
@@ -124,6 +125,15 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/admin/vehicle-types/${id}`,
     delete: (id: string) => `/admin/vehicle-types/${id}`,
   },
+  supportContacts: {
+    get: '/admin/support-contacts',
+    getAll: '/admin/support-contacts/all',
+    update: '/admin/support-contacts',
+  },
+  appStoreUrls: {
+    get: (appName: string) => `/admin/app-store-urls?appName=${appName}`,
+    update: (appName: string) => `/admin/app-store-urls`,
+  },
   rides: {
     list: '/rides',
     detail: (id: string) => `/rides/${id}`,
@@ -158,20 +168,25 @@ export const HTTP_METHODS = {
 } as const;
 
 /**
+ * Custom error class for authentication errors
+ * Components should catch this and redirect to login
+ */
+export class AuthenticationError extends Error {
+  constructor(message: string = 'Your session has expired. Please log in again.') {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+/**
  * Handle authentication errors (401/403)
- * Clears auth data and redirects to login page
+ * Clears auth data from localStorage
+ * Note: Components should catch AuthenticationError and redirect using React Router
  */
 export const handleAuthError = (): void => {
   // Clear authentication data from localStorage
   localStorage.removeItem('auth_token');
   localStorage.removeItem('auth_user');
-  
-  // Redirect to login page
-  // Use window.location for redirect since we can't use React Router hooks here
-  const currentPath = window.location.pathname;
-  if (currentPath !== '/login') {
-    window.location.href = '/login';
-  }
 };
 
 /**
@@ -179,6 +194,25 @@ export const handleAuthError = (): void => {
  */
 export const isAuthError = (response: Response): boolean => {
   return response.status === 401 || response.status === 403;
+};
+
+/**
+ * Check if error message indicates authentication error
+ */
+export const isAuthErrorMessage = (message: string): boolean => {
+  const authErrorKeywords = [
+    'unauthorized',
+    'invalid or expired token',
+    'invalid token',
+    'expired token',
+    'no token provided',
+    'not authenticated',
+    'insufficient permissions',
+    'authentication',
+    'session expired',
+  ];
+  const lowerMessage = message.toLowerCase();
+  return authErrorKeywords.some(keyword => lowerMessage.includes(keyword));
 };
 
 /**
@@ -190,14 +224,40 @@ export const handleApiResponse = async <T>(
   defaultError: string
 ): Promise<T> => {
   if (!response.ok) {
-    // Check for authentication errors (401/403)
-    if (isAuthError(response)) {
-      handleAuthError();
-      throw new Error('Your session has expired. Please log in again.');
+    let errorData: any = {};
+    let errorMessage = defaultError;
+    
+    try {
+      errorData = await response.json();
+      // Check multiple possible error message fields
+      errorMessage = 
+        errorData.message || 
+        errorData.error || 
+        errorData.errors?.message ||
+        (typeof errorData.errors === 'string' ? errorData.errors : null) ||
+        defaultError;
+    } catch {
+      // If JSON parsing fails, try to get text
+      try {
+        const text = await response.text();
+        errorMessage = text || defaultError;
+      } catch {
+        errorMessage = defaultError;
+      }
     }
     
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.message || errorData.error || defaultError;
+    // Check for authentication errors (401/403 status or auth-related error messages)
+    // Also check the full error data object for auth-related content
+    const fullErrorText = JSON.stringify(errorData).toLowerCase();
+    if (
+      isAuthError(response) || 
+      isAuthErrorMessage(errorMessage) ||
+      isAuthErrorMessage(fullErrorText)
+    ) {
+      handleAuthError();
+      throw new AuthenticationError('Your session has expired. Please log in again.');
+    }
+    
     throw new Error(errorMessage);
   }
   

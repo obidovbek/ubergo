@@ -20,10 +20,23 @@ export class AdminPassengerController {
       const status = req.query.status as string | undefined;
       const search = req.query.search as string | undefined;
 
+      console.log(`[AdminPassengerController] getAll called with:`, {
+        page,
+        pageSize,
+        status,
+        search
+      });
+
       const result = await AdminPassengerService.getAll(page, pageSize, { status, search });
+
+      console.log(`[AdminPassengerController] Service returned:`, {
+        passengersCount: result.passengers.length,
+        total: result.total
+      });
 
       paginatedResponse(res, result.passengers, page, pageSize, result.total);
     } catch (error) {
+      console.error('[AdminPassengerController] Error:', error);
       next(error);
     }
   }
@@ -55,6 +68,27 @@ export class AdminPassengerController {
       const passenger = await AdminPassengerService.update(id, updateData);
 
       successResponse(res, passenger, SuccessMessages.USER_UPDATED);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !['active', 'blocked', 'pending_delete'].includes(status)) {
+        throw new Error('Invalid status. Must be one of: active, blocked, pending_delete');
+      }
+
+      const passenger = await AdminPassengerService.updateStatus(id, status);
+
+      successResponse(res, passenger, SuccessMessages.USER_UPDATED || 'Status updated successfully');
     } catch (error) {
       next(error);
     }

@@ -5,28 +5,22 @@
 
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ProfileCompletionNavigator } from './ProfileCompletionNavigator';
-import { createTheme } from '../themes';
-
-const theme = createTheme('light');
+import { BlockedScreen } from '../screens/BlockedScreen';
+import { SplashScreen } from '../components/SplashScreen';
 
 export const RootNavigator: React.FC = () => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
   console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading });
 
-  // Show loading indicator while checking auth state
+  // Show splash screen while checking auth state
   if (isLoading) {
-    console.log('RootNavigator: Showing loading indicator');
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.palette.secondary.main} />
-      </View>
-    );
+    console.log('RootNavigator: Showing splash screen');
+    return <SplashScreen />;
   }
 
   // Determine which navigator to show
@@ -35,6 +29,14 @@ export const RootNavigator: React.FC = () => {
       // User is not authenticated, show auth screens
       console.log('RootNavigator: User not authenticated, showing AuthNavigator');
       return <AuthNavigator />;
+    }
+
+    // Check user status
+    const userStatus = (user as any)?.status;
+    if (userStatus === 'blocked' || userStatus === 'pending_delete') {
+      // User is blocked or pending deletion, show blocked screen
+      console.log('RootNavigator: User status is', userStatus, ', showing BlockedScreen');
+      return <BlockedScreen />;
     }
 
     // User is authenticated, check if profile is complete
@@ -57,13 +59,4 @@ export const RootNavigator: React.FC = () => {
     </NavigationContainer>
   );
 };
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.palette.background.default,
-  },
-});
 

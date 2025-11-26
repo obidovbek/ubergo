@@ -21,6 +21,9 @@ import adminVehicleModelRoutes from './admin-vehicle-model.routes.js';
 import adminVehicleBodyTypeRoutes from './admin-vehicle-body-type.routes.js';
 import adminVehicleColorRoutes from './admin-vehicle-color.routes.js';
 import adminVehicleTypeRoutes from './admin-vehicle-type.routes.js';
+import adminAppStoreUrlRoutes from './admin-app-store-url.routes.js';
+import adminSupportContactRoutes from './admin-support-contact.routes.js';
+import supportContactRoutes from './support-contact.routes.js';
 import vehicleRoutes from './vehicle.routes.js';
 
 const router = Router();
@@ -63,6 +66,12 @@ router.use('/admin/vehicle-models', adminVehicleModelRoutes);
 router.use('/admin/vehicle-body-types', adminVehicleBodyTypeRoutes);
 router.use('/admin/vehicle-colors', adminVehicleColorRoutes);
 
+// Admin app store URL routes
+router.use('/admin/app-store-urls', adminAppStoreUrlRoutes);
+
+// Admin support contact routes
+router.use('/admin/support-contacts', adminSupportContactRoutes);
+
 // User routes
 router.use('/user', userRoutes);
 
@@ -74,6 +83,9 @@ router.use('/geo', geoRoutes);
 
 // Public vehicle routes
 router.use('/vehicles', vehicleRoutes);
+
+// Public support contact routes
+router.use('/support-contacts', supportContactRoutes);
 
 // Device routes (push tokens)
 router.use('/devices', deviceRoutes);

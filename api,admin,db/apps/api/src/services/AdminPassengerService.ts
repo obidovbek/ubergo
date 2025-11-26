@@ -17,7 +17,8 @@ import { ErrorMessages as ERROR_MESSAGES } from '../constants/index.js';
 
 export class AdminPassengerService {
   /**
-   * Get all passengers (users with role='user')
+   * Get all passengers (users with role='user' or 'driver')
+   * Note: Drivers are included because they were originally passengers who registered in the user app
    */
   static async getAll(
     page: number = 1,
@@ -25,8 +26,10 @@ export class AdminPassengerService {
     filters?: { status?: string; search?: string }
   ) {
     const offset = (page - 1) * pageSize;
+    // Include both 'user' and 'driver' roles since drivers were originally passengers
+    // Users who registered in user app should show in passengers list even if they later became drivers
     const where: any = {
-      role: 'user'
+      role: { [Op.in]: ['user', 'driver'] }
     };
 
     if (filters?.status) {
@@ -48,6 +51,23 @@ export class AdminPassengerService {
       limit: pageSize,
       offset,
       order: [['created_at', 'DESC']],
+      attributes: [
+        'id',
+        'phone_e164',
+        'email',
+        'display_name',
+        'first_name',
+        'last_name',
+        'father_name',
+        'gender',
+        'birth_date',
+        'status',
+        'is_verified',
+        'profile_complete',
+        'role',
+        'created_at',
+        'updated_at'
+      ],
       include: [
         {
           model: Phone,
@@ -56,6 +76,17 @@ export class AdminPassengerService {
         }
       ]
     });
+
+    // Log for debugging
+    console.log(`[AdminPassengerService] Found ${total} passengers (page ${page}, pageSize ${pageSize})`);
+    if (users.length > 0) {
+      console.log(`[AdminPassengerService] Sample passenger:`, {
+        id: users[0].id,
+        phone: users[0].phone_e164,
+        role: users[0].role,
+        status: users[0].status
+      });
+    }
 
     return {
       passengers: users,
@@ -72,7 +103,7 @@ export class AdminPassengerService {
     const user = await User.findOne({
       where: {
         id,
-        role: 'user'
+        role: { [Op.in]: ['user', 'driver'] } // Include drivers since they were originally passengers
       },
       include: [
         {
@@ -113,7 +144,7 @@ export class AdminPassengerService {
     const user = await User.findOne({
       where: {
         id,
-        role: 'user'
+        role: { [Op.in]: ['user', 'driver'] } // Include drivers since they were originally passengers
       }
     });
 
@@ -126,13 +157,32 @@ export class AdminPassengerService {
   }
 
   /**
+   * Update passenger status
+   */
+  static async updateStatus(id: string, status: 'active' | 'blocked' | 'pending_delete') {
+    const user = await User.findOne({
+      where: {
+        id,
+        role: { [Op.in]: ['user', 'driver'] } // Include drivers since they were originally passengers
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundError(ERROR_MESSAGES.NOT_FOUND);
+    }
+
+    await user.update({ status });
+    return user;
+  }
+
+  /**
    * Delete passenger
    */
   static async delete(id: string) {
     const user = await User.findOne({
       where: {
         id,
-        role: 'user'
+        role: { [Op.in]: ['user', 'driver'] } // Include drivers since they were originally passengers
       }
     });
 

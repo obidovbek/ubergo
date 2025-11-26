@@ -17,6 +17,20 @@ export default {
 
   auth: {
     appName: 'UbexGo',
+    logout: 'Chiqish',
+    accountBlocked: 'Hisobingiz bloklangan',
+    accountBlockedDescription: 'Afsuski, sizning hisobingiz bloklangan. Iltimos, qo\'llab-quvvatlash xizmati bilan bog\'laning yoki keyinroq qayta urinib ko\'ring.',
+    accountPendingDelete: 'Hisobingiz o\'chirilmoqda',
+    accountPendingDeleteDescription: 'Sizning hisobingiz o\'chirish jarayonida. Agar bu xato bo\'lsa, qo\'llab-quvvatlash xizmati bilan bog\'laning.',
+    accountSuspended: 'Hisobingiz to\'xtatilgan',
+    accountSuspendedDescription: 'Sizning hisobingiz vaqtincha to\'xtatilgan. Iltimos, qo\'llab-quvvatlash xizmati bilan bog\'laning.',
+    contactSupport: 'Qo\'llab-quvvatlash bilan bog\'lanish',
+    supportEmail: 'Email: support@ubexgo.uz',
+    supportPhone: 'Telefon: +998 XX XXX XX XX',
+    emailNotAvailable: 'Email dasturi mavjud emas',
+    emailError: 'Email dasturini ochib bo\'lmadi',
+    phoneNotAvailable: 'Telefon dasturi mavjud emas',
+    phoneError: 'Telefon dasturini ochib bo\'lmadi',
   },
 
   // Phone Registration Screen
@@ -176,6 +190,16 @@ export default {
     validation: "Ma'lumotlar noto'g'ri",
     unknown: "Noma'lum xatolik yuz berdi",
     tryAgain: "Iltimos qaytadan urinib ko'ring",
+  },
+
+  // Network Status
+  networkStatus: {
+    noInternet: "Internet bilan aloqa yo'q",
+    noInternetMessage: "Serverga ulanib bo'lmadi. Taksi buyurtma qilishni davom ettirish uchun internet aloqangizni tekshiring.",
+    hint: "Wi-Fi yoki mobil ma'lumotlar yoqilganligini tekshiring",
+    retry: "Qayta urinib ko'ring",
+    tip1: "Wi-Fi yoki mobil ma'lumotlar sozlamalarini tekshiring",
+    tip2: "Ulanganingizdan keyin yangilash uchun pastga torting",
   },
 };
 

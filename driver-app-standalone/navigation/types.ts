@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // Auth Stack Parameter List - Driver App
 export type AuthStackParamList = {
   PhoneRegistration: undefined;
+  RegisterFirst: { appStoreUrls?: { android?: string; ios?: string } };
   OTPVerification: { phoneNumber: string; userId?: string };
   DriverDetails: { phoneNumber: string };
   DriverPersonalInfo: undefined;

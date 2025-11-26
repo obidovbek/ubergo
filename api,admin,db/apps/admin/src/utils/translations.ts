@@ -229,6 +229,30 @@ export const translations = {
     },
   },
 
+  // Support Contacts
+  supportContacts: {
+    title: 'Qo\'llab-quvvatlash kontaktlari',
+    description: 'Bloklangan foydalanuvchilar uchun ko\'rsatiladigan qo\'llab-quvvatlash kontakt ma\'lumotlarini boshqaring',
+    userApp: 'Foydalanuvchi ilovasi',
+    driverApp: 'Haydovchi ilovasi',
+    email: 'Email',
+    phone: 'Telefon',
+    updateSuccess: 'Qo\'llab-quvvatlash kontakti muvaffaqiyatli yangilandi',
+  },
+
+  // App Store URLs
+  appStoreUrls: {
+    title: 'Ilova do\'kon havolalari',
+    description: 'Foydalanuvchilar va haydovchilar uchun ko\'rsatiladigan ilova do\'kon havolalarini boshqaring',
+    userApp: 'Foydalanuvchi ilovasi (Yo\'lovchi ilovasi)',
+    driverApp: 'Haydovchi ilovasi',
+    androidUrl: 'Android havolasi (Google Play)',
+    iosUrl: 'iOS havolasi (App Store)',
+    androidHint: 'Google Play Store havolasi',
+    iosHint: 'Apple App Store havolasi',
+    updateSuccess: 'Ilova do\'kon havolalari muvaffaqiyatli yangilandi',
+  },
+
   // Errors
   errors: {
     loadFailed: 'Admin foydalanuvchilarni yuklashda xatolik',

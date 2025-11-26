@@ -11,9 +11,9 @@ import { Platform } from 'react-native';
 // : 'https://test3.fstu.uz/api'; // Production
 export const API_BASE_URL = __DEV__
   ? Platform.OS === 'android' 
-    ? 'https://test3.fstu.uz/api'  // Android emulator
-    : 'https://test3.fstu.uz/api'  // iOS simulator/device
-  : 'https://test3.fstu.uz/api'; // Production
+    ? 'http://10.0.2.2:4001/api'  // Android emulator
+    : 'http://10.0.2.2:4001/api'  // iOS simulator/device
+  : 'http://10.0.2.2:4001/api'; // Production
 
 // API Endpoints
 export const API_ENDPOINTS = {

@@ -69,6 +69,18 @@ export default {
     infoNotAvailable: ' sign-in is not available yet',
   },
 
+  // Register First Screen
+  registerFirst: {
+    title: 'Please Register in User App First',
+    description: 'To register as a driver, you must first register in the UbexGo user app with your phone number.',
+    step1: 'Download the UbexGo user app',
+    step2: 'Register in the app with your phone number',
+    step3: 'Then return to the driver app and continue with the same phone number',
+    downloadAndroid: 'Download for Android',
+    downloadIOS: 'Download for iOS',
+    noUrlsAvailable: 'App store URLs are not configured yet',
+  },
+
   otpVerification: {
     brand: 'UbexGo Driver',
     title: 'Enter code',
@@ -206,6 +218,16 @@ export default {
     validation: 'Invalid data',
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
+  },
+
+  // Network Status
+  networkStatus: {
+    noInternet: 'No Internet Connection',
+    noInternetMessage: 'We can\'t connect to the server. Please check your internet connection to continue receiving ride requests.',
+    hint: 'Make sure Wi-Fi or mobile data is turned on',
+    retry: 'Try Again',
+    tip1: 'Check your Wi-Fi or mobile data settings',
+    tip2: 'Pull down to refresh once connected',
   },
 
   // Form Validation Messages

@@ -7,11 +7,13 @@ import { HttpStatus } from '../constants/index.js';
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
+  public readonly data?: any;
 
-  constructor(message: string, statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR, isOperational: boolean = true) {
+  constructor(message: string, statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR, data?: any, isOperational: boolean = true) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.data = data;
 
     Error.captureStackTrace(this, this.constructor);
   }

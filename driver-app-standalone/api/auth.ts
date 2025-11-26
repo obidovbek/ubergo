@@ -47,7 +47,7 @@ export const sendOtp = async (
 
   try {
     const url = `${API_BASE_URL}${API_ENDPOINTS.auth.sendOtp}`;
-    const requestBody: any = { channel };
+    const requestBody: any = { channel, app: 'driver' };
     if (phone) requestBody.phone = phone;
     if (opts?.userId) requestBody.userId = opts.userId;
     
@@ -69,23 +69,55 @@ export const sendOtp = async (
     console.log('=== API Response ===');
     console.log('Status:', response.status);
     console.log('Status Text:', response.statusText);
+    console.log('Content-Type:', response.headers.get('content-type'));
 
-    const data = await response.json();
-    console.log('Response Data:', JSON.stringify(data, null, 2));
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    let data: any;
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+        console.log('Response Data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        const text = await response.text();
+        console.error('Response Text:', text);
+        throw new Error(`Server returned invalid JSON: ${response.statusText}`);
+      }
+    } else {
+      // Response is not JSON (might be HTML error page)
+      const text = await response.text();
+      console.error('Non-JSON Response:', text.substring(0, 200));
+      throw new Error(`Server error: ${response.statusText} (${response.status})`);
+    }
 
     if (!response.ok) {
       console.error('API Error:', data);
-      throw new Error(data.message || `Failed to send OTP (${response.status})`);
+      // Preserve error data structure for USER_NOT_REGISTERED handling
+      const error: any = new Error(data.message || data.error || `Failed to send OTP (${response.status})`);
+      error.response = { 
+        status: response.status,
+        data 
+      };
+      // Extract error data - check both data.data and data structure
+      error.data = data.data || (data.code ? data : null);
+      throw error;
     }
 
     return data;
-  } catch (error) {
+  } catch (error: any) {
     clearTimeout(timeoutId);
     
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         console.error('Request timed out after', API_TIMEOUT, 'ms');
         throw new Error('Request timed out. Please check your internet connection.');
+      }
+      if (error.message?.includes('JSON Parse')) {
+        console.error('JSON Parse error - server may have returned HTML');
+        // Re-throw with more context
+        throw error;
       }
       console.error('Send OTP error:', error.message);
     }
@@ -107,7 +139,7 @@ export const verifyOtp = async (phone: string | undefined, code: string, opts?: 
       {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ phone, code, userId: opts?.userId }),
+        body: JSON.stringify({ phone, code, userId: opts?.userId, app: 'driver' }),
         signal: controller.signal,
       }
     );

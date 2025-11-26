@@ -7,8 +7,9 @@ import { HttpStatus, ErrorMessages } from '../constants/index.js';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import { ValidationError } from './validator.js';
+import { AppError as AppErrorFromErrors } from '../errors/AppError.js';
 
-// Custom error class
+// Custom error class (kept for backward compatibility)
 export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
@@ -49,9 +50,10 @@ export const errorHandler = (
     statusCode = err.statusCode;
     message = t('validation.invalid', language, { field: '' });
     errors = err.errors;
-  } else if (err instanceof AppError) {
+  } else if (err instanceof AppError || err instanceof AppErrorFromErrors) {
     statusCode = err.statusCode;
     message = err.message;
+    // Note: data will be included in response object below
   } else if (err.name === 'ValidationError') {
     statusCode = HttpStatus.BAD_REQUEST;
     message = err.message;
@@ -82,6 +84,11 @@ export const errorHandler = (
 
   if (errors) {
     response.errors = errors;
+  }
+
+  // Include data from AppError if present
+  if ((err instanceof AppErrorFromErrors) && (err as any).data) {
+    response.data = (err as any).data;
   }
 
   if (process.env.NODE_ENV === 'development') {

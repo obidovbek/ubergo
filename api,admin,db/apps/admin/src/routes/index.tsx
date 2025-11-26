@@ -51,6 +51,8 @@ import { VehicleColorEditPage } from '../pages/vehicleColors/VehicleColorEditPag
 import { VehicleTypesListPage } from '../pages/vehicleTypes/VehicleTypesListPage';
 import { VehicleTypeCreatePage } from '../pages/vehicleTypes/VehicleTypeCreatePage';
 import { VehicleTypeEditPage } from '../pages/vehicleTypes/VehicleTypeEditPage';
+import { SupportContactPage } from '../pages/supportContacts/SupportContactPage';
+import { AppStoreUrlPage } from '../pages/appStoreUrls/AppStoreUrlPage';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -469,6 +471,24 @@ export const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <VehicleTypeEditPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/support-contacts"
+          element={
+            <ProtectedRoute>
+              <SupportContactPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/app-store-urls"
+          element={
+            <ProtectedRoute>
+              <AppStoreUrlPage />
             </ProtectedRoute>
           }
         />

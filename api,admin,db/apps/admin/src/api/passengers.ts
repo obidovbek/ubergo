@@ -92,14 +92,34 @@ export const getPassengers = async (
     }
 
     const result = await response.json();
+    
+    // Debug logging
+    console.log('[Passengers API] Response:', result);
+    
     if (result.success && result.data) {
-      return {
-        data: result.data.data || [],
-        total: result.data.pagination?.total || 0,
-        page: result.data.pagination?.page || page,
-        pageSize: result.data.pagination?.limit || pageSize,
-      };
+      // Handle paginated response structure
+      if (result.data.data && Array.isArray(result.data.data)) {
+        return {
+          data: result.data.data,
+          total: result.data.pagination?.total || 0,
+          page: result.data.pagination?.page || page,
+          pageSize: result.data.pagination?.limit || pageSize,
+        };
+      }
+      // Handle direct array response (fallback)
+      if (Array.isArray(result.data)) {
+        return {
+          data: result.data,
+          total: result.data.length,
+          page,
+          pageSize,
+        };
+      }
     }
+    
+    // Log unexpected response structure
+    console.warn('[Passengers API] Unexpected response structure:', result);
+    
     return {
       data: [],
       total: 0,
@@ -177,6 +197,46 @@ export const updatePassenger = async (
         throw new Error('Your session has expired. Please log in again.');
       }
       throw new Error(`Failed to update passenger: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.data || result;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+/**
+ * Update passenger status
+ */
+export const updatePassengerStatus = async (
+  token: string,
+  id: string,
+  status: 'active' | 'blocked' | 'pending_delete'
+): Promise<Passenger> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.passengers.detail(id)}/status`,
+      {
+        method: 'PATCH',
+        headers: getHeaders(token),
+        body: JSON.stringify({ status }),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (isAuthError(response)) {
+        handleAuthError();
+        throw new Error('Your session has expired. Please log in again.');
+      }
+      throw new Error(`Failed to update passenger status: ${response.statusText}`);
     }
 
     const result = await response.json();

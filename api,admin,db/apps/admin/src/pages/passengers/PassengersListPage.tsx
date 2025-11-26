@@ -59,6 +59,25 @@ export const PassengersListPage = () => {
     loadPassengers();
   };
 
+  const handleStatusChange = async (id: string, newStatus: 'active' | 'blocked' | 'pending_delete') => {
+    if (!token) return;
+    
+    const statusText = {
+      active: 'faollashtirish',
+      blocked: 'bloklash',
+      pending_delete: 'o\'chirish kutilmoqda holatiga o\'tkazish'
+    }[newStatus];
+    
+    if (!confirm(`Bu yo'lovchini ${statusText}ni xohlaysizmi?`)) return;
+
+    try {
+      await passengersApi.updatePassengerStatus(token, id, newStatus);
+      loadPassengers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : translations.errors.updateFailed || 'Status yangilashda xatolik');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!token) return;
     if (!confirm('Bu yo\'lovchini o\'chirishni xohlaysizmi?')) return;
@@ -171,6 +190,16 @@ export const PassengersListPage = () => {
                   </td>
                   <td>
                     <div className="action-buttons">
+                      <select
+                        value={passenger.status}
+                        onChange={(e) => handleStatusChange(passenger.id, e.target.value as 'active' | 'blocked' | 'pending_delete')}
+                        className="status-select"
+                        style={{ marginRight: '8px', padding: '4px 8px' }}
+                      >
+                        <option value="active">Faol</option>
+                        <option value="blocked">Bloklangan</option>
+                        <option value="pending_delete">O'chirish kutilmoqda</option>
+                      </select>
                       <Button
                         variant="outlined"
                         size="small"

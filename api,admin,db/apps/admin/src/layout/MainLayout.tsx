@@ -426,6 +426,18 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
             },
           ],
         },
+        {
+          id: 'settings-support-contacts',
+          label: translations.supportContacts?.title || 'Qo\'llab-quvvatlash kontaktlari',
+          icon: <UserIcon />,
+          path: '/support-contacts',
+        },
+        {
+          id: 'settings-app-store-urls',
+          label: translations.appStoreUrls?.title || 'Ilova do\'kon havolalari',
+          icon: <UserIcon />,
+          path: '/app-store-urls',
+        },
       ],
     },
   ];

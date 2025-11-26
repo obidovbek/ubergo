@@ -160,9 +160,34 @@ export const PhoneRegistrationScreen: React.FC = () => {
         console.error('Navigation error:', navError);
         showToast.error('Navigation Error', 'Failed to navigate to OTP screen');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Push notification send error:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // Check if error is USER_NOT_REGISTERED
+      // Try multiple paths to extract error data
+      const errorData = 
+        error?.response?.data?.data || 
+        error?.response?.data || 
+        error?.data || 
+        (error?.response?.status === 400 ? error?.response?.data : null);
+      
+      console.log('Extracted error data:', errorData);
+      
+      if (errorData?.code === 'USER_NOT_REGISTERED') {
+        const appStoreUrls = errorData.app_store_urls;
+        console.log('USER_NOT_REGISTERED detected, app_store_urls:', appStoreUrls);
+        console.log('Full errorData:', JSON.stringify(errorData, null, 2));
+        
+        // Navigate to RegisterFirstScreen with app store URLs (even if null, show defaults)
+        navigation.navigate('RegisterFirst' as any, {
+          appStoreUrls: appStoreUrls || {
+            android: null,
+            ios: null,
+          },
+        });
+        return;
+      }
       
       handleBackendError(error, {
         t,

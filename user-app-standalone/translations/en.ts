@@ -16,6 +16,20 @@ export default {
 
   auth: {
     appName: 'UbexGo',
+    logout: 'Logout',
+    accountBlocked: 'Account Blocked',
+    accountBlockedDescription: 'Unfortunately, your account has been blocked. Please contact support or try again later.',
+    accountPendingDelete: 'Account Deletion in Progress',
+    accountPendingDeleteDescription: 'Your account is in the process of being deleted. If this is a mistake, please contact support.',
+    accountSuspended: 'Account Suspended',
+    accountSuspendedDescription: 'Your account has been temporarily suspended. Please contact support for assistance.',
+    contactSupport: 'Contact Support',
+    supportEmail: 'Email: support@ubexgo.uz',
+    supportPhone: 'Phone: +998 XX XXX XX XX',
+    emailNotAvailable: 'Email client is not available on this device',
+    emailError: 'Unable to open email client',
+    phoneNotAvailable: 'Phone dialer is not available on this device',
+    phoneError: 'Unable to open phone dialer',
   },
 
   phoneRegistration: {
@@ -167,6 +181,16 @@ export default {
     validation: 'Invalid data',
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
+  },
+
+  // Network Status
+  networkStatus: {
+    noInternet: 'No Internet Connection',
+    noInternetMessage: 'We can\'t connect to the server. Please check your internet connection to continue booking your ride.',
+    hint: 'Make sure Wi-Fi or mobile data is turned on',
+    retry: 'Try Again',
+    tip1: 'Check your Wi-Fi or mobile data settings',
+    tip2: 'Pull down to refresh once connected',
   },
 };
 

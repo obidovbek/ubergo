@@ -96,6 +96,8 @@ import { VehicleModel, initVehicleModel } from './VehicleModel.js';
 import { VehicleBodyType, initVehicleBodyType } from './VehicleBodyType.js';
 import { VehicleColor, initVehicleColor } from './VehicleColor.js';
 import { VehicleType, initVehicleType } from './VehicleType.js';
+import { AppStoreUrl, initAppStoreUrl } from './AppStoreUrl.js';
+import { SupportContact, initSupportContact } from './SupportContact.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -126,6 +128,8 @@ initVehicleModel(sequelize);
 initVehicleBodyType(sequelize);
 initVehicleColor(sequelize);
 initVehicleType(sequelize);
+initAppStoreUrl(sequelize);
+initSupportContact(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -324,6 +328,8 @@ export {
   VehicleBodyType,
   VehicleColor,
   VehicleType,
+  AppStoreUrl,
+  SupportContact,
 };
 
 export default sequelize;

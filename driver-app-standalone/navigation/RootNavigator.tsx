@@ -5,15 +5,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ProfileCompletionNavigator } from './ProfileCompletionNavigator';
-import { createTheme } from '../themes';
+import { SplashScreen } from '../components/SplashScreen';
 import { getDriverProfileStatus } from '../api/driver';
-
-const theme = createTheme('light');
 
 export const RootNavigator: React.FC = () => {
   const { isAuthenticated, user, isLoading, token } = useAuth();
@@ -58,14 +55,10 @@ export const RootNavigator: React.FC = () => {
   // 2. After taxi license submission (DriverTaxiLicenseScreen calls checkDriverProfileStatus)
   // No polling needed - prevents unnecessary API calls
 
-  // Show loading indicator while checking auth state or profile
+  // Show splash screen while checking auth state or profile
   if (isLoading || checkingProfile) {
-    console.log('RootNavigator: Showing loading indicator');
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.palette.secondary.main} />
-      </View>
-    );
+    console.log('RootNavigator: Showing splash screen');
+    return <SplashScreen />;
   }
 
   // Determine which navigator to show
@@ -94,13 +87,4 @@ export const RootNavigator: React.FC = () => {
     </NavigationContainer>
   );
 };
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.palette.background.default,
-  },
-});
 

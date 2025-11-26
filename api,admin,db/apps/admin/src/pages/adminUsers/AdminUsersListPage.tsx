@@ -10,11 +10,12 @@ import * as adminUsersApi from '../../api/adminUsers';
 import type { AdminUser } from '../../api/adminUsers';
 import { Button } from '../../components/Button';
 import { translations } from '../../utils/translations';
+import { handleApiError } from '../../utils/errorHandler';
 import './AdminUsersListPage.css';
 
 export const AdminUsersListPage = () => {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,11 @@ export const AdminUsersListPage = () => {
       setAdminUsers(response.adminUsers);
       setTotal(response.total);
     } catch (err) {
+      // Handle authentication errors by redirecting to login
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
       setError(err instanceof Error ? err.message : translations.errors.loadFailed);
     } finally {
       setLoading(false);
@@ -52,6 +58,11 @@ export const AdminUsersListPage = () => {
       await adminUsersApi.deleteAdminUser(token, id);
       loadAdminUsers();
     } catch (err) {
+      // Handle authentication errors by redirecting to login
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
       alert(err instanceof Error ? err.message : translations.errors.deleteFailed);
     }
   };

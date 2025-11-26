@@ -8,6 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { PhoneRegistrationScreen } from '../screens/PhoneRegistrationScreen';
 import { OTPVerificationScreen } from '../screens/OTPVerificationScreen';
+import { RegisterFirstScreen } from '../screens/RegisterFirstScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
 import { DriverPersonalInfoScreen } from '../screens/DriverPersonalInfoScreen';
 import { DriverPassportScreen } from '../screens/DriverPassportScreen';
@@ -37,6 +38,11 @@ export const AuthNavigator: React.FC = () => {
         name="PhoneRegistration" 
         component={PhoneRegistrationScreen}
         options={{ title: 'Phone Registration' }}
+      />
+      <Stack.Screen 
+        name="RegisterFirst" 
+        component={RegisterFirstScreen}
+        options={{ title: 'Register First' }}
       />
       <Stack.Screen 
         name="OTPVerification" 

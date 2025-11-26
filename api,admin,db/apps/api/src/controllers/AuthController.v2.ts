@@ -4,9 +4,11 @@
  */
 
 import type { Request, Response } from 'express';
-import { User } from '../database/models/index.js';
+import { User, PushToken } from '../database/models/index.js';
 import OtpService from '../services/OtpService.js';
 import SsoService from '../services/SsoService.js';
+import PushService from '../services/PushService.js';
+import AppStoreUrlService from '../services/AppStoreUrlService.js';
 import { generateTokenPair, rotateTokens, revokeToken, verifyAccessToken } from '../utils/jwt.js';
 import { logAudit, AuditActions } from '../utils/auditLogger.js';
 import { AppError } from '../errors/AppError.js';
@@ -17,7 +19,7 @@ import { AppError } from '../errors/AppError.js';
  */
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
-    const { phone: rawPhone, userId, channel = 'sms' } = req.body as any;
+    const { phone: rawPhone, userId, channel = 'sms', app = 'user' } = req.body as any;
     let phone = rawPhone as string | undefined;
 
     if (!phone && userId) {
@@ -34,6 +36,28 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
 
     if (!['sms', 'call', 'push'].includes(channel)) {
       throw new AppError('Invalid channel. Use "sms", "call" or "push"', 400);
+    }
+
+    // If request is from driver app, check if phone exists in user app
+    if (app === 'driver') {
+      const userExists = await User.findOne({ where: { phone_e164: phone } });
+      
+      if (!userExists) {
+        // Get app store URLs
+        const appStoreUrls = await AppStoreUrlService.getAppStoreUrls('user_app');
+        
+        throw new AppError(
+          'Please register in the passenger app first',
+          400,
+          {
+            code: 'USER_NOT_REGISTERED',
+            app_store_urls: {
+              android: appStoreUrls.android_url,
+              ios: appStoreUrls.ios_url
+            }
+          }
+        );
+      }
     }
 
     const metadata = {
@@ -66,7 +90,7 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
  */
 export async function verifyOtp(req: Request, res: Response): Promise<void> {
   try {
-    const { phone: rawPhone, userId, code } = req.body as any;
+    const { phone: rawPhone, userId, code, app = 'user' } = req.body as any;
 
     let phone = rawPhone as string | undefined;
     if (!phone && userId) {
@@ -79,6 +103,28 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
 
     if (!phone || !code) {
       throw new AppError('Phone number or userId and code are required', 400);
+    }
+
+    // If request is from driver app, check if phone exists in user app
+    if (app === 'driver') {
+      const userExists = await User.findOne({ where: { phone_e164: phone } });
+      
+      if (!userExists) {
+        // Get app store URLs
+        const appStoreUrls = await AppStoreUrlService.getAppStoreUrls('user_app');
+        
+        throw new AppError(
+          'Please register in the passenger app first',
+          400,
+          {
+            code: 'USER_NOT_REGISTERED',
+            app_store_urls: {
+              android: appStoreUrls.android_url,
+              ios: appStoreUrls.ios_url
+            }
+          }
+        );
+      }
     }
 
     // Verify OTP
@@ -114,6 +160,33 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // If driver app login, send push notification to user app
+    if (app === 'driver' && user) {
+      try {
+        // Find latest push token for user app
+        const pushToken = await PushToken.findOne({
+          where: { user_id: user.id, app: 'user' },
+          order: [['updated_at', 'DESC']],
+        });
+
+        if (pushToken) {
+          await PushService.send({
+            token: pushToken.token,
+            title: 'Haydovchi ilovasi',
+            body: 'Siz haydovchi ilovasiga kirgansiz',
+            data: { 
+              type: 'driver_login',
+              phone: phone || '',
+              timestamp: new Date().toISOString()
+            },
+          });
+        }
+      } catch (pushError: any) {
+        // Log push notification error but don't fail the login
+        console.error('Failed to send push notification to user app:', pushError.message);
+      }
+    }
+
     // Generate tokens
     const tokens = generateTokenPair({
       userId: user.id,
@@ -125,7 +198,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     await logAudit({
       userId: user.id,
       action: AuditActions.AUTH_OTP_VERIFY,
-      payload: { phone },
+      payload: { phone, app },
       req,
     });
 
@@ -424,14 +497,8 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       throw new AppError('User not found', 404);
     }
 
-    if (user.status === 'blocked') {
-      throw new AppError('User account is blocked', 403);
-    }
-
-    if (user.status === 'pending_delete') {
-      throw new AppError('User account is pending deletion', 403);
-    }
-
+    // Return user data even if blocked/pending_delete so app can show appropriate screen
+    // The app will handle showing blocked screen based on status
     res.status(200).json({
       success: true,
       data: {
