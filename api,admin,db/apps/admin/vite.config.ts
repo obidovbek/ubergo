@@ -20,6 +20,26 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Proxy uploads to backend to avoid CORS issues in development
+      '/uploads': {
+        target: process.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4001',
+        changeOrigin: true,
+        secure: false,
+        // Preserve the original path
+        rewrite: (path) => path,
+        // Handle errors
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, res) => {
+            console.error('Proxy error:', err);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Log proxy responses in development
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[PROXY] ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
+            }
+          });
+        },
+      },
     },
   },
 });

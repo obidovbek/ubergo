@@ -16,13 +16,10 @@ import './DriverDetailPage.css';
 /**
  * Convert image URL to absolute URL using API base URL
  * Handles both relative paths (/uploads/...) and full URLs
- * Always uses the API_BASE_URL to ensure correct origin
+ * Always constructs full URL based on API_BASE_URL to ensure consistency
  */
 const getImageUrl = (imageUrl: string | null | undefined): string | null => {
   if (!imageUrl) return null;
-  
-  // Extract base URL from API_BASE_URL (remove /api suffix if present)
-  const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
   
   // If already a full URL, extract just the path part
   let imagePath = imageUrl;
@@ -41,6 +38,23 @@ const getImageUrl = (imageUrl: string | null | undefined): string | null => {
   
   // Ensure image URL starts with /
   const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // Extract base URL from API_BASE_URL (remove /api suffix if present)
+  // For development, check if we're running on localhost and use localhost:4001 directly
+  let apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+  
+  // In development, if API_BASE_URL points to production but we're on localhost,
+  // use localhost:4001 directly
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname === '0.0.0.0';
+    
+    if (isLocalhost && apiBaseUrl.includes('fstu.uz')) {
+      // Override with localhost for development
+      apiBaseUrl = 'http://localhost:4001';
+    }
+  }
   
   return `${apiBaseUrl}${normalizedPath}`;
 };
@@ -333,15 +347,21 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Yuz rasmi</label>
                       {imageErrors.has(profile.photo_face_url) ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                          Rasm yuklanmadi
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '12px' }}>
+                          <div>Rasm yuklanmadi</div>
+                          <div style={{ marginTop: '5px', opacity: 0.7 }}>
+                            {getImageUrl(profile.photo_face_url) || profile.photo_face_url}
+                          </div>
                         </div>
                       ) : (
                         <img 
                           src={getImageUrl(profile.photo_face_url) || ''} 
                           alt="Yuz" 
                           onClick={() => setSelectedImage(getImageUrl(profile.photo_face_url) || null)}
-                          onError={() => handleImageError(profile.photo_face_url)}
+                          onError={() => {
+                            console.error('Image load error:', profile.photo_face_url, '->', getImageUrl(profile.photo_face_url));
+                            handleImageError(profile.photo_face_url);
+                          }}
                           onLoad={() => handleImageLoad(profile.photo_face_url)}
                         />
                       )}
@@ -351,15 +371,21 @@ export const DriverDetailPage = () => {
                     <div className="photo-item">
                       <label>Tana rasmi</label>
                       {imageErrors.has(profile.photo_body_url) ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                          Rasm yuklanmadi
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '12px' }}>
+                          <div>Rasm yuklanmadi</div>
+                          <div style={{ marginTop: '5px', opacity: 0.7 }}>
+                            {getImageUrl(profile.photo_body_url) || profile.photo_body_url}
+                          </div>
                         </div>
                       ) : (
                         <img 
                           src={getImageUrl(profile.photo_body_url) || ''} 
                           alt="Tana" 
                           onClick={() => setSelectedImage(getImageUrl(profile.photo_body_url) || null)}
-                          onError={() => handleImageError(profile.photo_body_url)}
+                          onError={() => {
+                            console.error('Image load error:', profile.photo_body_url, '->', getImageUrl(profile.photo_body_url));
+                            handleImageError(profile.photo_body_url);
+                          }}
                           onLoad={() => handleImageLoad(profile.photo_body_url)}
                         />
                       )}
