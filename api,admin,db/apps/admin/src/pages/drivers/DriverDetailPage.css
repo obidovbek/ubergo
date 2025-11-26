@@ -207,6 +207,13 @@
   max-height: 300px;
   object-fit: contain;
   background: #1f1f1f;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.photo-item img:hover {
+  transform: scale(1.02);
+  border-color: #64b5f6;
 }
 
 .phones-list,

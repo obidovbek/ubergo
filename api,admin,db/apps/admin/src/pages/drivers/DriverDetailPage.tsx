@@ -19,6 +19,7 @@ export const DriverDetailPage = () => {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (token && id) {
@@ -283,13 +284,21 @@ export const DriverDetailPage = () => {
                   {profile.photo_face_url && (
                     <div className="photo-item">
                       <label>Yuz rasmi</label>
-                      <img src={profile.photo_face_url} alt="Yuz" />
+                      <img 
+                        src={profile.photo_face_url} 
+                        alt="Yuz" 
+                        onClick={() => setSelectedImage(profile.photo_face_url || null)}
+                      />
                     </div>
                   )}
                   {profile.photo_body_url && (
                     <div className="photo-item">
                       <label>Tana rasmi</label>
-                      <img src={profile.photo_body_url} alt="Tana" />
+                      <img 
+                        src={profile.photo_body_url} 
+                        alt="Tana" 
+                        onClick={() => setSelectedImage(profile.photo_body_url || null)}
+                      />
                     </div>
                   )}
                 </div>
@@ -357,13 +366,21 @@ export const DriverDetailPage = () => {
                   {profile.passport.passport_front_url && (
                     <div className="photo-item">
                       <label>Old tomoni</label>
-                      <img src={profile.passport.passport_front_url} alt="Pasport old" />
+                      <img 
+                        src={profile.passport.passport_front_url} 
+                        alt="Pasport old" 
+                        onClick={() => setSelectedImage(profile.passport.passport_front_url || null)}
+                      />
                     </div>
                   )}
                   {profile.passport.passport_back_url && (
                     <div className="photo-item">
                       <label>Orqa tomoni</label>
-                      <img src={profile.passport.passport_back_url} alt="Pasport orqa" />
+                      <img 
+                        src={profile.passport.passport_back_url} 
+                        alt="Pasport orqa" 
+                        onClick={() => setSelectedImage(profile.passport.passport_back_url || null)}
+                      />
                     </div>
                   )}
                 </div>
@@ -414,13 +431,21 @@ export const DriverDetailPage = () => {
                   {profile.license.license_front_url && (
                     <div className="photo-item">
                       <label>Old tomoni</label>
-                      <img src={profile.license.license_front_url} alt="Guvohnoma old" />
+                      <img 
+                        src={profile.license.license_front_url} 
+                        alt="Guvohnoma old" 
+                        onClick={() => setSelectedImage(profile.license.license_front_url || null)}
+                      />
                     </div>
                   )}
                   {profile.license.license_back_url && (
                     <div className="photo-item">
                       <label>Orqa tomoni</label>
-                      <img src={profile.license.license_back_url} alt="Guvohnoma orqa" />
+                      <img 
+                        src={profile.license.license_back_url} 
+                        alt="Guvohnoma orqa" 
+                        onClick={() => setSelectedImage(profile.license.license_back_url || null)}
+                      />
                     </div>
                   )}
                 </div>
@@ -547,34 +572,100 @@ export const DriverDetailPage = () => {
               </div>
             )}
 
+            {/* Vehicle Tech Passport Photos */}
+            {(profile.vehicle.tech_passport_front_url || profile.vehicle.tech_passport_back_url) && (
+              <div className="photos-section">
+                <h3>Texnik pasport rasmlari</h3>
+                <div className="photos-grid">
+                  {profile.vehicle.tech_passport_front_url && (
+                    <div className="photo-item">
+                      <label>Texnik pasport old tomoni</label>
+                      <img 
+                        src={profile.vehicle.tech_passport_front_url} 
+                        alt="Texnik pasport old" 
+                        onClick={() => setSelectedImage(profile.vehicle.tech_passport_front_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.vehicle.tech_passport_back_url && (
+                    <div className="photo-item">
+                      <label>Texnik pasport orqa tomoni</label>
+                      <img 
+                        src={profile.vehicle.tech_passport_back_url} 
+                        alt="Texnik pasport orqa" 
+                        onClick={() => setSelectedImage(profile.vehicle.tech_passport_back_url || null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Vehicle Photos */}
             {(profile.vehicle.photo_front_url || profile.vehicle.photo_back_url || 
-              profile.vehicle.photo_right_url || profile.vehicle.photo_left_url) && (
+              profile.vehicle.photo_right_url || profile.vehicle.photo_left_url ||
+              profile.vehicle.photo_angle_45_url || profile.vehicle.photo_interior_url) && (
               <div className="photos-section">
                 <h3>Transport rasmlari</h3>
                 <div className="photos-grid">
                   {profile.vehicle.photo_front_url && (
                     <div className="photo-item">
-                      <label>Old</label>
-                      <img src={profile.vehicle.photo_front_url} alt="Old" />
+                      <label>Old tomoni</label>
+                      <img 
+                        src={profile.vehicle.photo_front_url} 
+                        alt="Old" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_front_url || null)}
+                      />
                     </div>
                   )}
                   {profile.vehicle.photo_back_url && (
                     <div className="photo-item">
-                      <label>Orqa</label>
-                      <img src={profile.vehicle.photo_back_url} alt="Orqa" />
+                      <label>Orqa tomoni</label>
+                      <img 
+                        src={profile.vehicle.photo_back_url} 
+                        alt="Orqa" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_back_url || null)}
+                      />
                     </div>
                   )}
                   {profile.vehicle.photo_right_url && (
                     <div className="photo-item">
-                      <label>O'ng</label>
-                      <img src={profile.vehicle.photo_right_url} alt="O'ng" />
+                      <label>O'ng tomoni</label>
+                      <img 
+                        src={profile.vehicle.photo_right_url} 
+                        alt="O'ng" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_right_url || null)}
+                      />
                     </div>
                   )}
                   {profile.vehicle.photo_left_url && (
                     <div className="photo-item">
-                      <label>Chap</label>
-                      <img src={profile.vehicle.photo_left_url} alt="Chap" />
+                      <label>Chap tomoni</label>
+                      <img 
+                        src={profile.vehicle.photo_left_url} 
+                        alt="Chap" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_left_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.vehicle.photo_angle_45_url && (
+                    <div className="photo-item">
+                      <label>45° burchak ko'rinishi</label>
+                      <img 
+                        src={profile.vehicle.photo_angle_45_url} 
+                        alt="45° burchak" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_angle_45_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.vehicle.photo_interior_url && (
+                    <div className="photo-item">
+                      <label>Salon rasmi</label>
+                      <img 
+                        src={profile.vehicle.photo_interior_url} 
+                        alt="Salon" 
+                        onClick={() => setSelectedImage(profile.vehicle.photo_interior_url || null)}
+                      />
                     </div>
                   )}
                 </div>
@@ -620,6 +711,69 @@ export const DriverDetailPage = () => {
                 <span>{profile.taxiLicense.self_employment_number || '-'}</span>
               </div>
             </div>
+
+            {/* Taxi License Documents */}
+            {(profile.taxiLicense.license_document_url || 
+              profile.taxiLicense.license_sheet_document_url || 
+              profile.taxiLicense.self_employment_document_url ||
+              profile.taxiLicense.power_of_attorney_document_url ||
+              profile.taxiLicense.insurance_document_url) && (
+              <div className="photos-section">
+                <h3>Taksi litsenziya hujjatlari</h3>
+                <div className="photos-grid">
+                  {profile.taxiLicense.license_document_url && (
+                    <div className="photo-item">
+                      <label>Litsenziya hujjati</label>
+                      <img 
+                        src={profile.taxiLicense.license_document_url} 
+                        alt="Litsenziya hujjati" 
+                        onClick={() => setSelectedImage(profile.taxiLicense.license_document_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.taxiLicense.license_sheet_document_url && (
+                    <div className="photo-item">
+                      <label>Litsenziya varaqasi hujjati</label>
+                      <img 
+                        src={profile.taxiLicense.license_sheet_document_url} 
+                        alt="Litsenziya varaqasi" 
+                        onClick={() => setSelectedImage(profile.taxiLicense.license_sheet_document_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.taxiLicense.self_employment_document_url && (
+                    <div className="photo-item">
+                      <label>O'zini o'zi band qilish hujjati</label>
+                      <img 
+                        src={profile.taxiLicense.self_employment_document_url} 
+                        alt="O'zini o'zi band qilish" 
+                        onClick={() => setSelectedImage(profile.taxiLicense.self_employment_document_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.taxiLicense.power_of_attorney_document_url && (
+                    <div className="photo-item">
+                      <label>Ishonchnoma hujjati</label>
+                      <img 
+                        src={profile.taxiLicense.power_of_attorney_document_url} 
+                        alt="Ishonchnoma" 
+                        onClick={() => setSelectedImage(profile.taxiLicense.power_of_attorney_document_url || null)}
+                      />
+                    </div>
+                  )}
+                  {profile.taxiLicense.insurance_document_url && (
+                    <div className="photo-item">
+                      <label>Sugurta hujjati</label>
+                      <img 
+                        src={profile.taxiLicense.insurance_document_url} 
+                        alt="Sugurta" 
+                        onClick={() => setSelectedImage(profile.taxiLicense.insurance_document_url || null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -656,6 +810,62 @@ export const DriverDetailPage = () => {
           </section>
         )}
       </div>
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div 
+          className="image-lightbox"
+          onClick={() => setSelectedImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            cursor: 'pointer',
+            padding: '20px'
+          }}
+        >
+          <img 
+            src={selectedImage} 
+            alt="Kattalashtirilgan rasm"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: '4px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setSelectedImage(null)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              color: '#fff',
+              fontSize: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 };
