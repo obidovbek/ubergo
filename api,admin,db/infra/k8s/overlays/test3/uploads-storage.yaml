@@ -1,0 +1,35 @@
+# ------------------------
+# PersistentVolume for Uploads
+# ------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: uploads-pv-test3
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /opt/local-path-provisioner/uploads-data-test3
+
+---
+# ------------------------
+# PersistentVolumeClaim for Uploads
+# ------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc-test3
+  namespace: test3
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: uploads-pv-test3
+  storageClassName: local-path
+

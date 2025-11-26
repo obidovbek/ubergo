@@ -8,6 +8,7 @@ resources:
   - admin-service.yaml
   - ingress.yaml
   - postgres.yaml
+  - uploads-storage.yaml
 
 images:
   - name: REPLACEME

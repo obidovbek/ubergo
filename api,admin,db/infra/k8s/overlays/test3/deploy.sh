@@ -10,8 +10,9 @@ echo "🧹 Resetting namespace..."
 kubectl delete namespace test3 --ignore-not-found
 kubectl create namespace test3
 
-echo "🧹 Resetting PersistentVolume..."
+echo "🧹 Resetting PersistentVolumes..."
 kubectl patch pv postgres-pv-test3 -p '{"spec":{"claimRef": null}}' || true
+kubectl patch pv uploads-pv-test3 -p '{"spec":{"claimRef": null}}' || true
 
 echo "🚀 Building API..."
 cd "$PROJECT_ROOT/apps/api"

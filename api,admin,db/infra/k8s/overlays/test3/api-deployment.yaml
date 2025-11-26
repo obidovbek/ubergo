@@ -41,6 +41,11 @@ spec:
               value: "production"
             - name: DB_HOST
               value: "postgres-service-test3"
+            - name: UPLOAD_PATH
+              value: "/app/uploads"
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /app/uploads
           readinessProbe:
             httpGet:
               path: /health
@@ -57,4 +62,8 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 3
+      volumes:
+        - name: uploads-storage
+          persistentVolumeClaim:
+            claimName: uploads-pvc-test3
 
