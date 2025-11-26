@@ -29,10 +29,10 @@ export default defineConfig({
         rewrite: (path) => path,
         // Handle errors
         configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, res) => {
+          proxy.on('error', (err, _req, _res) => {
             console.error('Proxy error:', err);
           });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
             // Log proxy responses in development
             if (process.env.NODE_ENV === 'development') {
               console.log(`[PROXY] ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
