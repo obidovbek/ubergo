@@ -17,7 +17,7 @@ import Toast from 'react-native-toast-message';
 import { toastConfig } from './utils/toast';
 import { ensurePushPermission, setupForegroundNotificationHandler } from './services/PushService';
 
-// Register background message handler at module level (only for native platforms)
+// Register background message handler at module level (only for native platforms) d
 if (Platform.OS !== 'web') {
   const messaging = require('@react-native-firebase/messaging').default;
   messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
