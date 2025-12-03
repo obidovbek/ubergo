@@ -82,7 +82,7 @@ export const DriverDetailPage = () => {
       return newSet;
     });
   };
-
+ // 
   useEffect(() => {
     if (token && id) {
       loadDriver();
