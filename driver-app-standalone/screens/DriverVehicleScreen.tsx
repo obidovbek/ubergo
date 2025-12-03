@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -63,13 +63,15 @@ const fuelTypeLabels = {
 
 export const DriverVehicleScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
-  
+
   // Field validation errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -89,7 +91,7 @@ export const DriverVehicleScreen: React.FC = () => {
     styles.selectInput,
     fieldErrors[field] ? styles.selectInputError : undefined,
   ];
-  
+
   // Photo URI states
   const [techPassportFrontUri, setTechPassportFrontUri] = useState<string | null>(null);
   const [techPassportBackUri, setTechPassportBackUri] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export const DriverVehicleScreen: React.FC = () => {
   const [photoLeftUri, setPhotoLeftUri] = useState<string | null>(null);
   const [photoAngle45Uri, setPhotoAngle45Uri] = useState<string | null>(null);
   const [photoInteriorUri, setPhotoInteriorUri] = useState<string | null>(null);
-  
+
   // Vehicle dropdown state
   type VehicleFieldType = 'type' | 'make' | 'model' | 'body_type' | 'color';
   const [vehicleModalType, setVehicleModalType] = useState<VehicleFieldType | null>(null);
@@ -114,7 +116,7 @@ export const DriverVehicleScreen: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<VehicleModelOption | null>(null);
   const [selectedBodyType, setSelectedBodyType] = useState<VehicleBodyTypeOption | null>(null);
   const [selectedColor, setSelectedColor] = useState<VehicleColorOption | null>(null);
-  
+
   // Geo location state
   type GeoFieldType = 'country' | 'province' | 'city_district' | 'administrative_area' | 'settlement' | 'neighborhood';
   const [geoModalType, setGeoModalType] = useState<GeoFieldType | null>(null);
@@ -131,7 +133,7 @@ export const DriverVehicleScreen: React.FC = () => {
   const [selectedAdministrativeArea, setSelectedAdministrativeArea] = useState<GeoOption | null>(null);
   const [selectedSettlement, setSelectedSettlement] = useState<GeoOption | null>(null);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<GeoOption | null>(null);
-  
+
   const [formData, setFormData] = useState({
     // Vehicle basic info
     vehicle_type: '' as 'light' | 'cargo' | '', // Legacy enum field
@@ -186,14 +188,44 @@ export const DriverVehicleScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    loadVehicleData();
-    loadVehicleOptions();
-    loadInitialGeoData();
-  }, []);
+    const initializeData = async () => {
+      if (!token) return;
+      
+      try {
+        setInitialLoading(true);
+        
+        // Load all initial data in parallel
+        const [countriesData, typesData, makesData, bodyTypesData, colorsData] = await Promise.all([
+          fetchGeoCountries(),
+          fetchVehicleTypes(token),
+          fetchVehicleMakes(token),
+          fetchVehicleBodyTypes(token),
+          fetchVehicleColors(token),
+        ]);
+
+        // Set all options first
+        setCountries(countriesData);
+        setTypes(typesData);
+        setMakes(makesData);
+        setBodyTypes(bodyTypesData);
+        setColors(colorsData);
+
+        // Then load vehicle data (which depends on options being loaded)
+        await loadVehicleData(typesData, makesData, bodyTypesData, colorsData, countriesData);
+      } catch (error) {
+        console.error('Failed to initialize data:', error);
+        showToast.error(t('common.error'), 'Ma\'lumotlarni yuklashda xatolik');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [token]);
 
   const loadInitialGeoData = async () => {
     if (!token) return;
-    
+
     try {
       const countriesData = await fetchGeoCountries();
       setCountries(countriesData);
@@ -204,31 +236,31 @@ export const DriverVehicleScreen: React.FC = () => {
 
   const loadVehicleOptions = async () => {
     if (!token) return;
-    
+
     try {
-      setInitialLoading(true);
       const [typesData, makesData, bodyTypesData, colorsData] = await Promise.all([
         fetchVehicleTypes(token),
         fetchVehicleMakes(token),
         fetchVehicleBodyTypes(token),
         fetchVehicleColors(token),
       ]);
-      
+
       setTypes(typesData);
       setMakes(makesData);
       setBodyTypes(bodyTypesData);
       setColors(colorsData);
+      
+      return { typesData, makesData, bodyTypesData, colorsData };
     } catch (error) {
       console.error('Failed to load vehicle options:', error);
       showToast.error(t('common.error'), 'Transport ma\'lumotlarini yuklashda xatolik');
-    } finally {
-      setInitialLoading(false);
+      return null;
     }
   };
 
   const loadVehicleModels = async (makeId: string) => {
     if (!token || !makeId) return;
-    
+
     try {
       const modelsData = await fetchVehicleModels(token, makeId);
       setModels(modelsData);
@@ -240,26 +272,34 @@ export const DriverVehicleScreen: React.FC = () => {
     }
   };
 
-  const loadVehicleData = async () => {
+  const loadVehicleData = async (
+    typesData?: VehicleTypeOption[],
+    makesData?: VehicleMakeOption[],
+    bodyTypesData?: VehicleBodyTypeOption[],
+    colorsData?: VehicleColorOption[],
+    countriesData?: GeoOption[]
+  ) => {
     if (!token) return;
-    
+
     try {
       const profile = await getDriverProfile(token);
       if (profile.profile && (profile.profile as any).vehicle) {
         const vehicle = (profile.profile as any).vehicle;
-        
-        // Load vehicle options first if not loaded
-        if (makes.length === 0) {
-          await loadVehicleOptions();
-        }
-        
+
+        // Use passed options or current state
+        const availableTypes = typesData || types;
+        const availableMakes = makesData || makes;
+        const availableBodyTypes = bodyTypesData || bodyTypes;
+        const availableColors = colorsData || colors;
+        const availableCountries = countriesData || countries;
+
         // Set form data with IDs if available
         const typeId = vehicle.vehicle_type_id || '';
         const makeId = vehicle.vehicle_make_id || '';
         const modelId = vehicle.vehicle_model_id || '';
         const bodyTypeId = vehicle.vehicle_body_type_id || '';
         const colorId = vehicle.vehicle_color_id || '';
-        
+
         setFormData(prev => ({
           ...prev,
           vehicle_type: vehicle.vehicle_type || '', // Legacy enum
@@ -334,17 +374,17 @@ export const DriverVehicleScreen: React.FC = () => {
         if (vehicle.photo_interior_url) {
           setPhotoInteriorUri(vehicle.photo_interior_url);
         }
-        
-        // Set selected options if IDs exist
-        if (typeId && types.length > 0) {
-          const typeOption = types.find(t => t.id === typeId);
+
+        // Set selected options if IDs exist - use passed data or wait for it
+        if (typeId && availableTypes.length > 0) {
+          const typeOption = availableTypes.find(t => t.id === typeId);
           if (typeOption) {
             setSelectedType(typeOption);
           }
         }
-        
-        if (makeId && makes.length > 0) {
-          const makeOption = makes.find(m => m.id === makeId);
+
+        if (makeId && availableMakes.length > 0) {
+          const makeOption = availableMakes.find(m => m.id === makeId);
           if (makeOption) {
             setSelectedMake(makeOption);
             // Load models for this make
@@ -357,16 +397,16 @@ export const DriverVehicleScreen: React.FC = () => {
             }
           }
         }
-        
-        if (bodyTypeId && bodyTypes.length > 0) {
-          const bodyTypeOption = bodyTypes.find(b => b.id === bodyTypeId);
+
+        if (bodyTypeId && availableBodyTypes.length > 0) {
+          const bodyTypeOption = availableBodyTypes.find(b => b.id === bodyTypeId);
           if (bodyTypeOption) {
             setSelectedBodyType(bodyTypeOption);
           }
         }
-        
-        if (colorId && colors.length > 0) {
-          const colorOption = colors.find(c => c.id === colorId);
+
+        if (colorId && availableColors.length > 0) {
+          const colorOption = availableColors.find(c => c.id === colorId);
           if (colorOption) {
             setSelectedColor(colorOption);
           }
@@ -374,43 +414,37 @@ export const DriverVehicleScreen: React.FC = () => {
 
         // Load and set geo options if IDs exist
         if (vehicle.owner_address_country_id) {
-          // Load countries if not loaded
-          if (countries.length === 0) {
-            const countriesData = await fetchGeoCountries();
-            setCountries(countriesData);
-          }
-          
-          const countryOption = findOptionById(countries, vehicle.owner_address_country_id);
+          const countryOption = findOptionById(availableCountries, vehicle.owner_address_country_id);
           if (countryOption) {
             setSelectedCountry(countryOption);
             const provincesData = await loadProvinces(vehicle.owner_address_country_id);
-            
+
             if (vehicle.owner_address_province_id) {
               const provinceOption = findOptionById(provincesData, vehicle.owner_address_province_id);
               if (provinceOption) {
                 setSelectedProvince(provinceOption);
                 const cityDistrictsData = await loadCityDistrictsList(vehicle.owner_address_province_id);
-                
+
                 if (vehicle.owner_address_city_district_id) {
                   const cityOption = findOptionById(cityDistrictsData, vehicle.owner_address_city_district_id);
                   if (cityOption) {
                     setSelectedCityDistrict(cityOption);
                     const { areas, settlements: settlementsData, neighborhoods: neighborhoodsData } = await loadCityChildren(vehicle.owner_address_city_district_id);
-                    
+
                     if (vehicle.owner_address_administrative_area_id) {
                       const areaOption = findOptionById(areas, vehicle.owner_address_administrative_area_id);
                       if (areaOption) {
                         setSelectedAdministrativeArea(areaOption);
                       }
                     }
-                    
+
                     if (vehicle.owner_address_settlement_id) {
                       const settlementOption = findOptionById(settlementsData, vehicle.owner_address_settlement_id);
                       if (settlementOption) {
                         setSelectedSettlement(settlementOption);
                       }
                     }
-                    
+
                     if (vehicle.owner_address_neighborhood_id) {
                       const neighborhoodOption = findOptionById(neighborhoodsData, vehicle.owner_address_neighborhood_id);
                       if (neighborhoodOption) {
@@ -529,7 +563,7 @@ export const DriverVehicleScreen: React.FC = () => {
       default:
         return [];
     }
-    
+
     // Filter options based on search query
     if (vehicleSearchQuery.trim()) {
       const query = vehicleSearchQuery.toLowerCase().trim();
@@ -541,22 +575,22 @@ export const DriverVehicleScreen: React.FC = () => {
         return name.includes(query) || nameUz.includes(query) || nameRu.includes(query) || nameEn.includes(query);
       });
     }
-    
+
     return options;
   };
 
   const getVehicleModalTitle = (type: VehicleFieldType | null): string => {
     switch (type) {
       case 'type':
-        return 'Transport turini tanlang';
+        return t('driverVehicle.selectVehicleType');
       case 'make':
-        return 'Markani tanlang';
+        return t('driverVehicle.selectMake');
       case 'model':
-        return 'Modelni tanlang';
+        return t('driverVehicle.selectModel');
       case 'body_type':
-        return 'Kuzov turini tanlang';
+        return t('driverVehicle.selectBodyType');
       case 'color':
-        return 'Rangni tanlang';
+        return t('driverVehicle.selectColor');
       default:
         return '';
     }
@@ -827,7 +861,7 @@ export const DriverVehicleScreen: React.FC = () => {
       default:
         return [];
     }
-    
+
     // Filter options based on search query
     if (geoSearchQuery.trim()) {
       const query = geoSearchQuery.toLowerCase().trim();
@@ -837,31 +871,31 @@ export const DriverVehicleScreen: React.FC = () => {
         return nameMatch || typeMatch;
       });
     }
-    
+
     return options;
   };
 
   const getGeoModalTitle = (type: GeoFieldType | null): string => {
     switch (type) {
       case 'country':
-        return 'Mamlakatni tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.country').toLowerCase();
       case 'province':
-        return 'Viloyatni tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.province').toLowerCase();
       case 'city_district':
-        return 'Shahar yoki tumanni tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.cityDistrict').toLowerCase();
       case 'administrative_area':
-        return 'Maʼmuriy hududni tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.administrativeArea').toLowerCase();
       case 'settlement':
-        return 'Aholi punktini tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.settlement').toLowerCase();
       case 'neighborhood':
-        return 'Mahallani tanlang';
+        return t('driverVehicle.select') + ' ' + t('driverVehicle.neighborhood').toLowerCase();
       default:
         return '';
     }
   };
 
   // Photo upload handlers
-  type PhotoType = 
+  type PhotoType =
     | 'tech_passport_front'
     | 'tech_passport_back'
     | 'photo_front'
@@ -945,11 +979,11 @@ export const DriverVehicleScreen: React.FC = () => {
       }
 
       const asset = result.assets[0];
-      
+
       try {
         // Use base64 from expo-image-picker if available, otherwise fallback
         let base64: string;
-        
+
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
@@ -960,7 +994,7 @@ export const DriverVehicleScreen: React.FC = () => {
           if (Platform.OS === 'web') {
             const response = await fetch(asset.uri);
             const blob = await response.blob();
-            
+
             base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
@@ -978,7 +1012,7 @@ export const DriverVehicleScreen: React.FC = () => {
             throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
         }
-        
+
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
         if (asset.type) {
@@ -1000,17 +1034,17 @@ export const DriverVehicleScreen: React.FC = () => {
             fileExtension = ext === 'jpeg' ? 'jpg' : ext;
           }
         }
-        
+
         // Upload to server
         if (!token) {
           throw new Error('Token is required');
         }
         const imageUrl = await uploadImage(token, base64, fileExtension);
-        
+
         // Update state and form data based on photo type
         const fieldName = `${photoType}_url` as keyof typeof formData;
         updateField(fieldName, imageUrl);
-        
+
         // Set preview URI
         switch (photoType) {
           case 'tech_passport_front':
@@ -1038,7 +1072,7 @@ export const DriverVehicleScreen: React.FC = () => {
             setPhotoInteriorUri(asset.uri);
             break;
         }
-        
+
         showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
       } catch (error) {
         console.error('Failed to upload image:', error);
@@ -1227,7 +1261,12 @@ export const DriverVehicleScreen: React.FC = () => {
             type: 'custom',
             errorKey: 'formValidation.grossWeightInvalid',
             customValidator: (val) => {
-              const weight = parseInt(val);
+              const trimmed = val.trim();
+              // Check if the entire string is numeric (digits only)
+              if (!/^\d+$/.test(trimmed)) {
+                return false;
+              }
+              const weight = parseInt(trimmed, 10);
               return !isNaN(weight) && weight > 0 && weight <= 50000;
             },
           },
@@ -1244,7 +1283,12 @@ export const DriverVehicleScreen: React.FC = () => {
             type: 'custom',
             errorKey: 'formValidation.unladenWeightInvalid',
             customValidator: (val) => {
-              const weight = parseInt(val);
+              const trimmed = val.trim();
+              // Check if the entire string is numeric (digits only)
+              if (!/^\d+$/.test(trimmed)) {
+                return false;
+              }
+              const weight = parseInt(trimmed, 10);
               return !isNaN(weight) && weight > 0 && weight <= 50000;
             },
           },
@@ -1261,7 +1305,12 @@ export const DriverVehicleScreen: React.FC = () => {
             type: 'custom',
             errorKey: 'formValidation.seatingCapacityInvalid',
             customValidator: (val) => {
-              const capacity = parseInt(val);
+              const trimmed = val.trim();
+              // Check if the entire string is numeric (digits only)
+              if (!/^\d+$/.test(trimmed)) {
+                return false;
+              }
+              const capacity = parseInt(trimmed, 10);
               return !isNaN(capacity) && capacity > 0 && capacity <= 50;
             },
           },
@@ -1281,7 +1330,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
   const handleFieldChange = (field: string, value: any) => {
     updateField(field, value);
-    
+
     // Clear error when user starts typing/selecting
     if (fieldErrors[field]) {
       setFieldErrors(prev => {
@@ -1290,7 +1339,7 @@ export const DriverVehicleScreen: React.FC = () => {
         return newErrors;
       });
     }
-    
+
     // Validate field on change (optional - can be removed if too aggressive)
     // const error = validateField(field, value);
     // if (error) {
@@ -1300,193 +1349,265 @@ export const DriverVehicleScreen: React.FC = () => {
 
   const handleFieldBlur = (field: string, value: any) => {
     let error: string | null = null;
-    
+
     // Validate this specific field based on field name
     switch (field) {
-        case 'vehicle_type_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.vehicleTypeRequired' }],
-            t
-          );
-          break;
-        case 'vehicle_make_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.vehicleMakeRequired' }],
-            t
-          );
-          break;
-        case 'vehicle_model_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.vehicleModelRequired' }],
-            t
-          );
-          break;
-        case 'vehicle_body_type_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.vehicleBodyTypeRequired' }],
-            t
-          );
-          break;
-        case 'vehicle_color_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.vehicleColorRequired' }],
-            t
-          );
-          break;
-        case 'tech_passport_series':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.techPassportSeriesRequired' },
-              { type: 'minLength', errorKey: 'formValidation.techPassportSeriesTooShort', params: { min: 3 } },
-            ],
-            t
-          );
-          break;
-        case 'license_plate':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.licensePlateRequired' },
-              { type: 'minLength', errorKey: 'formValidation.licensePlateTooShort', params: { min: 3 } },
-            ],
-            t
-          );
-          break;
-        case 'model':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.modelRequired' }],
-            t
-          );
-          break;
-        case 'owner_first_name':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.ownerFirstNameRequired' },
-              { type: 'minLength', errorKey: 'formValidation.ownerFirstNameTooShort', params: { min: 2 } },
-            ],
-            t
-          );
-          break;
-        case 'owner_last_name':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.ownerLastNameRequired' },
-              { type: 'minLength', errorKey: 'formValidation.ownerLastNameTooShort', params: { min: 2 } },
-            ],
-            t
-          );
-          break;
-        case 'owner_father_name':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.ownerFatherNameRequired' },
-              { type: 'minLength', errorKey: 'formValidation.ownerFatherNameTooShort', params: { min: 2 } },
-            ],
-            t
-          );
-          break;
-        case 'owner_pinfl':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.ownerPinflRequired' },
-              {
-                type: 'custom',
-                errorKey: 'formValidation.ownerPinflInvalid',
-                customValidator: (val) => !val || /^\d{14}$/.test(val.trim()),
+      case 'vehicle_type_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.vehicleTypeRequired' }],
+          t
+        );
+        break;
+      case 'vehicle_make_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.vehicleMakeRequired' }],
+          t
+        );
+        break;
+      case 'vehicle_model_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.vehicleModelRequired' }],
+          t
+        );
+        break;
+      case 'vehicle_body_type_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.vehicleBodyTypeRequired' }],
+          t
+        );
+        break;
+      case 'vehicle_color_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.vehicleColorRequired' }],
+          t
+        );
+        break;
+      case 'tech_passport_series':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.techPassportSeriesRequired' },
+            { type: 'minLength', errorKey: 'formValidation.techPassportSeriesTooShort', params: { min: 3 } },
+          ],
+          t
+        );
+        break;
+      case 'license_plate':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.licensePlateRequired' },
+            { type: 'minLength', errorKey: 'formValidation.licensePlateTooShort', params: { min: 3 } },
+          ],
+          t
+        );
+        break;
+      case 'model':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.modelRequired' }],
+          t
+        );
+        break;
+      case 'owner_first_name':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.ownerFirstNameRequired' },
+            { type: 'minLength', errorKey: 'formValidation.ownerFirstNameTooShort', params: { min: 2 } },
+          ],
+          t
+        );
+        break;
+      case 'owner_last_name':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.ownerLastNameRequired' },
+            { type: 'minLength', errorKey: 'formValidation.ownerLastNameTooShort', params: { min: 2 } },
+          ],
+          t
+        );
+        break;
+      case 'owner_father_name':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.ownerFatherNameRequired' },
+            { type: 'minLength', errorKey: 'formValidation.ownerFatherNameTooShort', params: { min: 2 } },
+          ],
+          t
+        );
+        break;
+      case 'owner_pinfl':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.ownerPinflRequired' },
+            {
+              type: 'custom',
+              errorKey: 'formValidation.ownerPinflInvalid',
+              customValidator: (val) => !val || /^\d{14}$/.test(val.trim()),
+            },
+          ],
+          t
+        );
+        break;
+      case 'owner_address_country_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.ownerAddressCountryRequired' }],
+          t
+        );
+        break;
+      case 'owner_address_province_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.ownerAddressProvinceRequired' }],
+          t
+        );
+        break;
+      case 'owner_address_city_district_id':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.ownerAddressCityDistrictRequired' }],
+          t
+        );
+        break;
+      case 'owner_address_street':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.ownerAddressStreetRequired' },
+            { type: 'minLength', errorKey: 'formValidation.ownerAddressStreetTooShort', params: { min: 5 } },
+          ],
+          t
+        );
+        break;
+      case 'year':
+        error = validateField(
+          field,
+          value,
+          [
+            { type: 'required', errorKey: 'formValidation.yearRequired' },
+            {
+              type: 'custom',
+              errorKey: 'formValidation.yearInvalid',
+              customValidator: (val) => {
+                if (!val || val.trim() === '') return false;
+                const yearNum = parseInt(val);
+                if (isNaN(yearNum)) return false;
+                const currentYear = new Date().getFullYear();
+                return yearNum >= 1900 && yearNum <= currentYear + 1;
               },
-            ],
-            t
-          );
-          break;
-        case 'owner_address_country_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.ownerAddressCountryRequired' }],
-            t
-          );
-          break;
-        case 'owner_address_province_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.ownerAddressProvinceRequired' }],
-            t
-          );
-          break;
-        case 'owner_address_city_district_id':
-          error = validateField(
-            field,
-            value,
-            [{ type: 'required', errorKey: 'formValidation.ownerAddressCityDistrictRequired' }],
-            t
-          );
-          break;
-        case 'owner_address_street':
+            },
+          ],
+          t
+        );
+        break;
+      case 'fuel_types':
+        error = validateField(
+          field,
+          value,
+          [{ type: 'required', errorKey: 'formValidation.fuelTypesRequired' }],
+          t
+        );
+        break;
+      case 'gross_weight':
+        if (value && value.trim() !== '') {
           error = validateField(
             field,
             value,
             [
-              { type: 'required', errorKey: 'formValidation.ownerAddressStreetRequired' },
-              { type: 'minLength', errorKey: 'formValidation.ownerAddressStreetTooShort', params: { min: 5 } },
-            ],
-            t
-          );
-          break;
-        case 'year':
-          error = validateField(
-            field,
-            value,
-            [
-              { type: 'required', errorKey: 'formValidation.yearRequired' },
               {
                 type: 'custom',
-                errorKey: 'formValidation.yearInvalid',
+                errorKey: 'formValidation.grossWeightInvalid',
                 customValidator: (val) => {
-                  if (!val || val.trim() === '') return false;
-                  const yearNum = parseInt(val);
-                  if (isNaN(yearNum)) return false;
-                  const currentYear = new Date().getFullYear();
-                  return yearNum >= 1900 && yearNum <= currentYear + 1;
+                  const trimmed = val.trim();
+                  // Check if the entire string is numeric (digits only)
+                  if (!/^\d+$/.test(trimmed)) {
+                    return false;
+                  }
+                  const weight = parseInt(trimmed, 10);
+                  return !isNaN(weight) && weight > 0 && weight <= 50000;
                 },
               },
             ],
             t
           );
-          break;
-        case 'fuel_types':
+        }
+        break;
+      case 'unladen_weight':
+        if (value && value.trim() !== '') {
           error = validateField(
             field,
             value,
-            [{ type: 'required', errorKey: 'formValidation.fuelTypesRequired' }],
+            [
+              {
+                type: 'custom',
+                errorKey: 'formValidation.unladenWeightInvalid',
+                customValidator: (val) => {
+                  const trimmed = val.trim();
+                  // Check if the entire string is numeric (digits only)
+                  if (!/^\d+$/.test(trimmed)) {
+                    return false;
+                  }
+                  const weight = parseInt(trimmed, 10);
+                  return !isNaN(weight) && weight > 0 && weight <= 50000;
+                },
+              },
+            ],
             t
           );
-          break;
+        }
+        break;
+      case 'seating_capacity':
+        if (value && value.trim() !== '') {
+          error = validateField(
+            field,
+            value,
+            [
+              {
+                type: 'custom',
+                errorKey: 'formValidation.seatingCapacityInvalid',
+                customValidator: (val) => {
+                  const trimmed = val.trim();
+                  // Check if the entire string is numeric (digits only)
+                  if (!/^\d+$/.test(trimmed)) {
+                    return false;
+                  }
+                  const capacity = parseInt(trimmed, 10);
+                  return !isNaN(capacity) && capacity > 0 && capacity <= 50;
+                },
+              },
+            ],
+            t
+          );
+        }
+        break;
     }
-    
+
     if (error) {
       setFieldErrors(prev => ({ ...prev, [field]: error! }));
     } else {
@@ -1570,23 +1691,29 @@ export const DriverVehicleScreen: React.FC = () => {
       });
 
       await updateVehicle(token, cleanData);
-      
+
       showToast.success(t('common.success'), t('driver.vehicleUpdated'));
-      
-      // Navigate to next step (Taxi License)
-      (navigation as any).navigate('DriverTaxiLicense');
+
+      showToast.success(t('common.success'), t('driver.vehicleUpdated'));
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Navigate to next step (Taxi License)
+        (navigation as any).navigate('DriverTaxiLicense');
+      }
     } catch (error: any) {
       console.error('Failed to save vehicle info:', error);
-      
+
       // Check if it's a validation error from backend (422 status)
       const statusCode = error?.response?.status || error?.status;
       if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
-        
+
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...apiErrors }));
-        
+
         // Also show a general error toast
         const firstError = Object.values(apiErrors)[0];
         if (firstError) {
@@ -1625,14 +1752,14 @@ export const DriverVehicleScreen: React.FC = () => {
             >
               <View style={styles.backButtonContent}>
                 <Text style={styles.backButtonArrow}>←</Text>
-                <Text style={styles.backButtonText}>Orqaga</Text>
+                <Text style={styles.backButtonText}>{t('driverVehicle.backButton')}</Text>
               </View>
             </TouchableOpacity>
             <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>Shaharlar aro</Text>
-            <Text style={styles.subtitle}>TRANSPORT VOSITASI MA'LUMOTLARI</Text>
+            <Text style={styles.title}>{isEditing ? t('editProfile.vehicle') : 'Shaharlar aro'}</Text>
+            <Text style={styles.subtitle}>{isEditing ? t('editProfile.vehicle') : t('driverVehicle.title')}</Text>
             <Text style={styles.description}>
-              (Barcha ma'lumotlar tex. passport boyicha kiritiladi)
+              {t('driverVehicle.description')}
             </Text>
           </View>
 
@@ -1642,7 +1769,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Vehicle Basic Information */}
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_type_id')}>
-                Transport turi: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.vehicleType')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1657,7 +1784,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedType ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedType ? getVehicleDisplayName(selectedType) : 'Tanlang'}
+                  {selectedType ? getVehicleDisplayName(selectedType) : t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.vehicle_type_id && (
@@ -1667,7 +1794,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_make_id')}>
-                Marka: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.make')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1682,7 +1809,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedMake ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedMake ? getVehicleDisplayName(selectedMake) : 'Tanlang'}
+                  {selectedMake ? getVehicleDisplayName(selectedMake) : t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.vehicle_make_id && (
@@ -1692,7 +1819,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_model_id')}>
-                Model: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.model')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1709,7 +1836,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedModel ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedModel ? getVehicleDisplayName(selectedModel) : 'Tanlang'}
+                  {selectedModel ? getVehicleDisplayName(selectedModel) : t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.vehicle_model_id && (
@@ -1719,7 +1846,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_body_type_id')}>
-                Kuzov turi: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.bodyType')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1734,7 +1861,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedBodyType ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedBodyType ? getVehicleDisplayName(selectedBodyType) : 'Tanlang'}
+                  {selectedBodyType ? getVehicleDisplayName(selectedBodyType) : t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.vehicle_body_type_id && (
@@ -1744,7 +1871,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_color_id')}>
-                Rangi: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.color')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1761,7 +1888,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedColor ? styles.selectText : styles.selectPlaceholder
                   ]}
                 >
-                  {selectedColor ? getVehicleDisplayName(selectedColor) : 'Tanlang'}
+                  {selectedColor ? getVehicleDisplayName(selectedColor) : t('driverVehicle.select')}
                 </Text>
                 <View style={[
                   styles.colorIndicator,
@@ -1776,7 +1903,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Tech Passport Information */}
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('tech_passport_series')}>
-                Guvohnoma (Tex.Passport) seriya raqami: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.techPassportSeries')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('tech_passport_series')}
@@ -1794,7 +1921,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_plate')}>
-                Davlat raqam: 1. <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.licensePlate')}: 1. <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('license_plate')}
@@ -1812,7 +1939,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('model')}>
-                Rusumi/Modeli: 2. <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.modelName')}: 2. <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('model')}
@@ -1830,7 +1957,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('vehicle_color_id')}>
-                Rangi: 3. <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.colorField')}: 3. <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1861,7 +1988,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             {/* Company Information */}
             <View style={styles.inputGroup}>
-              <Text style={getLabelStyle('company_name')}>FIRMA: 4.</Text>
+              <Text style={getLabelStyle('company_name')}>{t('driverVehicle.company')}: 4.</Text>
               <TextInput
                 style={getInputStyle('company_name')}
                 placeholder="LOGISTIKA MCHJ"
@@ -1877,11 +2004,11 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             {/* Owner Personal Information */}
-            <Text style={styles.sectionTitle}>FISH: 4.</Text>
-            
+            <Text style={styles.sectionTitle}>{t('driverVehicle.ownerInfo')}: 4.</Text>
+
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_first_name')}>
-                Ism <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.firstName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('owner_first_name')}
@@ -1899,7 +2026,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_last_name')}>
-                Familiya <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.lastName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('owner_last_name')}
@@ -1917,7 +2044,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_father_name')}>
-                Otasining ismi <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.fatherName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('owner_father_name')}
@@ -1934,11 +2061,11 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             {/* Owner Address */}
-            <Text style={styles.sectionTitle}>Manzili: 5.</Text>
+            <Text style={styles.sectionTitle}>{t('driverVehicle.address')}: 5.</Text>
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_address_country_id')}>
-                Mamlakat <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.country')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1953,7 +2080,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedCountry ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedCountry?.name || 'Tanlang'}
+                  {selectedCountry?.name || t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.owner_address_country_id && (
@@ -1963,7 +2090,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_address_province_id')}>
-                Viloyat <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.province')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1980,7 +2107,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedProvince ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedProvince?.name || 'Tanlang'}
+                  {selectedProvince?.name || t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.owner_address_province_id && (
@@ -1990,7 +2117,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_address_city_district_id')}>
-                Shahar / Tuman <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.cityDistrict')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -2007,7 +2134,7 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedCityDistrict ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedCityDistrict?.name || 'Tanlang'}
+                  {selectedCityDistrict?.name || t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
               {fieldErrors.owner_address_city_district_id && (
@@ -2016,7 +2143,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Ma'muriy hudud</Text>
+              <Text style={styles.label}>{t('driverVehicle.administrativeArea')}</Text>
               <TouchableOpacity
                 style={[
                   styles.selectInput,
@@ -2032,13 +2159,13 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedAdministrativeArea ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedAdministrativeArea?.name || 'Tanlang'}
+                  {selectedAdministrativeArea?.name || t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Aholi punkti</Text>
+              <Text style={styles.label}>{t('driverVehicle.settlement')}</Text>
               <TouchableOpacity
                 style={[
                   styles.selectInput,
@@ -2058,13 +2185,13 @@ export const DriverVehicleScreen: React.FC = () => {
                     ? selectedSettlement.type
                       ? `${selectedSettlement.name} (${selectedSettlement.type})`
                       : selectedSettlement.name
-                    : 'Tanlang'}
+                    : t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Mahalla</Text>
+              <Text style={styles.label}>{t('driverVehicle.neighborhood')}</Text>
               <TouchableOpacity
                 style={[
                   styles.selectInput,
@@ -2080,14 +2207,14 @@ export const DriverVehicleScreen: React.FC = () => {
                     selectedNeighborhood ? styles.selectText : styles.selectPlaceholder
                   }
                 >
-                  {selectedNeighborhood?.name || 'Tanlang'}
+                  {selectedNeighborhood?.name || t('driverVehicle.select')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_address_street')}>
-                Ko'cha va uy <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.street')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('owner_address_street')}
@@ -2105,7 +2232,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             {/* Company Tax ID and Owner PINFL */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Firma STIR: 8.</Text>
+              <Text style={styles.label}>{t('driverVehicle.companyTaxId')}: 8.</Text>
               <TextInput
                 style={styles.input}
                 placeholder="301458658"
@@ -2119,7 +2246,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('owner_pinfl')}>
-                JSHSHIR (ПИНФЛ): 8. <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.pinfl')}: 8. <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('owner_pinfl')}
@@ -2140,7 +2267,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Vehicle Specifications */}
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('year')}>
-                Ishlab chiqarilgan yili: 9. <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.year')}: 9. <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('year')}
@@ -2158,18 +2285,18 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Turi: 9.</Text>
+              <Text style={styles.label}>{t('driverVehicle.type')}: 9.</Text>
               <View style={styles.typeContainer}>
                 <TextInput
                   style={styles.typeInput}
-                  placeholder="Yengil"
+                  placeholder={t('driverVehicle.vehicleTypeLight')}
                   placeholderTextColor={theme.palette.text.disabled}
-                  value={formData.vehicle_type === 'light' ? 'Yengil' : ''}
+                  value={formData.vehicle_type === 'light' ? t('driverVehicle.vehicleTypeLight') : ''}
                   editable={false}
                 />
                 <TextInput
                   style={styles.typeInput}
-                  placeholder="Sedan"
+                  placeholder={t('driverVehicle.bodyTypePlaceholder')}
                   placeholderTextColor={theme.palette.text.disabled}
                   value={formData.body_type}
                   onChangeText={(value: string) => updateField('body_type', value)}
@@ -2179,7 +2306,9 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={getLabelStyle('gross_weight')}>To'la vazni: 11.</Text>
+              <Text style={getLabelStyle('gross_weight')}>
+                {t('driverVehicle.grossWeight')}: 11.
+              </Text>
               <View style={[
                 styles.weightInputContainer,
                 fieldErrors.gross_weight && styles.inputError,
@@ -2202,7 +2331,9 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={getLabelStyle('unladen_weight')}>Yuksiz vazni: 12.</Text>
+              <Text style={getLabelStyle('unladen_weight')}>
+                {t('driverVehicle.unladenWeight')}: 12.
+              </Text>
               <View style={[
                 styles.weightInputContainer,
                 fieldErrors.unladen_weight && styles.inputError,
@@ -2227,7 +2358,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Fuel Types */}
             <View style={styles.inputGroup}>
               <Text style={[styles.sectionTitle, fieldErrors.fuel_types && styles.labelError]}>
-                Yoqilg'i turi: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverVehicle.fuelType')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <View style={styles.fuelTypesContainer}>
                 {fuelTypes.map((fuelType) => (
@@ -2267,7 +2398,9 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={getLabelStyle('seating_capacity')}>O'tiradigan joylar soni haydovchi bilan: 17.</Text>
+              <Text style={getLabelStyle('seating_capacity')}>
+                {t('driverVehicle.seatingCapacity')}: 17.
+              </Text>
               <View style={[
                 styles.weightInputContainer,
                 fieldErrors.seating_capacity && styles.inputError,
@@ -2291,7 +2424,7 @@ export const DriverVehicleScreen: React.FC = () => {
 
             {/* Photo Sections */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Tex. Pasport oldi tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.techPassportFront')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('tech_passport_front')}
@@ -2308,7 +2441,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Tex. Pasport orqa tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.techPassportBack')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('tech_passport_back')}
@@ -2325,7 +2458,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport oldi tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleFront')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_front')}
@@ -2342,7 +2475,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport orqa tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleBack')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_back')}
@@ -2359,7 +2492,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport o'ng tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleRight')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_right')}
@@ -2376,7 +2509,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport chap tomon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleLeft')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_left')}
@@ -2393,7 +2526,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport umumiy ko'rinishi 45°:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleAngle45')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_angle_45')}
@@ -2410,7 +2543,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Transport salon rasmi:</Text>
+              <Text style={styles.label}>{t('driverVehicle.vehicleInterior')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('photo_interior')}
@@ -2433,7 +2566,7 @@ export const DriverVehicleScreen: React.FC = () => {
               disabled={isLoading}
             >
               <Text style={styles.continueButtonText}>
-                {isLoading ? t('common.saving') || 'Saqlanmoqda...' : t('common.next') || 'Keyingi'}
+                {isLoading ? 'Saqlanmoqda...' : (isEditing ? 'Saqlash' : t('common.next') || 'Keyingi')}
               </Text>
             </TouchableOpacity>
           </View>

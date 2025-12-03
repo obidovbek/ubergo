@@ -33,16 +33,16 @@ export const ProfileScreen: React.FC = () => {
   const userInitial = displayName.charAt(0).toUpperCase();
 
   // Debug auth state
-  console.log('ProfileScreen: Auth state:', { 
-    user: user?.id, 
+  console.log('ProfileScreen: Auth state:', {
+    user: user?.id,
     logoutAvailable: typeof logout,
-    isAuthenticated: !!user 
+    isAuthenticated: !!user
   });
 
   const handleLogout = () => {
     console.log('ProfileScreen: Logout button pressed');
     console.log('ProfileScreen: logout function available:', typeof logout);
-    
+
     Alert.alert(
       t('profile.logout'),
       t('profile.logoutConfirm'),
@@ -67,7 +67,7 @@ export const ProfileScreen: React.FC = () => {
 
   const menuItems = [
     { id: 'notifications', title: t('profile.notifications'), icon: '🔔', navigate: 'Notifications' },
-    { id: 'edit', title: t('profile.editProfile'), icon: '✏️' },
+    { id: 'edit', title: t('profile.editProfile'), icon: '✏️', navigate: 'EditProfile' },
     { id: 'payment', title: t('profile.paymentMethods'), icon: '💳' },
     { id: 'history', title: t('profile.tripHistory'), icon: '📜' },
     { id: 'help', title: t('profile.helpSupport'), icon: '❓' },
@@ -115,8 +115,8 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton} 
+        <TouchableOpacity
+          style={styles.logoutButton}
           onPress={async () => {
             console.log('Direct logout test pressed');
             try {

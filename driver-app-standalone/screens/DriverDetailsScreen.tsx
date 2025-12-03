@@ -27,10 +27,11 @@ type DriverType = 'driver' | 'dispatcher' | 'special_transport' | 'logist';
 
 export const DriverDetailsScreen: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { user, token, updateUser } = useAuth();
   const { t } = useTranslation();
-  
+
   const phoneNumberFromRoute = (route.params as any)?.phoneNumber;
   const phoneNumber = phoneNumberFromRoute || user?.phone_e164 || '';
   const driverId = user?.id?.toString() || '';
@@ -57,7 +58,7 @@ export const DriverDetailsScreen: React.FC = () => {
     try {
       console.log('=== Driver Profile Update ===');
       console.log('Driver Type:', driverType);
-      
+
       const profileData = {
         driver_type: driverType,
         role: 'driver',
@@ -94,8 +95,15 @@ export const DriverDetailsScreen: React.FC = () => {
 
       console.log('Driver profile updated successfully');
       showToast.success(t('common.success'), t('driver.profileUpdated'));
-      
-      // Navigate to main app after successful registration
+
+      showToast.success(t('common.success'), t('driver.profileUpdated'));
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Navigate to next step (PersonalInfo)
+        (navigation as any).navigate('DriverPersonalInfo');
+      }
     } catch (error) {
       console.error('Driver profile update error:', error);
       handleBackendError(error, {
@@ -112,8 +120,17 @@ export const DriverDetailsScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
+          {isEditing && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={isLoading}
+            >
+              <Text style={styles.backButtonText}>← Orqaga</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.logo}>UbexGo Driver</Text>
-          <Text style={styles.title}>Driver registration</Text>
+          <Text style={styles.title}>{isEditing ? 'Haydovchi turini tahrirlash' : 'Driver registration'}</Text>
         </View>
 
         {/* Driver Type Selection */}
@@ -195,7 +212,7 @@ export const DriverDetailsScreen: React.FC = () => {
           disabled={isLoading || !driverType}
         >
           <Text style={styles.continueButtonText}>
-            {isLoading ? 'Yuklanmoqda...' : 'Continue'}
+            {isLoading ? 'Yuklanmoqda...' : (isEditing ? 'Saqlash' : 'Continue')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -215,6 +232,20 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: theme.spacing(3),
+    position: 'relative',
+    width: '100%',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    padding: theme.spacing(1),
+    zIndex: 1,
+  },
+  backButtonText: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: '600',
   },
   logo: {
     fontSize: 18,

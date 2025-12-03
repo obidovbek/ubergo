@@ -29,6 +29,7 @@ import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
 import { useCountries } from '../hooks/useCountries';
 import type { CountryOption } from '../types/country';
+import { LanguageSelector } from '../components/LanguageSelector';
 
 const theme = createTheme('light');
 
@@ -77,7 +78,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
   const { signIn: googleSignInExpo, isReady: googleReady } = useGoogleSignIn();
   const { t } = useTranslation();
   const { countries, isLoading: countriesLoading, error: countriesError } = useCountries();
-  
+
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -132,29 +133,29 @@ export const PhoneRegistrationScreen: React.FC = () => {
 
     // Remove all non-numeric characters
     const cleanedNumber = phoneNumber.replace(/\D/g, '');
-    
+
     console.log('=== OTP Send Debug ===');
     console.log('Phone input value:', phoneNumber);
     console.log('Cleaned number:', cleanedNumber);
     console.log('Selected country code:', activeCountry.code);
-    
+
     if (cleanedNumber.length < activeCountry.localLength) {
       showToast.warning(t('common.error'), t('phoneRegistration.errorPhoneIncomplete'));
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       // Format: +9981234567  (country code + 9 digits)
       const fullPhone = `${activeCountry.code}${cleanedNumber}`;
       console.log('Full phone number:', fullPhone);
       console.log('Sending OTP to:', fullPhone);
-      
+
       await sendOtp(fullPhone, 'sms');
-      
+
       console.log('OTP sent successfully');
-      
+
       // Navigate to OTP screen
       console.log('Attempting to navigate to OTPVerification screen...');
       try {
@@ -164,15 +165,15 @@ export const PhoneRegistrationScreen: React.FC = () => {
         console.log('Navigation successful');
       } catch (navError) {
         console.error('Navigation error:', navError);
-        showToast.error('Navigation Error', 'Failed to navigate to OTP screen');
+        showToast.error(t('common.navigationError'), t('phoneRegistration.errorNavigation'));
       }
     } catch (error) {
       console.error('OTP send error:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
-      
+
       handleBackendError(error, {
         t,
-        defaultMessage: 'OTP yuborishda xatolik yuz berdi',
+        defaultMessage: t('phoneRegistration.errorOtpSend'),
       });
     } finally {
       setIsLoading(false);
@@ -183,7 +184,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
     setSocialLoading(true);
     try {
       let result;
-      
+
       // Try native Google Sign-In first (only works with Google Play Services)
       try {
         console.log('Attempting native Google Sign-In...');
@@ -191,16 +192,16 @@ export const PhoneRegistrationScreen: React.FC = () => {
         console.log('Native Google Sign-In successful');
       } catch (nativeError: any) {
         console.log('Native Google Sign-In not available, using web flow...');
-        
+
         // Check if Google auth session is ready
         if (!googleReady) {
           throw new Error(t('phoneRegistration.errorGoogleNotReady'));
         }
-        
+
         // Fall back to expo auth session (web-based OAuth)
         console.log('Starting web-based Google OAuth...');
         result = await googleSignInExpo();
-        
+
         if (result) {
           console.log('Web-based Google Sign-In successful');
         }
@@ -213,14 +214,14 @@ export const PhoneRegistrationScreen: React.FC = () => {
         // Navigation handled by auth context
       } else {
         console.log('Google Sign-In cancelled by user');
-        showToast.info('Info', t('phoneRegistration.errorGoogleCancelled'));
+        showToast.info(t('common.info'), t('phoneRegistration.errorGoogleCancelled'));
       }
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
-      
+
       // More specific error messages
       let errorMessage = t('phoneRegistration.errorGoogleFailed');
-      
+
       if (error.message?.includes('not ready')) {
         errorMessage = t('phoneRegistration.errorGoogleNotReady');
       } else if (error.message?.includes('cancelled')) {
@@ -228,7 +229,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
       } else if (error.message?.includes('network') || error.message?.includes('Network')) {
         errorMessage = t('phoneRegistration.errorNetwork');
       }
-      
+
       showToast.error(t('common.error'), errorMessage);
     } finally {
       setSocialLoading(false);
@@ -239,7 +240,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
     if (provider === 'Google') {
       handleGoogleSignIn();
     } else {
-      showToast.info('Info', `${provider}${t('phoneRegistration.infoNotAvailable')}`);
+      showToast.info(t('common.info'), `${provider}${t('phoneRegistration.infoNotAvailable')}`);
     }
   };
 
@@ -249,12 +250,15 @@ export const PhoneRegistrationScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
           <View style={styles.header}>
+            <View style={styles.languageSelectorContainer}>
+              <LanguageSelector />
+            </View>
             <Text style={styles.logo}>{t('auth.appName')}</Text>
             <Text style={styles.title}>{t('phoneRegistration.title')}</Text>
             <Text style={styles.subtitle}>
@@ -281,7 +285,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
           >
             <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
               <View style={styles.pickerOverlay}>
-                <TouchableWithoutFeedback onPress={() => {}}>
+                <TouchableWithoutFeedback onPress={() => { }}>
                   <View style={styles.countryPickerModal}>
                     {countries.map((country) => (
                       <TouchableOpacity
@@ -312,6 +316,7 @@ export const PhoneRegistrationScreen: React.FC = () => {
             <TextInput
               style={styles.phoneInput}
               placeholder={t('phoneRegistration.phonePlaceholder')}
+              placeholderTextColor={theme.palette.text.hint}
               value={phoneNumber}
               onChangeText={(text: string) =>
                 setPhoneNumber(formatPhoneNumber(text, activeCountry))
@@ -428,6 +433,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing(3),
     marginTop: theme.spacing(2),
+    position: 'relative',
+  },
+  languageSelectorContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 1,
   },
   logo: {
     fontSize: 24,

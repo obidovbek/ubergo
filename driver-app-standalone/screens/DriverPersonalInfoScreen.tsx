@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -46,6 +46,8 @@ const theme = createTheme('light');
 
 export const DriverPersonalInfoScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { user, token, logout } = useAuth();
   const { t } = useTranslation();
 
@@ -129,12 +131,12 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
   const convertDateFormat = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
-    
+
     // If already in DD.MM.YYYY format, return as is
     if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
       return dateString;
     }
-    
+
     // If in YYYY-MM-DD format, convert to DD.MM.YYYY
     const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
@@ -143,7 +145,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       const day = isoMatch[3].padStart(2, '0');
       return `${day}.${month}.${year}`;
     }
-    
+
     // Return as is if format is unknown
     return dateString;
   };
@@ -152,31 +154,31 @@ export const DriverPersonalInfoScreen: React.FC = () => {
     // Parse DD.MM.YYYY format
     const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (!match) return null;
-    
+
     const day = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
     const year = parseInt(match[3], 10);
-    
+
     if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear()) {
       return null;
     }
-    
+
     const date = new Date(year, month, day);
     // Validate the date (e.g., check for invalid dates like 31.02.2000)
     if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
       return null;
     }
-    
+
     return date;
   };
 
   const handleDateInputChange = (text: string) => {
     // Remove all non-digits
     const digitsOnly = text.replace(/\D/g, '');
-    
+
     // Limit to 8 digits (DDMMYYYY)
     if (digitsOnly.length > 8) return;
-    
+
     // Auto-format as user types: DD.MM.YYYY
     let formatted = digitsOnly;
     if (digitsOnly.length > 4) {
@@ -186,9 +188,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       // Insert first dot: DDMM -> DD.MM
       formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2);
     }
-    
+
     updateField('birth_date', formatted);
-    
+
     // If valid format (DD.MM.YYYY), update selectedDate
     if (formatted.length === 10) {
       const parsedDate = parseDate(formatted);
@@ -568,7 +570,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
                       profile.address_administrative_area_id,
                       profile.addressAdministrativeArea ?? null
                     );
-                  if (areaOption) {
+                    if (areaOption) {
                       if (!areas.some((item) => item.id === areaOption.id)) {
                         setAdministrativeAreas(ensureOptionInList(areas, areaOption));
                       }
@@ -761,7 +763,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       default:
         return [];
     }
-    
+
     // Filter options based on search query
     if (geoSearchQuery.trim()) {
       const query = geoSearchQuery.toLowerCase().trim();
@@ -771,7 +773,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         return nameMatch || typeMatch;
       });
     }
-    
+
     return options;
   };
 
@@ -797,9 +799,12 @@ export const DriverPersonalInfoScreen: React.FC = () => {
   // Check registration status on mount and request permissions
   useEffect(() => {
     if (!token) return;
-    checkRegistrationStatus();
+    // Only check registration status if not in editing mode
+    if (!isEditing) {
+      checkRegistrationStatus();
+    }
     loadInitialProfileData();
-  }, [token]);
+  }, [token, isEditing]);
 
   const handleImagePicker = async (photoType: 'face' | 'body') => {
     if (!token) {
@@ -876,11 +881,11 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       }
 
       const asset = result.assets[0];
-      
+
       try {
         // Use base64 from expo-image-picker if available, otherwise fallback
         let base64: string;
-        
+
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
@@ -891,7 +896,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           if (Platform.OS === 'web') {
             const response = await fetch(asset.uri);
             const blob = await response.blob();
-            
+
             base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
@@ -909,7 +914,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
         }
-        
+
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
         if (asset.type) {
@@ -931,7 +936,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             fileExtension = ext === 'jpeg' ? 'jpg' : ext;
           }
         }
-        
+
         // Validate base64 before upload
         if (!base64 || base64.trim().length === 0) {
           throw new Error('Rasm ma\'lumotlari topilmadi');
@@ -941,9 +946,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         if (!token) {
           throw new Error('Autentifikatsiya xatosi. Iltimos, qayta kirish');
         }
-        
+
         const imageUrl = await uploadImage(token, base64, fileExtension);
-        
+
         // Update state and form data
         if (photoType === 'face') {
           setPhotoFaceUri(asset.uri);
@@ -952,12 +957,12 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           setPhotoBodyUri(asset.uri);
           updateField('photo_body_url', imageUrl);
         }
-        
+
         showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
       } catch (error) {
         console.error('Failed to upload image:', error);
         let errorMessage = 'Rasmni yuklashda xatolik';
-        
+
         if (error instanceof Error) {
           errorMessage = error.message;
           // Provide more specific error messages
@@ -969,7 +974,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             errorMessage = 'Autentifikatsiya xatosi. Iltimos, qayta kirish';
           }
         }
-        
+
         showToast.error(t('common.error'), errorMessage);
       } finally {
         setUploadingPhoto(null);
@@ -983,7 +988,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
   const checkRegistrationStatus = async () => {
     if (!token) return;
-    
+
     try {
       console.log('Checking registration status... token', token);
       const status = await getDriverProfileStatus(token);
@@ -1116,27 +1121,33 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       );
 
       await updatePersonalInfo(token, cleanData as Partial<DriverProfile>);
-      
+
       showToast.success(t('common.success'), t('driver.profileUpdated'));
-      
-      // Navigate to next step (Passport)
-      navigation.navigate('DriverPassport' as any);
+
+      showToast.success(t('common.success'), t('driver.profileUpdated'));
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Navigate to next step (Passport)
+        navigation.navigate('DriverPassport' as any);
+      }
     } catch (error: any) {
       console.error('Failed to save personal info:', error);
-      
+
       // Check if it's a validation error from backend (422 status)
       const statusCode = error?.response?.status || error?.status;
       if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
-        
+
         // Map API field names to form field names if needed
         const mappedErrors: Record<string, string> = {};
         Object.keys(apiErrors).forEach((apiField) => {
           // API field names should match form field names, but we can map if needed
           // For example: 'address_country' -> 'address_country_id'
           let formField = apiField;
-          
+
           // Handle any field name mappings if necessary
           if (apiField === 'address_country') {
             formField = 'address_country_id';
@@ -1151,13 +1162,13 @@ export const DriverPersonalInfoScreen: React.FC = () => {
           } else if (apiField === 'address_neighborhood') {
             formField = 'address_neighborhood_id';
           }
-          
+
           mappedErrors[formField] = apiErrors[apiField];
         });
-        
+
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
-        
+
         // Also show a general error toast
         const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
@@ -1192,6 +1203,10 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.backButton}
               onPress={async () => {
+                if (isEditing) {
+                  navigation.goBack();
+                  return;
+                }
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {
@@ -1215,8 +1230,8 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>Shaharlar aro</Text>
-            <Text style={styles.subtitle}>HAYDOVCHI MA'LUMOTLARI</Text>
+            <Text style={styles.title}>{isEditing ? t('editProfile.personalInfo') : 'Shaharlar aro'}</Text>
+            <Text style={styles.subtitle}>{isEditing ? t('editProfile.personalInfo') : 'HAYDOVCHI MA\'LUMOTLARI'}</Text>
             <Text style={styles.description}>
               (FISH va tug'ilgan sana passport bo'yicha)
             </Text>
@@ -1227,19 +1242,19 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
             {/* Personal Information */}
             <View style={styles.inputGroup}>
-            <Text style={getLabelStyle('first_name')}>
+              <Text style={getLabelStyle('first_name')}>
                 {t('userDetails.firstName')} <Text style={styles.requiredMarker}>*</Text>
-            </Text>
-            <TextInput
-              style={getInputStyle('first_name')}
-              placeholder={t('userDetails.firstNamePlaceholder')}
-              placeholderTextColor={theme.palette.text.disabled}
-              value={formData.first_name}
-              onChangeText={(value) => updateField('first_name', value)}
-              onBlur={() => handleFieldBlur('first_name', formData.first_name)}
-              editable={!isLoading}
-            />
-            {fieldErrors.first_name && <Text style={styles.errorText}>{fieldErrors.first_name}</Text>}
+              </Text>
+              <TextInput
+                style={getInputStyle('first_name')}
+                placeholder={t('userDetails.firstNamePlaceholder')}
+                placeholderTextColor={theme.palette.text.disabled}
+                value={formData.first_name}
+                onChangeText={(value) => updateField('first_name', value)}
+                onBlur={() => handleFieldBlur('first_name', formData.first_name)}
+                editable={!isLoading}
+              />
+              {fieldErrors.first_name && <Text style={styles.errorText}>{fieldErrors.first_name}</Text>}
             </View>
 
             <View style={styles.inputGroup}>
@@ -1248,8 +1263,8 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               </Text>
               <TextInput
                 style={getInputStyle('last_name')}
-              placeholder={t('userDetails.lastNamePlaceholder')}
-              placeholderTextColor={theme.palette.text.disabled}
+                placeholder={t('userDetails.lastNamePlaceholder')}
+                placeholderTextColor={theme.palette.text.disabled}
                 value={formData.last_name}
                 onChangeText={(value) => updateField('last_name', value)}
                 onBlur={() => handleFieldBlur('last_name', formData.last_name)}
@@ -1264,8 +1279,8 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               </Text>
               <TextInput
                 style={getInputStyle('father_name')}
-              placeholder={t('userDetails.fatherNamePlaceholder')}
-              placeholderTextColor={theme.palette.text.disabled}
+                placeholder={t('userDetails.fatherNamePlaceholder')}
+                placeholderTextColor={theme.palette.text.disabled}
                 value={formData.father_name}
                 onChangeText={(value) => updateField('father_name', value)}
                 onBlur={() => handleFieldBlur('father_name', formData.father_name)}
@@ -1335,120 +1350,120 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               {fieldErrors.birth_date && <Text style={styles.errorText}>{fieldErrors.birth_date}</Text>}
             </View>
 
-          {/* Simple Date Picker Modal */}
-          {showDatePicker && (
-            <Modal
-              transparent={true}
-              animationType="slide"
-              visible={showDatePicker}
-              onRequestClose={handleDateCancel}
-            >
-              <View style={styles.modalOverlay}>
-                <TouchableOpacity 
-                  activeOpacity={1}
-                  onPress={handleDateCancel}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <TouchableOpacity onPress={handleDateCancel}>
-                      <Text style={styles.modalCancelText}>Bekor</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.modalTitle}>Sanani tanlang</Text>
-                    <TouchableOpacity onPress={handleDateConfirm}>
-                      <Text style={styles.modalConfirmText}>Tasdiqlash</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.datePickerContainer}>
-                    {/* Day Picker */}
-                    <View style={styles.pickerColumn}>
-                      <Text style={styles.pickerLabel}>Kun</Text>
-                      <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                        {generateDays().map((day) => (
-                          <TouchableOpacity
-                            key={day}
-                            style={[
-                              styles.pickerItem,
-                              tempDate.getDate() === day && styles.pickerItemSelected
-                            ]}
-                            onPress={() => {
-                              const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
-                              setTempDate(newDate);
-                            }}
-                          >
-                            <Text style={[
-                              styles.pickerItemText,
-                              tempDate.getDate() === day && styles.pickerItemTextSelected
-                            ]}>
-                              {day}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+            {/* Simple Date Picker Modal */}
+            {showDatePicker && (
+              <Modal
+                transparent={true}
+                animationType="slide"
+                visible={showDatePicker}
+                onRequestClose={handleDateCancel}
+              >
+                <View style={styles.modalOverlay}>
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={handleDateCancel}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                      <TouchableOpacity onPress={handleDateCancel}>
+                        <Text style={styles.modalCancelText}>Bekor</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.modalTitle}>Sanani tanlang</Text>
+                      <TouchableOpacity onPress={handleDateConfirm}>
+                        <Text style={styles.modalConfirmText}>Tasdiqlash</Text>
+                      </TouchableOpacity>
                     </View>
+                    <View style={styles.datePickerContainer}>
+                      {/* Day Picker */}
+                      <View style={styles.pickerColumn}>
+                        <Text style={styles.pickerLabel}>Kun</Text>
+                        <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                          {generateDays().map((day) => (
+                            <TouchableOpacity
+                              key={day}
+                              style={[
+                                styles.pickerItem,
+                                tempDate.getDate() === day && styles.pickerItemSelected
+                              ]}
+                              onPress={() => {
+                                const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
+                                setTempDate(newDate);
+                              }}
+                            >
+                              <Text style={[
+                                styles.pickerItemText,
+                                tempDate.getDate() === day && styles.pickerItemTextSelected
+                              ]}>
+                                {day}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
 
-                    {/* Month Picker */}
-                    <View style={styles.pickerColumn}>
-                      <Text style={styles.pickerLabel}>Oy</Text>
-                      <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                        {generateMonths().map((month) => (
-                          <TouchableOpacity
-                            key={month.value}
-                            style={[
-                              styles.pickerItem,
-                              tempDate.getMonth() === month.value && styles.pickerItemSelected
-                            ]}
-                            onPress={() => {
-                              const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
-                              const day = Math.min(tempDate.getDate(), maxDay);
-                              const newDate = new Date(tempDate.getFullYear(), month.value, day);
-                              setTempDate(newDate);
-                            }}
-                          >
-                            <Text style={[
-                              styles.pickerItemText,
-                              tempDate.getMonth() === month.value && styles.pickerItemTextSelected
-                            ]}>
-                              {month.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
+                      {/* Month Picker */}
+                      <View style={styles.pickerColumn}>
+                        <Text style={styles.pickerLabel}>Oy</Text>
+                        <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                          {generateMonths().map((month) => (
+                            <TouchableOpacity
+                              key={month.value}
+                              style={[
+                                styles.pickerItem,
+                                tempDate.getMonth() === month.value && styles.pickerItemSelected
+                              ]}
+                              onPress={() => {
+                                const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
+                                const day = Math.min(tempDate.getDate(), maxDay);
+                                const newDate = new Date(tempDate.getFullYear(), month.value, day);
+                                setTempDate(newDate);
+                              }}
+                            >
+                              <Text style={[
+                                styles.pickerItemText,
+                                tempDate.getMonth() === month.value && styles.pickerItemTextSelected
+                              ]}>
+                                {month.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
 
-                    {/* Year Picker */}
-                    <View style={styles.pickerColumn}>
-                      <Text style={styles.pickerLabel}>Yil</Text>
-                      <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                        {generateYears().map((year) => (
-                          <TouchableOpacity
-                            key={year}
-                            style={[
-                              styles.pickerItem,
-                              tempDate.getFullYear() === year && styles.pickerItemSelected
-                            ]}
-                            onPress={() => {
-                              const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
-                              const day = Math.min(tempDate.getDate(), maxDay);
-                              const newDate = new Date(year, tempDate.getMonth(), day);
-                              setTempDate(newDate);
-                            }}
-                          >
-                            <Text style={[
-                              styles.pickerItemText,
-                              tempDate.getFullYear() === year && styles.pickerItemTextSelected
-                            ]}>
-                              {year}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                      {/* Year Picker */}
+                      <View style={styles.pickerColumn}>
+                        <Text style={styles.pickerLabel}>Yil</Text>
+                        <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                          {generateYears().map((year) => (
+                            <TouchableOpacity
+                              key={year}
+                              style={[
+                                styles.pickerItem,
+                                tempDate.getFullYear() === year && styles.pickerItemSelected
+                              ]}
+                              onPress={() => {
+                                const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
+                                const day = Math.min(tempDate.getDate(), maxDay);
+                                const newDate = new Date(year, tempDate.getMonth(), day);
+                                setTempDate(newDate);
+                              }}
+                            >
+                              <Text style={[
+                                styles.pickerItemText,
+                                tempDate.getFullYear() === year && styles.pickerItemTextSelected
+                              ]}>
+                                {year}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
-            </Modal>
-          )}
+              </Modal>
+            )}
 
             {/* Email */}
             <View style={styles.inputGroup}>
@@ -1816,7 +1831,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               disabled={isLoading}
             >
               <Text style={styles.continueButtonText}>
-                {isLoading ? 'Saqlanmoqda...' : 'Keyingi'}
+                {isLoading ? 'Saqlanmoqda...' : (isEditing ? 'Saqlash' : 'Keyingi')}
               </Text>
             </TouchableOpacity>
           </View>

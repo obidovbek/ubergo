@@ -49,7 +49,7 @@ export async function ensurePushPermission(): Promise<boolean> {
     console.log('Push notifications not supported on web platform');
     return false;
   }
-  
+
   const androidGranted = await requestAndroidNotificationPermission();
   if (!androidGranted) {
     return false;
@@ -60,7 +60,7 @@ export async function ensurePushPermission(): Promise<boolean> {
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-    
+
     console.log('Push permission status:', enabled ? 'granted' : 'denied');
     return enabled;
   } catch (e) {
@@ -77,7 +77,7 @@ export async function getFcmPushToken(): Promise<string | null> {
     console.log('FCM push tokens not supported on web platform');
     return null;
   }
-  
+
   try {
     const hasPerm = await ensurePushPermission();
     if (!hasPerm) {
@@ -101,7 +101,7 @@ export async function registerPushTokenWithBackend(apiToken: string): Promise<vo
   try {
     const token = await getFcmPushToken();
     console.log('Registering FCM push token with backend:', token);
-    
+
     if (!token) {
       console.log('No push token available, skipping registration');
       return;
@@ -112,7 +112,7 @@ export async function registerPushTokenWithBackend(apiToken: string): Promise<vo
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
       app: 'user',
     });
-    
+
     console.log('FCM push token registered successfully');
   } catch (error) {
     console.error('Error registering FCM push token:', error);
@@ -125,9 +125,9 @@ export async function registerPushTokenWithBackend(apiToken: string): Promise<vo
 export function subscribeTokenRefresh(apiToken: string) {
   if (Platform.OS === 'web') {
     console.log('Token refresh not supported on web platform');
-    return () => {}; // Return no-op unsubscribe function
+    return () => { }; // Return no-op unsubscribe function
   }
-  
+
   const unsubscribe = messaging().onTokenRefresh(async (token) => {
     try {
       console.log('FCM push token refreshed:', token);
@@ -148,15 +148,20 @@ export function subscribeTokenRefresh(apiToken: string) {
 /**
  * Setup foreground notification handler
  */
-export function setupForegroundNotificationHandler() {
+export function setupForegroundNotificationHandler(onNotificationReceived?: (message: any) => void) {
   if (Platform.OS === 'web') {
     console.log('Foreground notification handler not supported on web platform');
-    return () => {}; // Return no-op unsubscribe function
+    return () => { }; // Return no-op unsubscribe function
   }
-  
-  const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+
+  const unsubscribe = messaging().onMessage(async (remoteMessage: any) => {
     console.log('FCM message received in foreground:', remoteMessage);
-    
+
+    // Trigger callback if provided
+    if (onNotificationReceived) {
+      onNotificationReceived(remoteMessage);
+    }
+
     // You can display a local notification here if needed
     // For OTP codes, you might want to show an alert or auto-fill
     if (remoteMessage.data?.type === 'otp') {

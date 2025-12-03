@@ -5,7 +5,7 @@
 
 export default {
   common: {
-    continue: 'Continue',
+    continue: 'Davom etish',
     cancel: 'Bekor qilish',
     confirm: 'Tasdiqlash',
     ok: 'OK',
@@ -13,6 +13,9 @@ export default {
     success: 'Muvaffaqiyat',
     loading: 'Yuklanmoqda...',
     retry: 'Qayta urinish',
+    info: 'Ma\'lumot',
+    navigationError: 'Navigatsiya xatosi',
+    delete: 'O\'chirish',
   },
 
   splash: {
@@ -63,6 +66,8 @@ export default {
     errorNetwork: "Internet aloqasi bilan muammo. Iltimos qayta urinib ko'ring.",
     errorGoogleFailed: "Google orqali kirish amalga oshmadi",
     infoNotAvailable: " orqali kirish hozircha mavjud emas",
+    errorNavigation: "OTP ekraniga o'tib bo'lmadi",
+    errorOtpSend: "OTP yuborishda xatolik yuz berdi",
   },
 
   // OTP Verification Screen
@@ -229,6 +234,14 @@ export default {
     minutesAgo: '{count} daqiqa oldin',
     hoursAgo: '{count} soat oldin',
     daysAgo: '{count} kun oldin',
+    message: 'Xabar',
+    type: 'Turi',
+    date: 'Sana',
+    status: 'Holati',
+    read: 'O\'qilgan',
+    unread: 'O\'qilmagan',
+    additionalInfo: 'Qo\'shimcha ma\'lumot',
+    markAsRead: 'O\'qilgan deb belgilash',
   },
 };
 

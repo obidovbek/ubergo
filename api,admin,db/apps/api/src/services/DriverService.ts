@@ -16,7 +16,12 @@ import {
   GeoCityDistrict,
   GeoAdministrativeArea,
   GeoSettlement,
-  GeoNeighborhood
+  GeoNeighborhood,
+  VehicleType,
+  VehicleMake,
+  VehicleModel,
+  VehicleBodyType,
+  VehicleColor
 } from '../database/models/index.js';
 import { AppError } from '../errors/AppError.js';
 
@@ -42,7 +47,34 @@ export class DriverService {
         },
         {
           model: DriverVehicle,
-          as: 'vehicle'
+          as: 'vehicle',
+          include: [
+            {
+              model: VehicleType,
+              as: 'type',
+              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+            },
+            {
+              model: VehicleMake,
+              as: 'make',
+              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+            },
+            {
+              model: VehicleModel,
+              as: 'model',
+              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+            },
+            {
+              model: VehicleBodyType,
+              as: 'bodyType',
+              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+            },
+            {
+              model: VehicleColor,
+              as: 'color',
+              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+            }
+          ]
         },
         {
           model: DriverTaxiLicense,

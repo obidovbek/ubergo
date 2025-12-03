@@ -13,7 +13,18 @@ import {
   DriverTaxiLicense,
   Phone,
   UserIdentity,
-  PushToken
+  PushToken,
+  VehicleType,
+  VehicleMake,
+  VehicleModel,
+  VehicleBodyType,
+  VehicleColor,
+  GeoCountry,
+  GeoProvince,
+  GeoCityDistrict,
+  GeoAdministrativeArea,
+  GeoSettlement,
+  GeoNeighborhood
 } from '../database/models/index.js';
 import { Op } from 'sequelize';
 import { NotFoundError } from '../errors/AppError.js';
@@ -137,11 +148,79 @@ export class AdminDriverService {
             {
               model: DriverVehicle,
               as: 'vehicle',
-              required: false
+              required: false,
+              include: [
+                {
+                  model: VehicleType,
+                  as: 'type',
+                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en'],
+                  required: false
+                },
+                {
+                  model: VehicleMake,
+                  as: 'make',
+                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en'],
+                  required: false
+                },
+                {
+                  model: VehicleModel,
+                  as: 'model',
+                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en'],
+                  required: false
+                },
+                {
+                  model: VehicleBodyType,
+                  as: 'bodyType',
+                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en'],
+                  required: false
+                },
+                {
+                  model: VehicleColor,
+                  as: 'color',
+                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en'],
+                  required: false
+                }
+              ]
             },
             {
               model: DriverTaxiLicense,
               as: 'taxiLicense',
+              required: false
+            },
+            {
+              model: GeoCountry,
+              as: 'addressCountry',
+              attributes: ['id', 'name'],
+              required: false
+            },
+            {
+              model: GeoProvince,
+              as: 'addressProvince',
+              attributes: ['id', 'name'],
+              required: false
+            },
+            {
+              model: GeoCityDistrict,
+              as: 'addressCityDistrict',
+              attributes: ['id', 'name'],
+              required: false
+            },
+            {
+              model: GeoAdministrativeArea,
+              as: 'addressAdministrativeArea',
+              attributes: ['id', 'name'],
+              required: false
+            },
+            {
+              model: GeoSettlement,
+              as: 'addressSettlement',
+              attributes: ['id', 'name', 'type'],
+              required: false
+            },
+            {
+              model: GeoNeighborhood,
+              as: 'addressNeighborhood',
+              attributes: ['id', 'name'],
               required: false
             }
           ]

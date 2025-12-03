@@ -4,11 +4,12 @@
  */
 
 import type { Request, Response } from 'express';
-import { User, PushToken } from '../database/models/index.js';
+import { User, PushToken, OtpCode } from '../database/models/index.js';
 import OtpService from '../services/OtpService.js';
 import SsoService from '../services/SsoService.js';
 import PushService from '../services/PushService.js';
 import AppStoreUrlService from '../services/AppStoreUrlService.js';
+import { NotificationService } from '../services/NotificationService.js';
 import { generateTokenPair, rotateTokens, revokeToken, verifyAccessToken } from '../utils/jwt.js';
 import { logAudit, AuditActions } from '../utils/auditLogger.js';
 import { AppError } from '../errors/AppError.js';
@@ -66,6 +67,36 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     };
 
     const result = await OtpService.sendOtp(phone, channel as any, metadata);
+
+    // If driver app sends OTP via push, create notification with OTP code
+    if (app === 'driver' && channel === 'push') {
+      try {
+        const user = await User.findOne({ where: { phone_e164: phone } });
+        if (user) {
+          // Get the OTP code from the database (most recent one for this phone)
+          const otpRecord = await OtpCode.findOne({
+            where: { target: phone },
+            order: [['created_at', 'DESC']],
+          });
+
+          if (otpRecord) {
+            await NotificationService.createNotification(user.id, {
+              title: 'UbexGo tasdiqlash kodingiz',
+              message: `Kodni haydovchi ilovasiga kiriting: ${otpRecord.code}`,
+              type: 'info',
+              data: {
+                type: 'otp',
+                phone: phone || '',
+                timestamp: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      } catch (notifError: any) {
+        // Log error but don't fail the OTP send
+        console.error('Failed to create notification for OTP:', notifError.message);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -161,6 +192,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     }
 
     // If driver app login, send push notification to user app
+    // Note: OTP notification is created in sendOtp, not here
     if (app === 'driver' && user) {
       try {
         // Find latest push token for user app
@@ -169,6 +201,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
           order: [['updated_at', 'DESC']],
         });
 
+        // Send push notification for successful login (optional)
         if (pushToken) {
           await PushService.send({
             token: pushToken.token,
@@ -183,7 +216,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         }
       } catch (pushError: any) {
         // Log push notification error but don't fail the login
-        console.error('Failed to send push notification to user app:', pushError.message);
+        console.error('Failed to send push notification:', pushError.message);
       }
     }
 

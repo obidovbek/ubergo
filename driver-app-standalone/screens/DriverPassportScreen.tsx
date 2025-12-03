@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -33,9 +33,11 @@ const theme = createTheme('light');
 
 export const DriverPassportScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [personalInfo, setPersonalInfo] = useState({
@@ -52,7 +54,7 @@ export const DriverPassportScreen: React.FC = () => {
     expiry_date: new Date(),
   });
   const [tempDate, setTempDate] = useState(new Date());
-  
+
   // Geo selector state
   type GeoFieldType = 'citizenship' | 'birth_country' | 'birth_province' | 'birth_city';
   const [geoModalType, setGeoModalType] = useState<GeoFieldType | null>(null);
@@ -222,7 +224,7 @@ export const DriverPassportScreen: React.FC = () => {
       default:
         return [];
     }
-    
+
     // Filter options based on search query
     if (geoSearchQuery.trim()) {
       const query = geoSearchQuery.toLowerCase().trim();
@@ -232,7 +234,7 @@ export const DriverPassportScreen: React.FC = () => {
         return nameMatch || typeMatch;
       });
     }
-    
+
     return options;
   };
 
@@ -325,11 +327,11 @@ export const DriverPassportScreen: React.FC = () => {
       }
 
       const asset = result.assets[0];
-      
+
       try {
         // Use base64 from expo-image-picker if available, otherwise fallback
         let base64: string;
-        
+
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
@@ -340,7 +342,7 @@ export const DriverPassportScreen: React.FC = () => {
           if (Platform.OS === 'web') {
             const response = await fetch(asset.uri);
             const blob = await response.blob();
-            
+
             base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
@@ -358,7 +360,7 @@ export const DriverPassportScreen: React.FC = () => {
             throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
         }
-        
+
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
         if (asset.type) {
@@ -380,13 +382,13 @@ export const DriverPassportScreen: React.FC = () => {
             fileExtension = ext === 'jpeg' ? 'jpg' : ext;
           }
         }
-        
+
         // Upload to server
         if (!token) {
           throw new Error('Token is required');
         }
         const imageUrl = await uploadImage(token, base64, fileExtension);
-        
+
         // Update state and form data
         if (photoType === 'front') {
           setPhotoFrontUri(asset.uri);
@@ -395,7 +397,7 @@ export const DriverPassportScreen: React.FC = () => {
           setPhotoBackUri(asset.uri);
           updateField('passport_back_url', imageUrl);
         }
-        
+
         showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
       } catch (error) {
         console.error('Failed to upload image:', error);
@@ -413,12 +415,12 @@ export const DriverPassportScreen: React.FC = () => {
 
   const convertDateFormat = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
-    
+
     // If already in DD.MM.YYYY format, return as is
     if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
       return dateString;
     }
-    
+
     // If in YYYY-MM-DD format, convert to DD.MM.YYYY
     const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
@@ -427,7 +429,7 @@ export const DriverPassportScreen: React.FC = () => {
       const day = isoMatch[3].padStart(2, '0');
       return `${day}.${month}.${year}`;
     }
-    
+
     // Return as is if format is unknown
     return dateString;
   };
@@ -443,31 +445,31 @@ export const DriverPassportScreen: React.FC = () => {
     // Parse DD.MM.YYYY format
     const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (!match) return null;
-    
+
     const day = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
     const year = parseInt(match[3], 10);
-    
+
     if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
       return null;
     }
-    
+
     const date = new Date(year, month, day);
     // Validate the date (e.g., check for invalid dates like 31.02.2000)
     if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
       return null;
     }
-    
+
     return date;
   };
 
   const handleDateInputChange = (field: 'birth_date' | 'issue_date' | 'expiry_date', text: string) => {
     // Remove all non-digits
     const digitsOnly = text.replace(/\D/g, '');
-    
+
     // Limit to 8 digits (DDMMYYYY)
     if (digitsOnly.length > 8) return;
-    
+
     // Auto-format as user types: DD.MM.YYYY
     let formatted = digitsOnly;
     if (digitsOnly.length > 4) {
@@ -477,9 +479,9 @@ export const DriverPassportScreen: React.FC = () => {
       // Insert first dot: DDMM -> DD.MM
       formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2);
     }
-    
+
     updateField(field, formatted);
-    
+
     // If valid format (DD.MM.YYYY), update selectedDate
     if (formatted.length === 10) {
       const parsedDate = parseDate(formatted);
@@ -491,7 +493,7 @@ export const DriverPassportScreen: React.FC = () => {
 
   const handleDateConfirm = () => {
     if (!datePickerField) return;
-    
+
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
     updateField(datePickerField, formattedDate);
@@ -546,7 +548,7 @@ export const DriverPassportScreen: React.FC = () => {
     // For birth_date, go back to 1900, for others go forward to 2050
     const startYear = datePickerField === 'birth_date' ? 1900 : currentYear - 10;
     const endYear = datePickerField === 'birth_date' ? currentYear : 2050;
-    
+
     if (datePickerField === 'birth_date') {
       for (let year = endYear; year >= startYear; year--) {
         years.push(year);
@@ -561,13 +563,13 @@ export const DriverPassportScreen: React.FC = () => {
 
   const loadPersonalInfo = async () => {
     if (!token) return;
-    
+
     try {
       // Ensure countries are loaded first
       if (countries.length === 0) {
         await loadCountries();
       }
-      
+
       const profile = await getDriverProfile(token);
       if (profile.profile) {
         const personalInfoData = {
@@ -576,25 +578,25 @@ export const DriverPassportScreen: React.FC = () => {
           father_name: profile.profile.father_name || '',
           birth_date: convertDateFormat(profile.profile.birth_date),
         };
-        
+
         setPersonalInfo(personalInfoData);
-        
+
         // Pre-fill form data with personal info as defaults
         const passportData = (profile.profile as any).passport || {};
-        
+
         const birthDateStr = convertDateFormat(passportData.birth_date) || personalInfoData.birth_date;
         const issueDateStr = convertDateFormat(passportData.issue_date) || '';
         const expiryDateStr = convertDateFormat(passportData.expiry_date) || '';
-        
+
         // Initialize selected dates
         const birthDate = birthDateStr ? parseDate(birthDateStr) : new Date(2000, 0, 1);
         const issueDate = issueDateStr ? parseDate(issueDateStr) : new Date();
         const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : new Date();
-        
+
         if (birthDate) setSelectedDate(prev => ({ ...prev, birth_date: birthDate }));
         if (issueDate) setSelectedDate(prev => ({ ...prev, issue_date: issueDate }));
         if (expiryDate) setSelectedDate(prev => ({ ...prev, expiry_date: expiryDate }));
-        
+
         setFormData(prev => ({
           ...prev,
           // Pre-fill from personal info if not already set in passport data
@@ -754,9 +756,9 @@ export const DriverPassportScreen: React.FC = () => {
                   expiryDate.setHours(0, 0, 0, 0);
                   if (expiryDate <= issueDate) {
                     // Set error for expiry_date (preserve existing errors)
-                    setFieldErrors(prev => ({ 
-                      ...prev, 
-                      expiry_date: 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak' 
+                    setFieldErrors(prev => ({
+                      ...prev,
+                      expiry_date: 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak'
                     }));
                   } else if (fieldErrors.expiry_date === 'Amal qilish muddati berilgan sanadan keyin bo\'lishi kerak') {
                     // Clear this specific error if it was set due to date relationship
@@ -809,7 +811,7 @@ export const DriverPassportScreen: React.FC = () => {
   const handleContinue = async () => {
     // Frontend validation
     const validationErrors: Record<string, string> = {};
-    
+
     if (!formData.first_name) {
       validationErrors.first_name = 'Ismni kiriting';
     }
@@ -897,23 +899,29 @@ export const DriverPassportScreen: React.FC = () => {
       );
 
       await updatePassport(token, cleanData);
-      
+
       showToast.success(t('common.success'), 'Passport ma\'lumotlari saqlandi');
-      
-      // Navigate to next step (License)
-      (navigation as any).navigate('DriverLicense');
+
+      showToast.success(t('common.success'), 'Passport ma\'lumotlari saqlandi');
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Navigate to next step (License)
+        (navigation as any).navigate('DriverLicense');
+      }
     } catch (error: any) {
       console.error('Failed to save passport info:', error);
-      
+
       // Check if it's a validation error from backend (422 status)
       const statusCode = error?.response?.status || error?.status;
       if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
-        
+
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...apiErrors }));
-        
+
         // Also show a general error toast
         const firstError = Object.values(apiErrors)[0];
         if (firstError) {
@@ -956,8 +964,8 @@ export const DriverPassportScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>Shaharlar aro</Text>
-            <Text style={styles.subtitle}>PASSPORT MA'LUMOTLARI</Text>
+            <Text style={styles.title}>{isEditing ? t('editProfile.passport') : 'Shaharlar aro'}</Text>
+            <Text style={styles.subtitle}>{isEditing ? t('editProfile.passport') : 'PASSPORT MA\'LUMOTLARI'}</Text>
             <Text style={styles.description}>
               (Barcha ma'lumotlar passport bo'yicha kiritiladi)
             </Text>
@@ -1338,7 +1346,7 @@ export const DriverPassportScreen: React.FC = () => {
               disabled={isLoading}
             >
               <Text style={styles.continueButtonText}>
-                {isLoading ? 'Saqlanmoqda...' : 'Keyingi'}
+                {isLoading ? 'Saqlanmoqda...' : (isEditing ? 'Saqlash' : 'Keyingi')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1354,7 +1362,7 @@ export const DriverPassportScreen: React.FC = () => {
           onRequestClose={handleDateCancel}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={1}
               onPress={handleDateCancel}
               style={StyleSheet.absoluteFill}

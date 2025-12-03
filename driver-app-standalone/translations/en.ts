@@ -392,6 +392,107 @@ export default {
     issueDateRequired: 'Please enter issue date',
   },
 
+  // Driver Vehicle Screen
+  driverVehicle: {
+    title: 'VEHICLE INFORMATION',
+    subtitle: 'EDIT INFORMATION',
+    description: '(All information is entered according to technical passport)',
+    backButton: 'Back',
+    // Vehicle Basic Information
+    vehicleType: 'Vehicle Type',
+    make: 'Make',
+    model: 'Model',
+    bodyType: 'Body Type',
+    color: 'Color',
+    // Tech Passport
+    techPassportSeries: 'Tech Passport Series',
+    licensePlate: 'License Plate',
+    modelName: 'Model/Name',
+    colorField: 'Color',
+    // Company
+    company: 'COMPANY',
+    // Owner Personal Information
+    ownerInfo: 'FULL NAME',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    fatherName: 'Father\'s Name',
+    // Owner Address
+    address: 'Address',
+    country: 'Country',
+    province: 'Province',
+    cityDistrict: 'City / District',
+    administrativeArea: 'Administrative Area',
+    settlement: 'Settlement',
+    neighborhood: 'Neighborhood',
+    street: 'Street and House',
+    companyTaxId: 'Company Tax ID',
+    pinfl: 'PINFL',
+    // Vehicle Specifications
+    year: 'Manufacturing Year',
+    type: 'Type',
+    vehicleTypeLight: 'Light',
+    bodyTypePlaceholder: 'Sedan',
+    grossWeight: 'Gross weight',
+    unladenWeight: 'Unladen weight',
+    fuelType: 'Fuel Type',
+    seatingCapacity: 'Seating capacity (with driver)',
+    // Photo labels
+    techPassportFront: 'Tech Passport Front Side Photo:',
+    techPassportBack: 'Tech Passport Back Side Photo:',
+    vehicleFront: 'Vehicle Front Side Photo:',
+    vehicleBack: 'Vehicle Back Side Photo:',
+    vehicleRight: 'Vehicle Right Side Photo:',
+    vehicleLeft: 'Vehicle Left Side Photo:',
+    vehicleAngle45: 'Vehicle General View 45°:',
+    vehicleInterior: 'Vehicle Interior Photo:',
+    // Select placeholders
+    select: 'Select',
+    // Modal titles
+    selectVehicleType: 'Select Vehicle Type',
+    selectMake: 'Select Make',
+    selectModel: 'Select Model',
+    selectBodyType: 'Select Body Type',
+    selectColor: 'Select Color',
+  },
+
+  // Driver Taxi License Screen
+  driverTaxiLicense: {
+    title: 'LICENSE',
+    subtitle: 'EDIT INFORMATION',
+    description: '(All information is entered according to the license)',
+    backButton: 'Back',
+    licenseNumber: 'LICENSE number',
+    issueDate: 'Issue date',
+    registryNumber: 'LICENSE registry number',
+    licensePhoto: 'LICENSE photo:',
+    licenseSheetTitle: 'LICENSE sheet',
+    licenseSheetNumber: 'LICENSE sheet number',
+    validFrom: 'Valid from',
+    validUntil: 'Valid until',
+    licenseSheetPhoto: 'LICENSE sheet photo:',
+    selfEmploymentTitle: 'Self-employment',
+    selfEmploymentNumber: 'Self-employment №',
+    selfEmploymentPhoto: 'Self-employment photo:',
+    powerOfAttorneyPhoto: 'Power of attorney photo:',
+    insurancePhoto: 'Insurance photo:',
+    chooseImageOrFile: 'Choose image or file',
+    howToSelectImage: 'How do you want to select an image or PDF file?',
+    save: 'Save',
+    ready: 'Ready',
+    cameraPermissionMessage: 'Please grant permission to use the camera',
+    galleryPermissionMessage: 'Please grant permission to select image from gallery',
+  },
+
+  // Edit Profile Menu
+  editProfile: {
+    personalInfo: 'Personal Information',
+    passport: 'Passport Information',
+    license: 'Driving License',
+    vehicle: 'Vehicle Information',
+    taxiLicense: 'Taxi License',
+    driverType: 'Driver Type',
+  },
+
   // Notifications
   notifications: {
     title: 'Notifications',

@@ -5,7 +5,7 @@
 
 export default {
   common: {
-    continue: 'Continue',
+    continue: 'Davom etish',
     cancel: 'Bekor qilish',
     confirm: 'Tasdiqlash',
     ok: 'OK',
@@ -399,6 +399,107 @@ export default {
     errorUpdate: "Ma'lumotlarni saqlashda xatolik",
     licenseNumberRequired: 'Guvohnoma raqamini kiriting',
     issueDateRequired: 'Berilgan sanani kiriting',
+  },
+
+  // Driver Vehicle Screen
+  driverVehicle: {
+    title: 'TRANSPORT VOSITASI MA\'LUMOTLARI',
+    subtitle: 'MA\'LUMOTLARNI TAHRIRLASH',
+    description: "(Barcha ma'lumotlar tex. passport boyicha kiritiladi)",
+    backButton: 'Orqaga',
+    // Vehicle Basic Information
+    vehicleType: 'Transport turi',
+    make: 'Marka',
+    model: 'Model',
+    bodyType: 'Kuzov turi',
+    color: 'Rangi',
+    // Tech Passport
+    techPassportSeries: 'Guvohnoma (Tex.Passport) seriya raqami',
+    licensePlate: 'Davlat raqam',
+    modelName: 'Rusumi/Modeli',
+    colorField: 'Rangi',
+    // Company
+    company: 'FIRMA',
+    // Owner Personal Information
+    ownerInfo: 'FISH',
+    firstName: 'Ism',
+    lastName: 'Familiya',
+    fatherName: 'Otasining ismi',
+    // Owner Address
+    address: 'Manzili',
+    country: 'Mamlakat',
+    province: 'Viloyat',
+    cityDistrict: 'Shahar / Tuman',
+    administrativeArea: 'Ma\'muriy hudud',
+    settlement: 'Aholi punkti',
+    neighborhood: 'Mahalla',
+    street: 'Ko\'cha va uy',
+    companyTaxId: 'Firma STIR',
+    pinfl: 'JSHSHIR (ПИНФЛ)',
+    // Vehicle Specifications
+    year: 'Ishlab chiqarilgan yili',
+    type: 'Turi',
+    vehicleTypeLight: 'Yengil',
+    bodyTypePlaceholder: 'Sedan',
+    grossWeight: "To'la vazni",
+    unladenWeight: 'Yuksiz vazni',
+    fuelType: "Yoqilg'i turi",
+    seatingCapacity: "O'tiradigan joylar soni haydovchi bilan",
+    // Photo labels
+    techPassportFront: 'Tex. Pasport oldi tomon rasmi:',
+    techPassportBack: 'Tex. Pasport orqa tomon rasmi:',
+    vehicleFront: 'Transport oldi tomon rasmi:',
+    vehicleBack: 'Transport orqa tomon rasmi:',
+    vehicleRight: 'Transport o\'ng tomon rasmi:',
+    vehicleLeft: 'Transport chap tomon rasmi:',
+    vehicleAngle45: 'Transport umumiy ko\'rinishi 45°:',
+    vehicleInterior: 'Transport salon rasmi:',
+    // Select placeholders
+    select: 'Tanlang',
+    // Modal titles
+    selectVehicleType: 'Transport turini tanlang',
+    selectMake: 'Markani tanlang',
+    selectModel: 'Modelni tanlang',
+    selectBodyType: 'Kuzov turini tanlang',
+    selectColor: 'Rangni tanlang',
+  },
+
+  // Driver Taxi License Screen
+  driverTaxiLicense: {
+    title: 'LITSENZIYA',
+    subtitle: 'MA\'LUMOTLARNI TAHRIRLASH',
+    description: "(Barcha ma'lumotlar litsenziya bo'yicha kiritiladi)",
+    backButton: 'Orqaga',
+    licenseNumber: 'LITSENZIYA raqami',
+    issueDate: 'Berilgan sanasi',
+    registryNumber: 'LITSENZIYA reyestrda',
+    licensePhoto: 'LITSENZIYA rasmi:',
+    licenseSheetTitle: 'LITSENZIYA varaqasi',
+    licenseSheetNumber: 'LITSENZIYA varaqasi raqami',
+    validFrom: 'Amal qilish muddati (dan)',
+    validUntil: 'Amal qilish muddati (gacha)',
+    licenseSheetPhoto: 'LITSENZIYA varaqasi rasmi:',
+    selfEmploymentTitle: 'O\'zini o\'zi band qilish',
+    selfEmploymentNumber: 'O\'zini o\'zi band qilish №',
+    selfEmploymentPhoto: 'O\'zini o\'zi band qilish rasm:',
+    powerOfAttorneyPhoto: 'Ishonchnoma rasmi:',
+    insurancePhoto: 'Sugurta rasmi:',
+    chooseImageOrFile: 'Rasm yoki fayl tanlash',
+    howToSelectImage: 'Rasm yoki PDF faylni qanday tanlamoqchisiz?',
+    save: 'Saqlash',
+    ready: 'Tayyor',
+    cameraPermissionMessage: 'Kameradan foydalanish uchun ruxsat bering',
+    galleryPermissionMessage: 'Galereyadan rasm tanlash uchun ruxsat bering',
+  },
+
+  // Edit Profile Menu
+  editProfile: {
+    personalInfo: 'Shaxsiy ma\'lumotlar',
+    passport: 'Pasport ma\'lumotlari',
+    license: 'Haydovchilik guvohnomasi',
+    vehicle: 'Transport vositasi',
+    taxiLicense: 'Taksi litsenziyasi',
+    driverType: 'Haydovchi turi',
   },
 
   // Notifications

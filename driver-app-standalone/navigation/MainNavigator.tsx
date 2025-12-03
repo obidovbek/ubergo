@@ -9,6 +9,14 @@ import { MenuScreen } from '../screens/MenuScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 
+import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { DriverPersonalInfoScreen } from '../screens/DriverPersonalInfoScreen';
+import { DriverPassportScreen } from '../screens/DriverPassportScreen';
+import { DriverLicenseScreen } from '../screens/DriverLicenseScreen';
+import { DriverVehicleScreen } from '../screens/DriverVehicleScreen';
+import { DriverTaxiLicenseScreen } from '../screens/DriverTaxiLicenseScreen';
+import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
+
 const Stack = createNativeStackNavigator();
 
 export const MainNavigator: React.FC = () => {
@@ -18,20 +26,51 @@ export const MainNavigator: React.FC = () => {
         headerShown: false,
       }}
     >
-      <Stack.Screen 
-        name="Home" 
+      <Stack.Screen
+        name="Home"
         component={MenuScreen}
       />
-      <Stack.Screen 
-        name="Profile" 
+      <Stack.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
           headerShown: true,
           title: 'Profile',
         }}
       />
-      <Stack.Screen 
-        name="Notifications" 
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="DriverPersonalInfo"
+        component={DriverPersonalInfoScreen}
+      />
+      <Stack.Screen
+        name="DriverPassport"
+        component={DriverPassportScreen}
+      />
+      <Stack.Screen
+        name="DriverLicense"
+        component={DriverLicenseScreen}
+      />
+      <Stack.Screen
+        name="DriverVehicle"
+        component={DriverVehicleScreen}
+      />
+      <Stack.Screen
+        name="DriverTaxiLicense"
+        component={DriverTaxiLicenseScreen}
+      />
+      <Stack.Screen
+        name="DriverDetails"
+        component={DriverDetailsScreen}
+      />
+      <Stack.Screen
+        name="Notifications"
         component={NotificationsScreen}
         options={{
           headerShown: true,

@@ -18,9 +18,12 @@ export interface Notification {
 
 export interface NotificationsResponse {
   success: boolean;
-  data: Notification[];
-  total?: number;
-  unread?: number;
+  message?: string;
+  data: {
+    data: Notification[];
+    total?: number;
+    unread?: number;
+  };
 }
 
 /**

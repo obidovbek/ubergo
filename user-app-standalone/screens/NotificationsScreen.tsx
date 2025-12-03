@@ -3,7 +3,7 @@
  * Display and manage all notifications
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,68 +14,48 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
-import { showToast } from '../utils/toast';
-import * as NotificationsAPI from '../api/notifications';
-import type { Notification } from '../api/notifications';
+import { useNotifications, Notification } from '../contexts/NotificationContext';
 
 const theme = createTheme('light');
 
 export const NotificationsScreen: React.FC = () => {
   const { token } = useAuth();
   const { t } = useTranslation();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    notifications,
+    loading,
+    refreshing,
+    unreadCount,
+    loadNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
-  const loadNotifications = useCallback(async () => {
-    if (!token) return;
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-    try {
-      const response = await NotificationsAPI.getNotifications(token);
-      if (response.success && response.data) {
-        setNotifications(response.data);
-        setUnreadCount(response.unread || response.data.filter(n => !n.read).length);
-      }
-    } catch (error: any) {
-      console.error('Failed to load notifications:', error);
-      showToast('error', t('notifications.loadError'), error.message || t('notifications.loadErrorDescription'));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const handleNotificationPress = async (notification: Notification) => {
+    // Mark as read if unread
+    if (!notification.read) {
+      await markAsRead(notification.id);
     }
-  }, [token, t]);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadNotifications();
-  }, [loadNotifications]);
+    // Show detail modal
+    setSelectedNotification(notification);
+  };
 
   const handleMarkAsRead = async (notification: Notification) => {
-    if (!token || notification.read) return;
-
-    try {
-      await NotificationsAPI.markNotificationAsRead(token, notification.id);
-      setNotifications(prev =>
-        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error: any) {
-      console.error('Failed to mark notification as read:', error);
-      showToast('error', t('notifications.markReadError'), error.message);
-    }
+    if (notification.read) return;
+    await markAsRead(notification.id);
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!token || unreadCount === 0) return;
+    if (unreadCount === 0) return;
 
     Alert.alert(
       t('notifications.markAllRead'),
@@ -85,15 +65,7 @@ export const NotificationsScreen: React.FC = () => {
         {
           text: t('common.confirm'),
           onPress: async () => {
-            try {
-              await NotificationsAPI.markAllNotificationsAsRead(token);
-              setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-              setUnreadCount(0);
-              showToast('success', t('notifications.allMarkedRead'));
-            } catch (error: any) {
-              console.error('Failed to mark all as read:', error);
-              showToast('error', t('notifications.markAllReadError'), error.message);
-            }
+            await markAllAsRead();
           },
         },
       ]
@@ -101,8 +73,6 @@ export const NotificationsScreen: React.FC = () => {
   };
 
   const handleDelete = async (notification: Notification) => {
-    if (!token) return;
-
     Alert.alert(
       t('notifications.delete'),
       t('notifications.deleteConfirm'),
@@ -112,17 +82,7 @@ export const NotificationsScreen: React.FC = () => {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            try {
-              await NotificationsAPI.deleteNotification(token, notification.id);
-              setNotifications(prev => prev.filter(n => n.id !== notification.id));
-              if (!notification.read) {
-                setUnreadCount(prev => Math.max(0, prev - 1));
-              }
-              showToast('success', t('notifications.deleted'));
-            } catch (error: any) {
-              console.error('Failed to delete notification:', error);
-              showToast('error', t('notifications.deleteError'), error.message);
-            }
+            await deleteNotification(notification.id);
           },
         },
       ]
@@ -138,10 +98,21 @@ export const NotificationsScreen: React.FC = () => {
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) return t('notifications.justNow');
-    if (minutes < 60) return t('notifications.minutesAgo', { count: minutes });
-    if (hours < 24) return t('notifications.hoursAgo', { count: hours });
-    if (days < 7) return t('notifications.daysAgo', { count: days });
+    if (minutes < 60) return t('notifications.minutesAgo').replace('{count}', minutes.toString());
+    if (hours < 24) return t('notifications.hoursAgo').replace('{count}', hours.toString());
+    if (days < 7) return t('notifications.daysAgo').replace('{count}', days.toString());
     return date.toLocaleDateString();
+  };
+
+  const formatFullDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const getNotificationIcon = (type: string) => {
@@ -168,7 +139,7 @@ export const NotificationsScreen: React.FC = () => {
         styles.notificationItem,
         !item.read && styles.unreadNotification,
       ]}
-      onPress={() => handleMarkAsRead(item)}
+      onPress={() => handleNotificationPress(item)}
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: getNotificationColor(item.type) + '20' }]}>
@@ -196,7 +167,7 @@ export const NotificationsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (loading && notifications.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -233,13 +204,112 @@ export const NotificationsScreen: React.FC = () => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={handleRefresh}
+              onRefresh={loadNotifications}
               colors={[theme.palette.primary.main]}
             />
           }
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      {/* Notification Detail Modal */}
+      <Modal
+        visible={selectedNotification !== null}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedNotification(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedNotification && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={[styles.modalIconContainer, { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }]}>
+                    <Text style={[styles.modalIcon, { color: getNotificationColor(selectedNotification.type) }]}>
+                      {getNotificationIcon(selectedNotification.type)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => setSelectedNotification(null)}
+                  >
+                    <Text style={styles.modalCloseText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.modalTitle}>{selectedNotification.title}</Text>
+                  
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>{t('notifications.message')}</Text>
+                    <Text style={styles.modalMessage}>{selectedNotification.message}</Text>
+                  </View>
+
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>{t('notifications.type')}</Text>
+                    <View style={[styles.modalTypeBadge, { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }]}>
+                      <Text style={[styles.modalTypeText, { color: getNotificationColor(selectedNotification.type) }]}>
+                        {selectedNotification.type.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>{t('notifications.date')}</Text>
+                    <Text style={styles.modalDate}>{formatFullDate(selectedNotification.created_at)}</Text>
+                  </View>
+
+                  {selectedNotification.data && Object.keys(selectedNotification.data).length > 0 && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalSectionTitle}>{t('notifications.additionalInfo')}</Text>
+                      <View style={styles.modalDataContainer}>
+                        {Object.entries(selectedNotification.data).map(([key, value]) => (
+                          <View key={key} style={styles.modalDataRow}>
+                            <Text style={styles.modalDataKey}>{key}:</Text>
+                            <Text style={styles.modalDataValue}>{String(value)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>{t('notifications.status')}</Text>
+                    <View style={[styles.modalStatusBadge, { backgroundColor: selectedNotification.read ? theme.palette.success.main + '20' : theme.palette.warning.main + '20' }]}>
+                      <Text style={[styles.modalStatusText, { color: selectedNotification.read ? theme.palette.success.main : theme.palette.warning.main }]}>
+                        {selectedNotification.read ? t('notifications.read') : t('notifications.unread')}
+                      </Text>
+                    </View>
+                  </View>
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  {!selectedNotification.read && (
+                    <TouchableOpacity
+                      style={styles.modalActionButton}
+                      onPress={async () => {
+                        await markAsRead(selectedNotification.id);
+                        setSelectedNotification({ ...selectedNotification, read: true });
+                      }}
+                    >
+                      <Text style={styles.modalActionText}>{t('notifications.markAsRead')}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.modalActionButton, styles.modalDeleteButton]}
+                    onPress={async () => {
+                      setSelectedNotification(null);
+                      await deleteNotification(selectedNotification.id);
+                    }}
+                  >
+                    <Text style={[styles.modalActionText, styles.modalDeleteText]}>{t('common.delete')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -354,5 +424,146 @@ const styles = StyleSheet.create({
     color: theme.palette.text.secondary,
     textAlign: 'center',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: theme.palette.background.card,
+    borderTopLeftRadius: theme.borderRadius.lg,
+    borderTopRightRadius: theme.borderRadius.lg,
+    maxHeight: '90%',
+    paddingBottom: theme.spacing(2),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing(2),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.palette.divider,
+  },
+  modalIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.palette.grey[200],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 18,
+    color: theme.palette.text.primary,
+    fontWeight: 'bold',
+  },
+  modalBody: {
+    padding: theme.spacing(2),
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+    color: theme.palette.text.primary,
+    fontWeight: '700',
+    marginBottom: theme.spacing(2),
+  },
+  modalSection: {
+    marginBottom: theme.spacing(2),
+  },
+  modalSectionTitle: {
+    ...theme.typography.body2,
+    color: theme.palette.text.secondary,
+    fontWeight: '600',
+    marginBottom: theme.spacing(1),
+    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  modalMessage: {
+    ...theme.typography.body1,
+    color: theme.palette.text.primary,
+    lineHeight: 22,
+  },
+  modalTypeBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.borderRadius.sm,
+  },
+  modalTypeText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  modalDate: {
+    ...theme.typography.body2,
+    color: theme.palette.text.primary,
+  },
+  modalDataContainer: {
+    backgroundColor: theme.palette.grey[100],
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing(1.5),
+  },
+  modalDataRow: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing(1),
+  },
+  modalDataKey: {
+    ...theme.typography.body2,
+    color: theme.palette.text.secondary,
+    fontWeight: '600',
+    marginRight: theme.spacing(1),
+    minWidth: 100,
+  },
+  modalDataValue: {
+    ...theme.typography.body2,
+    color: theme.palette.text.primary,
+    flex: 1,
+  },
+  modalStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.borderRadius.sm,
+  },
+  modalStatusText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: theme.spacing(2),
+    borderTopWidth: 1,
+    borderTopColor: theme.palette.divider,
+    gap: theme.spacing(1.5),
+  },
+  modalActionButton: {
+    flex: 1,
+    padding: theme.spacing(1.5),
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.palette.primary.main,
+    alignItems: 'center',
+  },
+  modalActionText: {
+    ...theme.typography.button,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  modalDeleteButton: {
+    backgroundColor: theme.palette.error.main,
+  },
+  modalDeleteText: {
+    color: '#FFFFFF',
+  },
 });
-

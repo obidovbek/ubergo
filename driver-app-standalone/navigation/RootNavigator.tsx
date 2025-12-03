@@ -111,17 +111,18 @@ export const RootNavigator: React.FC = () => {
     }
   }, [isAuthenticated, token, refreshTrigger]);
   
-  // Also check when user status changes (separate effect to ensure status changes trigger re-evaluation)
+  // Also check when user profile_complete changes (to handle profile completion)
   useEffect(() => {
     if (isAuthenticated && token && user) {
-      // When user object changes (e.g., status updated), re-check profile
-      // This ensures we re-evaluate navigation after status update
-      const userStatus = (user as any)?.status;
-      console.log('RootNavigator: User status changed, current status:', userStatus);
-      // Don't call checkDriverProfile again here to avoid double API calls
-      // The status check in getNavigator() will handle the navigation change
+      const profileComplete = (user as any)?.profile_complete;
+      console.log('RootNavigator: User profile_complete changed:', profileComplete);
+      // Re-check profile status when profile_complete flag changes
+      // This ensures navigation switches when profile is marked as complete
+      if (profileComplete === true) {
+        checkDriverProfile();
+      }
     }
-  }, [(user as any)?.status, user?.id]); // Trigger when status or user ID changes
+  }, [(user as any)?.profile_complete, user?.id, isAuthenticated, token, checkDriverProfile]); // Trigger when profile_complete or user ID changes
 
   // Profile status is checked:
   // 1. On initial mount (useEffect above)

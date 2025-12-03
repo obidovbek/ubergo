@@ -287,56 +287,46 @@ export const DriverDetailPage = () => {
               </div>
             </div>
 
-            {/* Address */}
-            {(
-              profile.addressCountry ||
-              profile.addressProvince ||
-              profile.addressCityDistrict ||
-              profile.addressAdministrativeArea ||
-              profile.addressSettlement ||
-              profile.addressNeighborhood ||
-              profile.address_street
-            ) && (
-              <div className="address-section">
-                <h3>Manzil</h3>
-                <div className="detail-grid">
-                  <div className="detail-item">
-                    <label>Davlat</label>
-                    <span>{profile.addressCountry?.name || '-'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Viloyat</label>
-                    <span>{profile.addressProvince?.name || '-'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Shahar</label>
-                    <span>{profile.addressCityDistrict?.name || '-'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Ma'muriy hudud</label>
-                    <span>{profile.addressAdministrativeArea?.name || '-'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Turar joy turi</label>
-                    <span>
-                      {profile.addressSettlement
-                        ? `${profile.addressSettlement.name}${
-                            profile.addressSettlement.type ? ` (${profile.addressSettlement.type})` : ''
-                          }`
-                        : '-'}
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Mahalla</label>
-                    <span>{profile.addressNeighborhood?.name || '-'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Ko'cha</label>
-                    <span>{profile.address_street || '-'}</span>
-                  </div>
+            {/* Address - Always show address section */}
+            <div className="address-section">
+              <h3>Manzil</h3>
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <label>Davlat</label>
+                  <span>{profile.addressCountry?.name || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Viloyat</label>
+                  <span>{profile.addressProvince?.name || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Shahar</label>
+                  <span>{profile.addressCityDistrict?.name || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Ma'muriy hudud</label>
+                  <span>{profile.addressAdministrativeArea?.name || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Turar joy turi</label>
+                  <span>
+                    {profile.addressSettlement
+                      ? `${profile.addressSettlement.name}${
+                          profile.addressSettlement.type ? ` (${profile.addressSettlement.type})` : ''
+                        }`
+                      : '-'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label>Mahalla</label>
+                  <span>{profile.addressNeighborhood?.name || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Ko'cha</label>
+                  <span>{profile.address_street || '-'}</span>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Photos */}
             {(profile.photo_face_url || profile.photo_body_url) && (
@@ -572,24 +562,36 @@ export const DriverDetailPage = () => {
             <div className="detail-grid">
               <div className="detail-item">
                 <label>Transport turi</label>
-                <span>{profile.vehicle.vehicle_type === 'light' ? 'Yengil' : 
-                       profile.vehicle.vehicle_type === 'cargo' ? 'Yuk' : '-'}</span>
+                <span>
+                  {(profile.vehicle as any).type?.name_uz || 
+                   (profile.vehicle as any).type?.name || 
+                   (profile.vehicle.vehicle_type === 'light' ? 'Yengil' : 
+                    profile.vehicle.vehicle_type === 'cargo' ? 'Yuk' : '-')}
+                </span>
               </div>
               <div className="detail-item">
                 <label>Kuzov turi</label>
-                <span>{profile.vehicle.body_type || '-'}</span>
+                <span>{(profile.vehicle as any).bodyType?.name_uz || 
+                       (profile.vehicle as any).bodyType?.name || 
+                       profile.vehicle.body_type || '-'}</span>
               </div>
               <div className="detail-item">
                 <label>Marka</label>
-                <span>{profile.vehicle.make || '-'}</span>
+                <span>{(profile.vehicle as any).make?.name_uz || 
+                       (profile.vehicle as any).make?.name || 
+                       (typeof profile.vehicle.make === 'string' ? profile.vehicle.make : '-')}</span>
               </div>
               <div className="detail-item">
                 <label>Model</label>
-                <span>{profile.vehicle.model || '-'}</span>
+                <span>{(profile.vehicle as any).model?.name_uz || 
+                       (profile.vehicle as any).model?.name || 
+                       (typeof profile.vehicle.model === 'string' ? profile.vehicle.model : '-')}</span>
               </div>
               <div className="detail-item">
                 <label>Rang</label>
-                <span>{profile.vehicle.color || '-'}</span>
+                <span>{(profile.vehicle as any).color?.name_uz || 
+                       (profile.vehicle as any).color?.name || 
+                       (typeof profile.vehicle.color === 'string' ? profile.vehicle.color : '-')}</span>
               </div>
               <div className="detail-item">
                 <label>Davlat raqami</label>

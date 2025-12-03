@@ -32,7 +32,7 @@ export const handleBackendError = (
   options: ErrorHandlerOptions
 ): string => {
   const { t, defaultMessage, showToastNotification = true } = options;
-  
+
   let errorTitle = t('common.error');
   let errorMessage = defaultMessage || t('errors.unknown');
 
@@ -46,9 +46,9 @@ export const handleBackendError = (
   } else {
     // Handle HTTP status codes
     const status = error.response.status;
-    const serverMessage = error.response.data?.error || 
-                         error.response.data?.message || 
-                         error.message;
+    const serverMessage = error.response.data?.error ||
+      error.response.data?.message ||
+      error.message;
 
     switch (status) {
       case 400:
@@ -83,7 +83,11 @@ export const handleBackendError = (
         errorMessage = `${t('errors.serverError')}. ${t('errors.tryAgain')}`;
         break;
       default:
-        errorMessage = serverMessage || t('errors.unknown');
+        if (defaultMessage && serverMessage) {
+          errorMessage = `${defaultMessage}: ${serverMessage}`;
+        } else {
+          errorMessage = serverMessage || defaultMessage || t('errors.unknown');
+        }
     }
   }
 
@@ -100,11 +104,11 @@ export const handleBackendError = (
  */
 export const getErrorMessage = (error: any, defaultMsg: string = 'An error occurred'): string => {
   if (typeof error === 'string') return error;
-  
+
   if (error?.response?.data?.error) return error.response.data.error;
   if (error?.response?.data?.message) return error.response.data.message;
   if (error?.message) return error.message;
-  
+
   return defaultMsg;
 };
 
@@ -114,10 +118,10 @@ export const getErrorMessage = (error: any, defaultMsg: string = 'An error occur
 export const isNetworkError = (error: any): boolean => {
   return (
     !error.response &&
-    (error.code === 'ERR_NETWORK' || 
-     error.code === 'ECONNABORTED' ||
-     error.message?.includes('Network') ||
-     error.message?.includes('timeout'))
+    (error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      error.message?.includes('Network') ||
+      error.message?.includes('timeout'))
   );
 };
 
@@ -133,10 +137,10 @@ export const isAuthError = (error: any): boolean => {
  */
 export const parseValidationErrors = (error: any): Record<string, string> => {
   const errors: Record<string, string> = {};
-  
+
   if (error?.response?.data?.errors) {
     const backendErrors = error.response.data.errors;
-    
+
     if (Array.isArray(backendErrors)) {
       backendErrors.forEach((err: any) => {
         if (err.field && err.message) {
@@ -149,7 +153,7 @@ export const parseValidationErrors = (error: any): Record<string, string> => {
       });
     }
   }
-  
+
   return errors;
 };
 

@@ -12,6 +12,9 @@ export default {
     success: 'Success',
     loading: 'Loading...',
     retry: 'Retry',
+    info: 'Info',
+    navigationError: 'Navigation Error',
+    delete: 'Delete',
   },
 
   splash: {
@@ -61,6 +64,8 @@ export default {
     errorNetwork: 'Network connection problem. Please try again.',
     errorGoogleFailed: 'Google sign-in failed',
     infoNotAvailable: ' sign-in is not available yet',
+    errorNavigation: 'Failed to navigate to OTP screen',
+    errorOtpSend: 'Error sending OTP',
   },
 
   otpVerification: {
@@ -220,6 +225,14 @@ export default {
     minutesAgo: '{count} minutes ago',
     hoursAgo: '{count} hours ago',
     daysAgo: '{count} days ago',
+    message: 'Message',
+    type: 'Type',
+    date: 'Date',
+    status: 'Status',
+    read: 'Read',
+    unread: 'Unread',
+    additionalInfo: 'Additional Information',
+    markAsRead: 'Mark as Read',
   },
 };
 

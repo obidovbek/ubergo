@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -33,10 +33,13 @@ const theme = createTheme('light');
 
 export const DriverTaxiLicenseScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { token, updateUser, user } = useAuth();
   const { t } = useTranslation();
-  
+
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   const [personalInfo, setPersonalInfo] = useState({
@@ -44,7 +47,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     last_name: '',
     father_name: '',
   });
-  
+
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerField, setDatePickerField] = useState<'license_issue_date' | 'license_sheet_valid_from' | 'license_sheet_valid_until' | null>(null);
@@ -54,14 +57,14 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     license_sheet_valid_until: new Date(),
   });
   const [tempDate, setTempDate] = useState(new Date());
-  
+
   // Photo/document URI states
   const [licenseDocumentUri, setLicenseDocumentUri] = useState<string | null>(null);
   const [licenseSheetDocumentUri, setLicenseSheetDocumentUri] = useState<string | null>(null);
   const [selfEmploymentDocumentUri, setSelfEmploymentDocumentUri] = useState<string | null>(null);
   const [powerOfAttorneyDocumentUri, setPowerOfAttorneyDocumentUri] = useState<string | null>(null);
   const [insuranceDocumentUri, setInsuranceDocumentUri] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     // License Information
     license_number: '',
@@ -96,12 +99,12 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const convertDateFormat = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
-    
+
     // If already in DD.MM.YYYY format, return as is
     if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
       return dateString;
     }
-    
+
     // If in YYYY-MM-DD format, convert to DD.MM.YYYY
     const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
@@ -110,7 +113,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       const day = isoMatch[3].padStart(2, '0');
       return `${day}.${month}.${year}`;
     }
-    
+
     // Return as is if format is unknown
     return dateString;
   };
@@ -126,21 +129,21 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     // Parse DD.MM.YYYY format
     const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (!match) return null;
-    
+
     const day = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
     const year = parseInt(match[3], 10);
-    
+
     if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
       return null;
     }
-    
+
     const date = new Date(year, month, day);
     // Validate the date (e.g., check for invalid dates like 31.02.2000)
     if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
       return null;
     }
-    
+
     return date;
   };
 
@@ -148,32 +151,32 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     if (!dateString || dateString.trim() === '') {
       return null;
     }
-    
+
     // If already in YYYY-MM-DD format, return as is
     if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
       return dateString;
     }
-    
+
     // Convert DD.MM.YYYY to YYYY-MM-DD
     const parsedDate = parseDate(dateString);
     if (!parsedDate) {
       return null; // Invalid date
     }
-    
+
     const year = parsedDate.getFullYear();
     const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
     const day = parsedDate.getDate().toString().padStart(2, '0');
-    
+
     return `${year}-${month}-${day}`;
   };
 
   const handleDateInputChange = (field: 'license_issue_date' | 'license_sheet_valid_from' | 'license_sheet_valid_until', text: string) => {
     // Remove all non-digits
     const digitsOnly = text.replace(/\D/g, '');
-    
+
     // Limit to 8 digits (DDMMYYYY)
     if (digitsOnly.length > 8) return;
-    
+
     // Auto-format as user types: DD.MM.YYYY
     let formatted = digitsOnly;
     if (digitsOnly.length > 4) {
@@ -183,9 +186,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       // Insert first dot: DDMM -> DD.MM
       formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2);
     }
-    
+
     handleFieldChange(field, formatted);
-    
+
     // If valid format (DD.MM.YYYY), update selectedDate
     if (formatted.length === 10) {
       const parsedDate = parseDate(formatted);
@@ -197,7 +200,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const handleDateConfirm = () => {
     if (!datePickerField) return;
-    
+
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
     updateField(datePickerField, formattedDate);
@@ -231,18 +234,18 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const generateMonths = () => {
     return [
-      { value: 0, label: 'Yanvar' },
-      { value: 1, label: 'Fevral' },
-      { value: 2, label: 'Mart' },
-      { value: 3, label: 'Aprel' },
-      { value: 4, label: 'May' },
-      { value: 5, label: 'Iyun' },
-      { value: 6, label: 'Iyul' },
-      { value: 7, label: 'Avgust' },
-      { value: 8, label: 'Sentabr' },
-      { value: 9, label: 'Oktabr' },
-      { value: 10, label: 'Noyabr' },
-      { value: 11, label: 'Dekabr' },
+      { value: 0, label: t('common.monthJanuary') },
+      { value: 1, label: t('common.monthFebruary') },
+      { value: 2, label: t('common.monthMarch') },
+      { value: 3, label: t('common.monthApril') },
+      { value: 4, label: t('common.monthMay') },
+      { value: 5, label: t('common.monthJune') },
+      { value: 6, label: t('common.monthJuly') },
+      { value: 7, label: t('common.monthAugust') },
+      { value: 8, label: t('common.monthSeptember') },
+      { value: 9, label: t('common.monthOctober') },
+      { value: 10, label: t('common.monthNovember') },
+      { value: 11, label: t('common.monthDecember') },
     ];
   };
 
@@ -257,13 +260,33 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    loadPersonalInfo();
-    loadTaxiLicenseData();
-  }, []);
+    if (!token) {
+      setInitialLoading(false);
+      return;
+    }
+    
+    const initializeData = async () => {
+      try {
+        setInitialLoading(true);
+        // Always load personal info and taxi license data
+        await Promise.all([
+          loadPersonalInfo(),
+          loadTaxiLicenseData(),
+        ]);
+      } catch (error) {
+        console.error('Failed to initialize taxi license data:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [token, isEditing]);
+
 
   const loadPersonalInfo = async () => {
     if (!token) return;
-    
+
     try {
       const profile = await getDriverProfile(token);
       if (profile.profile) {
@@ -280,57 +303,77 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const loadTaxiLicenseData = async () => {
     if (!token) return;
-    
-    try {
-      const profile = await getDriverProfile(token);
-      if (profile.profile && (profile.profile as any).taxi_license) {
-        const taxiLicense = (profile.profile as any).taxi_license;
-        
-        const issueDateStr = convertDateFormat(taxiLicense.license_issue_date);
-        const validFromStr = convertDateFormat(taxiLicense.license_sheet_valid_from);
-        const validUntilStr = convertDateFormat(taxiLicense.license_sheet_valid_until);
-        
-        // Initialize selected dates
-        const issueDate = issueDateStr ? parseDate(issueDateStr) : new Date();
-        const validFrom = validFromStr ? parseDate(validFromStr) : new Date();
-        const validUntil = validUntilStr ? parseDate(validUntilStr) : new Date();
-        
-        if (issueDate) setSelectedDate(prev => ({ ...prev, license_issue_date: issueDate }));
-        if (validFrom) setSelectedDate(prev => ({ ...prev, license_sheet_valid_from: validFrom }));
-        if (validUntil) setSelectedDate(prev => ({ ...prev, license_sheet_valid_until: validUntil }));
-        
-        setFormData(prev => ({
-          ...prev,
-          license_number: taxiLicense.license_number || '',
-          license_issue_date: issueDateStr || '',
-          license_registry_number: taxiLicense.license_registry_number || '',
-          license_document_url: taxiLicense.license_document_url || '',
-          license_sheet_number: taxiLicense.license_sheet_number || '',
-          license_sheet_valid_from: validFromStr || '',
-          license_sheet_valid_until: validUntilStr || '',
-          license_sheet_document_url: taxiLicense.license_sheet_document_url || '',
-          self_employment_number: taxiLicense.self_employment_number || '',
-          self_employment_document_url: taxiLicense.self_employment_document_url || '',
-          power_of_attorney_document_url: taxiLicense.power_of_attorney_document_url || '',
-          insurance_document_url: taxiLicense.insurance_document_url || '',
-        }));
 
-        // Set photo URIs for preview
-        if (taxiLicense.license_document_url) {
-          setLicenseDocumentUri(taxiLicense.license_document_url);
+    try {
+      const profileResponse = await getDriverProfile(token);
+      if (!profileResponse || !profileResponse.profile) {
+        return;
+      }
+
+      const profileData = profileResponse.profile as any;
+      
+      // Backend returns it as 'taxiLicense' (camelCase) based on Sequelize alias
+      const taxiLicense = profileData.taxiLicense || profileData.taxi_license;
+      
+      if (!taxiLicense) {
+        return;
+      }
+
+      const issueDateStr = convertDateFormat(taxiLicense.license_issue_date);
+      const validFromStr = convertDateFormat(taxiLicense.license_sheet_valid_from);
+      const validUntilStr = convertDateFormat(taxiLicense.license_sheet_valid_until);
+
+      // Initialize selected dates - only set if date strings exist
+      if (issueDateStr) {
+        const issueDate = parseDate(issueDateStr);
+        if (issueDate) {
+          setSelectedDate(prev => ({ ...prev, license_issue_date: issueDate }));
         }
-        if (taxiLicense.license_sheet_document_url) {
-          setLicenseSheetDocumentUri(taxiLicense.license_sheet_document_url);
+      }
+      if (validFromStr) {
+        const validFrom = parseDate(validFromStr);
+        if (validFrom) {
+          setSelectedDate(prev => ({ ...prev, license_sheet_valid_from: validFrom }));
         }
-        if (taxiLicense.self_employment_document_url) {
-          setSelfEmploymentDocumentUri(taxiLicense.self_employment_document_url);
+      }
+      if (validUntilStr) {
+        const validUntil = parseDate(validUntilStr);
+        if (validUntil) {
+          setSelectedDate(prev => ({ ...prev, license_sheet_valid_until: validUntil }));
         }
-        if (taxiLicense.power_of_attorney_document_url) {
-          setPowerOfAttorneyDocumentUri(taxiLicense.power_of_attorney_document_url);
-        }
-        if (taxiLicense.insurance_document_url) {
-          setInsuranceDocumentUri(taxiLicense.insurance_document_url);
-        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        license_number: taxiLicense.license_number || '',
+        license_issue_date: issueDateStr || '',
+        license_registry_number: taxiLicense.license_registry_number || '',
+        license_document_url: taxiLicense.license_document_url || '',
+        license_sheet_number: taxiLicense.license_sheet_number || '',
+        license_sheet_valid_from: validFromStr || '',
+        license_sheet_valid_until: validUntilStr || '',
+        license_sheet_document_url: taxiLicense.license_sheet_document_url || '',
+        self_employment_number: taxiLicense.self_employment_number || '',
+        self_employment_document_url: taxiLicense.self_employment_document_url || '',
+        power_of_attorney_document_url: taxiLicense.power_of_attorney_document_url || '',
+        insurance_document_url: taxiLicense.insurance_document_url || '',
+      }));
+
+      // Set photo URIs for preview
+      if (taxiLicense.license_document_url) {
+        setLicenseDocumentUri(taxiLicense.license_document_url);
+      }
+      if (taxiLicense.license_sheet_document_url) {
+        setLicenseSheetDocumentUri(taxiLicense.license_sheet_document_url);
+      }
+      if (taxiLicense.self_employment_document_url) {
+        setSelfEmploymentDocumentUri(taxiLicense.self_employment_document_url);
+      }
+      if (taxiLicense.power_of_attorney_document_url) {
+        setPowerOfAttorneyDocumentUri(taxiLicense.power_of_attorney_document_url);
+      }
+      if (taxiLicense.insurance_document_url) {
+        setInsuranceDocumentUri(taxiLicense.insurance_document_url);
       }
     } catch (error) {
       console.error('Failed to load taxi license data:', error);
@@ -350,7 +393,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const handleFieldChange = (field: string, value: any) => {
     updateField(field, value);
-    
+
     // Clear error when user starts typing/selecting
     if (fieldErrors[field]) {
       setFieldErrors(prev => {
@@ -520,7 +563,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     if (formData.license_sheet_valid_until && formData.license_sheet_valid_until.trim() !== '') {
       const validFromDate = formData.license_sheet_valid_from ? parseDate(formData.license_sheet_valid_from) : null;
       const validUntilDate = parseDate(formData.license_sheet_valid_until);
-      
+
       validationRules.push({
         field: 'license_sheet_valid_until',
         value: formData.license_sheet_valid_until,
@@ -573,19 +616,19 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
 
     Alert.alert(
-      'Rasm yoki fayl tanlash',
-      'Rasm yoki PDF faylni qanday tanlamoqchisiz?',
+      t('driverTaxiLicense.chooseImageOrFile'),
+      t('driverTaxiLicense.howToSelectImage'),
       [
         {
-          text: 'Kamera',
+          text: t('common.camera'),
           onPress: () => pickImage(photoType, 'camera'),
         },
         {
-          text: 'Galereya',
+          text: t('common.gallery'),
           onPress: () => pickImage(photoType, 'library'),
         },
         {
-          text: 'Bekor qilish',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ]
@@ -599,8 +642,8 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
             Alert.alert(
-              'Ruxsat kerak',
-              'Kameradan foydalanish uchun ruxsat bering'
+              t('common.permissionRequired'),
+              t('driverTaxiLicense.cameraPermissionMessage')
             );
             return;
           }
@@ -608,8 +651,8 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
             Alert.alert(
-              'Ruxsat kerak',
-              'Galereyadan rasm tanlash uchun ruxsat bering'
+              t('common.permissionRequired'),
+              t('driverTaxiLicense.galleryPermissionMessage')
             );
             return;
           }
@@ -640,11 +683,11 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       }
 
       const asset = result.assets[0];
-      
+
       try {
         // Use base64 from expo-image-picker if available, otherwise fallback
         let base64: string;
-        
+
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
@@ -655,7 +698,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           if (Platform.OS === 'web') {
             const response = await fetch(asset.uri);
             const blob = await response.blob();
-            
+
             base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
@@ -673,7 +716,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
         }
-        
+
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
         if (asset.type) {
@@ -695,17 +738,17 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             fileExtension = ext === 'jpeg' ? 'jpg' : ext;
           }
         }
-        
+
         // Upload to server
         if (!token) {
           throw new Error('Token is required');
         }
         const imageUrl = await uploadImage(token, base64, fileExtension);
-        
+
         // Update state and form data based on photo type
         const fieldName = `${photoType}_url` as keyof typeof formData;
         updateField(fieldName, imageUrl);
-        
+
         // Set preview URI
         switch (photoType) {
           case 'license_document':
@@ -724,7 +767,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             setInsuranceDocumentUri(asset.uri);
             break;
         }
-        
+
         showToast.success(t('common.success'), 'Rasm muvaffaqiyatli yuklandi');
       } catch (error) {
         console.error('Failed to upload image:', error);
@@ -758,16 +801,16 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
     try {
       // Convert dates to YYYY-MM-DD format and validate them
-      const licenseIssueDateISO = formData.license_issue_date 
-        ? convertDateToISO(formData.license_issue_date) 
+      const licenseIssueDateISO = formData.license_issue_date
+        ? convertDateToISO(formData.license_issue_date)
         : null;
-      
-      const licenseSheetValidFromISO = formData.license_sheet_valid_from 
-        ? convertDateToISO(formData.license_sheet_valid_from) 
+
+      const licenseSheetValidFromISO = formData.license_sheet_valid_from
+        ? convertDateToISO(formData.license_sheet_valid_from)
         : null;
-      
-      const licenseSheetValidUntilISO = formData.license_sheet_valid_until 
-        ? convertDateToISO(formData.license_sheet_valid_until) 
+
+      const licenseSheetValidUntilISO = formData.license_sheet_valid_until
+        ? convertDateToISO(formData.license_sheet_valid_until)
         : null;
 
       const cleanData: any = {
@@ -791,7 +834,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           delete cleanData[key];
         }
       });
-      
+
       // Validate dates before sending - if a date field had a value but conversion failed, show error
       const dateErrors: Record<string, string> = {};
       if (formData.license_issue_date && !licenseIssueDateISO) {
@@ -803,7 +846,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       if (formData.license_sheet_valid_until && !licenseSheetValidUntilISO) {
         dateErrors.license_sheet_valid_until = 'Noto\'g\'ri sana formati';
       }
-      
+
       if (Object.keys(dateErrors).length > 0) {
         setFieldErrors(dateErrors);
         showToast.error(t('common.error'), t('formValidation.fixErrors'));
@@ -812,63 +855,65 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       }
 
       await updateTaxiLicense(token, cleanData);
-      
+
       showToast.success(t('common.success'), t('driver.taxiLicenseUpdated'));
-      
-      // Check if profile is now complete
-      try {
-        const status = await getDriverProfileStatus(token);
-        if (status.isComplete) {
-          // Show completion message
-          showToast.success(t('common.success'), t('driver.registrationComplete'));
-          
-          // Update user in auth context to mark profile as complete
-          // This will trigger RootNavigator to re-render and switch to MainNavigator
-          if (user) {
-            await updateUser({
-              ...user,
-              profile_complete: true,
-            } as any);
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Check if profile is now complete
+        try {
+          const status = await getDriverProfileStatus(token);
+          if (status.isComplete) {
+            // Show completion message
+            showToast.success(t('common.success'), t('driver.registrationComplete'));
+
+            // Update user in auth context to mark profile as complete
+            // RootNavigator will detect the profile_complete change and automatically
+            // switch from ProfileCompletionNavigator to MainNavigator (MenuScreen)
+            if (user) {
+              await updateUser({
+                ...user,
+                profile_complete: true,
+              } as any);
+            }
+
+            // RootNavigator has a useEffect that watches for profile_complete changes
+            // and will automatically re-check profile status and switch navigators
+            // No additional action needed - the navigation will happen automatically
+          } else {
+            // Profile not complete yet, but data is saved
+            showToast.info(t('common.info'), 'Ma\'lumotlar saqlandi. Profil tekshirilmoqda...');
           }
-          
-          // RootNavigator will automatically switch from ProfileCompletionNavigator 
-          // to MainNavigator (which contains MenuScreen/Home) when it detects 
-          // the profile is complete. The updateUser call above helps trigger this.
-          // 
-          // RootNavigator checks profile status on mount and when user state changes,
-          // so it will detect the completion and show MainNavigator with MenuScreen.
-        } else {
-          // Profile not complete yet, but data is saved
-          showToast.info(t('common.info'), 'Ma\'lumotlar saqlandi. Profil tekshirilmoqda...');
+        } catch (error) {
+          console.error('Failed to check profile status after saving:', error);
+          // Still show success message even if status check fails
+          showToast.success(t('common.success'), 'Ma\'lumotlar saqlandi');
         }
-      } catch (error) {
-        console.error('Failed to check profile status after saving:', error);
-        // Still show success message even if status check fails
-        showToast.success(t('common.success'), 'Ma\'lumotlar saqlandi');
       }
     } catch (error: any) {
       console.error('Failed to save taxi license info:', error);
-      
+
       // Check if it's a validation error from backend (422 status) or database error (500 status)
       const statusCode = error?.response?.status || error?.status;
       if (statusCode === 422 || statusCode === 500) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
-        
+
         // Map backend field names to form field names if needed
         // Backend may send field names like "license_sheet_valid_until" which match our form fields
         const mappedErrors: Record<string, string> = {};
         Object.keys(apiErrors).forEach((apiField) => {
           // Field names should match, but ensure they're mapped correctly
           let formField = apiField;
-          
+
           // Handle any field name mappings if needed (e.g., backend sends different names)
           mappedErrors[formField] = apiErrors[apiField];
         });
-        
+
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
-        
+
         // Also show a general error toast
         const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
@@ -894,6 +939,17 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
   };
 
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -913,14 +969,14 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             >
               <View style={styles.backButtonContent}>
                 <Text style={styles.backButtonArrow}>←</Text>
-                <Text style={styles.backButtonText}>Orqaga</Text>
+                <Text style={styles.backButtonText}>{t('driverTaxiLicense.backButton')}</Text>
               </View>
             </TouchableOpacity>
             <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>Shaharlar aro</Text>
-            <Text style={styles.subtitle}>LITSENZIYA</Text>
+            <Text style={styles.title}>{isEditing ? t('editProfile.taxiLicense') : 'Shaharlar aro'}</Text>
+            <Text style={styles.subtitle}>{isEditing ? t('editProfile.taxiLicense') : t('driverTaxiLicense.title')}</Text>
             <Text style={styles.description}>
-              (Barcha ma'lumotlar litsenziya bo'yicha kiritiladi)
+              {t('driverTaxiLicense.description')}
             </Text>
           </View>
 
@@ -935,11 +991,11 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             </View>
 
             {/* License Section */}
-            <Text style={styles.sectionTitle}>LITSENZIYA</Text>
+            <Text style={styles.sectionTitle}>{t('driverTaxiLicense.title')}</Text>
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_number')}>
-                LITSENZIYA raqami: <Text style={styles.requiredMarker}>*</Text>
+                {t('driverTaxiLicense.licenseNumber')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
               <TextInput
                 style={getInputStyle('license_number')}
@@ -957,7 +1013,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_issue_date')}>
-                Berilgan sanasi:
+                {t('driverTaxiLicense.issueDate')}:
               </Text>
               <View style={[styles.dateInputContainer, fieldErrors.license_issue_date ? styles.inputError : undefined]}>
                 <TextInput
@@ -986,7 +1042,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_registry_number')}>
-                LITSENZIYA reyestrda:
+                {t('driverTaxiLicense.registryNumber')}:
               </Text>
               <TextInput
                 style={getInputStyle('license_registry_number')}
@@ -1004,7 +1060,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             {/* License Document Upload */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>LITSENZIYA rasmi:</Text>
+              <Text style={styles.label}>{t('driverTaxiLicense.licensePhoto')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('license_document')}
@@ -1021,7 +1077,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             </View>
 
             {/* License Sheet Section */}
-            <Text style={styles.sectionTitle}>LITSENZIYA varaqasi</Text>
+            <Text style={styles.sectionTitle}>{t('driverTaxiLicense.licenseSheetTitle')}</Text>
 
             <View style={styles.readOnlySection}>
               <Text style={styles.readOnlyLabel}>
@@ -1031,7 +1087,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_sheet_number')}>
-                LITSENZIYA varaqasi raqami:
+                {t('driverTaxiLicense.licenseSheetNumber')}:
               </Text>
               <TextInput
                 style={getInputStyle('license_sheet_number')}
@@ -1049,7 +1105,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_sheet_valid_from')}>
-                Amal qilish muddati (dan):
+                {t('driverTaxiLicense.validFrom')}:
               </Text>
               <View style={[styles.dateInputContainer, fieldErrors.license_sheet_valid_from ? styles.inputError : undefined]}>
                 <TextInput
@@ -1078,7 +1134,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('license_sheet_valid_until')}>
-                Amal qilish muddati (gacha):
+                {t('driverTaxiLicense.validUntil')}:
               </Text>
               <View style={[styles.dateInputContainer, fieldErrors.license_sheet_valid_until ? styles.inputError : undefined]}>
                 <TextInput
@@ -1107,7 +1163,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             {/* License Sheet Document Upload */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>LITSENZIYA varaqasi rasmi:</Text>
+              <Text style={styles.label}>{t('driverTaxiLicense.licenseSheetPhoto')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('license_sheet_document')}
@@ -1124,11 +1180,11 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             </View>
 
             {/* Self-Employment Section */}
-            <Text style={styles.sectionTitle}>O'zini o'zi band qilish</Text>
+            <Text style={styles.sectionTitle}>{t('driverTaxiLicense.selfEmploymentTitle')}</Text>
 
             <View style={styles.inputGroup}>
               <Text style={getLabelStyle('self_employment_number')}>
-                O'zini o'zi band qilish №:
+                {t('driverTaxiLicense.selfEmploymentNumber')}:
               </Text>
               <TextInput
                 style={getInputStyle('self_employment_number')}
@@ -1147,7 +1203,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             {/* Self-Employment Document Upload */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>O'zini o'zi band qilish rasm:</Text>
+              <Text style={styles.label}>{t('driverTaxiLicense.selfEmploymentPhoto')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('self_employment_document')}
@@ -1165,7 +1221,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             {/* Power of Attorney Section */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Ishonchnoma rasmi:</Text>
+              <Text style={styles.label}>{t('driverTaxiLicense.powerOfAttorneyPhoto')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('power_of_attorney_document')}
@@ -1183,7 +1239,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
             {/* Insurance Section */}
             <View style={[styles.inputGroup, styles.photoSection]}>
-              <Text style={styles.label}>Sugurta rasmi:</Text>
+              <Text style={styles.label}>{t('driverTaxiLicense.insurancePhoto')}</Text>
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => handleImagePicker('insurance_document')}
@@ -1206,7 +1262,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               disabled={isLoading}
             >
               <Text style={styles.continueButtonText}>
-                {isLoading ? t('common.saving') : 'Tayyor'}
+                {isLoading ? t('common.saving') : (isEditing ? t('driverTaxiLicense.save') : t('driverTaxiLicense.ready'))}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1222,7 +1278,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           onRequestClose={handleDateCancel}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={1}
               onPress={handleDateCancel}
               style={StyleSheet.absoluteFill}
@@ -1230,17 +1286,17 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={handleDateCancel}>
-                  <Text style={styles.modalCancelText}>Bekor</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>Sanani tanlang</Text>
+                <Text style={styles.modalTitle}>{t('common.selectDate')}</Text>
                 <TouchableOpacity onPress={handleDateConfirm}>
-                  <Text style={styles.modalConfirmText}>Tasdiqlash</Text>
+                  <Text style={styles.modalConfirmText}>{t('common.confirm')}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.datePickerContainer}>
                 {/* Day Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Kun</Text>
+                  <Text style={styles.pickerLabel}>{t('common.day')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateDays().map((day) => (
                       <TouchableOpacity
@@ -1267,7 +1323,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
                 {/* Month Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Oy</Text>
+                  <Text style={styles.pickerLabel}>{t('common.month')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateMonths().map((month) => (
                       <TouchableOpacity
@@ -1296,7 +1352,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
                 {/* Year Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Yil</Text>
+                  <Text style={styles.pickerLabel}>{t('common.year')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateYears().map((year) => (
                       <TouchableOpacity
@@ -1602,5 +1658,16 @@ const styles = StyleSheet.create({
   pickerItemTextSelected: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.palette.background.default,
+  },
+  loadingText: {
+    marginTop: theme.spacing(2),
+    ...theme.typography.body1,
+    color: theme.palette.text.secondary,
   },
 });

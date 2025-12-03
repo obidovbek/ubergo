@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -36,9 +36,11 @@ const categories = ['A', 'B', 'C', 'D', 'BE', 'CE', 'DE'];
 
 export const DriverLicenseScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [personalInfo, setPersonalInfo] = useState({
@@ -60,7 +62,7 @@ export const DriverLicenseScreen: React.FC = () => {
     license_front_url: '',
     license_back_url: '',
   });
-  
+
   const [emergencyContacts, setEmergencyContacts] = useState([
     { phone_country_code: '+998', phone_number: '', relationship: '' },
     { phone_country_code: '+998', phone_number: '', relationship: '' },
@@ -98,12 +100,12 @@ export const DriverLicenseScreen: React.FC = () => {
 
   const convertDateFormat = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
-    
+
     // If already in DD.MM.YYYY format, return as is
     if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
       return dateString;
     }
-    
+
     // If in YYYY-MM-DD format, convert to DD.MM.YYYY
     const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
@@ -112,7 +114,7 @@ export const DriverLicenseScreen: React.FC = () => {
       const day = isoMatch[3].padStart(2, '0');
       return `${day}.${month}.${year}`;
     }
-    
+
     // Return as is if format is unknown
     return dateString;
   };
@@ -128,27 +130,27 @@ export const DriverLicenseScreen: React.FC = () => {
     // Parse DD.MM.YYYY format
     const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (!match) return null;
-    
+
     const day = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
     const year = parseInt(match[3], 10);
-    
+
     if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
       return null;
     }
-    
+
     const date = new Date(year, month, day);
     // Validate the date
     if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
       return null;
     }
-    
+
     return date;
   };
 
   const loadLicenseData = async () => {
     if (!token) return;
-    
+
     try {
       const profile = await getDriverProfile(token);
       if (profile.profile) {
@@ -161,7 +163,7 @@ export const DriverLicenseScreen: React.FC = () => {
 
         // Load license data if exists
         const licenseDataFromApi = (profile.profile as any).license || {};
-        
+
         // Initialize dates
         const issueDateStr = convertDateFormat(licenseDataFromApi.issue_date);
         const issueDate = issueDateStr ? parseDate(issueDateStr) : new Date();
@@ -312,10 +314,10 @@ export const DriverLicenseScreen: React.FC = () => {
   const handleDateInputChange = (field: string, text: string) => {
     // Remove all non-digits
     const digitsOnly = text.replace(/\D/g, '');
-    
+
     // Limit to 8 digits (DDMMYYYY)
     if (digitsOnly.length > 8) return;
-    
+
     // Auto-format as user types: DD.MM.YYYY
     let formatted = digitsOnly;
     if (digitsOnly.length > 4) {
@@ -323,9 +325,9 @@ export const DriverLicenseScreen: React.FC = () => {
     } else if (digitsOnly.length > 2) {
       formatted = digitsOnly.slice(0, 2) + '.' + digitsOnly.slice(2);
     }
-    
+
     updateLicenseField(field, formatted);
-    
+
     // If valid format (DD.MM.YYYY), update selectedDate
     if (formatted.length === 10) {
       const parsedDate = parseDate(formatted);
@@ -337,20 +339,20 @@ export const DriverLicenseScreen: React.FC = () => {
 
   const handleDateConfirm = () => {
     if (!datePickerField) return;
-    
+
     // Validate issue_date and category dates cannot be in the future
     if (datePickerField === 'issue_date' || datePickerField.startsWith('category_')) {
       const currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
       const selectedDate = new Date(tempDate);
       selectedDate.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate > currentDate) {
         showToast.error(t('common.error'), 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas');
         return;
       }
     }
-    
+
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
     updateLicenseField(datePickerField, formattedDate);
@@ -376,7 +378,7 @@ export const DriverLicenseScreen: React.FC = () => {
   const generateDays = () => {
     const days = [];
     const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
-    
+
     // For issue_date and category dates, if current year and month are selected, restrict days to current day and earlier
     let maxAllowedDay = maxDay;
     if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
@@ -384,12 +386,12 @@ export const DriverLicenseScreen: React.FC = () => {
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth();
       const currentDay = currentDate.getDate();
-      
+
       if (tempDate.getFullYear() === currentYear && tempDate.getMonth() === currentMonth) {
         maxAllowedDay = currentDay;
       }
     }
-    
+
     for (let i = 1; i <= maxAllowedDay; i++) {
       days.push(i);
     }
@@ -411,25 +413,25 @@ export const DriverLicenseScreen: React.FC = () => {
       { value: 10, label: t('common.monthNovember') },
       { value: 11, label: t('common.monthDecember') },
     ];
-    
+
     // For issue_date and category dates, if current year is selected, restrict months to current month and earlier
     if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth();
-      
+
       if (tempDate.getFullYear() === currentYear) {
         return allMonths.filter(month => month.value <= currentMonth);
       }
     }
-    
+
     return allMonths;
   };
 
   const generateYears = () => {
     const years = [];
     const currentYear = new Date().getFullYear();
-    
+
     if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
       // For issue date and category dates, only show past and current year (not future)
       const startYear = currentYear - 10;
@@ -522,11 +524,11 @@ export const DriverLicenseScreen: React.FC = () => {
       }
 
       const asset = result.assets[0];
-      
+
       try {
         // Use base64 from expo-image-picker if available, otherwise fallback
         let base64: string;
-        
+
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
@@ -537,7 +539,7 @@ export const DriverLicenseScreen: React.FC = () => {
           if (Platform.OS === 'web') {
             const response = await fetch(asset.uri);
             const blob = await response.blob();
-            
+
             base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
@@ -555,7 +557,7 @@ export const DriverLicenseScreen: React.FC = () => {
             throw new Error('Base64 encoding not available. Please ensure expo-image-picker is up to date.');
           }
         }
-        
+
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
         if (asset.type) {
@@ -577,13 +579,13 @@ export const DriverLicenseScreen: React.FC = () => {
             fileExtension = ext === 'jpeg' ? 'jpg' : ext;
           }
         }
-        
+
         // Upload to server
         if (!token) {
           throw new Error('Token is required');
         }
         const imageUrl = await uploadImage(token, base64, fileExtension);
-        
+
         // Update state and form data
         if (photoType === 'front') {
           setPhotoFrontUri(asset.uri);
@@ -592,7 +594,7 @@ export const DriverLicenseScreen: React.FC = () => {
           setPhotoBackUri(asset.uri);
           updateLicenseField('license_back_url', imageUrl);
         }
-        
+
         showToast.success(t('common.success'), t('driverLicense.photoUploaded'));
       } catch (error) {
         console.error('Failed to upload image:', error);
@@ -706,39 +708,45 @@ export const DriverLicenseScreen: React.FC = () => {
         license: cleanLicenseData,
         emergencyContacts: cleanContacts.length > 0 ? cleanContacts : undefined,
       });
-      
+
       showToast.success(t('common.success'), t('driverLicense.licenseSaved'));
-      
-      // Navigate to next step (Vehicle)
-      (navigation as any).navigate('DriverVehicle');
+
+      showToast.success(t('common.success'), t('driverLicense.licenseSaved'));
+
+      if (isEditing) {
+        navigation.goBack();
+      } else {
+        // Navigate to next step (Vehicle)
+        (navigation as any).navigate('DriverVehicle');
+      }
     } catch (error: any) {
       console.error('Failed to save license info:', error);
-      
+
       // Check if it's a validation error from backend (422 status)
       const statusCode = error?.response?.status || error?.status;
       if (statusCode === 422) {
         // Parse validation errors and map to form fields
         const apiErrors = parseValidationErrors(error);
-        
+
         // Map API field names to form field names if needed
         // Backend sends errors with field names matching DriverLicense model
         const mappedErrors: Record<string, string> = {};
         Object.keys(apiErrors).forEach((apiField) => {
           let formField = apiField;
-          
+
           // Handle nested license fields (e.g., license.license_number -> license_number)
           if (apiField.startsWith('license.')) {
             formField = apiField.replace('license.', '');
           }
-          
+
           // Map backend field names to form field names
           // DriverLicense model fields: license_number, issue_date, category_a, etc.
           mappedErrors[formField] = apiErrors[apiField];
         });
-        
+
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
-        
+
         // Also show a general error toast
         const firstError = Object.values(mappedErrors)[0];
         if (firstError) {
@@ -781,8 +789,8 @@ export const DriverLicenseScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             <Text style={styles.brand}>UbexGo Driver</Text>
-            <Text style={styles.title}>{t('driverLicense.title')}</Text>
-            <Text style={styles.subtitle}>{t('driverLicense.subtitle')}</Text>
+            <Text style={styles.title}>{isEditing ? t('editProfile.license') : t('driverLicense.title')}</Text>
+            <Text style={styles.subtitle}>{isEditing ? t('editProfile.license') : t('driverLicense.subtitle')}</Text>
             <Text style={styles.description}>
               {t('driverLicense.description')}
             </Text>
@@ -925,41 +933,41 @@ export const DriverLicenseScreen: React.FC = () => {
             </Text>
             <Text style={styles.subsectionTitle}>{t('driverLicense.emergencyContactsHint')}</Text>
 
-          {emergencyContacts.map((contact, index) => {
-            const selectedCountry = getSelectedCountry(contact.phone_country_code);
-            return (
-              <View key={index} style={styles.contactRow}>
-                <TouchableOpacity
-                  style={styles.countrySelector}
-                  onPress={() => {
-                    setCountryPickerIndex(index);
-                    setShowCountryPicker(true);
-                  }}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.countryFlag}>{selectedCountry?.flag || '🌍'}</Text>
-                  <Text style={styles.countryCodeText}>{contact.phone_country_code}</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder={t('driverLicense.phoneNumberPlaceholder')}
-                  placeholderTextColor={theme.palette.text.secondary}
-                  value={contact.phone_number}
-                  onChangeText={(value) => updateEmergencyContact(index, 'phone_number', value)}
-                  keyboardType="phone-pad"
-                  editable={!isLoading}
-                />
-                <TextInput
-                  style={styles.relationshipInput}
-                  placeholder={index === 0 ? t('driverLicense.relationshipFather') : t('driverLicense.relationshipSpouse')}
-                  placeholderTextColor={theme.palette.text.secondary}
-                  value={contact.relationship}
-                  onChangeText={(value) => updateEmergencyContact(index, 'relationship', value)}
-                  editable={!isLoading}
-                />
-              </View>
-            );
-          })}
+            {emergencyContacts.map((contact, index) => {
+              const selectedCountry = getSelectedCountry(contact.phone_country_code);
+              return (
+                <View key={index} style={styles.contactRow}>
+                  <TouchableOpacity
+                    style={styles.countrySelector}
+                    onPress={() => {
+                      setCountryPickerIndex(index);
+                      setShowCountryPicker(true);
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Text style={styles.countryFlag}>{selectedCountry?.flag || '🌍'}</Text>
+                    <Text style={styles.countryCodeText}>{contact.phone_country_code}</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder={t('driverLicense.phoneNumberPlaceholder')}
+                    placeholderTextColor={theme.palette.text.secondary}
+                    value={contact.phone_number}
+                    onChangeText={(value) => updateEmergencyContact(index, 'phone_number', value)}
+                    keyboardType="phone-pad"
+                    editable={!isLoading}
+                  />
+                  <TextInput
+                    style={styles.relationshipInput}
+                    placeholder={index === 0 ? t('driverLicense.relationshipFather') : t('driverLicense.relationshipSpouse')}
+                    placeholderTextColor={theme.palette.text.secondary}
+                    value={contact.relationship}
+                    onChangeText={(value) => updateEmergencyContact(index, 'relationship', value)}
+                    editable={!isLoading}
+                  />
+                </View>
+              );
+            })}
 
             {/* Continue Button */}
             <TouchableOpacity
@@ -968,7 +976,7 @@ export const DriverLicenseScreen: React.FC = () => {
               disabled={isLoading}
             >
               <Text style={styles.continueButtonText}>
-                {isLoading ? t('common.saving') : t('common.next')}
+                {isLoading ? t('common.saving') : (isEditing ? 'Saqlash' : t('common.next'))}
               </Text>
             </TouchableOpacity>
           </View>
@@ -984,7 +992,7 @@ export const DriverLicenseScreen: React.FC = () => {
           onRequestClose={handleDateCancel}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={1}
               onPress={handleDateCancel}
               style={StyleSheet.absoluteFill}
@@ -1052,19 +1060,19 @@ export const DriverLicenseScreen: React.FC = () => {
                           const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
                           let day = Math.min(tempDate.getDate(), maxDay);
                           const newDate = new Date(tempDate.getFullYear(), month.value, day);
-                          
+
                           // For issue_date and category dates, if current year and selected month is current month, restrict day
                           if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
                             const currentDate = new Date();
                             const currentYear = currentDate.getFullYear();
                             const currentMonth = currentDate.getMonth();
                             const currentDay = currentDate.getDate();
-                            
+
                             if (newDate.getFullYear() === currentYear && month.value === currentMonth) {
                               day = Math.min(day, currentDay);
                               newDate.setDate(day);
                             }
-                            
+
                             // Validate the date is not in the future
                             newDate.setHours(0, 0, 0, 0);
                             currentDate.setHours(0, 0, 0, 0);
@@ -1073,7 +1081,7 @@ export const DriverLicenseScreen: React.FC = () => {
                               return;
                             }
                           }
-                          
+
                           setTempDate(newDate);
                         }}
                       >
@@ -1103,14 +1111,14 @@ export const DriverLicenseScreen: React.FC = () => {
                           const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
                           let day = Math.min(tempDate.getDate(), maxDay);
                           const newDate = new Date(year, tempDate.getMonth(), day);
-                          
+
                           // For issue_date and category dates, validate the date is not in the future
                           if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
                             const currentDate = new Date();
                             const currentYear = currentDate.getFullYear();
                             const currentMonth = currentDate.getMonth();
                             const currentDay = currentDate.getDate();
-                            
+
                             // If current year is selected, restrict month and day
                             if (year === currentYear) {
                               // If current month is selected, restrict day
@@ -1122,7 +1130,7 @@ export const DriverLicenseScreen: React.FC = () => {
                                 return;
                               }
                             }
-                            
+
                             // Final validation: date should not be in the future
                             newDate.setHours(0, 0, 0, 0);
                             currentDate.setHours(0, 0, 0, 0);
@@ -1131,7 +1139,7 @@ export const DriverLicenseScreen: React.FC = () => {
                               return;
                             }
                           }
-                          
+
                           setTempDate(newDate);
                         }}
                       >
@@ -1167,7 +1175,7 @@ export const DriverLicenseScreen: React.FC = () => {
             setCountryPickerIndex(null);
           }}>
             <View style={styles.countryPickerOverlay}>
-              <TouchableWithoutFeedback onPress={() => {}}>
+              <TouchableWithoutFeedback onPress={() => { }}>
                 <View style={styles.countryPickerModal}>
                   <View style={styles.countryPickerHeader}>
                     <Text style={styles.countryPickerTitle}>{t('driverLicense.selectCountryCode') || 'Mamlakat kodini tanlang'}</Text>

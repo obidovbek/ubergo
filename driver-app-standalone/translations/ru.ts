@@ -392,6 +392,107 @@ export default {
     issueDateRequired: 'Пожалуйста, введите дату выдачи',
   },
 
+  // Driver Vehicle Screen
+  driverVehicle: {
+    title: 'ДАННЫЕ ТРАНСПОРТНОГО СРЕДСТВА',
+    subtitle: 'РЕДАКТИРОВАНИЕ ДАННЫХ',
+    description: '(Все данные вводятся согласно техпаспорту)',
+    backButton: 'Назад',
+    // Vehicle Basic Information
+    vehicleType: 'Тип транспорта',
+    make: 'Марка',
+    model: 'Модель',
+    bodyType: 'Тип кузова',
+    color: 'Цвет',
+    // Tech Passport
+    techPassportSeries: 'Серия техпаспорта',
+    licensePlate: 'Государственный номер',
+    modelName: 'Модель',
+    colorField: 'Цвет',
+    // Company
+    company: 'ФИРМА',
+    // Owner Personal Information
+    ownerInfo: 'ФИО',
+    firstName: 'Имя',
+    lastName: 'Фамилия',
+    fatherName: 'Отчество',
+    // Owner Address
+    address: 'Адрес',
+    country: 'Страна',
+    province: 'Область',
+    cityDistrict: 'Город / Район',
+    administrativeArea: 'Административная зона',
+    settlement: 'Населенный пункт',
+    neighborhood: 'Махалля',
+    street: 'Улица и дом',
+    companyTaxId: 'СТИР фирмы',
+    pinfl: 'ПИНФЛ',
+    // Vehicle Specifications
+    year: 'Год выпуска',
+    type: 'Тип',
+    vehicleTypeLight: 'Легковой',
+    bodyTypePlaceholder: 'Седан',
+    grossWeight: 'Полная масса',
+    unladenWeight: 'Снаряженная масса',
+    fuelType: 'Тип топлива',
+    seatingCapacity: 'Количество мест с водителем',
+    // Photo labels
+    techPassportFront: 'Фото передней стороны техпаспорта:',
+    techPassportBack: 'Фото задней стороны техпаспорта:',
+    vehicleFront: 'Фото передней стороны транспорта:',
+    vehicleBack: 'Фото задней стороны транспорта:',
+    vehicleRight: 'Фото правой стороны транспорта:',
+    vehicleLeft: 'Фото левой стороны транспорта:',
+    vehicleAngle45: 'Общий вид транспорта 45°:',
+    vehicleInterior: 'Фото салона транспорта:',
+    // Select placeholders
+    select: 'Выбрать',
+    // Modal titles
+    selectVehicleType: 'Выберите тип транспорта',
+    selectMake: 'Выберите марку',
+    selectModel: 'Выберите модель',
+    selectBodyType: 'Выберите тип кузова',
+    selectColor: 'Выберите цвет',
+  },
+
+  // Driver Taxi License Screen
+  driverTaxiLicense: {
+    title: 'ЛИЦЕНЗИЯ',
+    subtitle: 'РЕДАКТИРОВАНИЕ ДАННЫХ',
+    description: '(Все данные вводятся в соответствии с лицензией)',
+    backButton: 'Назад',
+    licenseNumber: 'Номер ЛИЦЕНЗИИ',
+    issueDate: 'Дата выдачи',
+    registryNumber: 'Номер в реестре ЛИЦЕНЗИИ',
+    licensePhoto: 'Фото ЛИЦЕНЗИИ:',
+    licenseSheetTitle: 'Лист ЛИЦЕНЗИИ',
+    licenseSheetNumber: 'Номер листа ЛИЦЕНЗИИ',
+    validFrom: 'Срок действия (с)',
+    validUntil: 'Срок действия (по)',
+    licenseSheetPhoto: 'Фото листа ЛИЦЕНЗИИ:',
+    selfEmploymentTitle: 'Самостоятельная занятость',
+    selfEmploymentNumber: '№ самостоятельной занятости',
+    selfEmploymentPhoto: 'Фото самостоятельной занятости:',
+    powerOfAttorneyPhoto: 'Фото доверенности:',
+    insurancePhoto: 'Фото страховки:',
+    chooseImageOrFile: 'Выбрать изображение или файл',
+    howToSelectImage: 'Как вы хотите выбрать изображение или PDF файл?',
+    save: 'Сохранить',
+    ready: 'Готово',
+    cameraPermissionMessage: 'Разрешите использование камеры',
+    galleryPermissionMessage: 'Разрешите выбор изображения из галереи',
+  },
+
+  // Edit Profile Menu
+  editProfile: {
+    personalInfo: 'Личные данные',
+    passport: 'Данные паспорта',
+    license: 'Водительские права',
+    vehicle: 'Транспортное средство',
+    taxiLicense: 'Лицензия такси',
+    driverType: 'Тип водителя',
+  },
+
   // Notifications
   notifications: {
     title: 'Уведомления',

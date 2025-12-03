@@ -12,6 +12,9 @@ export default {
     success: 'Успешно',
     loading: 'Загрузка...',
     retry: 'Повторить',
+    info: 'Инфо',
+    navigationError: 'Ошибка навигации',
+    delete: 'Удалить',
   },
 
   splash: {
@@ -61,6 +64,8 @@ export default {
     errorNetwork: 'Проблема с интернет-соединением. Пожалуйста, попробуйте снова.',
     errorGoogleFailed: 'Ошибка входа через Google',
     infoNotAvailable: ' вход пока недоступен',
+    errorNavigation: 'Не удалось перейти на экран OTP',
+    errorOtpSend: 'Ошибка отправки OTP',
   },
 
   otpVerification: {
@@ -220,6 +225,14 @@ export default {
     minutesAgo: '{count} минут назад',
     hoursAgo: '{count} часов назад',
     daysAgo: '{count} дней назад',
+    message: 'Сообщение',
+    type: 'Тип',
+    date: 'Дата',
+    status: 'Статус',
+    read: 'Прочитано',
+    unread: 'Не прочитано',
+    additionalInfo: 'Дополнительная информация',
+    markAsRead: 'Отметить как прочитанное',
   },
 };
 
