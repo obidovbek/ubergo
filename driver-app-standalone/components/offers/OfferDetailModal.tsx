@@ -136,7 +136,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
   if (!offer) return null;
 
   const statusColor = getStatusColor(offer.status);
-  const canEdit = ['archived', 'cancelled'].includes(offer.status);
+  const canEdit = offer.status === 'published'; // Only published offers can be edited
   const canCancel = offer.status === 'published';
   const canPublish = ['archived', 'cancelled'].includes(offer.status);
   const canDelete = ['archived', 'cancelled'].includes(offer.status);
@@ -191,6 +191,8 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
             showsVerticalScrollIndicator={false}
             style={styles.scrollView}
             contentContainerStyle={styles.scrollViewContent}
+            nestedScrollEnabled={true}
+            bounces={false}
           >
             {/* Status Badge */}
             <View style={styles.modalStatusContainer}>
@@ -362,18 +364,20 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
 
           {/* Action Buttons - Fixed at bottom */}
           <View style={styles.modalActions}>
-            {/* Primary Action - Edit Button (Full Width) */}
-            <TouchableOpacity
-              style={[styles.modalActionButton, styles.editButton]}
-              onPress={() => {
-                onClose();
-                onEdit(offer);
-              }}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="edit" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-              <Text style={styles.actionButtonText}>{t('driverOffers.edit') || 'Tahrirlash'}</Text>
-            </TouchableOpacity>
+            {/* Primary Action - Edit Button (Full Width) - Only show if can edit */}
+            {canEdit && (
+              <TouchableOpacity
+                style={[styles.modalActionButton, styles.editButton]}
+                onPress={() => {
+                  onClose();
+                  onEdit(offer);
+                }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="edit" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                <Text style={styles.actionButtonText}>{t('driverOffers.edit') || 'Tahrirlash'}</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Secondary Actions Row */}
             <View style={styles.secondaryActionsRow}>
@@ -455,7 +459,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -722,7 +726,7 @@ const styles = StyleSheet.create({
   modalActions: {
     padding: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 50,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',

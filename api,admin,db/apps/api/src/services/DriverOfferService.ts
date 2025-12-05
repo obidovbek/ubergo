@@ -340,35 +340,7 @@ export class DriverOfferService {
   ) {
     const offer = await this.getOfferById(offerId, userId);
 
-    // Check if offer can be edited
-    if (offer.status === 'published') {
-      // For published offers, only allow limited edits
-      const allowedFields = ['price_per_seat', 'front_price_per_seat', 'note', 'seats_total'];
-      const hasDisallowedFields = Object.keys(data).some(
-        (key) => !allowedFields.includes(key) && key !== 'stops'
-      );
-
-      if (hasDisallowedFields) {
-        throw new AppError(
-          'Only price_per_seat, note, and seats_total can be edited for published offers',
-          400
-        );
-      }
-
-      // Price can only be decreased
-      if (data.price_per_seat !== undefined && data.price_per_seat > offer.price_per_seat) {
-        throw new AppError('Price can only be decreased for published offers', 400);
-      }
-      if (
-        data.front_price_per_seat !== undefined &&
-        offer.front_price_per_seat !== null &&
-        offer.front_price_per_seat !== undefined &&
-        data.front_price_per_seat > offer.front_price_per_seat
-      ) {
-        throw new AppError('front_price_per_seat can only be decreased for published offers', 400);
-      }
-    }
-
+    // All fields can be edited for all offer statuses
     // Validate data
     this.validateOfferData(data, true);
 
@@ -384,8 +356,8 @@ export class DriverOfferService {
       seats_free: data.seats_total !== undefined ? data.seats_total : offer.seats_free
     });
 
-    // Update stops if provided (only for archived/cancelled offers)
-    if (data.stops !== undefined && ['archived', 'cancelled'].includes(offer.status)) {
+    // Update stops if provided (allows editing stops for all offer statuses)
+    if (data.stops !== undefined) {
       // Delete existing stops
       await DriverOfferStop.destroy({
         where: { offer_id: offerId }

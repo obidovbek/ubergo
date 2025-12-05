@@ -202,6 +202,24 @@ export const OfferWizardScreen: React.FC = () => {
         const offer = response.offer;
         setExistingOffer(offer);
         
+        // Check if offer is archived or cancelled - prevent editing
+        if (offer.status === 'archived' || offer.status === 'cancelled') {
+          showToast.error(
+            'Xatolik',
+            offer.status === 'archived' 
+              ? 'Arxivlangan e\'lonni tahrirlash mumkin emas'
+              : 'Bekor qilingan e\'lonni tahrirlash mumkin emas'
+          );
+          navigation.goBack();
+          return;
+        }
+        
+        // Load countries first and get the result directly
+        const countries = await DriverAPI.fetchGeoCountries();
+        setFromCountries(countries);
+        setToCountries(countries);
+        setStopCountries(countries);
+        
         // Pre-fill form data
         const startDate = new Date(offer.start_at);
         setSelectedDate(startDate);
@@ -223,20 +241,161 @@ export const OfferWizardScreen: React.FC = () => {
           note: offer.note || '',
         });
 
+        // Parse and populate "From" location geo selections
+        let loadedFromCountry: GeoOption | null = null;
+        let loadedFromProvince: GeoOption | null = null;
+        let loadedFromCity: GeoOption | null = null;
+        let loadedFromCities: GeoOption[] = [];
+
+        if (offer.from_text) {
+          const fromGeo = await parseLocationText(offer.from_text, countries);
+          if (fromGeo.country) {
+            loadedFromCountry = fromGeo.country;
+            setFromCountry(fromGeo.country);
+            const provinces = await DriverAPI.fetchGeoProvinces(fromGeo.country.id);
+            setFromProvinces(provinces);
+            if (fromGeo.province) {
+              loadedFromProvince = fromGeo.province;
+              setFromProvince(fromGeo.province);
+              const cities = await DriverAPI.fetchGeoCityDistricts(fromGeo.province.id);
+              setFromCities(cities);
+              if (fromGeo.city) {
+                loadedFromCity = fromGeo.city;
+                setFromCity(fromGeo.city);
+                loadedFromCities.push(fromGeo.city);
+              }
+            }
+          }
+        }
+
+        // Parse and populate "To" location geo selections
+        let loadedToCountry: GeoOption | null = null;
+        let loadedToProvince: GeoOption | null = null;
+        let loadedToCity: GeoOption | null = null;
+        let loadedToCities: GeoOption[] = [];
+
+        if (offer.to_text) {
+          const toGeo = await parseLocationText(offer.to_text, countries);
+          if (toGeo.country) {
+            loadedToCountry = toGeo.country;
+            setToCountry(toGeo.country);
+            const provinces = await DriverAPI.fetchGeoProvinces(toGeo.country.id);
+            setToProvinces(provinces);
+            if (toGeo.province) {
+              loadedToProvince = toGeo.province;
+              setToProvince(toGeo.province);
+              const cities = await DriverAPI.fetchGeoCityDistricts(toGeo.province.id);
+              setToCities(cities);
+              if (toGeo.city) {
+                loadedToCity = toGeo.city;
+                setToCity(toGeo.city);
+                loadedToCities.push(toGeo.city);
+              }
+            }
+          }
+        }
+
         // Load stops if they exist
+        // Separate stops that belong to From/To multi-city selections from true intermediate stops
+        const trueIntermediateStops: Array<{ id: string; city: GeoOption | null; selectedCities?: GeoOption[]; country: GeoOption | null; province: GeoOption | null; label_text: string; lat?: number; lng?: number }> = [];
+        
         if (offer.stops && offer.stops.length > 0) {
-          // For existing stops, we'll need to reconstruct the geo hierarchy
-          // For now, just set the label_text and coordinates
-          const loadedStops = offer.stops.map((stop, index) => ({
-            id: `stop-${index}`,
-            city: null as GeoOption | null,
-            country: null as GeoOption | null,
-            province: null as GeoOption | null,
-            label_text: stop.label_text,
-            lat: stop.lat || undefined,
-            lng: stop.lng || undefined,
-          }));
-          setStops(loadedStops);
+          for (let index = 0; index < offer.stops.length; index++) {
+            const stop = offer.stops[index];
+            let country: GeoOption | null = null;
+            let province: GeoOption | null = null;
+            let city: GeoOption | null = null;
+
+            if (stop.label_text) {
+              const stopGeo = await parseLocationText(stop.label_text, countries);
+              country = stopGeo.country;
+              province = stopGeo.province;
+              city = stopGeo.city;
+
+              // Check if this stop belongs to From multi-city selection
+              if (country && province && city && 
+                  loadedFromCountry && loadedFromProvince &&
+                  country.id === loadedFromCountry.id && 
+                  province.id === loadedFromProvince.id) {
+                // This is an additional From city, add to selectedFromCities
+                // Don't add if it's the same as the primary fromCity
+                if (loadedFromCity && city.id === loadedFromCity.id) {
+                  // This is the primary city, skip it (already in loadedFromCities)
+                  continue;
+                }
+                if (!loadedFromCities.some(c => c.id === city!.id)) {
+                  loadedFromCities.push(city);
+                }
+                continue; // Skip adding to stops
+              }
+
+              // Check if this stop belongs to To multi-city selection
+              if (country && province && city &&
+                  loadedToCountry && loadedToProvince &&
+                  country.id === loadedToCountry.id && 
+                  province.id === loadedToProvince.id) {
+                // This is an additional To city, add to selectedToCities
+                // Don't add if it's the same as the primary toCity
+                if (loadedToCity && city.id === loadedToCity.id) {
+                  // This is the primary city, skip it (already in loadedToCities)
+                  continue;
+                }
+                if (!loadedToCities.some(c => c.id === city!.id)) {
+                  loadedToCities.push(city);
+                }
+                continue; // Skip adding to stops
+              }
+
+              // This is a true intermediate stop (different location)
+              // Load provinces and cities if country/province found
+              if (country) {
+                const provinces = await DriverAPI.fetchGeoProvinces(country.id);
+                setStopProvinces(prev => ({ ...prev, [`stop-${index}`]: provinces }));
+                if (province) {
+                  const cities = await DriverAPI.fetchGeoCityDistricts(province.id);
+                  setStopCities(prev => ({ ...prev, [`stop-${index}`]: cities }));
+                }
+              }
+
+              trueIntermediateStops.push({
+                id: `stop-${index}`,
+                city,
+                country,
+                province,
+                label_text: stop.label_text,
+                lat: stop.lat || undefined,
+                lng: stop.lng || undefined,
+              });
+            }
+          }
+
+          // Update selectedFromCities and selectedToCities with additional cities
+          // Combine primary city (from from_text/to_text) with additional cities (from stops)
+          // When multiple cities: all cities go in selectedFromCities/selectedToCities, clear single city
+          // When single city: set as fromCity/toCity, selectedFromCities/selectedToCities empty
+          if (loadedFromCities.length > 1) {
+            // Multiple cities: all go in selectedFromCities, clear single city
+            // Primary city is first, additional cities follow
+            setFromCity(null);
+            setSelectedFromCities(loadedFromCities);
+          } else if (loadedFromCities.length === 1) {
+            // Single city: set as fromCity, clear selectedFromCities
+            setFromCity(loadedFromCities[0]);
+            setSelectedFromCities([]);
+          }
+          
+          if (loadedToCities.length > 1) {
+            // Multiple cities: all go in selectedToCities, clear single city
+            // Primary city is first, additional cities follow
+            setToCity(null);
+            setSelectedToCities(loadedToCities);
+          } else if (loadedToCities.length === 1) {
+            // Single city: set as toCity, clear selectedToCities
+            setToCity(loadedToCities[0]);
+            setSelectedToCities([]);
+          }
+
+          setStops(trueIntermediateStops);
         }
 
         // Load vehicles after setting form data
@@ -434,6 +593,169 @@ export const OfferWizardScreen: React.FC = () => {
     return parts.join(', ') || '';
   };
 
+  // Parse location text and find matching geo options
+  // Supports formats: "City, Province" or "City, Province, Country"
+  const parseLocationText = async (
+    locationText: string,
+    countries: GeoOption[]
+  ): Promise<{ country: GeoOption | null; province: GeoOption | null; city: GeoOption | null }> => {
+    if (!locationText || !countries || countries.length === 0) {
+      return { country: null, province: null, city: null };
+    }
+
+    // Split by comma and trim
+    const parts = locationText.split(',').map(p => p.trim()).filter(p => p);
+    
+    if (parts.length === 0) {
+      return { country: null, province: null, city: null };
+    }
+
+    let country: GeoOption | null = null;
+    let province: GeoOption | null = null;
+    let city: GeoOption | null = null;
+
+    // Determine format:
+    // - 1 part: could be city only
+    // - 2 parts: City, Province (most common)
+    // - 3 parts: City, Province, Country
+
+    if (parts.length === 1) {
+      // Only city name - search all countries/provinces for this city
+      for (const c of countries) {
+        try {
+          const provinces = await DriverAPI.fetchGeoProvinces(c.id);
+          for (const p of provinces) {
+            try {
+              const cities = await DriverAPI.fetchGeoCityDistricts(p.id);
+              const foundCity = cities.find(city => 
+                city.name.toLowerCase() === parts[0].toLowerCase() ||
+                city.name.toLowerCase().includes(parts[0].toLowerCase()) ||
+                parts[0].toLowerCase().includes(city.name.toLowerCase())
+              );
+              if (foundCity) {
+                country = c;
+                province = p;
+                city = foundCity;
+                return { country, province, city };
+              }
+            } catch (error) {
+              // Continue to next province
+            }
+          }
+        } catch (error) {
+          // Continue to next country
+        }
+      }
+    } else if (parts.length === 2) {
+      // Format: "City, Province" - search for province in all countries
+      const cityName = parts[0].toLowerCase();
+      const provinceName = parts[1].toLowerCase();
+      
+      for (const c of countries) {
+        try {
+          const provinces = await DriverAPI.fetchGeoProvinces(c.id);
+          const foundProvince = provinces.find(p => 
+            p.name.toLowerCase() === provinceName ||
+            p.name.toLowerCase().includes(provinceName) ||
+            provinceName.includes(p.name.toLowerCase())
+          );
+          if (foundProvince) {
+            country = c;
+            province = foundProvince;
+            
+            // Try to match city
+            try {
+              const cities = await DriverAPI.fetchGeoCityDistricts(foundProvince.id);
+              city = cities.find(c => 
+                c.name.toLowerCase() === cityName ||
+                c.name.toLowerCase().includes(cityName) ||
+                cityName.includes(c.name.toLowerCase())
+              ) || null;
+            } catch (error) {
+              console.error('Failed to load cities:', error);
+            }
+            break;
+          }
+        } catch (error) {
+          // Continue to next country
+        }
+      }
+    } else if (parts.length >= 3) {
+      // Format: "City, Province, Country" - try to match country first
+      const cityName = parts[0].toLowerCase();
+      const provinceName = parts[parts.length - 2].toLowerCase();
+      const countryName = parts[parts.length - 1].toLowerCase();
+      
+      // Try to match country
+      country = countries.find(c => 
+        c.name.toLowerCase() === countryName ||
+        c.name.toLowerCase().includes(countryName) ||
+        countryName.includes(c.name.toLowerCase())
+      ) || null;
+
+      if (country) {
+        // Country found, try to match province
+        try {
+          const provinces = await DriverAPI.fetchGeoProvinces(country.id);
+          province = provinces.find(p => 
+            p.name.toLowerCase() === provinceName ||
+            p.name.toLowerCase().includes(provinceName) ||
+            provinceName.includes(p.name.toLowerCase())
+          ) || null;
+
+          // Try to match city
+          if (province) {
+            try {
+              const cities = await DriverAPI.fetchGeoCityDistricts(province.id);
+              city = cities.find(c => 
+                c.name.toLowerCase() === cityName ||
+                c.name.toLowerCase().includes(cityName) ||
+                cityName.includes(c.name.toLowerCase())
+              ) || null;
+            } catch (error) {
+              console.error('Failed to load cities:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load provinces:', error);
+        }
+      } else {
+        // Country not found, search all countries for province
+        for (const c of countries) {
+          try {
+            const provinces = await DriverAPI.fetchGeoProvinces(c.id);
+            const foundProvince = provinces.find(p => 
+              p.name.toLowerCase() === provinceName ||
+              p.name.toLowerCase().includes(provinceName) ||
+              provinceName.includes(p.name.toLowerCase())
+            );
+            if (foundProvince) {
+              country = c;
+              province = foundProvince;
+              
+              // Try to match city
+              try {
+                const cities = await DriverAPI.fetchGeoCityDistricts(foundProvince.id);
+                city = cities.find(c => 
+                  c.name.toLowerCase() === cityName ||
+                  c.name.toLowerCase().includes(cityName) ||
+                  cityName.includes(c.name.toLowerCase())
+                ) || null;
+              } catch (error) {
+                console.error('Failed to load cities:', error);
+              }
+              break;
+            }
+          } catch (error) {
+            // Continue to next country
+          }
+        }
+      }
+    }
+
+    return { country, province, city };
+  };
+
   const handleFromGeoSelection = async (
     type: 'country' | 'province' | 'city',
     option: GeoOption
@@ -559,10 +881,15 @@ export const OfferWizardScreen: React.FC = () => {
 
     // If multi-select for cities, ensure cities are loaded
     if (multiSelect && type === 'city') {
-      if (fromCities.length === 0) {
-        await loadFromCities(fromProvince!.id);
+      if (fromCities.length === 0 && fromProvince) {
+        await loadFromCities(fromProvince.id);
       }
-      setSelectedFromCities([]);
+      // Pre-select existing cities if editing
+      if (selectedFromCities.length === 0 && fromCity) {
+        setSelectedFromCities([fromCity]);
+      } else {
+        setSelectedFromCities([]);
+      }
     } else {
       setSelectedFromCities([]);
     }
@@ -583,10 +910,15 @@ export const OfferWizardScreen: React.FC = () => {
 
     // If multi-select for cities, ensure cities are loaded
     if (multiSelect && type === 'city') {
-      if (toCities.length === 0) {
-        await loadToCities(toProvince!.id);
+      if (toCities.length === 0 && toProvince) {
+        await loadToCities(toProvince.id);
       }
-      setSelectedToCities([]);
+      // Pre-select existing cities if editing
+      if (selectedToCities.length === 0 && toCity) {
+        setSelectedToCities([toCity]);
+      } else {
+        setSelectedToCities([]);
+      }
     } else {
       setSelectedToCities([]);
     }

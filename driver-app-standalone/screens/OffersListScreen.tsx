@@ -33,7 +33,7 @@ export const OffersListScreen: React.FC = () => {
   const [allOffers, setAllOffers] = useState<DriverOffer[]>([]); // Store all offers for counting
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<OfferStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<OfferStatus | 'all'>('published');
   const [selectedOffer, setSelectedOffer] = useState<DriverOffer | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -83,6 +83,16 @@ export const OffersListScreen: React.FC = () => {
   };
 
   const handleEditOffer = (offer: DriverOffer) => {
+    // Prevent editing archived or cancelled offers
+    if (offer.status === 'archived' || offer.status === 'cancelled') {
+      showToast.error(
+        'Xatolik',
+        offer.status === 'archived' 
+          ? 'Arxivlangan e\'lonni tahrirlash mumkin emas'
+          : 'Bekor qilingan e\'lonni tahrirlash mumkin emas'
+      );
+      return;
+    }
     (navigation as any).navigate('OfferWizard', { offerId: offer.id });
   };
 
