@@ -16,6 +16,8 @@ import { DriverLicenseScreen } from '../screens/DriverLicenseScreen';
 import { DriverVehicleScreen } from '../screens/DriverVehicleScreen';
 import { DriverTaxiLicenseScreen } from '../screens/DriverTaxiLicenseScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
+import { OffersListScreen } from '../screens/OffersListScreen';
+import { OfferWizardScreen } from '../screens/OfferWizardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -34,8 +36,7 @@ export const MainNavigator: React.FC = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          headerShown: true,
-          title: 'Profile',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -73,8 +74,21 @@ export const MainNavigator: React.FC = () => {
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          headerShown: true,
-          title: 'Notifications',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="OffersList"
+        component={OffersListScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="OfferWizard"
+        component={OfferWizardScreen}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

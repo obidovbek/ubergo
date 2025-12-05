@@ -151,6 +151,7 @@ export default {
   },
 
   profile: {
+    title: 'Profile',
     logout: 'Logout',
     logoutConfirm: 'Are you sure you want to logout?',
     logoutError: 'Error logging out. Please try again.',

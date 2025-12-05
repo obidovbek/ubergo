@@ -49,9 +49,24 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         try {
             const response = await NotificationsAPI.getNotifications(token);
             if (response.success && response.data) {
-                // API returns { success: true, data: { data: [...], total, unread } }
-                const notifications = response.data.data || [];
-                const unread = response.data.unread !== undefined ? response.data.unread : notifications.filter(n => !n.read).length;
+                // Handle different response structures:
+                // 1. { success: true, data: { data: [...], total, unread } }
+                // 2. { success: true, data: [...] } (array directly)
+                let notifications: Notification[] = [];
+                let unread = 0;
+
+                if (Array.isArray(response.data)) {
+                    // If data is an array directly
+                    notifications = response.data;
+                    unread = notifications.filter(n => !n.read).length;
+                } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+                    // If data is an object with a data property
+                    notifications = Array.isArray(response.data.data) ? response.data.data : [];
+                    unread = response.data.unread !== undefined 
+                        ? response.data.unread 
+                        : notifications.filter(n => !n.read).length;
+                }
+
                 setNotifications(notifications);
                 setUnreadCount(unread);
             }

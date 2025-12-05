@@ -63,6 +63,19 @@ export const API_ENDPOINTS = {
     markAllRead: '/notifications/read-all',
     delete: (id: string) => `/notifications/${id}`,
   },
+  driverOffers: {
+    list: '/driver/offers',
+    create: '/driver/offers',
+    detail: (id: string) => `/driver/offers/${id}`,
+    update: (id: string) => `/driver/offers/${id}`,
+    cancel: (id: string) => `/driver/offers/${id}/cancel`,
+    publish: (id: string) => `/driver/offers/${id}/publish`,
+    archive: (id: string) => `/driver/offers/${id}/archive`,
+    delete: (id: string) => `/driver/offers/${id}`,
+  },
+  vehicles: {
+    list: '/driver/profile',
+  },
 };
 
 // API Timeout

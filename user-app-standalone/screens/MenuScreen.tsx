@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -94,14 +95,14 @@ export const MenuScreen: React.FC = () => {
           {/* Title */}
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{t('menu.title')}</Text>
-            <Text style={styles.cardSubtitle}>{t('menu.subtitle')}</Text>
+            {/* <Text style={styles.cardSubtitle}>{t('menu.subtitle')}</Text> */}
           </View>
 
           {/* Country Selector */}
-          <TouchableOpacity style={styles.countrySelector}>
+          {/* <TouchableOpacity style={styles.countrySelector}>
             <Text style={styles.countryFlag}>🇺🇿</Text>
             <Text style={styles.countryName}>{selectedCountry}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Taxi Options Grid */}
           <View style={styles.optionsGrid}>
@@ -110,6 +111,7 @@ export const MenuScreen: React.FC = () => {
                 key={option.id}
                 style={styles.optionButton}
                 onPress={() => handleOptionPress(option.id)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.optionText}>{t(option.titleKey)}</Text>
               </TouchableOpacity>
@@ -124,16 +126,17 @@ export const MenuScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
+    paddingTop: Platform.OS === 'android' ? 50 : 20,
   },
   header: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: Platform.OS === 'android' ? 12 : 8,
+    marginBottom: 28,
   },
   headerContent: {
     flexDirection: 'row',
@@ -145,10 +148,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#4CAF50',
+    fontSize: 38,
+    fontWeight: '800',
+    color: '#10B981',
     letterSpacing: 0.5,
+    textShadowColor: 'rgba(16, 185, 129, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   profileButton: {
     position: 'absolute',
@@ -156,22 +162,22 @@ const styles = StyleSheet.create({
     top: 0,
   },
   profileAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4CAF50',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#2E7D32',
-    shadowColor: '#000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   profileInitial: {
     fontSize: 20,
@@ -180,83 +186,92 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderRadius: 20,
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cardHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   cardTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 6,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   cardSubtitle: {
     fontSize: 15,
-    color: '#666666',
+    color: '#6B7280',
     fontWeight: '500',
   },
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderRadius: 16,
     marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   countryFlag: {
-    fontSize: 24,
-    marginRight: 10,
+    fontSize: 28,
+    marginRight: 12,
   },
   countryName: {
     fontSize: 17,
-    color: '#000000',
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '700',
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 14,
+    gap: 16,
   },
   optionButton: {
     width: '47%',
     aspectRatio: 1,
-    backgroundColor: '#81C784',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#4CAF50',
-    padding: 14,
+    borderColor: '#E5E7EB',
+    padding: 18,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   optionText: {
-    fontSize: 16,
-    color: '#000000',
+    fontSize: 15,
+    color: '#111827',
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 22,

@@ -3,7 +3,7 @@
  * Main menu with taxi service options
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,18 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import * as DriverOffersAPI from '../api/driverOffers';
+import type { DriverOffer } from '../api/driverOffers';
+import { showToast } from '../utils/toast';
 
 const theme = createTheme('light');
 
@@ -30,18 +36,25 @@ interface TaxiOption {
 type MainStackParamList = {
   Home: undefined;
   Profile: undefined;
+  OffersList: undefined;
+  OfferWizard: { offerId?: string } | undefined;
 };
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
 export const MenuScreen: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigation = useNavigation<MenuScreenNavigationProp>();
   const { t } = useTranslation();
   const [selectedCountry, setSelectedCountry] = useState(t('menu.uzbekistan'));
+  const [activeOffers, setActiveOffers] = useState<DriverOffer[]>([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Taxi options with translation keys
+  // Taxi options with translation keys - My Offers first
   const taxiOptions: TaxiOption[] = [
+    { id: 'myOffers', titleKey: 'menu.myOffers' }, // My Offers at the top
     { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
     { id: 'ichi', titleKey: 'menu.ichi' },
     { id: 'tuman', titleKey: 'menu.tuman' },
@@ -57,19 +70,101 @@ export const MenuScreen: React.FC = () => {
 
   const handleOptionPress = (optionId: string) => {
     console.log('Selected option:', optionId);
-    // Handle navigation or action based on selected option
+    // Navigate to offers screen when "My Offers" is clicked
+    if (optionId === 'myOffers') {
+      handleViewAllOffers();
+    } else {
+      // Handle other menu options
+      // TODO: Add navigation for other options
+    }
   };
 
   const handleProfilePress = () => {
     navigation.navigate('Profile');
   };
 
+  const handleCreateOffer = () => {
+    (navigation as any).navigate('OfferWizard', { offerId: null });
+  };
+
+  const handleViewAllOffers = () => {
+    (navigation as any).navigate('OffersList');
+  };
+
+  const loadActiveOffers = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      setLoadingOffers(true);
+      // Load published and approved offers that are in the future
+      const response = await DriverOffersAPI.getDriverOffers(token, {
+        status: 'published,approved',
+      });
+      
+      if (response.success && response.offers) {
+        // Filter to only show future offers
+        const now = new Date();
+        const futureOffers = response.offers.filter(offer => {
+          const startDate = new Date(offer.start_at);
+          return startDate > now;
+        });
+        
+        // Sort by start_at (earliest first) and limit to 3
+        futureOffers.sort((a, b) => 
+          new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+        );
+        
+        setActiveOffers(futureOffers.slice(0, 3));
+      }
+    } catch (error: any) {
+      console.error('Failed to load active offers:', error);
+      // Don't show error toast for menu screen, just fail silently
+    } finally {
+      setLoadingOffers(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
+  // Load offers when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadActiveOffers();
+    }, [loadActiveOffers])
+  );
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadActiveOffers();
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('uz-UZ', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatPrice = (price: number, currency: string) => {
+    return new Intl.NumberFormat('uz-UZ', {
+      style: 'currency',
+      currency: currency || 'UZS',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       <ScrollView 
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         {/* Header with Logo and Profile Button */}
         <View style={styles.header}>
@@ -89,29 +184,52 @@ export const MenuScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Main Card */}
+        {/* Main Card - Unified Menu */}
         <View style={styles.card}>
           {/* Title */}
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{t('menu.title')}</Text>
-            <Text style={styles.cardSubtitle}>{t('menu.subtitle')}</Text>
+            {/* <Text style={styles.cardSubtitle}>{t('menu.subtitle')}</Text> */}
           </View>
 
           {/* Country Selector */}
-          <TouchableOpacity style={styles.countrySelector}>
+          {/* <TouchableOpacity style={styles.countrySelector}>
             <Text style={styles.countryFlag}>🇺🇿</Text>
             <Text style={styles.countryName}>{selectedCountry}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
-          {/* Taxi Options Grid */}
+          {/* Taxi Options Grid - Including My Offers */}
           <View style={styles.optionsGrid}>
             {taxiOptions.map((option) => (
               <TouchableOpacity
                 key={option.id}
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  option.id === 'myOffers' && styles.offersOptionButton
+                ]}
                 onPress={() => handleOptionPress(option.id)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.optionText}>{t(option.titleKey)}</Text>
+                {option.id === 'myOffers' && (
+                  <View style={styles.offersIconContainer}>
+                    <View style={styles.offersIcon}>
+                      <View style={styles.offersIconLine} />
+                      <View style={styles.offersIconLine} />
+                      <View style={styles.offersIconLine} />
+                    </View>
+                  </View>
+                )}
+                <Text style={[
+                  styles.optionText,
+                  option.id === 'myOffers' && styles.offersOptionText
+                ]}>
+                  {t(option.titleKey)}
+                </Text>
+                {option.id === 'myOffers' && activeOffers.length > 0 && (
+                  <View style={styles.offersBadge}>
+                    <Text style={styles.offersBadgeText}>{activeOffers.length}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -124,16 +242,17 @@ export const MenuScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
+    paddingTop: Platform.OS === 'android' ? 50 : 20,
   },
   header: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: Platform.OS === 'android' ? 12 : 8,
+    marginBottom: 28,
   },
   headerContent: {
     flexDirection: 'row',
@@ -145,10 +264,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#4CAF50',
+    fontSize: 38,
+    fontWeight: '800',
+    color: '#10B981',
     letterSpacing: 0.5,
+    textShadowColor: 'rgba(16, 185, 129, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   profileButton: {
     position: 'absolute',
@@ -156,22 +278,22 @@ const styles = StyleSheet.create({
     top: 0,
   },
   profileAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4CAF50',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#2E7D32',
-    shadowColor: '#000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   profileInitial: {
     fontSize: 20,
@@ -180,86 +302,151 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderRadius: 20,
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cardHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   cardTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 6,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   cardSubtitle: {
     fontSize: 15,
-    color: '#666666',
+    color: '#6B7280',
     fontWeight: '500',
   },
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderRadius: 16,
     marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   countryFlag: {
-    fontSize: 24,
-    marginRight: 10,
+    fontSize: 28,
+    marginRight: 12,
   },
   countryName: {
     fontSize: 17,
-    color: '#000000',
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '700',
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 14,
+    gap: 16,
   },
   optionButton: {
     width: '47%',
     aspectRatio: 1,
-    backgroundColor: '#81C784',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#4CAF50',
-    padding: 14,
+    borderColor: '#E5E7EB',
+    padding: 18,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   optionText: {
-    fontSize: 16,
-    color: '#000000',
+    fontSize: 15,
+    color: '#111827',
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  offersOptionButton: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+    borderWidth: 2,
+    position: 'relative',
+  },
+  offersOptionText: {
+    color: '#10B981',
+  },
+  offersIconContainer: {
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offersIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#10B981',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 6,
+    paddingTop: 4,
+  },
+  offersIconLine: {
+    width: 18,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 3,
+    borderRadius: 1,
+  },
+  offersBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  offersBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

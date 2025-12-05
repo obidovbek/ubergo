@@ -26,16 +26,14 @@ export const MainNavigator: React.FC = () => {
         name="Profile" 
         component={ProfileScreen}
         options={{
-          headerShown: true,
-          title: 'Profile',
+          headerShown: false,
         }}
       />
       <Stack.Screen 
         name="Notifications" 
         component={NotificationsScreen}
         options={{
-          headerShown: true,
-          title: 'Notifications',
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

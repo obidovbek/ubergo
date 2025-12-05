@@ -99,6 +99,8 @@ import { VehicleType, initVehicleType } from './VehicleType.js';
 import { AppStoreUrl, initAppStoreUrl } from './AppStoreUrl.js';
 import { SupportContact, initSupportContact } from './SupportContact.js';
 import { Notification, initNotification } from './Notification.js';
+import { DriverOffer, initDriverOffer } from './DriverOffer.js';
+import { DriverOfferStop, initDriverOfferStop } from './DriverOfferStop.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -132,6 +134,8 @@ initVehicleType(sequelize);
 initAppStoreUrl(sequelize);
 initSupportContact(sequelize);
 initNotification(sequelize);
+initDriverOffer(sequelize);
+initDriverOfferStop(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -280,6 +284,19 @@ VehicleColor.hasMany(DriverVehicle, { foreignKey: 'vehicle_color_id', as: 'vehic
 DriverProfile.hasOne(DriverTaxiLicense, { foreignKey: 'driver_profile_id', as: 'taxiLicense' });
 DriverTaxiLicense.belongsTo(DriverProfile, { foreignKey: 'driver_profile_id', as: 'driverProfile' });
 
+// Driver Offer associations
+User.hasMany(DriverOffer, { foreignKey: 'user_id', as: 'driverOffers' });
+DriverOffer.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+DriverVehicle.hasMany(DriverOffer, { foreignKey: 'vehicle_id', as: 'offers' });
+DriverOffer.belongsTo(DriverVehicle, { foreignKey: 'vehicle_id', as: 'vehicle' });
+
+DriverOffer.hasMany(DriverOfferStop, { foreignKey: 'offer_id', as: 'stops' });
+DriverOfferStop.belongsTo(DriverOffer, { foreignKey: 'offer_id', as: 'offer' });
+
+AdminUser.hasMany(DriverOffer, { foreignKey: 'reviewed_by', as: 'reviewedOffers' });
+DriverOffer.belongsTo(AdminUser, { foreignKey: 'reviewed_by', as: 'reviewer' });
+
 // Admin User associations
 AdminUser.belongsTo(AdminUser, { foreignKey: 'created_by', as: 'creator' });
 
@@ -336,6 +353,8 @@ export {
   AppStoreUrl,
   SupportContact,
   Notification,
+  DriverOffer,
+  DriverOfferStop,
 };
 
 export default sequelize;

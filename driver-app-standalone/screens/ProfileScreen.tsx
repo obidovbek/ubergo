@@ -12,6 +12,8 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
@@ -66,19 +68,105 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const menuItems = [
-    { id: 'notifications', title: t('profile.notifications'), icon: '🔔', navigate: 'Notifications' },
-    { id: 'edit', title: t('profile.editProfile'), icon: '✏️', navigate: 'EditProfile' },
-    { id: 'payment', title: t('profile.paymentMethods'), icon: '💳' },
-    { id: 'history', title: t('profile.tripHistory'), icon: '📜' },
-    { id: 'help', title: t('profile.helpSupport'), icon: '❓' },
-    { id: 'settings', title: t('profile.settings'), icon: '⚙️' },
+    { id: 'notifications', title: t('profile.notifications'), iconType: 'bell', navigate: 'Notifications' },
+    { id: 'edit', title: t('profile.editProfile'), iconType: 'edit', navigate: 'EditProfile' },
+    { id: 'offers', title: t('profile.myOffers'), iconType: 'list', navigate: 'OffersList' },
+    { id: 'payment', title: t('profile.paymentMethods'), iconType: 'card' },
+    { id: 'history', title: t('profile.tripHistory'), iconType: 'history' },
+    { id: 'help', title: t('profile.helpSupport'), iconType: 'help' },
+    { id: 'settings', title: t('profile.settings'), iconType: 'settings' },
   ];
+
+  const renderIcon = (iconType: string) => {
+    switch (iconType) {
+      case 'bell':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            </View>
+          </View>
+        );
+      case 'edit':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#DBEAFE' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#3B82F6' }]} />
+            </View>
+          </View>
+        );
+      case 'list':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#D1FAE5' }]}>
+              <View style={styles.listIcon}>
+                <View style={styles.listIconLine} />
+                <View style={styles.listIconLine} />
+                <View style={styles.listIconLine} />
+              </View>
+            </View>
+          </View>
+        );
+      case 'card':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#6366F1' }]} />
+            </View>
+          </View>
+        );
+      case 'history':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#EC4899' }]} />
+            </View>
+          </View>
+        );
+      case 'help':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            </View>
+          </View>
+        );
+      case 'settings':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#E5E7EB' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#6B7280' }]} />
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Header Card */}
+        <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{userInitial}</Text>
           </View>
@@ -87,18 +175,21 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.phone}>{userPhone}</Text>
           {user?.id && (
             <View style={styles.idContainer}>
-              <Text style={styles.idLabel}>{t('profile.driverId')}:</Text>
+              <Text style={styles.idLabel}>{t('profile.driverId')}</Text>
               <Text style={styles.idValue}>{user.id}</Text>
             </View>
           )}
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item) => (
+        {/* Menu Items Card */}
+        <View style={styles.menuCard}>
+          {menuItems.map((item, index) => (
             <TouchableOpacity
               key={item.id}
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                index === menuItems.length - 1 && styles.menuItemLast
+              ]}
               onPress={() => {
                 if (item.navigate) {
                   (navigation as any).navigate(item.navigate);
@@ -106,8 +197,9 @@ export const ProfileScreen: React.FC = () => {
                   console.log(`Navigate to ${item.id}`);
                 }
               }}
+              activeOpacity={0.7}
             >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
+              {renderIcon(item.iconType)}
               <Text style={styles.menuTitle}>{item.title}</Text>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
@@ -117,22 +209,11 @@ export const ProfileScreen: React.FC = () => {
         {/* Logout Button */}
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={async () => {
-            console.log('Direct logout test pressed');
-            try {
-              console.log('Calling logout directly...');
-              await logout();
-              console.log('Direct logout completed');
-            } catch (error) {
-              console.error('Direct logout error:', error);
-            }
-          }}
-          activeOpacity={0.7}
+          onPress={handleLogout}
+          activeOpacity={0.8}
         >
           <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
-
-
 
         {/* App Info */}
         <View style={styles.appInfo}>
@@ -146,106 +227,235 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: '#F8FAFC',
   },
   scrollView: {
     flex: 1,
   },
-  profileHeader: {
+  scrollContent: {
+    padding: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: theme.palette.background.card,
-    marginBottom: theme.spacing(2),
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#10B981',
+    fontWeight: '700',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  headerSpacer: {
+    width: 60,
+  },
+  profileCard: {
+    alignItems: 'center',
+    padding: 32,
+    paddingTop: 40,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.palette.secondary.main,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing(2),
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatarText: {
-    ...theme.typography.h1,
-    color: theme.palette.secondary.contrastText,
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   name: {
-    ...theme.typography.h3,
-    color: theme.palette.text.primary,
-    marginBottom: theme.spacing(0.5),
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   email: {
-    ...theme.typography.body1,
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(0.5),
+    fontSize: 15,
+    color: '#6B7280',
+    marginBottom: 6,
+    fontWeight: '500',
   },
   phone: {
-    ...theme.typography.body2,
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(1),
+    fontSize: 15,
+    color: '#6B7280',
+    marginBottom: 16,
+    fontWeight: '500',
   },
   idContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing(1),
-    padding: theme.spacing(1),
-    backgroundColor: theme.palette.background.default,
-    borderRadius: theme.borderRadius.sm,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   idLabel: {
-    ...theme.typography.caption,
-    color: theme.palette.text.secondary,
-    marginRight: theme.spacing(1),
+    fontSize: 13,
+    color: '#6B7280',
+    marginRight: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   idValue: {
-    ...theme.typography.body2,
-    color: theme.palette.text.primary,
+    fontSize: 14,
+    color: '#111827',
     fontFamily: 'monospace',
+    fontWeight: '600',
   },
-  menuSection: {
-    backgroundColor: theme.palette.background.card,
-    marginBottom: theme.spacing(2),
+  menuCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(2),
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: theme.palette.divider,
+    borderBottomColor: '#F3F4F6',
   },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: theme.spacing(2),
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
+  iconContainer: {
+    marginRight: 16,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  listIcon: {
+    width: 20,
+    height: 16,
+    justifyContent: 'space-between',
+  },
+  listIconLine: {
+    width: 18,
+    height: 2,
+    backgroundColor: '#10B981',
+    borderRadius: 1,
   },
   menuTitle: {
-    ...theme.typography.body1,
-    color: theme.palette.text.primary,
     flex: 1,
+    fontSize: 16,
+    color: '#111827',
+    fontWeight: '600',
   },
   menuArrow: {
     fontSize: 24,
-    color: theme.palette.text.secondary,
+    color: '#9CA3AF',
+    fontWeight: '300',
   },
   logoutButton: {
-    backgroundColor: theme.palette.error.main,
-    padding: theme.spacing(2),
-    borderRadius: theme.borderRadius.md,
-    margin: theme.spacing(2),
+    backgroundColor: '#EF4444',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    marginBottom: 20,
     alignItems: 'center',
-    ...theme.shadows.md,
+    shadowColor: '#EF4444',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   logoutButtonText: {
-    ...theme.typography.button,
+    fontSize: 16,
     color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   appInfo: {
-    padding: theme.spacing(2),
+    padding: 20,
+    paddingBottom: 32,
     alignItems: 'center',
   },
   appInfoText: {
-    ...theme.typography.caption,
-    color: theme.palette.text.disabled,
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
 });
 

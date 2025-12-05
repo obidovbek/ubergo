@@ -53,6 +53,8 @@ import { VehicleTypeCreatePage } from '../pages/vehicleTypes/VehicleTypeCreatePa
 import { VehicleTypeEditPage } from '../pages/vehicleTypes/VehicleTypeEditPage';
 import { SupportContactPage } from '../pages/supportContacts/SupportContactPage';
 import { AppStoreUrlPage } from '../pages/appStoreUrls/AppStoreUrlPage';
+import { DriverOffersListPage } from '../pages/driverOffers/DriverOffersListPage';
+import { DriverOfferDetailPage } from '../pages/driverOffers/DriverOfferDetailPage';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -489,6 +491,24 @@ export const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <AppStoreUrlPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/driver-offers"
+          element={
+            <ProtectedRoute>
+              <DriverOffersListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/driver-offers/:id"
+          element={
+            <ProtectedRoute>
+              <DriverOfferDetailPage />
             </ProtectedRoute>
           }
         />

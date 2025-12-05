@@ -158,6 +158,7 @@ export default {
 
   // Profile Screen
   profile: {
+    title: 'Profil',
     logout: 'Chiqish',
     logoutConfirm: 'Haqiqatan ham tizimdan chiqmoqchimisiz?',
     logoutError: "Chiqishda xatolik yuz berdi. Iltimos qayta urinib ko'ring.",

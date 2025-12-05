@@ -26,6 +26,9 @@ import adminSupportContactRoutes from './admin-support-contact.routes.js';
 import supportContactRoutes from './support-contact.routes.js';
 import vehicleRoutes from './vehicle.routes.js';
 import notificationRoutes from './notification.routes.js';
+import driverOfferRoutes from './driver-offer.routes.js';
+import adminDriverOfferRoutes from './admin-driver-offer.routes.js';
+import publicOfferRoutes from './public-offer.routes.js';
 
 const router = Router();
 
@@ -73,6 +76,9 @@ router.use('/admin/app-store-urls', adminAppStoreUrlRoutes);
 // Admin support contact routes
 router.use('/admin/support-contacts', adminSupportContactRoutes);
 
+// Admin driver offer routes
+router.use('/admin/driver-offers', adminDriverOfferRoutes);
+
 // User routes
 router.use('/user', userRoutes);
 
@@ -93,6 +99,12 @@ router.use('/devices', deviceRoutes);
 
 // Driver routes
 router.use('/driver', driverRoutes);
+
+// Driver offer routes
+router.use('/driver/offers', driverOfferRoutes);
+
+// Public driver offer routes
+router.use('/public/driver-offers', publicOfferRoutes);
 
 // Upload routes
 router.use('/upload', uploadRoutes);

@@ -151,6 +151,7 @@ export default {
   },
 
   profile: {
+    title: 'Профиль',
     logout: 'Выйти',
     logoutConfirm: 'Вы уверены, что хотите выйти?',
     logoutError: 'Ошибка выхода. Пожалуйста, попробуйте снова.',
