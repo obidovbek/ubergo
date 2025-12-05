@@ -15,7 +15,7 @@ import './DriverOfferDetailPage.css';
 export const DriverOfferDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [offer, setOffer] = useState<DriverOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,11 @@ export const DriverOfferDetailPage = () => {
       const data = await driverOffersApi.getOfferById(token, id);
       setOffer(data.offer);
     } catch (err) {
-      setError(handleApiError(err));
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
+      setError(err instanceof Error ? err.message : 'Failed to load offer');
     } finally {
       setLoading(false);
     }
@@ -56,7 +60,11 @@ export const DriverOfferDetailPage = () => {
       alert(`Offer ${autoPublish ? 'approved and published' : 'approved'} successfully!`);
       loadOffer();
     } catch (err) {
-      alert(handleApiError(err));
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
+      alert(err instanceof Error ? err.message : 'Failed to approve offer');
     } finally {
       setActionLoading(false);
     }
@@ -76,7 +84,11 @@ export const DriverOfferDetailPage = () => {
       setRejectionReason('');
       loadOffer();
     } catch (err) {
-      alert(handleApiError(err));
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
+      alert(err instanceof Error ? err.message : 'Failed to reject offer');
     } finally {
       setActionLoading(false);
     }

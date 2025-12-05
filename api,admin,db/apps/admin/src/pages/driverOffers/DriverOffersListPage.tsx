@@ -14,7 +14,7 @@ import './DriverOffersListPage.css';
 
 export const DriverOffersListPage = () => {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [statistics, setStatistics] = useState<DriverOfferStatistics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,11 @@ export const DriverOffersListPage = () => {
       setOffers(data.offers || []);
       setTotal(data.total || 0);
     } catch (err) {
-      setError(handleApiError(err));
+      const isAuthError = await handleApiError(err, logout, navigate);
+      if (isAuthError) {
+        return; // Redirect handled, don't show error
+      }
+      setError(err instanceof Error ? err.message : 'Failed to load offers');
     } finally {
       setLoading(false);
     }
