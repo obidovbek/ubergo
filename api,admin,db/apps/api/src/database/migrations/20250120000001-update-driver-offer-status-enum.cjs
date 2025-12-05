@@ -3,6 +3,24 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if driver_offers table exists
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'driver_offers'
+      );
+    `);
+    
+    const tableExists = results[0].exists;
+    
+    // If table doesn't exist, skip this migration
+    // The create migration will create it with the correct enum values
+    if (!tableExists) {
+      console.log('driver_offers table does not exist yet, skipping enum update migration');
+      return;
+    }
+
     // Step 1: Drop the default value first (it depends on the enum type)
     await queryInterface.sequelize.query(`
       ALTER TABLE driver_offers 
@@ -59,6 +77,23 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    // Check if driver_offers table exists
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'driver_offers'
+      );
+    `);
+    
+    const tableExists = results[0].exists;
+    
+    // If table doesn't exist, skip this migration
+    if (!tableExists) {
+      console.log('driver_offers table does not exist, skipping enum rollback migration');
+      return;
+    }
+
     // Step 1: Drop the default value first
     await queryInterface.sequelize.query(`
       ALTER TABLE driver_offers 

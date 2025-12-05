@@ -12,7 +12,7 @@ module.exports = {
         allowNull: false
       },
       offer_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: { model: 'driver_offers', key: 'id' },
         onDelete: 'CASCADE',

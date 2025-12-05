@@ -3,6 +3,24 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if driver_offers table exists
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'driver_offers'
+      );
+    `);
+    
+    const tableExists = results[0].exists;
+    
+    // If table doesn't exist, skip this migration
+    // The create migration will create it with INTEGER id directly
+    if (!tableExists) {
+      console.log('driver_offers table does not exist yet, skipping id type change migration');
+      return;
+    }
+
     // Step 1: Drop foreign key constraint from driver_offer_stops
     await queryInterface.sequelize.query(`
       ALTER TABLE driver_offer_stops 
@@ -101,6 +119,23 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    // Check if driver_offers table exists
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'driver_offers'
+      );
+    `);
+    
+    const tableExists = results[0].exists;
+    
+    // If table doesn't exist, skip this migration
+    if (!tableExists) {
+      console.log('driver_offers table does not exist, skipping id type rollback migration');
+      return;
+    }
+
     // Reverse the migration: change back to UUID
     
     // Step 1: Drop foreign key constraint

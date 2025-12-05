@@ -4,23 +4,24 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Create enum type for offer status
+    // Note: Using final enum values ('published', 'archived', 'cancelled')
+    // The update migration (20250120000001) will handle existing databases with old enum values
     await queryInterface.sequelize.query(`
       CREATE TYPE "enum_driver_offers_status" AS ENUM (
-        'draft',
-        'pending_review',
-        'approved',
         'published',
-        'rejected',
-        'archived'
+        'archived',
+        'cancelled'
       );
     `);
 
     // Create driver_offers table
+    // Note: Using INTEGER id (not UUID) as the final state
+    // The change-id migration (20250225000001) will handle existing databases with UUID ids
     await queryInterface.createTable('driver_offers', {
       id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        defaultValue: Sequelize.literal('uuid_generate_v4()'),
+        autoIncrement: true,
         allowNull: false
       },
       user_id: {
@@ -101,7 +102,7 @@ module.exports = {
       status: {
         type: 'enum_driver_offers_status',
         allowNull: false,
-        defaultValue: 'draft'
+        defaultValue: 'published'
       },
       rejection_reason: {
         type: Sequelize.TEXT,
