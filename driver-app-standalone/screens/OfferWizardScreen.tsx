@@ -248,21 +248,57 @@ export const OfferWizardScreen: React.FC = () => {
         let loadedFromCities: GeoOption[] = [];
 
         if (offer.from_text) {
-          const fromGeo = await parseLocationText(offer.from_text, countries);
-          if (fromGeo.country) {
-            loadedFromCountry = fromGeo.country;
-            setFromCountry(fromGeo.country);
-            const provinces = await DriverAPI.fetchGeoProvinces(fromGeo.country.id);
-            setFromProvinces(provinces);
-            if (fromGeo.province) {
-              loadedFromProvince = fromGeo.province;
-              setFromProvince(fromGeo.province);
-              const cities = await DriverAPI.fetchGeoCityDistricts(fromGeo.province.id);
+          // Check if from_text contains multiple cities (comma-separated, no province/country)
+          const fromTextParts = offer.from_text.split(',').map(p => p.trim());
+          const hasMultipleCities = fromTextParts.length > 1 && !fromTextParts.some(p => 
+            // Check if any part looks like a province/country (longer, common province names)
+            p.toLowerCase().includes('viloyat') || p.toLowerCase().includes('respublik')
+          );
+
+          if (hasMultipleCities) {
+            // Multiple cities in from_text - parse first one to get country/province
+            const firstCityGeo = await parseLocationText(fromTextParts[0], countries);
+            if (firstCityGeo.country && firstCityGeo.province) {
+              loadedFromCountry = firstCityGeo.country;
+              setFromCountry(firstCityGeo.country);
+              const provinces = await DriverAPI.fetchGeoProvinces(firstCityGeo.country.id);
+              setFromProvinces(provinces);
+              
+              loadedFromProvince = firstCityGeo.province;
+              setFromProvince(firstCityGeo.province);
+              const cities = await DriverAPI.fetchGeoCityDistricts(firstCityGeo.province.id);
               setFromCities(cities);
-              if (fromGeo.city) {
-                loadedFromCity = fromGeo.city;
-                setFromCity(fromGeo.city);
-                loadedFromCities.push(fromGeo.city);
+
+              // Parse all cities from from_text
+              for (const cityName of fromTextParts) {
+                const foundCity = cities.find(c => 
+                  c.name.toLowerCase() === cityName.toLowerCase() ||
+                  c.name.toLowerCase().includes(cityName.toLowerCase()) ||
+                  cityName.toLowerCase().includes(c.name.toLowerCase())
+                );
+                if (foundCity && !loadedFromCities.some(c => c.id === foundCity.id)) {
+                  loadedFromCities.push(foundCity);
+                }
+              }
+            }
+          } else {
+            // Single city or full location format
+            const fromGeo = await parseLocationText(offer.from_text, countries);
+            if (fromGeo.country) {
+              loadedFromCountry = fromGeo.country;
+              setFromCountry(fromGeo.country);
+              const provinces = await DriverAPI.fetchGeoProvinces(fromGeo.country.id);
+              setFromProvinces(provinces);
+              if (fromGeo.province) {
+                loadedFromProvince = fromGeo.province;
+                setFromProvince(fromGeo.province);
+                const cities = await DriverAPI.fetchGeoCityDistricts(fromGeo.province.id);
+                setFromCities(cities);
+                if (fromGeo.city) {
+                  loadedFromCity = fromGeo.city;
+                  setFromCity(fromGeo.city);
+                  loadedFromCities.push(fromGeo.city);
+                }
               }
             }
           }
@@ -275,21 +311,57 @@ export const OfferWizardScreen: React.FC = () => {
         let loadedToCities: GeoOption[] = [];
 
         if (offer.to_text) {
-          const toGeo = await parseLocationText(offer.to_text, countries);
-          if (toGeo.country) {
-            loadedToCountry = toGeo.country;
-            setToCountry(toGeo.country);
-            const provinces = await DriverAPI.fetchGeoProvinces(toGeo.country.id);
-            setToProvinces(provinces);
-            if (toGeo.province) {
-              loadedToProvince = toGeo.province;
-              setToProvince(toGeo.province);
-              const cities = await DriverAPI.fetchGeoCityDistricts(toGeo.province.id);
+          // Check if to_text contains multiple cities (comma-separated, no province/country)
+          const toTextParts = offer.to_text.split(',').map(p => p.trim());
+          const hasMultipleCities = toTextParts.length > 1 && !toTextParts.some(p => 
+            // Check if any part looks like a province/country (longer, common province names)
+            p.toLowerCase().includes('viloyat') || p.toLowerCase().includes('respublik')
+          );
+
+          if (hasMultipleCities) {
+            // Multiple cities in to_text - parse first one to get country/province
+            const firstCityGeo = await parseLocationText(toTextParts[0], countries);
+            if (firstCityGeo.country && firstCityGeo.province) {
+              loadedToCountry = firstCityGeo.country;
+              setToCountry(firstCityGeo.country);
+              const provinces = await DriverAPI.fetchGeoProvinces(firstCityGeo.country.id);
+              setToProvinces(provinces);
+              
+              loadedToProvince = firstCityGeo.province;
+              setToProvince(firstCityGeo.province);
+              const cities = await DriverAPI.fetchGeoCityDistricts(firstCityGeo.province.id);
               setToCities(cities);
-              if (toGeo.city) {
-                loadedToCity = toGeo.city;
-                setToCity(toGeo.city);
-                loadedToCities.push(toGeo.city);
+
+              // Parse all cities from to_text
+              for (const cityName of toTextParts) {
+                const foundCity = cities.find(c => 
+                  c.name.toLowerCase() === cityName.toLowerCase() ||
+                  c.name.toLowerCase().includes(cityName.toLowerCase()) ||
+                  cityName.toLowerCase().includes(c.name.toLowerCase())
+                );
+                if (foundCity && !loadedToCities.some(c => c.id === foundCity.id)) {
+                  loadedToCities.push(foundCity);
+                }
+              }
+            }
+          } else {
+            // Single city or full location format
+            const toGeo = await parseLocationText(offer.to_text, countries);
+            if (toGeo.country) {
+              loadedToCountry = toGeo.country;
+              setToCountry(toGeo.country);
+              const provinces = await DriverAPI.fetchGeoProvinces(toGeo.country.id);
+              setToProvinces(provinces);
+              if (toGeo.province) {
+                loadedToProvince = toGeo.province;
+                setToProvince(toGeo.province);
+                const cities = await DriverAPI.fetchGeoCityDistricts(toGeo.province.id);
+                setToCities(cities);
+                if (toGeo.city) {
+                  loadedToCity = toGeo.city;
+                  setToCity(toGeo.city);
+                  loadedToCities.push(toGeo.city);
+                }
               }
             }
           }
