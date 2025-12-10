@@ -101,6 +101,8 @@ import { SupportContact, initSupportContact } from './SupportContact.js';
 import { Notification, initNotification } from './Notification.js';
 import { DriverOffer, initDriverOffer } from './DriverOffer.js';
 import { DriverOfferStop, initDriverOfferStop } from './DriverOfferStop.js';
+import { OfferPassenger, initOfferPassenger } from './OfferPassenger.js';
+import { DriverRating, initDriverRating } from './DriverRating.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -136,6 +138,8 @@ initSupportContact(sequelize);
 initNotification(sequelize);
 initDriverOffer(sequelize);
 initDriverOfferStop(sequelize);
+initOfferPassenger(sequelize);
+initDriverRating(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -297,6 +301,23 @@ DriverOfferStop.belongsTo(DriverOffer, { foreignKey: 'offer_id', as: 'offer' });
 AdminUser.hasMany(DriverOffer, { foreignKey: 'reviewed_by', as: 'reviewedOffers' });
 DriverOffer.belongsTo(AdminUser, { foreignKey: 'reviewed_by', as: 'reviewer' });
 
+// Offer Passenger associations
+DriverOffer.hasMany(OfferPassenger, { foreignKey: 'offer_id', as: 'passengers' });
+OfferPassenger.belongsTo(DriverOffer, { foreignKey: 'offer_id', as: 'offer' });
+
+User.hasMany(OfferPassenger, { foreignKey: 'passenger_id', as: 'passengerBookings' });
+OfferPassenger.belongsTo(User, { foreignKey: 'passenger_id', as: 'passenger' });
+
+// Driver Rating associations
+User.hasMany(DriverRating, { foreignKey: 'driver_id', as: 'receivedRatings' });
+DriverRating.belongsTo(User, { foreignKey: 'driver_id', as: 'driver' });
+
+User.hasMany(DriverRating, { foreignKey: 'passenger_id', as: 'givenRatings' });
+DriverRating.belongsTo(User, { foreignKey: 'passenger_id', as: 'passenger' });
+
+OfferPassenger.hasOne(DriverRating, { foreignKey: 'offer_passenger_id', as: 'rating' });
+DriverRating.belongsTo(OfferPassenger, { foreignKey: 'offer_passenger_id', as: 'offerPassenger' });
+
 // Admin User associations
 AdminUser.belongsTo(AdminUser, { foreignKey: 'created_by', as: 'creator' });
 
@@ -355,6 +376,8 @@ export {
   Notification,
   DriverOffer,
   DriverOfferStop,
+  OfferPassenger,
+  DriverRating,
 };
 
 export default sequelize;

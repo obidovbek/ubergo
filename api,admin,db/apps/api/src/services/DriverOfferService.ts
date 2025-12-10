@@ -3,7 +3,7 @@
  * Handles driver offer logic (CRUD, status transitions, validations)
  */
 
-import { Op } from 'sequelize';
+import { Op, Sequelize, fn, col } from 'sequelize';
 import {
   DriverOffer,
   DriverOfferStop,
@@ -15,7 +15,10 @@ import {
   VehicleModel,
   VehicleBodyType,
   VehicleColor,
-  AdminUser
+  AdminUser,
+  GeoProvince,
+  GeoCityDistrict,
+  DriverRating
 } from '../database/models/index.js';
 import type { DriverOfferStatus } from '../database/models/DriverOffer.js';
 import { AppError } from '../errors/AppError.js';
@@ -141,7 +144,38 @@ export class DriverOfferService {
 
     // Filter by status
     if (filters.status) {
-      where.status = Array.isArray(filters.status) ? { [Op.in]: filters.status } : filters.status;
+      // Valid statuses for driver offers
+      const validStatuses: DriverOfferStatus[] = ['published', 'archived', 'cancelled'];
+      
+      // Normalize status filter - map old statuses to new ones
+      const normalizeStatus = (status: string): DriverOfferStatus | null => {
+        // Map old statuses to current ones
+        if (status === 'approved' || status === 'draft' || status === 'pending_review') {
+          return 'published';
+        }
+        // Return valid status or null
+        return validStatuses.includes(status as DriverOfferStatus) ? (status as DriverOfferStatus) : null;
+      };
+
+      if (Array.isArray(filters.status)) {
+        // Filter and normalize array of statuses
+        const normalizedStatuses = filters.status
+          .map(normalizeStatus)
+          .filter((s): s is DriverOfferStatus => s !== null);
+        
+        // Remove duplicates
+        const uniqueStatuses = [...new Set(normalizedStatuses)];
+        
+        if (uniqueStatuses.length > 0) {
+          where.status = { [Op.in]: uniqueStatuses };
+        }
+      } else {
+        // Normalize single status
+        const normalizedStatus = normalizeStatus(filters.status as string);
+        if (normalizedStatus) {
+          where.status = normalizedStatus;
+        }
+      }
     }
 
     // Filter by date range
@@ -498,20 +532,57 @@ export class DriverOfferService {
     from_text?: string;
     to_text?: string;
     date?: string;
+    from_province_id?: number;
+    from_city_id?: number;
+    to_province_id?: number;
+    to_city_id?: number;
+    min_rating?: number;
+    max_price?: number;
+    min_price?: number;
+    vehicle_type?: string;
+    vehicle_make?: string;
+    vehicle_color?: string;
+    sort_by?: string;
     limit?: number;
     offset?: number;
   }) {
-    const where: any = {
-      status: 'published',
-      start_at: { [Op.gte]: new Date() } // Only future offers
-    };
+    const whereConditions: any[] = [
+      { status: 'published' },
+      { start_at: { [Op.gte]: new Date() } } // Only future offers
+    ];
+
+    // Filter by "From" location geo
+    if (filters.from_city_id) {
+      const city = await GeoCityDistrict.findByPk(filters.from_city_id);
+      if (city) {
+        whereConditions.push({ from_text: { [Op.iLike]: `%${city.name}%` } });
+      }
+    } else if (filters.from_province_id) {
+      const province = await GeoProvince.findByPk(filters.from_province_id);
+      if (province) {
+        whereConditions.push({ from_text: { [Op.iLike]: `%${province.name}%` } });
+      }
+    }
+
+    // Filter by "To" location geo
+    if (filters.to_city_id) {
+      const city = await GeoCityDistrict.findByPk(filters.to_city_id);
+      if (city) {
+        whereConditions.push({ to_text: { [Op.iLike]: `%${city.name}%` } });
+      }
+    } else if (filters.to_province_id) {
+      const province = await GeoProvince.findByPk(filters.to_province_id);
+      if (province) {
+        whereConditions.push({ to_text: { [Op.iLike]: `%${province.name}%` } });
+      }
+    }
 
     // Filter by from/to text (simple text search for MVP)
     if (filters.from_text) {
-      where.from_text = { [Op.iLike]: `%${filters.from_text}%` };
+      whereConditions.push({ from_text: { [Op.iLike]: `%${filters.from_text}%` } });
     }
     if (filters.to_text) {
-      where.to_text = { [Op.iLike]: `%${filters.to_text}%` };
+      whereConditions.push({ to_text: { [Op.iLike]: `%${filters.to_text}%` } });
     }
 
     // Filter by date
@@ -521,10 +592,86 @@ export class DriverOfferService {
       const endOfDay = new Date(filters.date);
       endOfDay.setHours(23, 59, 59, 999);
       
-      where.start_at = {
-        [Op.gte]: startOfDay,
-        [Op.lte]: endOfDay
-      };
+      whereConditions.push({
+        start_at: {
+          [Op.gte]: startOfDay,
+          [Op.lte]: endOfDay
+        }
+      });
+    }
+
+    // Filter by price range
+    if (filters.min_price) {
+      whereConditions.push({ price_per_seat: { [Op.gte]: filters.min_price } });
+    }
+    if (filters.max_price) {
+      whereConditions.push({ price_per_seat: { [Op.lte]: filters.max_price } });
+    }
+
+    const where = whereConditions.length > 0 ? { [Op.and]: whereConditions } : {};
+
+    // Build vehicle include with filters
+    const vehicleInclude: any = {
+      model: DriverVehicle,
+      as: 'vehicle',
+      attributes: ['id', 'license_plate', 'year'],
+      include: [
+        {
+          model: VehicleType,
+          as: 'type',
+          attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+        },
+        {
+          model: VehicleMake,
+          as: 'make',
+          attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+        },
+        {
+          model: VehicleModel,
+          as: 'model',
+          attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+        },
+        {
+          model: VehicleColor,
+          as: 'color',
+          attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+        }
+      ]
+    };
+
+    // Add vehicle filters
+    const vehicleWhere: any = {};
+    if (filters.vehicle_type) {
+      vehicleInclude.include[0].where = { name: { [Op.iLike]: `%${filters.vehicle_type}%` } };
+      vehicleInclude.include[0].required = true;
+    }
+    if (filters.vehicle_make) {
+      vehicleInclude.include[1].where = { name: { [Op.iLike]: `%${filters.vehicle_make}%` } };
+      vehicleInclude.include[1].required = true;
+    }
+    if (filters.vehicle_color) {
+      vehicleInclude.include[3].where = { name: { [Op.iLike]: `%${filters.vehicle_color}%` } };
+      vehicleInclude.include[3].required = true;
+    }
+
+    // Determine sort order
+    let order: any[] = [['start_at', 'ASC']]; // Default sort
+    if (filters.sort_by) {
+      switch (filters.sort_by) {
+        case 'price_asc':
+          order = [['price_per_seat', 'ASC']];
+          break;
+        case 'price_desc':
+          order = [['price_per_seat', 'DESC']];
+          break;
+        case 'date_asc':
+          order = [['start_at', 'ASC']];
+          break;
+        case 'rating_desc':
+          // Rating sort will be handled after fetching
+          order = [['start_at', 'ASC']];
+          break;
+      }
     }
 
     const { rows: offers, count: total } = await DriverOffer.findAndCountAll({
@@ -542,66 +689,85 @@ export class DriverOfferService {
             }
           ]
         },
-        {
-          model: DriverVehicle,
-          as: 'vehicle',
-          attributes: ['id', 'license_plate', 'year'],
-          include: [
-            {
-              model: VehicleType,
-              as: 'type',
-              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-            },
-            {
-              model: VehicleMake,
-              as: 'make',
-              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-            },
-            {
-              model: VehicleModel,
-              as: 'model',
-              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-            },
-            {
-              model: VehicleColor,
-              as: 'color',
-              attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-            }
-          ]
-        }
+        vehicleInclude
       ],
       limit: filters.limit || 20,
       offset: filters.offset || 0,
-      order: [['start_at', 'ASC']]
+      order
     });
 
+    // Get driver IDs to fetch ratings
+    const driverIds = offers.map((offer: any) => offer.user_id);
+    
+    // Fetch ratings for all drivers
+    const ratingsMap = new Map<number, { average: number; count: number }>();
+    if (driverIds.length > 0) {
+      const ratings = await DriverRating.findAll({
+        where: { driver_id: { [Op.in]: driverIds } },
+        attributes: [
+          'driver_id',
+          [fn('AVG', col('rating')), 'avg_rating'],
+          [fn('COUNT', col('id')), 'rating_count']
+        ],
+        group: ['driver_id'],
+        raw: true
+      });
+
+      ratings.forEach((r: any) => {
+        ratingsMap.set(r.driver_id, {
+          average: parseFloat(r.avg_rating) || 0,
+          count: parseInt(r.rating_count) || 0
+        });
+      });
+    }
+
+    // Map offers with ratings
+    let mappedOffers = offers.map((offer) => {
+      const offerWithIncludes = offer as any;
+      const driverRating = ratingsMap.get(offer.user_id) || { average: 0, count: 0 };
+      
+      return {
+        id: offer.id,
+        from_text: offer.from_text,
+        to_text: offer.to_text,
+        start_at: offer.start_at,
+        price_per_seat: offer.price_per_seat,
+        front_price_per_seat: offer.front_price_per_seat,
+        currency: offer.currency,
+        seats_free: offer.seats_free,
+        seats_total: offer.seats_total,
+        note: offer.note,
+        driver: {
+          id: offerWithIncludes.user?.id,
+          name: offerWithIncludes.user?.display_name || 
+                `${offerWithIncludes.user?.first_name || ''} ${offerWithIncludes.user?.last_name || ''}`.trim(),
+          rating: Math.round(driverRating.average * 10) / 10,
+          rating_count: driverRating.count
+        },
+        vehicle: {
+          make: offerWithIncludes.vehicle?.make?.name,
+          model: offerWithIncludes.vehicle?.model?.name,
+          color: offerWithIncludes.vehicle?.color?.name,
+          type: offerWithIncludes.vehicle?.type?.name,
+          license_plate: offerWithIncludes.vehicle?.license_plate,
+          year: offerWithIncludes.vehicle?.year
+        }
+      };
+    });
+
+    // Filter by minimum rating if specified
+    if (filters.min_rating) {
+      mappedOffers = mappedOffers.filter(offer => offer.driver.rating >= filters.min_rating!);
+    }
+
+    // Sort by rating if requested
+    if (filters.sort_by === 'rating_desc') {
+      mappedOffers.sort((a, b) => b.driver.rating - a.driver.rating);
+    }
+
     return {
-      items: offers.map((offer) => {
-        const offerWithIncludes = offer as any;
-        return {
-          id: offer.id,
-          from_text: offer.from_text,
-          to_text: offer.to_text,
-          start_at: offer.start_at,
-          price_per_seat: offer.price_per_seat,
-          currency: offer.currency,
-          seats_free: offer.seats_free,
-          note: offer.note,
-          driver: {
-            name: offerWithIncludes.user?.display_name || 
-                  `${offerWithIncludes.user?.first_name || ''} ${offerWithIncludes.user?.last_name || ''}`.trim(),
-            rating: 0 // TODO: Implement rating system
-          },
-          vehicle: {
-            make: offerWithIncludes.vehicle?.make?.name,
-            model: offerWithIncludes.vehicle?.model?.name,
-            color: offerWithIncludes.vehicle?.color?.name,
-            license_plate: offerWithIncludes.vehicle?.license_plate,
-            year: offerWithIncludes.vehicle?.year
-          }
-        };
-      }),
-      total
+      items: mappedOffers,
+      total: mappedOffers.length // Adjusted total after rating filter
     };
   }
 }

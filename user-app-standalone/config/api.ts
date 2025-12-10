@@ -12,16 +12,16 @@ import { Platform } from 'react-native';
 // ? 'http://10.0.2.2:4001/api'  // Android emulator
 // : 'http://localhost:4001/api'  // iOS simulator/device
 // : 'https://test3.fstu.uz/api'; // Production
-// export const API_BASE_URL = __DEV__
-//   ? Platform.OS === 'android'
-//     ? 'http://10.0.2.2:4001/api'  // Android emulator
-//     : 'http://10.0.2.2:4001/api'  // iOS simulator/device
-//   : 'http://10.0.2.2:4001/api'; // Production
 export const API_BASE_URL = __DEV__
-  ? Platform.OS === 'android' 
-    ? 'https://test3.fstu.uz/api'  // Android emulator
-    : 'https://test3.fstu.uz/api'  // iOS simulator/device
-  : 'https://test3.fstu.uz/api'; // Production
+  ? Platform.OS === 'android'
+    ? 'http://10.0.2.2:4001/api'  // Android emulator
+    : 'http://10.0.2.2:4001/api'  // iOS simulator/device
+  : 'http://10.0.2.2:4001/api'; // Production
+// export const API_BASE_URL = __DEV__
+//   ? Platform.OS === 'android' 
+//     ? 'https://test3.fstu.uz/api'  // Android emulator
+//     : 'https://test3.fstu.uz/api'  // iOS simulator/device
+//   : 'https://test3.fstu.uz/api'; // Production
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -72,6 +72,15 @@ export const API_ENDPOINTS = {
     markRead: (id: string) => `/notifications/${id}/read`,
     markAllRead: '/notifications/read-all',
     delete: (id: string) => `/notifications/${id}`,
+  },
+  offers: {
+    search: '/public/driver-offers',
+    detail: (id: number) => `/public/driver-offers/${id}`,
+    join: (id: number) => `/passenger/offers/${id}/join`,
+  },
+  passenger: {
+    bookings: '/passenger/bookings',
+    cancelBooking: (id: string) => `/passenger/bookings/${id}/cancel`,
   },
 };
 

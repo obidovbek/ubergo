@@ -29,6 +29,8 @@ import notificationRoutes from './notification.routes.js';
 import driverOfferRoutes from './driver-offer.routes.js';
 import adminDriverOfferRoutes from './admin-driver-offer.routes.js';
 import publicOfferRoutes from './public-offer.routes.js';
+import offerPassengerRoutes from './offer-passenger.routes.js';
+import driverRatingRoutes from './driver-rating.routes.js';
 
 const router = Router();
 
@@ -105,6 +107,12 @@ router.use('/driver/offers', driverOfferRoutes);
 
 // Public driver offer routes
 router.use('/public/driver-offers', publicOfferRoutes);
+
+// Offer passenger routes (join/confirm/reject)
+router.use('/', offerPassengerRoutes);
+
+// Driver rating routes
+router.use('/ratings', driverRatingRoutes);
 
 // Upload routes
 router.use('/upload', uploadRoutes);

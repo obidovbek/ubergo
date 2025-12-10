@@ -3,23 +3,106 @@
  * Helper functions for date formatting and manipulation
  */
 
+import type { Language } from '../config/languages';
+
 /**
- * Format date to readable string
+ * Get locale string from language code
  */
-export const formatDate = (date: string | Date, format: 'short' | 'long' = 'short'): string => {
+const getLocaleFromLanguage = (language: Language): string => {
+  switch (language) {
+    case 'uz':
+      return 'uz-UZ';
+    case 'ru':
+      return 'ru-RU';
+    case 'en':
+    default:
+      return 'en-US';
+  }
+};
+
+/**
+ * Uzbek month names mapping
+ */
+const uzMonthsShort = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+const uzMonthsLong = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+
+/**
+ * Format month name based on language
+ */
+const formatMonth = (dateObj: Date, language: Language, format: 'short' | 'long' = 'short'): string => {
+  if (language === 'uz') {
+    const monthIndex = dateObj.getMonth();
+    return format === 'short' ? uzMonthsShort[monthIndex] : uzMonthsLong[monthIndex];
+  }
+  // For other languages, rely on locale formatting
+  const locale = getLocaleFromLanguage(language);
+  return dateObj.toLocaleDateString(locale, { month: format });
+};
+
+/**
+ * Format date to readable string with multilanguage support
+ */
+export const formatDate = (
+  date: string | Date,
+  format: 'short' | 'long' = 'short',
+  language: Language = 'en'
+): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = getLocaleFromLanguage(language);
 
   if (format === 'long') {
-    return dateObj.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    // For Uzbek, use manual month mapping for better reliability
+    if (language === 'uz') {
+      const month = formatMonth(dateObj, 'uz', 'long');
+      const day = dateObj.getDate();
+      const year = dateObj.getFullYear();
+      const hours = dateObj.getHours().toString().padStart(2, '0');
+      const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+      return `${day} ${month}, ${year} ${hours}:${minutes}`;
+    }
+    
+    // For other languages, use locale formatting
+    try {
+      return dateObj.toLocaleString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: language === 'en',
+      });
+    } catch (error) {
+      // Fallback if locale is not supported
+      return dateObj.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: language === 'en',
+      });
+    }
   }
 
-  return dateObj.toLocaleDateString('en-US', {
+  // For Uzbek, use manual month mapping for better reliability
+  if (language === 'uz') {
+    const month = formatMonth(dateObj, 'uz', 'short');
+    const day = dateObj.getDate();
+    const year = dateObj.getFullYear();
+    return `${day} ${month}, ${year}`;
+  }
+  
+  // For other languages, use locale formatting
+  // For Uzbek, use manual month mapping for better reliability
+  if (language === 'uz') {
+    const month = formatMonth(dateObj, 'uz', 'short');
+    const day = dateObj.getDate();
+    const year = dateObj.getFullYear();
+    return `${day} ${month}, ${year}`;
+  }
+  
+  // For other languages, use locale formatting
+  return dateObj.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -27,12 +110,57 @@ export const formatDate = (date: string | Date, format: 'short' | 'long' = 'shor
 };
 
 /**
- * Format time to readable string
+ * Format date and time together (for offer cards)
  */
-export const formatTime = (date: string | Date): string => {
+export const formatDateTime = (
+  date: string | Date,
+  language: Language = 'en'
+): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = getLocaleFromLanguage(language);
   
-  return dateObj.toLocaleTimeString('en-US', {
+  // For Uzbek, use manual month mapping for better reliability
+  if (language === 'uz') {
+    const month = formatMonth(dateObj, 'uz', 'short');
+    const day = dateObj.getDate();
+    const hours = dateObj.getHours().toString().padStart(2, '0');
+    const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+    return `${day} ${month}, ${hours}:${minutes}`;
+  }
+  
+  // For other languages, use locale formatting
+  try {
+    const formatted = dateObj.toLocaleString(locale, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: language === 'en', // Use 12-hour format for English, 24-hour for others
+    });
+    return formatted;
+  } catch (error) {
+    // Fallback if locale is not supported
+    const dateStr = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    const timeStr = dateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: language === 'en',
+    });
+    return `${dateStr}, ${timeStr}`;
+  }
+};
+
+/**
+ * Format time to readable string with multilanguage support
+ */
+export const formatTime = (date: string | Date, language: Language = 'en'): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = getLocaleFromLanguage(language);
+  
+  return dateObj.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });

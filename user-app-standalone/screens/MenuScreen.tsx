@@ -31,6 +31,9 @@ interface TaxiOption {
 type MainStackParamList = {
   Home: undefined;
   Profile: undefined;
+  SearchOffers: undefined;
+  OfferDetails: { offerId: number };
+  MyBookings: undefined;
 };
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
@@ -43,11 +46,13 @@ export const MenuScreen: React.FC = () => {
 
   // Taxi options with translation keys
   const taxiOptions: TaxiOption[] = [
-    { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
-    { id: 'ichi', titleKey: 'menu.ichi' },
-    { id: 'tuman', titleKey: 'menu.tuman' },
-    { id: 'empty', titleKey: 'menu.empty' },
-    { id: 'xalqaro', titleKey: 'menu.xalqaro' },
+    { id: 'driver_offers', titleKey: 'menu.driverOffersTitle' },
+    { id: 'my_bookings', titleKey: 'menu.myBookings' },
+    // { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
+    // { id: 'ichi', titleKey: 'menu.ichi' },
+    // { id: 'tuman', titleKey: 'menu.tuman' },
+    // { id: 'empty', titleKey: 'menu.empty' },
+    // { id: 'xalqaro', titleKey: 'menu.xalqaro' },
   ];
 
   // Get user display name or initials
@@ -57,8 +62,14 @@ export const MenuScreen: React.FC = () => {
   const userInitial = displayName.charAt(0).toUpperCase();
 
   const handleOptionPress = (optionId: string) => {
-    console.log('Selected option:', optionId);
-    // Handle navigation or action based on selected option
+    if (optionId === 'driver_offers') {
+      (navigation as any).navigate('SearchOffers');
+    } else if (optionId === 'my_bookings') {
+      (navigation as any).navigate('MyBookings');
+    } else {
+      console.log('Selected option:', optionId);
+      // Handle navigation or action based on selected option
+    }
   };
 
   const handleProfilePress = () => {

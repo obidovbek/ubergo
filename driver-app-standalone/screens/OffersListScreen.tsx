@@ -37,10 +37,15 @@ export const OffersListScreen: React.FC = () => {
   const [selectedOffer, setSelectedOffer] = useState<DriverOffer | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const loadOffers = useCallback(async () => {
+  const loadOffers = useCallback(async (isRefresh = false) => {
     if (!token) return;
 
     try {
+      // Set loading state only if not refreshing (to avoid full-screen loader during pull-to-refresh)
+      if (!isRefresh) {
+        setLoading(true);
+      }
+      
       // Always load all offers first to get accurate counts
       const allResponse = await DriverOffersAPI.getDriverOffers(token, {});
       if (allResponse.success && allResponse.offers) {
@@ -75,7 +80,7 @@ export const OffersListScreen: React.FC = () => {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    loadOffers();
+    loadOffers(true); // Pass true to indicate this is a refresh
   }, [loadOffers]);
 
   const handleCreateOffer = () => {

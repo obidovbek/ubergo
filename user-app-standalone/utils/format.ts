@@ -25,6 +25,13 @@ export const formatNumber = (num: number): string => {
 };
 
 /**
+ * Format number with spaces as thousand separators (better readability)
+ */
+export const formatNumberWithSpaces = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
+/**
  * Format phone number
  */
 export const formatPhoneNumber = (phone: string): string => {
