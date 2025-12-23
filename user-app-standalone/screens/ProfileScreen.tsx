@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Alert,
   Platform,
   StatusBar,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
 import { useNavigation } from '@react-navigation/native';
 
 const theme = createTheme('light');
@@ -45,36 +45,88 @@ export const ProfileScreen: React.FC = () => {
     console.log('ProfileScreen: Logout button pressed');
     console.log('ProfileScreen: logout function available:', typeof logout);
     
-    Alert.alert(
-      t('profile.logout'),
-      t('profile.logoutConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Calling logout directly...');
-              await logout();
-              console.log('Direct logout completed');
-            } catch (error) {
-              console.error('Direct logout error:', error);
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('profile.logout'),
+      message: t('profile.logoutConfirm'),
+      confirmText: t('profile.logout'),
+      cancelText: t('common.cancel'),
+      confirmButtonStyle: 'destructive',
+      onConfirm: async () => {
+        try {
+          console.log('Calling logout directly...');
+          await logout();
+          console.log('Direct logout completed');
+        } catch (error) {
+          console.error('Direct logout error:', error);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const menuItems = [
-    { id: 'notifications', title: t('profile.notifications'), icon: '🔔', navigate: 'Notifications' },
-    { id: 'edit', title: t('profile.editProfile'), icon: '✏️' },
-    { id: 'payment', title: t('profile.paymentMethods'), icon: '💳' },
-    { id: 'history', title: t('profile.tripHistory'), icon: '📜' },
-    { id: 'help', title: t('profile.helpSupport'), icon: '❓' },
-    { id: 'settings', title: t('profile.settings'), icon: '⚙️' },
+    { id: 'notifications', title: t('profile.notifications'), iconType: 'bell', navigate: 'Notifications' },
+    { id: 'edit', title: t('profile.editProfile'), iconType: 'edit', navigate: 'EditProfile' },
+    { id: 'payment', title: t('profile.paymentMethods'), iconType: 'card' },
+    { id: 'history', title: t('profile.tripHistory'), iconType: 'history' },
+    { id: 'help', title: t('profile.helpSupport'), iconType: 'help' },
+    { id: 'settings', title: t('profile.settings'), iconType: 'settings' },
   ];
+
+  const renderIcon = (iconType: string) => {
+    switch (iconType) {
+      case 'bell':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            </View>
+          </View>
+        );
+      case 'edit':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#DBEAFE' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#3B82F6' }]} />
+            </View>
+          </View>
+        );
+      case 'card':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#6366F1' }]} />
+            </View>
+          </View>
+        );
+      case 'history':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#EC4899' }]} />
+            </View>
+          </View>
+        );
+      case 'help':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            </View>
+          </View>
+        );
+      case 'settings':
+        return (
+          <View style={styles.iconContainer}>
+            <View style={[styles.iconCircle, { backgroundColor: '#E5E7EB' }]}>
+              <View style={[styles.iconDot, { backgroundColor: '#6B7280' }]} />
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,7 +183,7 @@ export const ProfileScreen: React.FC = () => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
+              {renderIcon(item.iconType)}
               <Text style={styles.menuTitle}>{item.title}</Text>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
@@ -320,9 +372,20 @@ const styles = StyleSheet.create({
   menuItemLast: {
     borderBottomWidth: 0,
   },
-  menuIcon: {
-    fontSize: 24,
+  iconContainer: {
     marginRight: 16,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   menuTitle: {
     flex: 1,

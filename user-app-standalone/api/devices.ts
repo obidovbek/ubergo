@@ -10,7 +10,7 @@ export const registerDevice = async (
   try {
     const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.devices.register}` ,{
       method: 'POST',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       body: JSON.stringify(body),
       signal: controller.signal,
     });

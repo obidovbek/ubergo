@@ -3,6 +3,20 @@
  * Helper functions for date formatting and manipulation
  */
 
+import type { Language } from '../config/languages';
+
+/**
+ * Map language code to locale string
+ */
+export const getLocaleFromLanguage = (language: Language): string => {
+  const localeMap: Record<Language, string> = {
+    uz: 'uz-UZ',
+    en: 'en-US',
+    ru: 'ru-RU',
+  };
+  return localeMap[language] || 'en-US';
+};
+
 /**
  * Format date to readable string
  */
@@ -93,5 +107,50 @@ export const calculateDuration = (start: string | Date, end: string | Date): str
     return `${hours}h ${minutes}m`;
   }
   return `${minutes}m`;
+};
+
+/**
+ * Format date and time based on language
+ */
+export const formatDateTime = (dateString: string | Date, language: Language = 'uz'): string => {
+  const dateObj = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  const locale = getLocaleFromLanguage(language);
+  
+  return dateObj.toLocaleString(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+};
+
+/**
+ * Format date based on language
+ */
+export const formatDateByLanguage = (date: string | Date, language: Language = 'uz'): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = getLocaleFromLanguage(language);
+  
+  return dateObj.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+/**
+ * Format time based on language
+ */
+export const formatTimeByLanguage = (date: string | Date, language: Language = 'uz'): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = getLocaleFromLanguage(language);
+  
+  return dateObj.toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 };
 

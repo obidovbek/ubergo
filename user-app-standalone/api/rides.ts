@@ -45,7 +45,7 @@ export const getRideHistory = async (
       `${API_BASE_URL}${API_ENDPOINTS.rides.list}?page=${page}&limit=${limit}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -79,7 +79,7 @@ export const createRide = async (
       `${API_BASE_URL}${API_ENDPOINTS.rides.create}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         body: JSON.stringify(rideData),
         signal: controller.signal,
       }
@@ -114,7 +114,7 @@ export const getRideDetail = async (
       `${API_BASE_URL}${API_ENDPOINTS.rides.detail(rideId)}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -149,7 +149,7 @@ export const cancelRide = async (
       `${API_BASE_URL}${API_ENDPOINTS.rides.cancel(rideId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         body: JSON.stringify({ reason }),
         signal: controller.signal,
       }

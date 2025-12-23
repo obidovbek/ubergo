@@ -38,7 +38,7 @@ export const getNotifications = async (token: string): Promise<NotificationsResp
       `${API_BASE_URL}${API_ENDPOINTS.notifications.list}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -73,7 +73,7 @@ export const markNotificationAsRead = async (
       `${API_BASE_URL}${API_ENDPOINTS.notifications.markRead(notificationId)}`,
       {
         method: 'PATCH',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -107,7 +107,7 @@ export const markAllNotificationsAsRead = async (
       `${API_BASE_URL}${API_ENDPOINTS.notifications.markAllRead}`,
       {
         method: 'PATCH',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -142,7 +142,7 @@ export const deleteNotification = async (
       `${API_BASE_URL}${API_ENDPOINTS.notifications.delete(notificationId)}`,
       {
         method: 'DELETE',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );

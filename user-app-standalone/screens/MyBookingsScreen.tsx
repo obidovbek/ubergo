@@ -13,13 +13,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
-  SafeAreaView,
   StatusBar,
   Platform,
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as OffersAPI from '../api/offers';
@@ -27,6 +26,9 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
+import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export default function MyBookingsScreen() {
   const navigation = useNavigation();
@@ -61,7 +63,8 @@ export default function MyBookingsScreen() {
       );
       setBookings(data);
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || t('common.error'));
+      const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
+      showToast.error(t('common.error'), errorMsg);
     } finally {
       setLoading(false);
     }
@@ -74,26 +77,24 @@ export default function MyBookingsScreen() {
   };
 
   const handleCancelBooking = (booking: OffersAPI.OfferPassenger) => {
-    Alert.alert(
-      t('myBookings.cancelBooking'),
-      t('myBookings.cancelConfirm'),
-      [
-        { text: t('myBookings.no'), style: 'cancel' },
-        {
-          text: t('myBookings.yes'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await OffersAPI.cancelJoin(token!, booking.id);
-              Alert.alert(t('myBookings.cancelSuccess'), t('myBookings.cancelSuccessMessage'));
-              loadBookings();
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.message || t('myBookings.cancelError'));
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('myBookings.cancelBooking'),
+      message: t('myBookings.cancelConfirm'),
+      confirmText: t('myBookings.yes'),
+      cancelText: t('myBookings.no'),
+      confirmButtonStyle: 'destructive',
+      onConfirm: async () => {
+        try {
+          await OffersAPI.cancelJoin(token!, booking.id);
+          showToast.success(t('myBookings.cancelSuccess'), t('myBookings.cancelSuccessMessage'));
+          loadBookings();
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'myBookings.cancelError');
+          showToast.error(t('common.error'), errorMsg);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const handleRateDriver = (booking: OffersAPI.OfferPassenger) => {
@@ -107,18 +108,19 @@ export default function MyBookingsScreen() {
     if (!selectedBooking || !token) return;
     
     if (rating === 0) {
-      Alert.alert(t('myBookings.ratingRequired'), t('myBookings.ratingRequiredMessage'));
+      showToast.error(t('myBookings.ratingRequired'), t('myBookings.ratingRequiredMessage'));
       return;
     }
 
     try {
       setSubmittingRating(true);
       await OffersAPI.rateDriver(token, selectedBooking.id, rating, ratingComment || undefined);
-      Alert.alert(t('myBookings.ratingSuccess'), t('myBookings.ratingSuccessMessage'));
+      showToast.success(t('myBookings.ratingSuccess'), t('myBookings.ratingSuccessMessage'));
       setRatingModalVisible(false);
       loadBookings();
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || t('myBookings.ratingError'));
+      const errorMsg = getErrorMessage(error, t, 'myBookings.ratingError');
+      showToast.error(t('common.error'), errorMsg);
     } finally {
       setSubmittingRating(false);
     }

@@ -3,7 +3,6 @@
  * API client for managing passengers in driver offers
  */
 
-import axios from 'axios';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
 
 // Types
@@ -40,18 +39,32 @@ export const getOfferPassengers = async (
   token: string,
   offerId: number
 ): Promise<OfferPassenger[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
   try {
     const url = `${API_BASE_URL}/driver/offers/${offerId}/passengers`;
     
-    const response = await axios.get(url, {
-      headers: getHeaders(token),
-      timeout: API_TIMEOUT,
+    const headers = await getHeaders(token);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
     });
 
-    return response.data.data.passengers;
+    clearTimeout(timeoutId);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || data.error || 'Failed to get passengers');
+    }
+
+    const payload = data.data || {};
+    return (payload.passengers || []) as OfferPassenger[];
   } catch (error: any) {
-    console.error('Error getting offer passengers:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Failed to get passengers');
+    clearTimeout(timeoutId);
+    console.error('Error getting offer passengers:', error);
+    throw new Error(error.message || 'Failed to get passengers');
   }
 };
 
@@ -62,18 +75,33 @@ export const confirmPassenger = async (
   token: string,
   passengerJoinId: string
 ): Promise<OfferPassenger> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
   try {
     const url = `${API_BASE_URL}/driver/passengers/${passengerJoinId}/confirm`;
     
-    const response = await axios.post(url, {}, {
-      headers: getHeaders(token),
-      timeout: API_TIMEOUT,
+    const headers = await getHeaders(token);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({}),
+      signal: controller.signal,
     });
 
-    return response.data.data.passenger_join;
+    clearTimeout(timeoutId);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || data.error || 'Failed to confirm passenger');
+    }
+
+    const payload = data.data || {};
+    return payload.passenger_join as OfferPassenger;
   } catch (error: any) {
-    console.error('Error confirming passenger:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Failed to confirm passenger');
+    clearTimeout(timeoutId);
+    console.error('Error confirming passenger:', error);
+    throw new Error(error.message || 'Failed to confirm passenger');
   }
 };
 
@@ -85,18 +113,33 @@ export const rejectPassenger = async (
   passengerJoinId: string,
   rejection_reason?: string
 ): Promise<OfferPassenger> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
   try {
     const url = `${API_BASE_URL}/driver/passengers/${passengerJoinId}/reject`;
     
-    const response = await axios.post(url, { rejection_reason }, {
-      headers: getHeaders(token),
-      timeout: API_TIMEOUT,
+    const headers = await getHeaders(token);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ rejection_reason }),
+      signal: controller.signal,
     });
 
-    return response.data.data.passenger_join;
+    clearTimeout(timeoutId);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || data.error || 'Failed to reject passenger');
+    }
+
+    const payload = data.data || {};
+    return payload.passenger_join as OfferPassenger;
   } catch (error: any) {
-    console.error('Error rejecting passenger:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Failed to reject passenger');
+    clearTimeout(timeoutId);
+    console.error('Error rejecting passenger:', error);
+    throw new Error(error.message || 'Failed to reject passenger');
   }
 };
 

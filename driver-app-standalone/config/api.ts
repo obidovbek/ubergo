@@ -4,16 +4,26 @@
  */
 
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Language, DEFAULT_LANGUAGE } from '../config/languages';
 
 // Base API URL - Update this based on your environment 
 // ? 'http://10.0.2.2:4001/api'  // Android emulator
 // : 'http://localhost:4001/api'  // iOS simulator/device
 // : 'https://test3.fstu.uz/api'; // Production
+// export const API_BASE_URL = __DEV__
+//   ? Platform.OS === 'android' 
+//     ? 'http://10.0.2.2:4001/api'  // Android emulator
+//     : 'http://10.0.2.2:4001/api'  // iOS simulator/device
+//   : 'http://10.0.2.2:4001/api'; // Production
+
 export const API_BASE_URL = __DEV__
-  ? Platform.OS === 'android' 
-    ? 'http://10.0.2.2:4001/api'  // Android emulator
-    : 'http://10.0.2.2:4001/api'  // iOS simulator/device
-  : 'http://10.0.2.2:4001/api'; // Production
+  ? Platform.OS === 'android'
+    ? 'http://192.168.254.102:4001/api'  // Android emulator
+    : 'http://192.168.254.102:4001/api'  // iOS simulator/device
+  : 'http://192.168.254.102:4001/api'; // Production
+
+
   // export const API_BASE_URL = __DEV__
   // ? Platform.OS === 'android' 
   //   ? 'https://test3.fstu.uz/api'  // Android emulator
@@ -82,11 +92,26 @@ export const API_ENDPOINTS = {
 export const API_TIMEOUT = 30000; // 30 seconds
 
 // Request Headers
-export const getHeaders = (token?: string) => {
+export const getHeaders = async (token?: string): Promise<Record<string, string>> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  // Add Accept-Language header based on current language (default: uz)
+  try {
+    const storedLanguage = await AsyncStorage.getItem('@app_language');
+    const language: Language = (storedLanguage as Language) || DEFAULT_LANGUAGE;
+    const localeMap: Record<Language, string> = {
+      uz: 'uz-UZ',
+      en: 'en-US',
+      ru: 'ru-RU',
+    };
+    headers['Accept-Language'] = localeMap[language] || 'uz-UZ';
+  } catch (error) {
+    // Default to Uzbek if language retrieval fails
+    headers['Accept-Language'] = 'uz-UZ';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

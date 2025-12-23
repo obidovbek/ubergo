@@ -350,11 +350,12 @@ export const UserDetailsScreen: React.FC = () => {
 
       console.log('Submitting profile data:', JSON.stringify(profileData, null, 2));
 
+      const headers = await getHeaders(token ?? undefined);
       const response = await fetch(
         `${API_BASE_URL}${API_ENDPOINTS.user.updateProfile}`,
         {
           method: 'PUT',
-          headers: getHeaders(token ?? undefined),
+          headers,
           body: JSON.stringify(profileData),
         }
       );

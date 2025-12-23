@@ -106,10 +106,15 @@ export const RootNavigator: React.FC = () => {
 
   // Check driver profile status when authenticated, when refresh is triggered, or when user changes
   useEffect(() => {
-    if (isAuthenticated && token) {
+    if (isAuthenticated && token && user) {
+      console.log('RootNavigator: Auth state changed, checking driver profile...', { 
+        isAuthenticated, 
+        hasToken: !!token, 
+        userId: user?.id 
+      });
       checkDriverProfile();
     }
-  }, [isAuthenticated, token, refreshTrigger]);
+  }, [isAuthenticated, token, refreshTrigger, user?.id]); // Also trigger when user ID changes (new login)
   
   // Also check when user profile_complete changes (to handle profile completion)
   useEffect(() => {

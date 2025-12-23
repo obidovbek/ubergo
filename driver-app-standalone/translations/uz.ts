@@ -40,6 +40,25 @@ export default {
     monthDecember: 'Dekabr',
   },
 
+  errors: {
+    unknown: 'Noma\'lum xatolik yuz berdi',
+    network: 'Internet aloqasi bilan muammo. Iltimos, internet aloqangizni tekshiring.',
+    timeout: 'So\'rov vaqti tugadi. Iltimos, qayta urinib ko\'ring.',
+    badRequest: 'Noto\'g\'ri so\'rov',
+    unauthorized: 'Autentifikatsiya kerak. Iltimos, qayta kirish qiling.',
+    forbidden: 'Sizda bu amalni bajarish uchun ruxsat yo\'q',
+    notFound: 'Ma\'lumot topilmadi',
+    conflict: 'Bu ma\'lumot allaqachon mavjud',
+    validation: 'Ma\'lumotlarni to\'g\'ri kiriting',
+    serverError: 'Server xatosi',
+    tryAgain: 'Iltimos, keyinroq qayta urinib ko\'ring',
+    loadFailed: 'Ma\'lumotlarni yuklab bo\'lmadi',
+    saveFailed: 'Ma\'lumotlarni saqlab bo\'lmadi',
+    deleteFailed: 'O\'chirib bo\'lmadi',
+    updateFailed: 'Yangilab bo\'lmadi',
+    createFailed: 'Yaratib bo\'lmadi',
+  },
+
   splash: {
     appName: 'UbexGo',
     tagline: 'Haydang va daromad oling',
@@ -241,21 +260,6 @@ export default {
     licenseUpdated: 'Guvohnoma ma\'lumotlari saqlandi',
     vehicleUpdated: 'Avtomobil ma\'lumotlari saqlandi',
     taxiLicenseUpdated: 'Taksi litsenziyasi saqlandi',
-  },
-
-  // Backend Error Messages
-  errors: {
-    network: "Internet bilan aloqa yo'q",
-    timeout: 'Kutish vaqti tugadi',
-    serverError: "Serverda xatolik yuz berdi",
-    unauthorized: "Ruxsat berilmagan",
-    forbidden: "Kirish taqiqlangan",
-    notFound: "Topilmadi",
-    badRequest: "Noto'g'ri so'rov",
-    conflict: "Ma'lumot allaqachon mavjud",
-    validation: "Ma'lumotlar noto'g'ri",
-    unknown: "Noma'lum xatolik yuz berdi",
-    tryAgain: "Iltimos qaytadan urinib ko'ring",
   },
 
   // Network Status
@@ -567,11 +571,45 @@ export default {
     viewDetails: 'Batafsil ko\'rish',
     details: 'Tafsilotlar',
     stop: 'To\'xtash',
+    viewPassengers: 'Yo\'lovchilarni ko\'rish',
+  },
+
+  // Offer Passengers
+  offerPassengers: {
+    title: 'Yo\'lovchi so\'rovlari',
+    all: 'Barchasi',
+    pending: 'Kutilmoqda',
+    confirmed: 'Tasdiqlangan',
+    rejected: 'Rad etilgan',
+    cancelled: 'Bekor qilingan',
+    confirm: 'Tasdiqlash',
+    reject: 'Rad etish',
+    confirmPassenger: 'Yo\'lovchini tasdiqlash',
+    rejectPassenger: 'Yo\'lovchini rad etish',
+    rejectReasonOptional: 'Sababni kiriting (ixtiyoriy):',
+    message: 'Xabar',
+    rejectionReason: 'Rad etish sababi',
+    confirmSuccess: 'Yo\'lovchi muvaffaqiyatli tasdiqlandi',
+    rejectSuccess: 'Yo\'lovchi rad etildi',
+    noPassengers: 'Yo\'lovchilar hali yo\'q',
+    noPassengersMessage: 'Yo\'lovchilar sizning e\'loningizga qo\'shilganda bu yerda ko\'rinadi',
+    noPassengersFiltered: 'Bu holatdagi yo\'lovchilar yo\'q',
+    noPassengersFilteredMessage: 'Bu holatdagi yo\'lovchi so\'rovlari mavjud emas',
+    seatsRequested: '{count} ta o\'rin so\'ralgan',
+    seatsRequestedOne: '1 ta o\'rin so\'ralgan',
+    frontSeatRequested: 'Oldingi o\'rin so\'ralgan',
+    agreedPriceFrontSeat: 'Kelishilgan: {price} {currency} (oldingi o\'rin)',
+    agreedPriceMultiple: 'Kelishilgan: {total} {currency} ({seats} ta o\'rin, 1 ta oldingi o\'rin)',
+    agreedPriceCalculation: 'Kelishilgan: {price} {currency} × {seats} = {total} {currency}',
+    unknownPassenger: 'Noma\'lum',
+    confirmPassengerMessage: '{name} uchun {seats} ta o\'rinni tasdiqlashni xohlaysizmi?',
+    confirmPassengerMessageOne: '{name} uchun 1 ta o\'rinni tasdiqlashni xohlaysizmi?',
   },
 
   // Offer Wizard
   offerWizard: {
     title: 'Yangi e\'lon yaratish',
+    editTitle: 'E\'lonni tahrirlash',
     step1Title: 'Yo\'nalish',
     step2Title: 'Vaqt',
     step3Title: 'O\'rinlar va narx',

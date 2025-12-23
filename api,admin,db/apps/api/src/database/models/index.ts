@@ -102,6 +102,8 @@ import { Notification, initNotification } from './Notification.js';
 import { DriverOffer, initDriverOffer } from './DriverOffer.js';
 import { DriverOfferStop, initDriverOfferStop } from './DriverOfferStop.js';
 import { OfferPassenger, initOfferPassenger } from './OfferPassenger.js';
+import { PassengerOffer, initPassengerOffer } from './PassengerOffer.js';
+import { OfferDriver, initOfferDriver } from './OfferDriver.js';
 import { DriverRating, initDriverRating } from './DriverRating.js';
 
 // Initialize all models
@@ -139,6 +141,8 @@ initNotification(sequelize);
 initDriverOffer(sequelize);
 initDriverOfferStop(sequelize);
 initOfferPassenger(sequelize);
+initPassengerOffer(sequelize);
+initOfferDriver(sequelize);
 initDriverRating(sequelize);
 
 // Define associations
@@ -318,6 +322,20 @@ DriverRating.belongsTo(User, { foreignKey: 'passenger_id', as: 'passenger' });
 OfferPassenger.hasOne(DriverRating, { foreignKey: 'offer_passenger_id', as: 'rating' });
 DriverRating.belongsTo(OfferPassenger, { foreignKey: 'offer_passenger_id', as: 'offerPassenger' });
 
+// Passenger Offer associations
+User.hasMany(PassengerOffer, { foreignKey: 'user_id', as: 'passengerOffers' });
+PassengerOffer.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// Offer Driver associations
+PassengerOffer.hasMany(OfferDriver, { foreignKey: 'offer_id', as: 'drivers' });
+OfferDriver.belongsTo(PassengerOffer, { foreignKey: 'offer_id', as: 'offer' });
+
+User.hasMany(OfferDriver, { foreignKey: 'driver_id', as: 'driverJoinRequests' });
+OfferDriver.belongsTo(User, { foreignKey: 'driver_id', as: 'driver' });
+
+DriverVehicle.hasMany(OfferDriver, { foreignKey: 'vehicle_id', as: 'driverJoinRequests' });
+OfferDriver.belongsTo(DriverVehicle, { foreignKey: 'vehicle_id', as: 'vehicle' });
+
 // Admin User associations
 AdminUser.belongsTo(AdminUser, { foreignKey: 'created_by', as: 'creator' });
 
@@ -377,6 +395,8 @@ export {
   DriverOffer,
   DriverOfferStop,
   OfferPassenger,
+  PassengerOffer,
+  OfferDriver,
   DriverRating,
 };
 

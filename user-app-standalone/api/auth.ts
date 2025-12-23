@@ -52,7 +52,7 @@ export const sendOtp = async (phone: string, channel: 'sms' | 'call' | 'push' = 
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
@@ -100,7 +100,7 @@ export const verifyOtp = async (phone: string, code: string): Promise<AuthRespon
       `${API_BASE_URL}${API_ENDPOINTS.auth.verifyOtp}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         body: JSON.stringify({ phone, code }),
         signal: controller.signal,
       }
@@ -133,7 +133,7 @@ export const googleSignIn = async (idToken: string): Promise<AuthResponse> => {
       `${API_BASE_URL}${API_ENDPOINTS.auth.googleAuth}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         body: JSON.stringify({ id_token: idToken }),
         signal: controller.signal,
       }
@@ -166,7 +166,7 @@ export const appleSignIn = async (idToken: string): Promise<AuthResponse> => {
       `${API_BASE_URL}${API_ENDPOINTS.auth.appleAuth}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         body: JSON.stringify({ id_token: idToken }),
         signal: controller.signal,
       }
@@ -199,7 +199,7 @@ export const facebookSignIn = async (accessToken: string): Promise<AuthResponse>
       `${API_BASE_URL}${API_ENDPOINTS.auth.facebookAuth}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         body: JSON.stringify({ access_token: accessToken }),
         signal: controller.signal,
       }
@@ -232,17 +232,39 @@ export const getCurrentUser = async (token: string) => {
       `${API_BASE_URL}${API_ENDPOINTS.auth.me}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    // Check if response is rate limited (429)
+    if (response.status === 429) {
+      const errorText = await response.text().catch(() => 'Too Many Requests');
+      throw new Error('Rate limit exceeded. Please try again in a moment.');
+    }
+
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // If JSON parsing fails, try to get text response
+        const textResponse = await response.text();
+        throw new Error(`Invalid JSON response: ${textResponse.substring(0, 100)}`);
+      }
+    } else {
+      // Non-JSON response
+      const textResponse = await response.text();
+      throw new Error(`Unexpected response format: ${textResponse.substring(0, 100)}`);
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to get user info');
+      throw new Error(data.message || `Failed to get user info: ${response.status} ${response.statusText}`);
     }
 
     return data;
@@ -264,7 +286,7 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ access
       `${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         body: JSON.stringify({ refresh: refreshToken }),
         signal: controller.signal,
       }
@@ -297,7 +319,7 @@ export const logout = async (token: string, refreshToken: string): Promise<void>
       `${API_BASE_URL}${API_ENDPOINTS.auth.logout}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         body: JSON.stringify({ refresh: refreshToken }),
         signal: controller.signal,
       }

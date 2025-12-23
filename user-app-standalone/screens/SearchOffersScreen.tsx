@@ -14,13 +14,12 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Alert,
-  SafeAreaView,
   StatusBar,
   Platform,
   Modal,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +30,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
+import { showToast } from '../utils/toast';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const LAST_SEARCH_KEY = '@ubexgo:last_search';
 
@@ -274,7 +275,7 @@ export default function SearchOffersScreen() {
       setFromProvinces(data);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
-      Alert.alert('Error', 'Failed to load provinces');
+      showToast.error('Error', 'Failed to load provinces');
     } finally {
       setGeoLoading(false);
     }
@@ -287,7 +288,7 @@ export default function SearchOffersScreen() {
       setFromCities(data);
     } catch (error: any) {
       console.error('Failed to load cities:', error);
-      Alert.alert('Error', 'Failed to load cities');
+      showToast.error('Error', 'Failed to load cities');
     } finally {
       setGeoLoading(false);
     }
@@ -300,7 +301,7 @@ export default function SearchOffersScreen() {
       setToProvinces(data);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
-      Alert.alert('Error', 'Failed to load provinces');
+      showToast.error('Error', 'Failed to load provinces');
     } finally {
       setGeoLoading(false);
     }
@@ -313,7 +314,7 @@ export default function SearchOffersScreen() {
       setToCities(data);
     } catch (error: any) {
       console.error('Failed to load cities:', error);
-      Alert.alert('Error', 'Failed to load cities');
+      showToast.error('Error', 'Failed to load cities');
     } finally {
       setGeoLoading(false);
     }
@@ -341,7 +342,8 @@ export default function SearchOffersScreen() {
       });
       setOffers(result.items);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load offers');
+      const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
+      showToast.error(t('common.error'), errorMsg);
     } finally {
       setLoading(false);
     }
@@ -360,11 +362,11 @@ export default function SearchOffersScreen() {
     
     if (type === 'from') {
       if (level === 'province' && !selectedFromCountry) {
-        Alert.alert(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
+        showToast.error(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
         return;
       }
       if (level === 'city' && !selectedFromProvince) {
-        Alert.alert(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
+        showToast.error(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
         return;
       }
       
@@ -375,11 +377,11 @@ export default function SearchOffersScreen() {
       }
     } else {
       if (level === 'province' && !selectedToCountry) {
-        Alert.alert(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
+        showToast.error(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
         return;
       }
       if (level === 'city' && !selectedToProvince) {
-        Alert.alert(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
+        showToast.error(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
         return;
       }
       
@@ -513,7 +515,7 @@ export default function SearchOffersScreen() {
 
   const handleJoinOffer = (offer: OffersAPI.DriverOffer) => {
     if (!token) {
-      Alert.alert(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
+      showToast.error(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
       return;
     }
     (navigation as any).navigate('OfferDetails', { offerId: offer.id });

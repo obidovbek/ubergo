@@ -11,6 +11,9 @@ import { NotificationsScreen } from '../screens/NotificationsScreen';
 import SearchOffersScreen from '../screens/SearchOffersScreen';
 import OfferDetailsScreen from '../screens/OfferDetailsScreen';
 import MyBookingsScreen from '../screens/MyBookingsScreen';
+import { CreatePassengerOfferScreen } from '../screens/CreatePassengerOfferScreen';
+import { MyPassengerOffersScreen } from '../screens/MyPassengerOffersScreen';
+import { EditProfileScreen } from '../screens/EditProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +59,27 @@ export const MainNavigator: React.FC = () => {
       <Stack.Screen 
         name="MyBookings" 
         component={MyBookingsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="CreatePassengerOffer" 
+        component={CreatePassengerOfferScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="MyPassengerOffers" 
+        component={MyPassengerOffersScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
         options={{
           headerShown: false,
         }}

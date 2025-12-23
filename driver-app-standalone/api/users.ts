@@ -42,11 +42,12 @@ export const getDriverProfile = async (token: string): Promise<DriverProfile> =>
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.user.profile}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -77,11 +78,12 @@ export const updateDriverProfile = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.user.updateProfile}`,
       {
         method: 'PUT',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(updates),
         signal: controller.signal,
       }
@@ -113,11 +115,12 @@ export const updateDriverAvailability = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.user.updateAvailability}`,
       {
         method: 'PUT',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify({ is_available: isAvailable }),
         signal: controller.signal,
       }
@@ -157,11 +160,15 @@ export const getDriverEarnings = async (
       url += `?${params.toString()}`;
     }
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getHeaders(token),
-      signal: controller.signal,
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      url,
+      {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      }
+    );
 
     clearTimeout(timeoutId);
 

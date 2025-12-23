@@ -34,6 +34,9 @@ type MainStackParamList = {
   SearchOffers: undefined;
   OfferDetails: { offerId: number };
   MyBookings: undefined;
+  CreatePassengerOffer: undefined;
+  MyPassengerOffers: undefined;
+  PassengerOfferDetails: { offerId: number };
 };
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
@@ -48,6 +51,8 @@ export const MenuScreen: React.FC = () => {
   const taxiOptions: TaxiOption[] = [
     { id: 'driver_offers', titleKey: 'menu.driverOffersTitle' },
     { id: 'my_bookings', titleKey: 'menu.myBookings' },
+    { id: 'create_passenger_offer', titleKey: 'passengerOffers.createRideRequest' },
+    { id: 'my_passenger_offers', titleKey: 'passengerOffers.myRideRequests' },
     // { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
     // { id: 'ichi', titleKey: 'menu.ichi' },
     // { id: 'tuman', titleKey: 'menu.tuman' },
@@ -66,6 +71,10 @@ export const MenuScreen: React.FC = () => {
       (navigation as any).navigate('SearchOffers');
     } else if (optionId === 'my_bookings') {
       (navigation as any).navigate('MyBookings');
+    } else if (optionId === 'create_passenger_offer') {
+      (navigation as any).navigate('CreatePassengerOffer');
+    } else if (optionId === 'my_passenger_offers') {
+      (navigation as any).navigate('MyPassengerOffers');
     } else {
       console.log('Selected option:', optionId);
       // Handle navigation or action based on selected option
@@ -124,7 +133,9 @@ export const MenuScreen: React.FC = () => {
                 onPress={() => handleOptionPress(option.id)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.optionText}>{t(option.titleKey)}</Text>
+                <Text style={styles.optionText}>
+                  {t(option.titleKey)}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>

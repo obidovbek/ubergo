@@ -105,11 +105,15 @@ export const getDriverOffers = async (
     const queryString = queryParams.toString();
     const url = `${API_BASE_URL}${API_ENDPOINTS.driverOffers.list}${queryString ? `?${queryString}` : ''}`;
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getHeaders(token),
-      signal: controller.signal,
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      url,
+      {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      }
+    );
 
     clearTimeout(timeoutId);
     const data = await response.json();
@@ -141,11 +145,12 @@ export const getDriverOfferById = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.detail(offerId)}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -180,11 +185,12 @@ export const createDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.create}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(offerData),
         signal: controller.signal,
       }
@@ -221,11 +227,12 @@ export const updateDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.update(offerId)}`,
       {
         method: 'PATCH',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(offerData),
         signal: controller.signal,
       }
@@ -261,11 +268,12 @@ export const cancelDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.cancel(offerId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -300,11 +308,12 @@ export const publishDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.publish(offerId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -339,11 +348,12 @@ export const archiveDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.archive(offerId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -378,11 +388,12 @@ export const deleteDriverOffer = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.driverOffers.delete(offerId)}`,
       {
         method: 'DELETE',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );

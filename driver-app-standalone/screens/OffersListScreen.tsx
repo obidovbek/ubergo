@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -21,6 +20,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
+import { getErrorMessage } from '../utils/errorHandler';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { DriverOffer, OfferStatus } from '../api/driverOffers';
 import { OfferCard, OfferDetailModal, StatusFilterTabs } from '../components/offers';
@@ -49,18 +50,26 @@ export const OffersListScreen: React.FC = () => {
       // Always load all offers first to get accurate counts
       const allResponse = await DriverOffersAPI.getDriverOffers(token, {});
       if (allResponse.success && allResponse.offers) {
-        setAllOffers(allResponse.offers);
+        // Sort all offers by created_at in descending order (newest first)
+        const sortedAllOffers = [...allResponse.offers].sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        });
+        
+        setAllOffers(sortedAllOffers);
         
         // Filter offers based on selected status
         if (statusFilter === 'all') {
-          setOffers(allResponse.offers);
+          setOffers(sortedAllOffers);
         } else {
-          setOffers(allResponse.offers.filter(o => o.status === statusFilter));
+          setOffers(sortedAllOffers.filter(o => o.status === statusFilter));
         }
       }
     } catch (error: any) {
       console.error('Failed to load offers:', error);
-      showToast.error('Xatolik', error.message || 'Failed to load offers');
+      const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
+      showToast.error(t('common.error'), errorMsg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -114,98 +123,94 @@ export const OffersListScreen: React.FC = () => {
   const handleCancelOffer = async (offer: DriverOffer) => {
     if (!token) return;
 
-    Alert.alert(
-      t('driverOffers.confirmCancel') || 'Bekor qilish',
-      t('driverOffers.confirmCancelMessage') || 'E\'lonni bekor qilmoqchimisiz?',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              await DriverOffersAPI.cancelDriverOffer(token, offer.id);
-              showToast.success(t('common.success'), t('driverOffers.cancelSuccess') || 'E\'lon bekor qilindi');
-              loadOffers();
-            } catch (error: any) {
-              showToast.error('Xatolik', error.message || 'Failed to cancel offer');
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('driverOffers.confirmCancel') || 'Bekor qilish',
+      message: t('driverOffers.confirmCancelMessage') || 'E\'lonni bekor qilmoqchimisiz?',
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: async () => {
+        try {
+          await DriverOffersAPI.cancelDriverOffer(token, offer.id);
+          showToast.success(t('common.success'), t('driverOffers.cancelSuccess') || 'E\'lon bekor qilindi');
+          loadOffers();
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'errors.unknown');
+          showToast.error(t('common.error'), errorMsg);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const handlePublishOffer = async (offer: DriverOffer) => {
     if (!token) return;
 
-    Alert.alert(
-      t('driverOffers.confirmPublish'),
-      t('driverOffers.confirmPublish'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              await DriverOffersAPI.publishDriverOffer(token, offer.id);
-              showToast.success(t('common.success'), t('driverOffers.publishSuccess'));
-              loadOffers();
-            } catch (error: any) {
-              showToast.error('Xatolik', error.message || 'Failed to publish offer');
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('driverOffers.confirmPublish'),
+      message: t('driverOffers.confirmPublish'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: async () => {
+        try {
+          await DriverOffersAPI.publishDriverOffer(token, offer.id);
+          showToast.success(t('common.success'), t('driverOffers.publishSuccess'));
+          loadOffers();
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'errors.unknown');
+          showToast.error(t('common.error'), errorMsg);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const handleArchiveOffer = async (offer: DriverOffer) => {
     if (!token) return;
 
-    Alert.alert(
-      t('driverOffers.confirmArchive'),
-      t('driverOffers.confirmArchive'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              await DriverOffersAPI.archiveDriverOffer(token, offer.id);
-              showToast.success(t('common.success'), t('driverOffers.archiveSuccess'));
-              loadOffers();
-            } catch (error: any) {
-              showToast.error('Xatolik', error.message || 'Failed to archive offer');
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('driverOffers.confirmArchive'),
+      message: t('driverOffers.confirmArchive'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: async () => {
+        try {
+          await DriverOffersAPI.archiveDriverOffer(token, offer.id);
+          showToast.success(t('common.success'), t('driverOffers.archiveSuccess'));
+          loadOffers();
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'errors.unknown');
+          showToast.error(t('common.error'), errorMsg);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const handleDeleteOffer = async (offer: DriverOffer) => {
     if (!token) return;
 
-    Alert.alert(
-      t('driverOffers.confirmDelete'),
-      t('driverOffers.confirmDelete'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await DriverOffersAPI.deleteDriverOffer(token, offer.id);
-              showToast.success(t('common.success'), t('driverOffers.deleteSuccess'));
-              loadOffers();
-            } catch (error: any) {
-              showToast.error('Xatolik', error.message || 'Failed to delete offer');
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('driverOffers.confirmDelete'),
+      message: t('driverOffers.confirmDelete'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      confirmButtonStyle: 'destructive',
+      onConfirm: async () => {
+        try {
+          await DriverOffersAPI.deleteDriverOffer(token, offer.id);
+          showToast.success(t('common.success'), t('driverOffers.deleteSuccess'));
+          loadOffers();
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'errors.deleteFailed');
+          showToast.error(t('common.error'), errorMsg);
+        }
+      },
+      onCancel: () => {},
+    });
+  };
+
+  const handleViewPassengers = (offer: DriverOffer) => {
+    (navigation as any).navigate('OfferPassengers', { offerId: offer.id });
   };
 
   const formatDate = (dateString: string) => {
@@ -303,6 +308,7 @@ export const OffersListScreen: React.FC = () => {
         onPublish={handlePublishOffer}
         onArchive={handleArchiveOffer}
         onDelete={handleDeleteOffer}
+        onViewPassengers={handleViewPassengers}
         formatDate={formatDate}
         formatPrice={formatPrice}
       />

@@ -48,18 +48,31 @@ export const sendOtp = async (
   try {
     const url = `${API_BASE_URL}${API_ENDPOINTS.auth.sendOtp}`;
     const requestBody: any = { channel, app: 'driver' };
-    if (phone) requestBody.phone = phone;
-    if (opts?.userId) requestBody.userId = opts.userId;
+    
+    // Add phone to request body if provided
+    if (phone && typeof phone === 'string' && phone.trim().length > 0) {
+      requestBody.phone = phone.trim();
+    }
+    // Only include userId if it's a valid non-empty string
+    if (opts?.userId && typeof opts.userId === 'string' && opts.userId.trim().length > 0) {
+      requestBody.userId = opts.userId.trim();
+    }
+    
+    // Get headers (await the async function)
+    const headers = await getHeaders();
     
     console.log('=== Driver API Request ===');
     console.log('URL:', url);
     console.log('Method: POST');
-    console.log('Headers:', JSON.stringify(getHeaders(), null, 2));
-    console.log('Body:', JSON.stringify(requestBody, null, 2));
+    console.log('Phone parameter:', phone);
+    console.log('Phone type:', typeof phone);
+    console.log('Phone length:', phone?.length);
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('Headers:', JSON.stringify(headers, null, 2));
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
@@ -134,11 +147,12 @@ export const verifyOtp = async (phone: string | undefined, code: string, opts?: 
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders();
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.auth.verifyOtp}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers,
         body: JSON.stringify({ phone, code, userId: opts?.userId, app: 'driver' }),
         signal: controller.signal,
       }
@@ -167,11 +181,12 @@ export const getCurrentUser = async (token: string) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.auth.me}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -199,11 +214,12 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ access
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders();
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers,
         body: JSON.stringify({ refresh: refreshToken }),
         signal: controller.signal,
       }
@@ -232,11 +248,12 @@ export const logout = async (token: string, refreshToken: string): Promise<void>
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.auth.logout}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify({ refresh: refreshToken }),
         signal: controller.signal,
       }

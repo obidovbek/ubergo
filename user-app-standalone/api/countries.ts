@@ -35,7 +35,7 @@ export const getCountries = async (): Promise<CountryResponse[]> => {
       `${API_BASE_URL}${API_ENDPOINTS.metadata.countries}`,
       {
         method: 'GET',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         signal: controller.signal,
       }
     );

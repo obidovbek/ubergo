@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   TextInput,
   SafeAreaView,
   StatusBar,
@@ -25,12 +24,17 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDate } from '../utils/date';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export default function OfferDetailsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { token } = useAuth();
   const { t, currentLanguage } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { offerId } = route.params as { offerId: number };
 
   const [offer, setOffer] = useState<OffersAPI.DriverOffer | null>(null);
@@ -54,7 +58,8 @@ export default function OfferDetailsScreen() {
       const data = await OffersAPI.getOfferDetails(offerId);
       setOffer(data);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load offer');
+      const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
+      showToast.error(t('common.error'), errorMsg);
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -63,7 +68,7 @@ export default function OfferDetailsScreen() {
 
   const handleJoin = async () => {
     if (!token) {
-      Alert.alert(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
+      showToast.error(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
       return;
     }
 
@@ -71,7 +76,7 @@ export default function OfferDetailsScreen() {
 
     if (seatsRequested > offer.seats_free) {
       const message = t('offerDetails.onlySeatsAvailable').replace('{count}', offer.seats_free.toString());
-      Alert.alert(t('common.error'), message);
+      showToast.error(t('common.error'), message);
       return;
     }
 
@@ -90,14 +95,28 @@ export default function OfferDetailsScreen() {
     }
 
     // Calculate price for confirmation
-    const confirmPricePerSeat = wantFrontSeat && offer.front_price_per_seat 
-      ? offer.front_price_per_seat 
-      : offer.price_per_seat;
-    const confirmTotalPrice = confirmPricePerSeat * seatsRequested;
+    // Front seat premium only applies to 1 seat (there's only one front seat)
+    let confirmTotalPrice: number;
+    if (wantFrontSeat && offer.front_price_per_seat) {
+      // Front seat selected: 1 front seat + (seatsRequested - 1) regular seats
+      const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
+      confirmTotalPrice = (offer.price_per_seat * seatsRequested) + frontSeatPremium;
+    } else {
+      // No front seat: regular price for all seats
+      confirmTotalPrice = offer.price_per_seat * seatsRequested;
+    }
     
-    const priceInfo = wantFrontSeat && offer.front_price_per_seat
-      ? `${formatNumberWithSpaces(confirmPricePerSeat)} ${offer.currency} ${t('offerDetails.frontSeatPerSeat')}`
-      : `${formatNumberWithSpaces(confirmPricePerSeat)} ${offer.currency} ${t('searchOffers.perSeat')}`;
+    let priceInfo: string;
+    if (wantFrontSeat && offer.front_price_per_seat) {
+      const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
+      if (seatsRequested === 1) {
+        priceInfo = `${formatNumberWithSpaces(offer.front_price_per_seat)} ${offer.currency} ${t('offerDetails.frontSeatPerSeat') || 'oldingi o\'rin uchun'}`;
+      } else {
+        priceInfo = `${formatNumberWithSpaces(offer.price_per_seat)} ${offer.currency} × ${seatsRequested} + ${formatNumberWithSpaces(frontSeatPremium)} ${offer.currency} (oldingi o'rin)`;
+      }
+    } else {
+      priceInfo = `${formatNumberWithSpaces(offer.price_per_seat)} ${offer.currency} ${t('searchOffers.perSeat')}`;
+    }
     
     const seatsText = seatsRequested === 1 ? t('searchOffers.seat') : t('searchOffers.seats');
     let confirmMessage = t('offerDetails.confirmJoinMessage');
@@ -105,43 +124,37 @@ export default function OfferDetailsScreen() {
     confirmMessage = confirmMessage.replace('{price}', formatNumberWithSpaces(confirmTotalPrice));
     confirmMessage = confirmMessage.replace('{currency}', offer.currency);
     confirmMessage = confirmMessage.replace('{plural}', seatsRequested > 1 ? 's' : '');
-    Alert.alert(
-      t('offerDetails.confirmJoin'),
-      `${confirmMessage}\n\n${priceInfo}`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              setJoining(true);
-              await OffersAPI.joinOffer(token, offerId, {
-                seats_requested: seatsRequested,
-                is_front_seat: wantFrontSeat,
-                message: fullMessage || undefined,
-              });
-              Alert.alert(
-                t('offerDetails.joinSuccess'),
-                t('offerDetails.joinSuccessMessage'),
-                [
-                  {
-                    text: t('common.ok'),
-                    onPress: () => {
-                      navigation.goBack();
-                      (navigation as any).navigate('MyBookings');
-                    },
-                  },
-                ]
-              );
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.message || t('common.error'));
-            } finally {
-              setJoining(false);
-            }
-          },
-        },
-      ]
-    );
+    
+    showConfirmDialog({
+      title: t('offerDetails.confirmJoin'),
+      message: `${confirmMessage}\n\n${priceInfo}`,
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: async () => {
+        try {
+          setJoining(true);
+          await OffersAPI.joinOffer(token, offerId, {
+            seats_requested: seatsRequested,
+            is_front_seat: wantFrontSeat, // Front seat can be selected with multiple seats
+            message: fullMessage || undefined,
+          });
+          showToast.success(
+            t('offerDetails.joinSuccess'),
+            t('offerDetails.joinSuccessMessage')
+          );
+          setTimeout(() => {
+            navigation.goBack();
+            (navigation as any).navigate('MyBookings');
+          }, 1500);
+        } catch (error: any) {
+          const errorMsg = getErrorMessage(error, t, 'errors.unknown');
+          showToast.error(t('common.error'), errorMsg);
+        } finally {
+          setJoining(false);
+        }
+      },
+      onCancel: () => {},
+    });
   };
 
   const formatOfferDate = (dateString: string) => {
@@ -164,10 +177,16 @@ export default function OfferDetailsScreen() {
   }
 
   // Calculate total price based on front seat selection
-  const pricePerSeat = wantFrontSeat && offer.front_price_per_seat 
-    ? offer.front_price_per_seat 
-    : offer.price_per_seat;
-  const totalPrice = pricePerSeat * seatsRequested;
+  // Front seat premium only applies to 1 seat (there's only one front seat)
+  let totalPrice: number;
+  if (wantFrontSeat && offer.front_price_per_seat) {
+    // Front seat selected: 1 front seat + (seatsRequested - 1) regular seats
+    const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
+    totalPrice = (offer.price_per_seat * seatsRequested) + frontSeatPremium;
+  } else {
+    // No front seat: regular price for all seats
+    totalPrice = offer.price_per_seat * seatsRequested;
+  }
   
   // Check if front seat pricing is available
   const hasFrontSeatPricing = offer.front_price_per_seat && offer.front_price_per_seat > offer.price_per_seat;
@@ -394,7 +413,10 @@ export default function OfferDetailsScreen() {
                   <Ionicons name="car-sport" size={20} color="#3B82F6" />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>{t('offerDetails.preferFrontSeat')}</Text>
+                  <Text style={styles.optionText}>
+                    {t('offerDetails.preferFrontSeat')}
+                    {seatsRequested > 1 && ' (faqat 1 o\'rin uchun qo\'shimcha narx)'}
+                  </Text>
                   {hasFrontSeatPricing && (
                     <Text style={styles.optionPriceText}>
                       {t('offerDetails.frontSeatPremium').replace('{premium}', formatNumberWithSpaces(offer.front_price_per_seat! - offer.price_per_seat)).replace('{currency}', offer.currency)}
@@ -456,26 +478,41 @@ export default function OfferDetailsScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
         <View style={styles.footerContent}>
           {wantFrontSeat && hasFrontSeatPricing && (
             <View style={styles.priceBreakdown}>
-              <View style={styles.priceBreakdownRow}>
-                <Text style={styles.priceBreakdownLabel}>
-                  {t('offerDetails.priceBreakdownBase').replace('{seats}', seatsRequested.toString()).replace('{price}', formatNumberWithSpaces(offer.price_per_seat)).replace('{currency}', offer.currency)}
-                </Text>
-                <Text style={styles.priceBreakdownValue}>
-                  {formatNumberWithSpaces(offer.price_per_seat * seatsRequested)} {offer.currency}
-                </Text>
-              </View>
-              <View style={styles.priceBreakdownRow}>
-                <Text style={styles.priceBreakdownLabel}>
-                  {t('offerDetails.priceBreakdownPremium').replace('{seats}', seatsRequested.toString()).replace('{premium}', formatNumberWithSpaces(offer.front_price_per_seat! - offer.price_per_seat)).replace('{currency}', offer.currency)}
-                </Text>
-                <Text style={styles.priceBreakdownValue}>
-                  {formatNumberWithSpaces((offer.front_price_per_seat! - offer.price_per_seat) * seatsRequested)} {offer.currency}
-                </Text>
-              </View>
+              {seatsRequested === 1 ? (
+                // Single seat with front seat: show front seat price only
+                <View style={styles.priceBreakdownRow}>
+                  <Text style={styles.priceBreakdownLabel}>
+                    {t('offerDetails.frontSeatPerSeat') || 'Oldingi o\'rin'}
+                  </Text>
+                  <Text style={styles.priceBreakdownValue}>
+                    {formatNumberWithSpaces(offer.front_price_per_seat!)} {offer.currency}
+                  </Text>
+                </View>
+              ) : (
+                // Multiple seats with front seat: show breakdown
+                <>
+                  <View style={styles.priceBreakdownRow}>
+                    <Text style={styles.priceBreakdownLabel}>
+                      {t('offerDetails.priceBreakdownBase')?.replace('{seats}', seatsRequested.toString()).replace('{price}', formatNumberWithSpaces(offer.price_per_seat)).replace('{currency}', offer.currency) || `${seatsRequested} o'rin × ${formatNumberWithSpaces(offer.price_per_seat)} ${offer.currency}`}
+                    </Text>
+                    <Text style={styles.priceBreakdownValue}>
+                      {formatNumberWithSpaces(offer.price_per_seat * seatsRequested)} {offer.currency}
+                    </Text>
+                  </View>
+                  <View style={styles.priceBreakdownRow}>
+                    <Text style={styles.priceBreakdownLabel}>
+                      {t('offerDetails.priceBreakdownPremium')?.replace('{seats}', '1').replace('{premium}', formatNumberWithSpaces(offer.front_price_per_seat! - offer.price_per_seat)).replace('{currency}', offer.currency) || `1 oldingi o'rin qo'shimcha: +${formatNumberWithSpaces(offer.front_price_per_seat! - offer.price_per_seat)} ${offer.currency}`}
+                    </Text>
+                    <Text style={styles.priceBreakdownValue}>
+                      {formatNumberWithSpaces(offer.front_price_per_seat! - offer.price_per_seat)} {offer.currency}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
           )}
           <View style={styles.totalSection}>
@@ -934,7 +971,6 @@ const styles = StyleSheet.create({
   footer: {
     backgroundColor: '#FFFFFF',
     paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',

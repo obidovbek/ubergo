@@ -4,6 +4,8 @@
  */
 
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Language, DEFAULT_LANGUAGE } from '../config/languages';
 
 // Base API URL - Update this based on your environment 
 // Production: https://test3.fstu.uz/api 
@@ -12,11 +14,18 @@ import { Platform } from 'react-native';
 // ? 'http://10.0.2.2:4001/api'  // Android emulator
 // : 'http://localhost:4001/api'  // iOS simulator/device
 // : 'https://test3.fstu.uz/api'; // Production
+// export const API_BASE_URL = __DEV__
+//   ? Platform.OS === 'android'
+//     ? 'http://10.0.2.2:4001/api'  // Android emulator
+//     : 'http://10.0.2.2:4001/api'  // iOS simulator/device
+//   : 'http://10.0.2.2:4001/api'; // Production
+
 export const API_BASE_URL = __DEV__
   ? Platform.OS === 'android'
-    ? 'http://10.0.2.2:4001/api'  // Android emulator
-    : 'http://10.0.2.2:4001/api'  // iOS simulator/device
-  : 'http://10.0.2.2:4001/api'; // Production
+    ? 'http://192.168.254.102:4001/api'  // Android emulator
+    : 'http://192.168.254.102:4001/api'  // iOS simulator/device
+  : 'http://192.168.254.102:4001/api'; // Production
+
 // export const API_BASE_URL = __DEV__
 //   ? Platform.OS === 'android' 
 //     ? 'https://test3.fstu.uz/api'  // Android emulator
@@ -82,20 +91,54 @@ export const API_ENDPOINTS = {
     bookings: '/passenger/bookings',
     cancelBooking: (id: string) => `/passenger/bookings/${id}/cancel`,
   },
+  PASSENGER_OFFERS: '/passenger/offers',
 };
 
 // API Timeout
 export const API_TIMEOUT = 30000; // 30 seconds
 
 // Request Headers
-export const getHeaders = (token?: string) => {
+export const getHeaders = async (token?: string | null): Promise<Record<string, string>> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  // Add Accept-Language header based on current language (default: uz)
+  try {
+    const storedLanguage = await AsyncStorage.getItem('@app_language');
+    const language: Language = (storedLanguage as Language) || DEFAULT_LANGUAGE;
+    const localeMap: Record<Language, string> = {
+      uz: 'uz-UZ',
+      en: 'en-US',
+      ru: 'ru-RU',
+    };
+    headers['Accept-Language'] = localeMap[language] || 'uz-UZ';
+  } catch (error) {
+    // Default to Uzbek if language retrieval fails
+    headers['Accept-Language'] = 'uz-UZ';
+  }
+
+  // If token is provided and valid, use it; otherwise try to get from storage
+  let authToken: string | null = null;
+  
+  // Check if provided token is valid (not null, undefined, or empty string)
+  if (token && typeof token === 'string' && token.trim().length > 0) {
+    authToken = token;
+  } else {
+    // Try to get from storage
+    try {
+      const storedToken = await AsyncStorage.getItem('@auth_token');
+      if (storedToken && storedToken.trim().length > 0) {
+        authToken = storedToken;
+      }
+    } catch (error) {
+      console.warn('Failed to get token from storage:', error);
+    }
+  }
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
   }
 
   return headers;

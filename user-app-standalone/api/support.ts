@@ -24,7 +24,7 @@ export const getSupportContact = async (
       `${API_BASE_URL}/support-contacts?appName=${appName}`,
       {
         method: 'GET',
-        headers: getHeaders(),
+        headers: await getHeaders(),
         signal: controller.signal,
       }
     );

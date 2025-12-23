@@ -101,15 +101,24 @@ export const handleBackendError = (
 
 /**
  * Extract error message from various error formats
+ * Backend messages are already translated, so we prefer them
  */
-export const getErrorMessage = (error: any, defaultMsg: string = 'An error occurred'): string => {
+export const getErrorMessage = (error: any, t?: (key: string) => string, defaultMsg?: string): string => {
   if (typeof error === 'string') return error;
 
-  if (error?.response?.data?.error) return error.response.data.error;
+  // Prefer backend-translated messages (they're already in user's language)
   if (error?.response?.data?.message) return error.response.data.message;
+  if (error?.response?.data?.error) return error.response.data.error;
   if (error?.message) return error.message;
 
-  return defaultMsg;
+  // Fallback to translated default or provided default
+  if (t && defaultMsg) {
+    return t(defaultMsg);
+  }
+  if (t) {
+    return t('errors.unknown');
+  }
+  return defaultMsg || 'An error occurred';
 };
 
 /**

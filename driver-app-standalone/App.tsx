@@ -15,6 +15,7 @@ import { NetworkStatus } from './components/@extended/NetworkStatus';
 import { SplashScreen } from './components/SplashScreen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './utils/toast';
+import { ConfirmDialogProvider } from './utils/confirmDialog';
 
 export default function App() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
@@ -63,9 +64,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <RootNavigator />
-          <StatusBar style="auto" />
-          <Toast config={toastConfig} />
+          <ConfirmDialogProvider>
+            <RootNavigator />
+            <StatusBar style="auto" />
+            <Toast config={toastConfig} />
+          </ConfirmDialogProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "UbexGoUser",
-    "slug": "ubexgo-monorepo",
+    "slug": "ubexgo-user",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

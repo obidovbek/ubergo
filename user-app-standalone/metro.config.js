@@ -6,6 +6,12 @@ const appDir = __dirname;
 
 const config = getDefaultConfig(appDir);
 
+// Set Metro port for user app (8081)
+config.server = {
+  ...config.server,
+  port: 8081,
+};
+
 // Ensure React DevTools is properly configured
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 

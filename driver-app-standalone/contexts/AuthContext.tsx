@@ -177,11 +177,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
+      const headers = await getHeaders();
       const response = await fetch(
         `${API_BASE_URL}${API_ENDPOINTS.auth.login}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers,
           body: JSON.stringify(credentials),
         }
       );
@@ -214,11 +215,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
+      const headers = await getHeaders();
       const response = await fetch(
         `${API_BASE_URL}${API_ENDPOINTS.auth.register}`,
         {
           method: 'POST',
-          headers: getHeaders(),
+          headers,
           body: JSON.stringify(data),
         }
       );

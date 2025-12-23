@@ -21,6 +21,8 @@ import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
 import type { Request } from 'express';
+import { getLanguageFromHeaders } from '../i18n/config.js';
+import { t } from '../i18n/translator.js';
 
 interface JoinOfferData {
   offer_id: number;
@@ -35,6 +37,7 @@ export class OfferPassengerService {
    */
   static async joinOffer(passengerId: number, data: JoinOfferData, req?: Request) {
     const { offer_id, seats_requested = 1, is_front_seat = false, message } = data;
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
 
     // Get offer with driver info
     const offer = await DriverOffer.findByPk(offer_id, {
@@ -72,21 +75,21 @@ export class OfferPassengerService {
     });
 
     if (!offer) {
-      throw new AppError('Offer not found', 404);
+      throw new AppError(t('offers.notFound', language), 404);
     }
 
     // Check if offer is published and in the future
     if (offer.status !== 'published') {
-      throw new AppError('This offer is not available', 400);
+      throw new AppError(t('offers.notAvailable', language), 400);
     }
 
     if (new Date(offer.start_at) < new Date()) {
-      throw new AppError('This offer has already started', 400);
+      throw new AppError(t('offers.alreadyStarted', language), 400);
     }
 
     // Check if passenger is the driver
     if (offer.user_id === passengerId) {
-      throw new AppError('You cannot join your own offer', 400);
+      throw new AppError(t('offers.cannotJoinOwn', language), 400);
     }
 
     // Check if passenger already joined
@@ -99,24 +102,36 @@ export class OfferPassengerService {
     });
 
     if (existingJoin) {
-      throw new AppError('You have already joined this offer', 400);
+      throw new AppError(t('offers.alreadyJoined', language), 400);
     }
 
     // Check if enough seats available
     if (seats_requested > offer.seats_free) {
-      throw new AppError(`Only ${offer.seats_free} seats available`, 400);
+      throw new AppError(t('offers.onlySeatsAvailable', language, { count: offer.seats_free }), 400);
     }
 
     // Validate seats_requested
     if (seats_requested < 1 || seats_requested > 8) {
-      throw new AppError('Seats requested must be between 1 and 8', 400);
+      throw new AppError(t('offers.seatsOutOfRange', language), 400);
     }
 
     // Calculate agreed prices at time of booking
-    const agreedPricePerSeat = is_front_seat && offer.front_price_per_seat 
-      ? offer.front_price_per_seat 
-      : offer.price_per_seat;
-    const totalAgreedPrice = agreedPricePerSeat * seats_requested;
+    // Front seat premium only applies to 1 seat (there's only one front seat)
+    // If multiple seats with front seat: (regular_price × seats) + (front_seat_premium × 1)
+    let agreedPricePerSeat: number;
+    let totalAgreedPrice: number;
+    
+    if (is_front_seat && offer.front_price_per_seat) {
+      // Front seat selected: calculate as (regular_price × seats) + (front_seat_premium × 1)
+      const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
+      totalAgreedPrice = (offer.price_per_seat * seats_requested) + frontSeatPremium;
+      // Average price per seat for display purposes
+      agreedPricePerSeat = totalAgreedPrice / seats_requested;
+    } else {
+      // No front seat: regular price
+      agreedPricePerSeat = offer.price_per_seat;
+      totalAgreedPrice = offer.price_per_seat * seats_requested;
+    }
 
     // Create passenger join request with agreed prices
     const passengerJoin = await OfferPassenger.create({
@@ -191,6 +206,7 @@ export class OfferPassengerService {
     passengerJoinId: string,
     req?: Request
   ) {
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
     const passengerJoin = await OfferPassenger.findByPk(passengerJoinId, {
       include: [
         {
@@ -207,24 +223,24 @@ export class OfferPassengerService {
     });
 
     if (!passengerJoin) {
-      throw new AppError('Passenger join request not found', 404);
+      throw new AppError(t('offers.joinRequestNotFound', language), 404);
     }
 
     const offer = (passengerJoin as any).offer as DriverOffer;
 
     // Check if driver owns the offer
     if (offer.user_id !== driverId) {
-      throw new AppError('You do not have permission to confirm this request', 403);
+      throw new AppError(t('offers.noPermissionConfirm', language), 403);
     }
 
     // Check if request is pending
     if (passengerJoin.status !== 'pending') {
-      throw new AppError('This request has already been processed', 400);
+      throw new AppError(t('offers.alreadyProcessed', language), 400);
     }
 
     // Check if enough seats available
     if (passengerJoin.seats_requested > offer.seats_free) {
-      throw new AppError(`Only ${offer.seats_free} seats available`, 400);
+      throw new AppError(t('offers.onlySeatsAvailable', language, { count: offer.seats_free }), 400);
     }
 
     // Update passenger join status
@@ -272,6 +288,7 @@ export class OfferPassengerService {
     rejection_reason?: string,
     req?: Request
   ) {
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
     const passengerJoin = await OfferPassenger.findByPk(passengerJoinId, {
       include: [
         {
@@ -288,19 +305,19 @@ export class OfferPassengerService {
     });
 
     if (!passengerJoin) {
-      throw new AppError('Passenger join request not found', 404);
+      throw new AppError(t('offers.joinRequestNotFound', language), 404);
     }
 
     const offer = (passengerJoin as any).offer as DriverOffer;
 
     // Check if driver owns the offer
     if (offer.user_id !== driverId) {
-      throw new AppError('You do not have permission to reject this request', 403);
+      throw new AppError(t('offers.noPermissionReject', language), 403);
     }
 
     // Check if request is pending
     if (passengerJoin.status !== 'pending') {
-      throw new AppError('This request has already been processed', 400);
+      throw new AppError(t('offers.alreadyProcessed', language), 400);
     }
 
     // Update passenger join status
@@ -340,6 +357,7 @@ export class OfferPassengerService {
    * Passenger cancels their join request
    */
   static async cancelJoin(passengerId: number, passengerJoinId: string, req?: Request) {
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
     const passengerJoin = await OfferPassenger.findByPk(passengerJoinId, {
       include: [
         {
@@ -351,17 +369,17 @@ export class OfferPassengerService {
     });
 
     if (!passengerJoin) {
-      throw new AppError('Join request not found', 404);
+      throw new AppError(t('offers.joinRequestNotFound', language), 404);
     }
 
     // Check if passenger owns the join
     if (passengerJoin.passenger_id !== passengerId) {
-      throw new AppError('You do not have permission to cancel this request', 403);
+      throw new AppError(t('offers.noPermissionCancel', language), 403);
     }
 
     // Check if request is pending or confirmed
     if (!['pending', 'confirmed'].includes(passengerJoin.status)) {
-      throw new AppError('This request cannot be cancelled', 400);
+      throw new AppError(t('offers.cannotCancel', language), 400);
     }
 
     const offer = (passengerJoin as any).offer as DriverOffer;
@@ -409,14 +427,15 @@ export class OfferPassengerService {
   /**
    * Get passengers for an offer (driver view)
    */
-  static async getOfferPassengers(driverId: number, offerId: number) {
+  static async getOfferPassengers(driverId: number, offerId: number, req?: Request) {
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
     // Verify driver owns the offer
     const offer = await DriverOffer.findOne({
       where: { id: offerId, user_id: driverId }
     });
 
     if (!offer) {
-      throw new AppError('Offer not found or you do not have permission', 403);
+      throw new AppError(t('offers.offerNotFoundOrNoPermission', language), 403);
     }
 
     const passengers = await OfferPassenger.findAll({

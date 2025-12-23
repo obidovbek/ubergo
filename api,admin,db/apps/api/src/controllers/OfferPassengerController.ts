@@ -107,7 +107,8 @@ export class OfferPassengerController {
       const { offerId } = req.params;
       const passengers = await OfferPassengerService.getOfferPassengers(
         userId,
-        parseInt(offerId)
+        parseInt(offerId),
+        req
       );
 
       return successResponse(res, { passengers });

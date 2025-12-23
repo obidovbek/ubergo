@@ -18,11 +18,14 @@ import {
   AdminUser,
   GeoProvince,
   GeoCityDistrict,
-  DriverRating
+  DriverRating,
+  OfferPassenger,
+  PushToken
 } from '../database/models/index.js';
 import type { DriverOfferStatus } from '../database/models/DriverOffer.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
+import PushService from './PushService.js';
 import type { Request } from 'express';
 
 interface OfferStopData {
@@ -439,14 +442,47 @@ export class DriverOfferService {
       throw new AppError('Only published offers can be cancelled', 400);
     }
 
+    // Get all confirmed passengers before cancelling
+    const confirmedPassengers = await OfferPassenger.findAll({
+      where: {
+        offer_id: offerId,
+        status: 'confirmed'
+      },
+      include: [
+        {
+          model: User,
+          as: 'passenger',
+          attributes: ['id', 'first_name', 'last_name', 'display_name']
+        }
+      ]
+    });
+
     await offer.update({ status: 'cancelled' });
+
+    // Send push notifications to all confirmed passengers
+    if (confirmedPassengers.length > 0) {
+      await Promise.all(
+        confirmedPassengers.map(async (passengerJoin) => {
+          await this.notifyPassenger(passengerJoin.passenger_id, {
+            type: 'offer_cancelled_by_driver',
+            title: 'Ride Cancelled',
+            body: `The ride from ${offer.from_text} to ${offer.to_text} has been cancelled by the driver`,
+            data: {
+              type: 'offer_cancelled_by_driver',
+              offer_id: String(offer.id),
+              passenger_join_id: passengerJoin.id
+            }
+          });
+        })
+      );
+    }
 
     // Audit log
     if (req) {
       await logAudit({
         userId: String(userId),
         action: 'driver.offer.cancel',
-        payload: { offer_id: offer.id },
+        payload: { offer_id: offer.id, notified_passengers: confirmedPassengers.length },
         req
       });
     }
@@ -769,6 +805,53 @@ export class DriverOfferService {
       items: mappedOffers,
       total: mappedOffers.length // Adjusted total after rating filter
     };
+  }
+
+  /**
+   * Send push notification to passenger
+   */
+  private static async notifyPassenger(
+    passengerId: number,
+    notification: {
+      type: string;
+      title: string;
+      body: string;
+      data: Record<string, string>;
+    }
+  ) {
+    try {
+      // Get passenger's push tokens
+      const tokens = await PushToken.findAll({
+        where: { user_id: passengerId, is_active: true }
+      });
+
+      if (tokens.length === 0) {
+        console.log(`No active push tokens found for passenger ${passengerId}`);
+        return;
+      }
+
+      // Send to all tokens
+      await Promise.all(
+        tokens.map(async (token) => {
+          try {
+            await PushService.send({
+              token: token.token,
+              title: notification.title,
+              body: notification.body,
+              data: notification.data
+            });
+          } catch (error) {
+            console.error(`Failed to send push to passenger ${passengerId}:`, error);
+            // Deactivate invalid tokens
+            if (error instanceof Error && error.message.includes('invalid')) {
+              await token.update({ is_active: false });
+            }
+          }
+        })
+      );
+    } catch (error) {
+      console.error('Error sending push notification to passenger:', error);
+    }
   }
 }
 

@@ -126,20 +126,33 @@ export const PhoneRegistrationScreen: React.FC = () => {
     setIsLoading(true);
     
     try {
+      // Validate and prepare phone number
       let usedPhone: string | undefined;
-      let usedUserId: string | undefined = userId?.trim() || undefined;
       if (cleanedNumber.length >= selectedCountry.localLength) {
         usedPhone = `${selectedCountry.code}${cleanedNumber}`;
       }
 
+      // Validate and prepare userId - ensure it's not empty string
+      const trimmedUserId = userId?.trim();
+      let usedUserId: string | undefined = trimmedUserId && trimmedUserId.length > 0 ? trimmedUserId : undefined;
+
+      // Final validation: at least one must be provided
       if (!usedPhone && !usedUserId) {
         showToast.warning(t('common.error'), t('phoneRegistration.errorPhoneIncomplete'));
         setIsLoading(false);
         return;
       }
 
+      console.log('=== Phone Number Construction ===');
+      console.log('Cleaned number length:', cleanedNumber.length);
+      console.log('Required length:', selectedCountry.localLength);
+      console.log('Country code:', selectedCountry.code);
       console.log('Full phone number:', usedPhone);
+      console.log('Phone number type:', typeof usedPhone);
+      console.log('Phone number length:', usedPhone?.length);
       console.log('UserId:', usedUserId);
+      console.log('UserId type:', typeof usedUserId);
+      console.log('UserId length:', usedUserId?.length);
       console.log('Sending OTP via push notification to user app...');
 
       // Driver app ONLY sends push notifications to user app

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "UbexGoDriver",
-    "slug": "ubexgo-monorepo",
+    "slug": "ubexgo-driver",
     "entryPoint": "./index.js",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -45,7 +45,9 @@
       ],
       [
         "@react-native-google-signin/google-signin"
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true

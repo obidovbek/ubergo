@@ -45,11 +45,12 @@ export const getAvailableRides = async (token: string): Promise<Ride[]> => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.available}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -77,11 +78,12 @@ export const acceptRide = async (token: string, rideId: string): Promise<Ride> =
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.accept(rideId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -109,11 +111,12 @@ export const startRide = async (token: string, rideId: string): Promise<Ride> =>
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.start(rideId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -141,11 +144,12 @@ export const completeRide = async (token: string, rideId: string): Promise<Ride>
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.complete(rideId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -173,11 +177,12 @@ export const getRideHistory = async (token: string): Promise<Ride[]> => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.history}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -205,11 +210,12 @@ export const cancelRide = async (token: string, rideId: string, reason: string):
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.rides.cancel(rideId)}`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify({ reason }),
         signal: controller.signal,
       }

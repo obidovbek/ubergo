@@ -33,7 +33,7 @@ export const getUserProfile = async (token: string): Promise<User> => {
       `${API_BASE_URL}${API_ENDPOINTS.user.profile}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );
@@ -67,7 +67,7 @@ export const updateUserProfile = async (
       `${API_BASE_URL}${API_ENDPOINTS.user.update}`,
       {
         method: 'PUT',
-        headers: getHeaders(token),
+        headers: await getHeaders(token),
         body: JSON.stringify(userData),
         signal: controller.signal,
       }

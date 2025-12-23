@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import type { DriverOffer, OfferStatus } from '../../api/driverOffers';
@@ -115,6 +116,7 @@ interface OfferDetailModalProps {
   onPublish: (offer: DriverOffer) => void;
   onArchive: (offer: DriverOffer) => void;
   onDelete: (offer: DriverOffer) => void;
+  onViewPassengers?: (offer: DriverOffer) => void;
   formatDate: (dateString: string) => string;
   formatPrice: (price: number, currency: string) => string;
 }
@@ -128,10 +130,12 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
   onPublish,
   onArchive,
   onDelete,
+  onViewPassengers,
   formatDate,
   formatPrice,
 }) => {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   if (!offer) return null;
 
@@ -372,7 +376,22 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
           </ScrollView>
 
           {/* Action Buttons - Fixed at bottom */}
-          <View style={styles.modalActions}>
+          <View style={[styles.modalActions, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
+            {/* View Passengers Button - Show for published offers */}
+            {offer.status === 'published' && onViewPassengers && (
+              <TouchableOpacity
+                style={[styles.modalActionButton, styles.viewPassengersButton]}
+                onPress={() => {
+                  onClose();
+                  onViewPassengers(offer);
+                }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="people" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                <Text style={styles.actionButtonText}>{t('driverOffers.viewPassengers') || 'View Passengers'}</Text>
+              </TouchableOpacity>
+            )}
+
             {/* Primary Action - Edit Button (Full Width) - Only show if can edit */}
             {canEdit && (
               <TouchableOpacity
@@ -742,7 +761,6 @@ const styles = StyleSheet.create({
   modalActions: {
     padding: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
@@ -763,6 +781,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 14,
     minHeight: 56,
+  },
+  viewPassengersButton: {
+    backgroundColor: '#3B82F6',
+    width: '100%',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 12,
   },
   editButton: {
     backgroundColor: '#10B981',

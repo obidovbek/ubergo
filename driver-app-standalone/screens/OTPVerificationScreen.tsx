@@ -29,7 +29,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const navigation = useNavigation<OTPVerificationNavigationProp>();
   const route = useRoute();
   const { phoneNumber, userId: routeUserId } = (route.params as any) || {};
-  const { verifyOtp, sendOtp, user, token } = useAuth();
+  const { verifyOtp, sendOtp, user, token, isAuthenticated } = useAuth();
   const { t } = useTranslation();
 
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -37,6 +37,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const [attempts, setAttempts] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(3);
   const [driverId, setDriverId] = useState('');
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Get driver ID from user object once authenticated
@@ -45,6 +46,20 @@ export const OTPVerificationScreen: React.FC = () => {
       setDriverId(user.id.toString());
     }
   }, [user]);
+
+  // Handle navigation after successful authentication
+  // RootNavigator will switch from AuthNavigator to ProfileCompletionNavigator or MainNavigator
+  // This effect ensures the screen doesn't remain visible during the transition
+  useEffect(() => {
+    if (verificationSuccess && isAuthenticated && user && token) {
+      console.log('OTPVerificationScreen: Authentication successful, RootNavigator will handle navigation');
+      // RootNavigator will automatically switch navigators based on profile status
+      // We don't need to navigate manually - the RootNavigator will unmount this screen
+      // when it switches from AuthNavigator to ProfileCompletionNavigator or MainNavigator
+      // Keep loading state active during transition
+      setIsLoading(true);
+    }
+  }, [verificationSuccess, isAuthenticated, user, token]);
 
   const handleOtpChange = (text: string, index: number) => {
     // Only allow numbers
@@ -91,13 +106,20 @@ export const OTPVerificationScreen: React.FC = () => {
       await verifyOtp(phoneNumber, otpCode, { userId: routeUserId });
       
       console.log('OTP verified successfully');
+      setVerificationSuccess(true);
       showToast.success(t('common.success'), t('otpVerification.phoneVerified'));
       
       // Auth context will update and RootNavigator will automatically check
       // driver profile status and route accordingly:
       // - If profile incomplete → ProfileCompletionNavigator (DriverPersonalInfo)
       // - If profile complete → MainNavigator (Home)
+      // The RootNavigator will switch from AuthNavigator to the appropriate navigator,
+      // which will unmount this screen automatically
       console.log('Auth context updated, RootNavigator will handle routing based on driver profile status');
+      
+      // Give RootNavigator a moment to process the auth state change and switch navigators
+      // If still on this screen after a short delay, it means RootNavigator hasn't switched yet
+      // (This should be rare, but helps ensure smooth transition)
     } catch (error) {
       console.error('OTP verification error:', error);
       
@@ -156,6 +178,19 @@ export const OTPVerificationScreen: React.FC = () => {
       });
     }
   };
+
+  // If authentication succeeded, RootNavigator will switch navigators
+  // Show loading state during transition
+  if (verificationSuccess && isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>{t('otpVerification.phoneVerified')}</Text>
+          <Text style={styles.loadingSubtext}>Yuklanmoqda...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -368,6 +403,24 @@ const styles = StyleSheet.create({
   resendLink: {
     color: '#2196F3',
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+  },
+  loadingText: {
+    ...theme.typography.h3,
+    color: '#4CAF50',
+    fontWeight: '700',
+    marginBottom: theme.spacing(2),
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    ...theme.typography.body1,
+    color: theme.palette.text.secondary,
+    textAlign: 'center',
   },
 });
 

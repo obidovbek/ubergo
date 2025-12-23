@@ -68,11 +68,12 @@ export const getDriverProfileStatus = async (token: string): Promise<DriverProfi
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/status`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -103,11 +104,12 @@ export const getDriverProfile = async (token: string) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -156,11 +158,12 @@ export const uploadImage = async (token: string, imageBase64: string, imageType:
       throw new Error(`Rasm hajmi juda katta. Maksimal hajm: 5MB`);
     }
 
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/upload/image`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify({
           image: base64Data,
           type: imageType,
@@ -238,11 +241,12 @@ export const updatePersonalInfo = async (token: string, data: Partial<DriverProf
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/personal`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       }
@@ -426,11 +430,15 @@ export const fetchVehicleMakes = async (token: string): Promise<VehicleMakeOptio
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/vehicles/makes`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: getHeaders(token),
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      `${API_BASE_URL}/vehicles/makes`,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers,
+      }
+    );
 
     clearTimeout(timeoutId);
 
@@ -455,15 +463,19 @@ export const fetchVehicleModels = async (token: string, makeId?: string): Promis
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const url = makeId 
       ? `${API_BASE_URL}/vehicles/models?make_id=${makeId}`
       : `${API_BASE_URL}/vehicles/models`;
     
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: getHeaders(token),
-    });
+    const response = await fetch(
+      url,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers,
+      }
+    );
 
     clearTimeout(timeoutId);
 
@@ -488,11 +500,15 @@ export const fetchVehicleBodyTypes = async (token: string): Promise<VehicleBodyT
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/vehicles/body-types`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: getHeaders(token),
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      `${API_BASE_URL}/vehicles/body-types`,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers,
+      }
+    );
 
     clearTimeout(timeoutId);
 
@@ -517,11 +533,15 @@ export const fetchVehicleColors = async (token: string): Promise<VehicleColorOpt
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/vehicles/colors`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: getHeaders(token),
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      `${API_BASE_URL}/vehicles/colors`,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers,
+      }
+    );
 
     clearTimeout(timeoutId);
 
@@ -546,11 +566,15 @@ export const fetchVehicleTypes = async (token: string): Promise<VehicleTypeOptio
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/vehicles/types`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: getHeaders(token),
-    });
+    const headers = await getHeaders(token);
+    const response = await fetch(
+      `${API_BASE_URL}/vehicles/types`,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers,
+      }
+    );
 
     clearTimeout(timeoutId);
 
@@ -575,11 +599,12 @@ export const updatePassport = async (token: string, data: any) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/passport`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       }
@@ -608,11 +633,12 @@ export const updateLicense = async (token: string, data: any) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/license`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       }
@@ -641,11 +667,12 @@ export const updateVehicle = async (token: string, data: any) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/vehicle`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       }
@@ -674,11 +701,12 @@ export const updateTaxiLicense = async (token: string, data: any) => {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}/driver/profile/taxi-license`,
       {
         method: 'POST',
-        headers: getHeaders(token),
+        headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       }

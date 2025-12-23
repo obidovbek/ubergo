@@ -20,12 +20,14 @@ import {
   FlatList,
   StatusBar,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { getErrorMessage } from '../utils/errorHandler';
+import { formatDateByLanguage, formatTimeByLanguage, formatDateTime, getLocaleFromLanguage } from '../utils/date';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
@@ -43,7 +45,8 @@ export const OfferWizardScreen: React.FC = () => {
   const route = useRoute<any>();
   const { offerId } = route.params || {};
   const { token } = useAuth();
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -56,6 +59,8 @@ export const OfferWizardScreen: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
 
   // Geo selection states for "From" location
   const [fromGeoModal, setFromGeoModal] = useState<{ type: 'country' | 'province' | 'city'; multiSelect?: boolean } | null>(null);
@@ -135,6 +140,24 @@ export const OfferWizardScreen: React.FC = () => {
       setFromCountries(countries);
       setToCountries(countries);
       setStopCountries(countries);
+      
+      // Set Uzbekistan as default for "From" if not already set
+      const uzbekistan = countries.find(country => 
+        country.name.toLowerCase().includes('zbekistan') ||
+        country.name.toLowerCase().includes('uzbekiston') ||
+        country.name.toLowerCase().includes('o\'zbekiston')
+      );
+      
+      if (uzbekistan && !fromCountry && !offerId) {
+        setFromCountry(uzbekistan);
+        await loadFromProvinces(uzbekistan.id);
+      }
+      
+      // Set Uzbekistan as default for "To" if not already set
+      if (uzbekistan && !toCountry && !offerId) {
+        setToCountry(uzbekistan);
+        await loadToProvinces(uzbekistan.id);
+      }
     } catch (error: any) {
       console.error('Failed to load countries:', error);
     }
@@ -475,7 +498,8 @@ export const OfferWizardScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Failed to load offer:', error);
-      showToast.error('Xatolik', error.message || 'E\'lonni yuklashda xatolik');
+      const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
+      showToast.error(t('common.error'), errorMsg);
       navigation.goBack();
     } finally {
       setInitialLoading(false);
@@ -602,36 +626,166 @@ export const OfferWizardScreen: React.FC = () => {
     }
   };
 
-  const handleDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (event.type === 'set' && date) {
-      setSelectedDate(date);
-      updateDateTime(date, selectedTime);
-      if (Platform.OS === 'ios') {
-        setShowDatePicker(false);
-      }
-    } else if (event.type === 'dismissed') {
-      setShowDatePicker(false);
-    }
+  const handleDateConfirm = () => {
+    setSelectedDate(tempDate);
+    updateDateTime(tempDate, selectedTime);
+    setShowDatePicker(false);
   };
 
-  const handleTimeChange = (event: any, time?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
+  const handleDateCancel = () => {
+    setTempDate(selectedDate);
+    setShowDatePicker(false);
+  };
+
+  const handleTimeConfirm = () => {
+    setSelectedTime(tempTime);
+    updateDateTime(selectedDate, tempTime);
+    setShowTimePicker(false);
+  };
+
+  const handleTimeCancel = () => {
+    setTempTime(selectedTime);
+    setShowTimePicker(false);
+  };
+
+  const openDatePicker = () => {
+    // Ensure tempDate is at least today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateToUse = selectedDate >= today ? selectedDate : today;
+    setTempDate(dateToUse);
+    setShowDatePicker(true);
+  };
+
+  const openTimePicker = () => {
+    // If selected date is today, ensure time is in the future
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateOnly = new Date(selectedDate);
+    selectedDateOnly.setHours(0, 0, 0, 0);
+    
+    let timeToUse = selectedTime;
+    if (selectedDateOnly.getTime() === today.getTime()) {
+      // If date is today, ensure time is at least 30 minutes from now
+      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+      if (selectedTime < minTime) {
+        timeToUse = minTime;
+      }
+    }
+    setTempTime(timeToUse);
+    setShowTimePicker(true);
+  };
+
+  const generateDays = () => {
+    const days = [];
+    const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
+    
+    // For offer dates, only allow dates from today onwards
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const currentDay = currentDate.getDate();
+    
+    let minDay = 1;
+    if (tempDate.getFullYear() === currentYear && tempDate.getMonth() === currentMonth) {
+      minDay = currentDay;
     }
     
-    if (event.type === 'set' && time) {
-      setSelectedTime(time);
-      updateDateTime(selectedDate, time);
-      if (Platform.OS === 'ios') {
-        setShowTimePicker(false);
-      }
-    } else if (event.type === 'dismissed') {
-      setShowTimePicker(false);
+    for (let i = minDay; i <= maxDay; i++) {
+      days.push(i);
     }
+    return days;
+  };
+
+  const generateMonths = () => {
+    const allMonths = [
+      { value: 0, label: t('common.monthJanuary') },
+      { value: 1, label: t('common.monthFebruary') },
+      { value: 2, label: t('common.monthMarch') },
+      { value: 3, label: t('common.monthApril') },
+      { value: 4, label: t('common.monthMay') },
+      { value: 5, label: t('common.monthJune') },
+      { value: 6, label: t('common.monthJuly') },
+      { value: 7, label: t('common.monthAugust') },
+      { value: 8, label: t('common.monthSeptember') },
+      { value: 9, label: t('common.monthOctober') },
+      { value: 10, label: t('common.monthNovember') },
+      { value: 11, label: t('common.monthDecember') },
+    ];
+
+    // For offer dates, if current year is selected, restrict months to current month and future
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    if (tempDate.getFullYear() === currentYear) {
+      return allMonths.filter(month => month.value >= currentMonth);
+    }
+
+    return allMonths;
+  };
+
+  const generateYears = () => {
+    const years = [];
+    const currentYear = new Date().getFullYear();
+    // For offer dates, show from current year to 10 years ahead
+    const endYear = currentYear + 10;
+    for (let year = currentYear; year <= endYear; year++) {
+      years.push(year);
+    }
+    return years;
+  };
+
+  const generateHours = () => {
+    const hours = [];
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateOnly = new Date(selectedDate);
+    selectedDateOnly.setHours(0, 0, 0, 0);
+    
+    // If selected date is today, restrict hours to future hours (at least 30 minutes from now)
+    let minHour = 0;
+    if (selectedDateOnly.getTime() === today.getTime()) {
+      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+      minHour = minTime.getHours();
+    }
+    
+    for (let hour = minHour; hour < 24; hour++) {
+      hours.push(hour);
+    }
+    return hours;
+  };
+
+  const generateMinutes = () => {
+    const minutes = [];
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateOnly = new Date(selectedDate);
+    selectedDateOnly.setHours(0, 0, 0, 0);
+    
+    // If selected date is today and selected hour is current hour, restrict minutes
+    let minMinute = 0;
+    if (
+      selectedDateOnly.getTime() === today.getTime() &&
+      tempTime.getHours() === now.getHours()
+    ) {
+      // Need at least 30 minutes from now
+      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+      if (minTime.getHours() === now.getHours()) {
+        minMinute = minTime.getMinutes();
+      } else {
+        // If minTime is in next hour, start from 0
+        minMinute = 0;
+      }
+    }
+    
+    for (let minute = minMinute; minute < 60; minute++) {
+      minutes.push(minute);
+    }
+    return minutes;
   };
 
   const updateDateTime = (date: Date, time: Date) => {
@@ -1477,7 +1631,8 @@ export const OfferWizardScreen: React.FC = () => {
       navigation.goBack();
     } catch (error: any) {
       console.error('Failed to save offer:', error);
-      showToast.error('Xatolik', error.message || 'E\'lonni saqlashda xatolik');
+      const errorMsg = getErrorMessage(error, t, 'errors.saveFailed');
+      showToast.error(t('common.error'), errorMsg);
     } finally {
       setLoading(false);
     }
@@ -1907,10 +2062,10 @@ export const OfferWizardScreen: React.FC = () => {
         <Text style={styles.label}>{t('offerWizard.dateLabel')}</Text>
         <TouchableOpacity
           style={[styles.dateInput, errors.start_at && styles.inputError]}
-          onPress={() => setShowDatePicker(true)}
+          onPress={openDatePicker}
         >
           <Text style={styles.dateInputText}>
-            {selectedDate.toLocaleDateString('uz-UZ')}
+            {formatDateByLanguage(selectedDate, currentLanguage)}
           </Text>
         </TouchableOpacity>
         {errors.start_at && (
@@ -1922,34 +2077,275 @@ export const OfferWizardScreen: React.FC = () => {
         <Text style={styles.label}>{t('offerWizard.timeLabel')}</Text>
         <TouchableOpacity
           style={[styles.dateInput, errors.start_at && styles.inputError]}
-          onPress={() => setShowTimePicker(true)}
+          onPress={openTimePicker}
         >
           <Text style={styles.dateInputText}>
-            {selectedTime.toLocaleTimeString('uz-UZ', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatTimeByLanguage(selectedTime, currentLanguage)}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Date Picker Modal */}
       {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          minimumDate={new Date()}
-          onChange={handleDateChange}
-        />
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showDatePicker}
+          onRequestClose={handleDateCancel}
+        >
+          <View style={styles.datePickerModalOverlay}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={handleDateCancel}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[styles.datePickerModalContent, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
+              <View style={styles.datePickerModalHeader}>
+                <TouchableOpacity onPress={handleDateCancel}>
+                  <Text style={styles.datePickerModalCancelText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerModalTitle}>{t('offerWizard.dateLabel')}</Text>
+                <TouchableOpacity onPress={handleDateConfirm}>
+                  <Text style={styles.datePickerModalConfirmText}>{t('common.confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.datePickerContainer}>
+                {/* Day Picker */}
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>{t('common.day')}</Text>
+                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {generateDays().map((day) => (
+                      <TouchableOpacity
+                        key={day}
+                        style={[
+                          styles.pickerItem,
+                          tempDate.getDate() === day && styles.pickerItemSelected
+                        ]}
+                        onPress={() => {
+                          const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
+                          const currentDate = new Date();
+                          currentDate.setHours(0, 0, 0, 0);
+                          newDate.setHours(0, 0, 0, 0);
+                          if (newDate < currentDate) {
+                            return;
+                          }
+                          setTempDate(newDate);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          tempDate.getDate() === day && styles.pickerItemTextSelected
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Month Picker */}
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>{t('common.month')}</Text>
+                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {generateMonths().map((month) => (
+                      <TouchableOpacity
+                        key={month.value}
+                        style={[
+                          styles.pickerItem,
+                          tempDate.getMonth() === month.value && styles.pickerItemSelected
+                        ]}
+                        onPress={() => {
+                          const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
+                          const currentDate = new Date();
+                          const currentYear = currentDate.getFullYear();
+                          const currentMonth = currentDate.getMonth();
+                          const currentDay = currentDate.getDate();
+                          
+                          let day = tempDate.getDate();
+                          if (tempDate.getFullYear() === currentYear && month.value === currentMonth) {
+                            day = Math.max(day, currentDay);
+                          }
+                          day = Math.min(day, maxDay);
+                          
+                          const newDate = new Date(tempDate.getFullYear(), month.value, day);
+                          const newDateNormalized = new Date(newDate);
+                          newDateNormalized.setHours(0, 0, 0, 0);
+                          currentDate.setHours(0, 0, 0, 0);
+                          if (newDateNormalized < currentDate) {
+                            return;
+                          }
+                          setTempDate(newDate);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          tempDate.getMonth() === month.value && styles.pickerItemTextSelected
+                        ]}>
+                          {month.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Year Picker */}
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>{t('common.year')}</Text>
+                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {generateYears().map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        style={[
+                          styles.pickerItem,
+                          tempDate.getFullYear() === year && styles.pickerItemSelected
+                        ]}
+                        onPress={() => {
+                          const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
+                          const currentDate = new Date();
+                          const currentYear = currentDate.getFullYear();
+                          const currentMonth = currentDate.getMonth();
+                          const currentDay = currentDate.getDate();
+                          
+                          let day = tempDate.getDate();
+                          if (year === currentYear && tempDate.getMonth() === currentMonth) {
+                            day = Math.max(day, currentDay);
+                          } else if (year === currentYear && tempDate.getMonth() < currentMonth) {
+                            return;
+                          }
+                          day = Math.min(day, maxDay);
+                          
+                          const newDate = new Date(year, tempDate.getMonth(), day);
+                          const newDateNormalized = new Date(newDate);
+                          newDateNormalized.setHours(0, 0, 0, 0);
+                          currentDate.setHours(0, 0, 0, 0);
+                          if (newDateNormalized < currentDate) {
+                            return;
+                          }
+                          setTempDate(newDate);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          tempDate.getFullYear() === year && styles.pickerItemTextSelected
+                        ]}>
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
 
+      {/* Time Picker Modal */}
       {showTimePicker && (
-        <DateTimePicker
-          value={selectedTime}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleTimeChange}
-        />
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showTimePicker}
+          onRequestClose={handleTimeCancel}
+        >
+          <View style={styles.datePickerModalOverlay}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={handleTimeCancel}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[styles.datePickerModalContent, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
+              <View style={styles.datePickerModalHeader}>
+                <TouchableOpacity onPress={handleTimeCancel}>
+                  <Text style={styles.datePickerModalCancelText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerModalTitle}>{t('offerWizard.timeLabel')}</Text>
+                <TouchableOpacity onPress={handleTimeConfirm}>
+                  <Text style={styles.datePickerModalConfirmText}>{t('common.confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.datePickerContainer}>
+                {/* Hour Picker */}
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Soat</Text>
+                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {generateHours().map((hour) => (
+                      <TouchableOpacity
+                        key={hour}
+                        style={[
+                          styles.pickerItem,
+                          tempTime.getHours() === hour && styles.pickerItemSelected
+                        ]}
+                        onPress={() => {
+                          const newTime = new Date(tempTime);
+                          newTime.setHours(hour);
+                          
+                          // If selected date is today and hour is current hour, ensure minutes are valid
+                          const now = new Date();
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const selectedDateOnly = new Date(selectedDate);
+                          selectedDateOnly.setHours(0, 0, 0, 0);
+                          
+                          if (
+                            selectedDateOnly.getTime() === today.getTime() &&
+                            hour === now.getHours()
+                          ) {
+                            // Need at least 30 minutes from now
+                            const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+                            if (minTime.getHours() === now.getHours()) {
+                              newTime.setMinutes(Math.max(tempTime.getMinutes(), minTime.getMinutes()));
+                            } else {
+                              // If minTime is in next hour, set to 0
+                              newTime.setMinutes(0);
+                            }
+                          }
+                          
+                          setTempTime(newTime);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          tempTime.getHours() === hour && styles.pickerItemTextSelected
+                        ]}>
+                          {hour.toString().padStart(2, '0')}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Minute Picker */}
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Daqiqa</Text>
+                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {generateMinutes().map((minute) => (
+                      <TouchableOpacity
+                        key={minute}
+                        style={[
+                          styles.pickerItem,
+                          tempTime.getMinutes() === minute && styles.pickerItemSelected
+                        ]}
+                        onPress={() => {
+                          const newTime = new Date(tempTime);
+                          newTime.setMinutes(minute);
+                          setTempTime(newTime);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          tempTime.getMinutes() === minute && styles.pickerItemTextSelected
+                        ]}>
+                          {minute.toString().padStart(2, '0')}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -2129,7 +2525,7 @@ export const OfferWizardScreen: React.FC = () => {
           </Text>
           <Text style={styles.summaryValue}>
             {formData.start_at
-              ? new Date(formData.start_at).toLocaleString('uz-UZ')
+              ? formatDateTime(formData.start_at, currentLanguage)
               : '-'}
           </Text>
         </View>
@@ -2200,7 +2596,7 @@ export const OfferWizardScreen: React.FC = () => {
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {t('offerWizard.title')}
+            {offerId ? (t('offerWizard.editTitle') || 'E\'lonni tahrirlash') : t('offerWizard.title')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -2214,7 +2610,7 @@ export const OfferWizardScreen: React.FC = () => {
           {currentStep === 4 && renderStep4()}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
           {currentStep < 4 ? (
             <>
               <TouchableOpacity
@@ -3020,6 +3416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 20,
+    paddingTop: 16,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
@@ -3423,6 +3820,82 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
     fontStyle: 'italic',
+  },
+  // Date/Time Picker Modal Styles
+  datePickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  datePickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  datePickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  datePickerModalCancelText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  datePickerModalConfirmText: {
+    fontSize: 16,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    height: 250,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  pickerColumn: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  pickerLabel: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  pickerScroll: {
+    flex: 1,
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginVertical: 2,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#10B981',
+  },
+  pickerItemText: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+  },
+  pickerItemTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

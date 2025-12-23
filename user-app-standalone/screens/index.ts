@@ -10,4 +10,6 @@ export { UserDetailsScreen } from './UserDetailsScreen';
 export { MenuScreen } from './MenuScreen';
 export { HomeScreen } from './HomeScreen';
 export { ProfileScreen } from './ProfileScreen';
+export { CreatePassengerOfferScreen } from './CreatePassengerOfferScreen';
+export { MyPassengerOffersScreen } from './MyPassengerOffersScreen';
 

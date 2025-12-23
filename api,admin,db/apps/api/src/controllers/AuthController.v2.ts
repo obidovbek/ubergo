@@ -13,6 +13,8 @@ import { NotificationService } from '../services/NotificationService.js';
 import { generateTokenPair, rotateTokens, revokeToken, verifyAccessToken } from '../utils/jwt.js';
 import { logAudit, AuditActions } from '../utils/auditLogger.js';
 import { AppError } from '../errors/AppError.js';
+import { getLanguageFromHeaders } from '../i18n/config.js';
+import { t } from '../i18n/translator.js';
 
 /**
  * Send OTP code
@@ -20,23 +22,28 @@ import { AppError } from '../errors/AppError.js';
  */
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
+    const language = getLanguageFromHeaders(req.headers['accept-language']);
     const { phone: rawPhone, userId, channel = 'sms', app = 'user' } = req.body as any;
+    console.log('sendOtp', req.body);
     let phone = rawPhone as string | undefined;
 
-    if (!phone && userId) {
-      const user = await User.findByPk(userId);
+    // Validate userId - if provided, it should be a valid string (not empty)
+    const validUserId = userId && typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : undefined;
+
+    if (!phone && validUserId) {
+      const user = await User.findByPk(validUserId);
       if (!user || !user.phone_e164) {
-        throw new AppError('User not found or phone missing', 404);
+        throw new AppError(t('otp.userNotFoundOrPhoneMissing', language), 404);
       }
       phone = user.phone_e164;
     }
 
     if (!phone) {
-      throw new AppError('Phone number or userId is required', 400);
+      throw new AppError(t('otp.phoneOrUserIdRequired', language), 400);
     }
 
     if (!['sms', 'call', 'push'].includes(channel)) {
-      throw new AppError('Invalid channel. Use "sms", "call" or "push"', 400);
+      throw new AppError(t('otp.invalidChannel', language), 400);
     }
 
     // If request is from driver app, check if phone exists in user app
@@ -121,19 +128,23 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
  */
 export async function verifyOtp(req: Request, res: Response): Promise<void> {
   try {
+    const language = getLanguageFromHeaders(req.headers['accept-language']);
     const { phone: rawPhone, userId, code, app = 'user' } = req.body as any;
 
     let phone = rawPhone as string | undefined;
-    if (!phone && userId) {
-      const userById = await User.findByPk(userId);
+    // Validate userId - if provided, it should be a valid string (not empty)
+    const validUserId = userId && typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : undefined;
+    
+    if (!phone && validUserId) {
+      const userById = await User.findByPk(validUserId);
       if (!userById || !userById.phone_e164) {
-        throw new AppError('User not found or phone missing', 404);
+        throw new AppError(t('otp.userNotFoundOrPhoneMissing', language), 404);
       }
       phone = userById.phone_e164;
     }
 
     if (!phone || !code) {
-      throw new AppError('Phone number or userId and code are required', 400);
+      throw new AppError(t('otp.phoneOrUserIdAndCodeRequired', language), 400);
     }
 
     // If request is from driver app, check if phone exists in user app
@@ -162,7 +173,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     const isValid = await OtpService.verifyOtp(phone, code);
 
     if (!isValid) {
-      throw new AppError('Invalid or expired code', 400);
+      throw new AppError(t('otp.invalidOrExpiredCode', language), 400);
     }
 
     // Find or create user

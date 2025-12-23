@@ -119,7 +119,7 @@ export const searchOffers = async (
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       signal: controller.signal,
     });
 
@@ -154,7 +154,7 @@ export const getOfferDetails = async (offerId: number): Promise<DriverOffer> => 
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       signal: controller.signal,
     });
 
@@ -193,7 +193,7 @@ export const joinOffer = async (
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       body: JSON.stringify(data),
       signal: controller.signal,
     });
@@ -232,7 +232,7 @@ export const cancelJoin = async (
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       body: JSON.stringify({}),
       signal: controller.signal,
     });
@@ -272,7 +272,7 @@ export const getMyBookings = async (
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       signal: controller.signal,
     });
 
@@ -312,7 +312,7 @@ export const rateDriver = async (
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       body: JSON.stringify({ rating, comment }),
       signal: controller.signal,
     });
@@ -348,7 +348,7 @@ export const getMyRatings = async (token: string): Promise<any[]> => {
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(token),
+      headers: await getHeaders(token),
       signal: controller.signal,
     });
 

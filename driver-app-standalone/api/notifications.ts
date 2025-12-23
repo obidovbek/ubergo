@@ -31,11 +31,12 @@ export const getNotifications = async (token: string): Promise<NotificationsResp
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.notifications.list}`,
       {
         method: 'GET',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -66,11 +67,12 @@ export const markNotificationAsRead = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.notifications.markRead(notificationId)}`,
       {
         method: 'PATCH',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -100,11 +102,12 @@ export const markAllNotificationsAsRead = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.notifications.markAllRead}`,
       {
         method: 'PATCH',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );
@@ -135,11 +138,12 @@ export const deleteNotification = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    const headers = await getHeaders(token);
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.notifications.delete(notificationId)}`,
       {
         method: 'DELETE',
-        headers: getHeaders(token),
+        headers,
         signal: controller.signal,
       }
     );

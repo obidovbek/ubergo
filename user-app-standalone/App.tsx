@@ -17,14 +17,22 @@ import { NetworkStatus } from './components/@extended/NetworkStatus';
 import { SplashScreen } from './components/SplashScreen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './utils/toast';
+import { ConfirmDialogProvider } from './utils/confirmDialog';
 import { ensurePushPermission, setupForegroundNotificationHandler } from './services/PushService';
 
-// Register background message handler at module level (only for native platforms) d
+// Register background message handler at module level (only for native platforms)
+// This must be at module level for background notifications to work
 if (Platform.OS !== 'web') {
-  const messaging = require('@react-native-firebase/messaging').default;
-  messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
-    console.log('FCM message handled in background:', remoteMessage);
-  });
+  try {
+    const messaging = require('@react-native-firebase/messaging').default;
+    messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
+      console.log('FCM message handled in background:', remoteMessage);
+    });
+  } catch (error) {
+    // Native module not ready yet - this is expected on first load
+    // The module will be available after the app is rebuilt
+    console.warn('Firebase messaging module not available:', error);
+  }
 }
 
 export default function App() {
@@ -61,41 +69,33 @@ export default function App() {
     };
   }, []);
 
-  // Show network status screen if not connected
-  if (isConnected === false) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <NetworkStatus />
-          <StatusBar style="auto" />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
-  // Show splash screen while checking connection (only on first render)
-  if (isConnected === null) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <SplashScreen />
-          <StatusBar style="light" />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <NotificationProvider>
-              <RootNavigator />
+          {/* Show network status screen if not connected */}
+          {isConnected === false ? (
+            <>
+              <NetworkStatus />
               <StatusBar style="auto" />
-              <Toast config={toastConfig} />
-            </NotificationProvider>
-          </AuthProvider>
+            </>
+          ) : isConnected === null ? (
+            /* Show splash screen while checking connection (only on first render) */
+            <>
+              <SplashScreen />
+              <StatusBar style="light" />
+            </>
+          ) : (
+            <AuthProvider>
+              <NotificationProvider>
+                <ConfirmDialogProvider>
+                  <RootNavigator />
+                  <StatusBar style="auto" />
+                  <Toast config={toastConfig} />
+                </ConfirmDialogProvider>
+              </NotificationProvider>
+            </AuthProvider>
+          )}
         </LanguageProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
