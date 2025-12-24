@@ -24,6 +24,8 @@ export interface OfferPassengerAttributes {
   confirmed_at?: Date | null;
   rejected_at?: Date | null;
   cancelled_at?: Date | null;
+  driver_10min_notified_at?: Date | null;
+  driver_arrived_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -41,6 +43,8 @@ export interface OfferPassengerCreationAttributes
     | 'confirmed_at'
     | 'rejected_at'
     | 'cancelled_at'
+    | 'driver_10min_notified_at'
+    | 'driver_arrived_at'
     | 'created_at'
     | 'updated_at'
   > {}
@@ -64,6 +68,8 @@ export class OfferPassenger
   declare confirmed_at?: Date | null;
   declare rejected_at?: Date | null;
   declare cancelled_at?: Date | null;
+  declare driver_10min_notified_at?: Date | null;
+  declare driver_arrived_at?: Date | null;
   declare readonly created_at: Date;
   declare readonly updated_at: Date;
 
@@ -150,6 +156,14 @@ export function initOfferPassenger(sequelize: Sequelize) {
         allowNull: true
       },
       cancelled_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+      },
+      driver_10min_notified_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+      },
+      driver_arrived_at: {
         type: DataTypes.DATE,
         allowNull: true
       },

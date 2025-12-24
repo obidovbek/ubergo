@@ -47,5 +47,11 @@ router.post(
   OfferPassengerController.rejectPassenger
 );
 
+router.post(
+  '/driver/passengers/:id/location',
+  authenticate,
+  OfferPassengerController.updateDriverLocation
+);
+
 export default router;
 

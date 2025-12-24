@@ -188,6 +188,8 @@ export default {
     driverJoinRequestNotFound: 'Driver join request not found',
     noPermissionViewDrivers: 'You do not have permission to view drivers for this offer',
     cannotCancelConfirmed: 'Cannot cancel a confirmed request',
+    cannotJoinAfterRejected: 'You cannot join this offer because your previous request was rejected',
+    cannotJoinAfterCancelled: 'You cannot join this offer because you cancelled your previous request',
   },
 
   // Driver License specific messages
@@ -224,6 +226,55 @@ export default {
     photoFormatInvalid: 'Photo format is invalid',
     photoSizeTooLarge: 'Photo size is too large',
     photoRequired: 'Photo is required',
+  },
+
+  // Push notification messages
+  push: {
+    // Passenger join request (to driver)
+    passengerJoinRequestTitle: '🎯 New Passenger Request',
+    passengerJoinRequestBody: '{name} wants to join your ride from {from} to {to}. Requesting {seats} seat(s).',
+    
+    // Join confirmed (to passenger)
+    joinConfirmedTitle: '✅ Request Confirmed!',
+    joinConfirmedBody: 'Congratulations! Your ride from {from} to {to} has been confirmed. Contact the driver.',
+    
+    // Join rejected (to passenger)
+    joinRejectedTitle: '❌ Request Declined',
+    joinRejectedBody: 'Sorry, your request to join the ride from {from} to {to} was declined. Check other offers.',
+    
+    // Passenger cancelled (to driver)
+    passengerCancelledTitle: '⚠️ Passenger Cancelled',
+    passengerCancelledBody: 'A passenger cancelled from your ride from {from} to {to}. {status} request was cancelled.',
+    
+    // Driver join request (to passenger)
+    driverJoinRequestTitle: '🚗 New Driver Offer',
+    driverJoinRequestBody: '{name} wants to take you from {from} to {to}. Price: {price} {currency}',
+    
+    // Driver request confirmed (to driver)
+    driverRequestConfirmedTitle: '✅ Offer Accepted!',
+    driverRequestConfirmedBody: 'Great! Your ride from {from} to {to} has been confirmed. Contact the passenger.',
+    
+    // Driver request rejected (to driver)
+    driverRequestRejectedTitle: '❌ Offer Declined',
+    driverRequestRejectedBody: 'Sorry, your offer for the ride from {from} to {to} was declined. Check other offers.',
+    
+    // Driver request cancelled (to passenger)
+    driverRequestCancelledTitle: '⚠️ Driver Cancelled',
+    driverRequestCancelledBody: 'A driver cancelled from your ride from {from} to {to}. Search for other drivers.',
+    
+    // Offer cancelled by driver (to passenger)
+    offerCancelledByDriverTitle: '❌ Ride Cancelled',
+    offerCancelledByDriverBody: 'Sorry, your ride from {from} to {to} was cancelled by the driver. Search for other offers.',
+    
+    // Offer cancelled by passenger (to driver)
+    offerCancelledByPassengerTitle: '❌ Ride Cancelled',
+    offerCancelledByPassengerBody: 'The passenger cancelled the ride from {from} to {to}. Check other offers.',
+    
+    // Driver arrival notifications (to passenger)
+    driver10MinAwayTitle: '⏰ Driver Approaching',
+    driver10MinAwayBody: '{driverName} will arrive within {minutes} minutes. Please be ready!',
+    driverArrivedTitle: '✅ Driver Arrived',
+    driverArrivedBody: '{driverName} is waiting for you at {location}. Please come out!',
   },
 };
 

@@ -20,17 +20,17 @@ import { Language, DEFAULT_LANGUAGE } from '../config/languages';
 //     : 'http://10.0.2.2:4001/api'  // iOS simulator/device
 //   : 'http://10.0.2.2:4001/api'; // Production
 
-export const API_BASE_URL = __DEV__
-  ? Platform.OS === 'android'
-    ? 'http://192.168.254.102:4001/api'  // Android emulator
-    : 'http://192.168.254.102:4001/api'  // iOS simulator/device
-  : 'http://192.168.254.102:4001/api'; // Production
-
 // export const API_BASE_URL = __DEV__
-//   ? Platform.OS === 'android' 
-//     ? 'https://test3.fstu.uz/api'  // Android emulator
-//     : 'https://test3.fstu.uz/api'  // iOS simulator/device
-//   : 'https://test3.fstu.uz/api'; // Production
+//   ? Platform.OS === 'android'
+//     ? 'http://10.93.67.8:4001/api'  // Android emulator
+//     : 'http://10.93.67.8:4001/api'  // iOS simulator/device
+//   : 'http://10.93.67.8:4001/api'; // Production
+
+export const API_BASE_URL = __DEV__
+  ? Platform.OS === 'android' 
+    ? 'https://test3.fstu.uz/api'  // Android emulator
+    : 'https://test3.fstu.uz/api'  // iOS simulator/device
+  : 'https://test3.fstu.uz/api'; // Production
 
 // API Endpoints
 export const API_ENDPOINTS = {

@@ -6,6 +6,7 @@ export interface PushTokenAttributes {
   token: string;
   platform: 'android' | 'ios';
   app: 'user' | 'driver';
+  is_active: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -19,6 +20,7 @@ export class PushToken extends Model<PushTokenAttributes, PushTokenCreationAttri
   declare token: string;
   declare platform: 'android' | 'ios';
   declare app: 'user' | 'driver';
+  declare is_active: boolean;
   declare readonly created_at: Date;
   declare readonly updated_at: Date;
 
@@ -56,6 +58,11 @@ export function initPushToken(sequelize: Sequelize) {
         type: DataTypes.ENUM('user', 'driver'),
         allowNull: false,
         defaultValue: 'user',
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
       },
       created_at: {
         type: DataTypes.DATE,

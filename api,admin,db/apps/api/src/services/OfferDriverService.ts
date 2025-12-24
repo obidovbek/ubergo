@@ -23,6 +23,7 @@ import PushService from './PushService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
+import type { Language } from '../i18n/types.js';
 
 interface JoinPassengerOfferData {
   offer_id: number;
@@ -96,17 +97,26 @@ export class OfferDriverService {
       throw new AppError(t('offers.cannotJoinOwn', language), 400);
     }
 
-    // Check if driver already joined
+    // Check if driver already has any join request (regardless of status)
     const existingJoin = await OfferDriver.findOne({
       where: {
         offer_id,
-        driver_id: driverId,
-        status: { [Op.in]: ['pending', 'confirmed'] }
+        driver_id: driverId
       }
     });
 
     if (existingJoin) {
-      throw new AppError(t('offers.alreadySentRequest', language), 400);
+      // Handle different statuses with appropriate error messages
+      if (existingJoin.status === 'pending' || existingJoin.status === 'confirmed') {
+        throw new AppError(t('offers.alreadySentRequest', language), 400);
+      } else if (existingJoin.status === 'rejected') {
+        throw new AppError(t('offers.cannotJoinAfterRejected', language), 400);
+      } else if (existingJoin.status === 'cancelled') {
+        throw new AppError(t('offers.cannotJoinAfterCancelled', language), 400);
+      } else {
+        // For any other status, use generic message
+        throw new AppError(t('offers.alreadySentRequest', language), 400);
+      }
     }
 
     // Check if offered seats meet the requirement
@@ -145,11 +155,20 @@ export class OfferDriverService {
       attributes: ['id', 'first_name', 'last_name', 'display_name']
     });
 
+    // Get passenger language preference (default to uz)
+    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to passenger
     await this.notifyPassenger(offer.user_id, {
       type: 'driver_join_request',
-      title: 'New Driver Offer',
-      body: `${driver?.display_name || 'A driver'} wants to take you from ${offer.from_text} to ${offer.to_text}`,
+      title: t('push.driverJoinRequestTitle', passengerLanguage),
+      body: t('push.driverJoinRequestBody', passengerLanguage, {
+        name: driver?.display_name || driver?.first_name || (passengerLanguage === 'uz' ? 'Haydovchi' : passengerLanguage === 'ru' ? 'Водитель' : 'Driver'),
+        from: offer.from_text,
+        to: offer.to_text,
+        price: String(offered_price_per_seat),
+        currency: offer.currency || 'UZS'
+      }),
       data: {
         type: 'driver_join_request',
         offer_id: String(offer_id),
@@ -157,7 +176,7 @@ export class OfferDriverService {
         driver_join_id: driverJoin.id,
         offered_price: String(offered_price_per_seat)
       }
-    });
+    }, passengerLanguage);
 
     // Audit log
     if (req) {
@@ -267,17 +286,23 @@ export class OfferDriverService {
     // Update offer status to completed
     await offer.update({ status: 'completed' });
 
+    // Get driver language preference (default to uz)
+    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to driver
     await this.notifyDriver(driverJoin.driver_id, {
       type: 'driver_request_confirmed',
-      title: 'Request Confirmed',
-      body: `Your request to drive from ${offer.from_text} to ${offer.to_text} has been confirmed!`,
+      title: t('push.driverRequestConfirmedTitle', driverLanguage),
+      body: t('push.driverRequestConfirmedBody', driverLanguage, {
+        from: offer.from_text,
+        to: offer.to_text
+      }),
       data: {
         type: 'driver_request_confirmed',
         offer_id: String(offer.id),
         driver_join_id: driverJoin.id
       }
-    });
+    }, driverLanguage);
 
     // Audit log
     if (req) {
@@ -340,17 +365,23 @@ export class OfferDriverService {
       rejected_at: new Date()
     });
 
+    // Get driver language preference (default to uz)
+    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to driver
     await this.notifyDriver(driverJoin.driver_id, {
       type: 'driver_request_rejected',
-      title: 'Request Declined',
-      body: `Your request to drive from ${offer.from_text} to ${offer.to_text} was declined`,
+      title: t('push.driverRequestRejectedTitle', driverLanguage),
+      body: t('push.driverRequestRejectedBody', driverLanguage, {
+        from: offer.from_text,
+        to: offer.to_text
+      }),
       data: {
         type: 'driver_request_rejected',
         offer_id: String(offer.id),
         driver_join_id: driverJoin.id
       }
-    });
+    }, driverLanguage);
 
     // Audit log
     if (req) {
@@ -402,17 +433,23 @@ export class OfferDriverService {
 
     const offer = driverJoin.offer as any;
 
+    // Get passenger language preference (default to uz)
+    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to passenger
     await this.notifyPassenger(offer.user_id, {
       type: 'driver_request_cancelled',
-      title: 'Driver Cancelled',
-      body: `A driver cancelled their request for your ride from ${offer.from_text} to ${offer.to_text}`,
+      title: t('push.driverRequestCancelledTitle', passengerLanguage),
+      body: t('push.driverRequestCancelledBody', passengerLanguage, {
+        from: offer.from_text,
+        to: offer.to_text
+      }),
       data: {
         type: 'driver_request_cancelled',
         offer_id: String(offer.id),
         driver_join_id: driverJoin.id
       }
-    });
+    }, passengerLanguage);
 
     // Audit log
     if (req) {
@@ -549,16 +586,23 @@ export class OfferDriverService {
     title: string;
     body: string;
     data: Record<string, string>;
-  }) {
+  }, language: Language = 'uz') {
     try {
+      // Get passenger's push tokens (only user app tokens)
       const tokens = await PushToken.findAll({
-        where: { user_id: passengerId, is_active: true }
+        where: { 
+          user_id: passengerId, 
+          app: 'user',
+          is_active: true 
+        }
       });
 
       if (tokens.length === 0) {
-        console.log(`No active push tokens found for passenger ${passengerId}`);
+        console.log(`No active push tokens found for passenger ${passengerId} (user app)`);
         return;
       }
+
+      console.log(`Sending push notification to passenger ${passengerId} (${tokens.length} tokens)`);
 
       // Send to all tokens
       await Promise.all(
@@ -570,11 +614,13 @@ export class OfferDriverService {
               body: notification.body,
               data: notification.data
             });
+            console.log(`✅ Push sent to passenger ${passengerId} token: ${token.token.substring(0, 20)}...`);
           } catch (error) {
             console.error(`Failed to send push to passenger ${passengerId}:`, error);
             // Deactivate invalid tokens
-            if (error instanceof Error && error.message.includes('invalid')) {
+            if (error instanceof Error && (error.message.includes('invalid') || error.message.includes('not-registered'))) {
               await token.update({ is_active: false });
+              console.log(`Deactivated invalid token for passenger ${passengerId}`);
             }
           }
         })
@@ -592,16 +638,23 @@ export class OfferDriverService {
     title: string;
     body: string;
     data: Record<string, string>;
-  }) {
+  }, language: Language = 'uz') {
     try {
+      // Get driver's push tokens (only driver app tokens)
       const tokens = await PushToken.findAll({
-        where: { user_id: driverId, is_active: true }
+        where: { 
+          user_id: driverId, 
+          app: 'driver',
+          is_active: true 
+        }
       });
 
       if (tokens.length === 0) {
-        console.log(`No active push tokens found for driver ${driverId}`);
+        console.log(`No active push tokens found for driver ${driverId} (driver app)`);
         return;
       }
+
+      console.log(`Sending push notification to driver ${driverId} (${tokens.length} tokens)`);
 
       // Send to all tokens
       await Promise.all(
@@ -613,11 +666,13 @@ export class OfferDriverService {
               body: notification.body,
               data: notification.data
             });
+            console.log(`✅ Push sent to driver ${driverId} token: ${token.token.substring(0, 20)}...`);
           } catch (error) {
             console.error(`Failed to send push to driver ${driverId}:`, error);
             // Deactivate invalid tokens
-            if (error instanceof Error && error.message.includes('invalid')) {
+            if (error instanceof Error && (error.message.includes('invalid') || error.message.includes('not-registered'))) {
               await token.update({ is_active: false });
+              console.log(`Deactivated invalid token for driver ${driverId}`);
             }
           }
         })

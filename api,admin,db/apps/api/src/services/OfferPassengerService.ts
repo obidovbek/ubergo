@@ -23,6 +23,8 @@ import PushService from './PushService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
+import type { Language } from '../i18n/types.js';
+import { isWithinMinutes, hasArrived } from '../utils/geo.js';
 
 interface JoinOfferData {
   offer_id: number;
@@ -92,17 +94,26 @@ export class OfferPassengerService {
       throw new AppError(t('offers.cannotJoinOwn', language), 400);
     }
 
-    // Check if passenger already joined
+    // Check if passenger already has any join request (regardless of status)
     const existingJoin = await OfferPassenger.findOne({
       where: {
         offer_id,
-        passenger_id: passengerId,
-        status: { [Op.in]: ['pending', 'confirmed'] }
+        passenger_id: passengerId
       }
     });
 
     if (existingJoin) {
-      throw new AppError(t('offers.alreadyJoined', language), 400);
+      // Handle different statuses with appropriate error messages
+      if (existingJoin.status === 'pending' || existingJoin.status === 'confirmed') {
+        throw new AppError(t('offers.alreadyJoined', language), 400);
+      } else if (existingJoin.status === 'rejected') {
+        throw new AppError(t('offers.cannotJoinAfterRejected', language), 400);
+      } else if (existingJoin.status === 'cancelled') {
+        throw new AppError(t('offers.cannotJoinAfterCancelled', language), 400);
+      } else {
+        // For any other status, use generic message
+        throw new AppError(t('offers.alreadyJoined', language), 400);
+      }
     }
 
     // Check if enough seats available
@@ -154,8 +165,13 @@ export class OfferPassengerService {
     // Send push notification to driver
     await this.notifyDriver(offer.user_id, {
       type: 'passenger_join_request',
-      title: 'New Passenger Request',
-      body: `${passenger?.display_name || 'A passenger'} wants to join your ride from ${offer.from_text} to ${offer.to_text}`,
+      title: t('push.passengerJoinRequestTitle', language),
+      body: t('push.passengerJoinRequestBody', language, {
+        name: passenger?.display_name || passenger?.first_name || (language === 'uz' ? 'Yo\'lovchi' : language === 'ru' ? 'Пассажир' : 'Passenger'),
+        from: offer.from_text,
+        to: offer.to_text,
+        seats: String(seats_requested)
+      }),
       data: {
         type: 'passenger_join_request',
         offer_id: String(offer_id),
@@ -163,7 +179,7 @@ export class OfferPassengerService {
         passenger_join_id: passengerJoin.id,
         seats_requested: String(seats_requested)
       }
-    });
+    }, language);
 
     // Audit log
     if (req) {
@@ -254,17 +270,23 @@ export class OfferPassengerService {
       seats_free: offer.seats_free - passengerJoin.seats_requested
     });
 
+    // Get passenger language preference (default to uz)
+    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to passenger
     await this.notifyPassenger(passengerJoin.passenger_id, {
       type: 'join_confirmed',
-      title: 'Ride Confirmed!',
-      body: `Your request to join the ride from ${offer.from_text} to ${offer.to_text} has been confirmed`,
+      title: t('push.joinConfirmedTitle', passengerLanguage),
+      body: t('push.joinConfirmedBody', passengerLanguage, {
+        from: offer.from_text,
+        to: offer.to_text
+      }),
       data: {
         type: 'join_confirmed',
         offer_id: String(offer.id),
         passenger_join_id: passengerJoin.id
       }
-    });
+    }, passengerLanguage);
 
     // Audit log
     if (req) {
@@ -327,18 +349,24 @@ export class OfferPassengerService {
       rejected_at: new Date()
     });
 
+    // Get passenger language preference (default to uz)
+    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to passenger
     await this.notifyPassenger(passengerJoin.passenger_id, {
       type: 'join_rejected',
-      title: 'Request Declined',
-      body: `Your request to join the ride from ${offer.from_text} to ${offer.to_text} was declined`,
+      title: t('push.joinRejectedTitle', passengerLanguage),
+      body: t('push.joinRejectedBody', passengerLanguage, {
+        from: offer.from_text,
+        to: offer.to_text
+      }),
       data: {
         type: 'join_rejected',
         offer_id: String(offer.id),
         passenger_join_id: passengerJoin.id,
         rejection_reason: rejection_reason || ''
       }
-    });
+    }, passengerLanguage);
 
     // Audit log
     if (req) {
@@ -398,18 +426,27 @@ export class OfferPassengerService {
       });
     }
 
+    // Get driver language preference (default to uz)
+    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notification to driver
     await this.notifyDriver(offer.user_id, {
       type: 'passenger_cancelled',
-      title: 'Passenger Cancelled',
-      body: `A passenger cancelled their ${wasConfirmed ? 'confirmed' : 'pending'} request for your ride from ${offer.from_text} to ${offer.to_text}`,
+      title: t('push.passengerCancelledTitle', driverLanguage),
+      body: t('push.passengerCancelledBody', driverLanguage, {
+        from: offer.from_text,
+        to: offer.to_text,
+        status: wasConfirmed 
+          ? (driverLanguage === 'uz' ? 'Tasdiqlangan' : driverLanguage === 'ru' ? 'Подтвержденный' : 'Confirmed')
+          : (driverLanguage === 'uz' ? 'Kutilayotgan' : driverLanguage === 'ru' ? 'Ожидающий' : 'Pending')
+      }),
       data: {
         type: 'passenger_cancelled',
         offer_id: String(offer.id),
         passenger_join_id: passengerJoin.id,
         was_confirmed: String(wasConfirmed)
       }
-    });
+    }, driverLanguage);
 
     // Audit log
     if (req) {
@@ -512,6 +549,138 @@ export class OfferPassengerService {
   }
 
   /**
+   * Update driver location and check proximity to send arrival notifications
+   */
+  static async updateDriverLocation(
+    driverId: number,
+    passengerJoinId: string,
+    driverLat: number,
+    driverLon: number,
+    req?: Request
+  ) {
+    const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+
+    // Get passenger join with offer details
+    const passengerJoin = await OfferPassenger.findByPk(passengerJoinId, {
+      include: [
+        {
+          model: DriverOffer,
+          as: 'offer',
+          required: true,
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'first_name', 'last_name', 'display_name']
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'passenger',
+          attributes: ['id', 'first_name', 'last_name', 'display_name']
+        }
+      ]
+    });
+
+    if (!passengerJoin) {
+      throw new AppError(t('offers.joinRequestNotFound', language), 404);
+    }
+
+    const offer = (passengerJoin as any).offer as DriverOffer;
+
+    // Verify driver owns the offer
+    if (offer.user_id !== driverId) {
+      throw new AppError(t('offers.noPermissionConfirm', language), 403);
+    }
+
+    // Only check for confirmed bookings
+    if (passengerJoin.status !== 'confirmed') {
+      throw new AppError('Can only update location for confirmed bookings', 400);
+    }
+
+    // Check if offer has pickup coordinates
+    if (!offer.from_lat || !offer.from_lng) {
+      throw new AppError('Pickup location coordinates not available', 400);
+    }
+
+    // Get passenger language preference (default to uz)
+    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+
+    // Check if driver has arrived (within 200 meters)
+    if (hasArrived(driverLat, driverLon, offer.from_lat, offer.from_lng)) {
+      // Only send arrival notification if not already sent
+      if (!passengerJoin.driver_arrived_at) {
+        await passengerJoin.update({
+          driver_arrived_at: new Date()
+        });
+
+        // Send arrival notification to passenger
+        await this.notifyPassenger(passengerJoin.passenger_id, {
+          type: 'driver_arrived',
+          title: t('push.driverArrivedTitle', passengerLanguage),
+          body: t('push.driverArrivedBody', passengerLanguage, {
+            driverName: (offer as any).user?.display_name || (offer as any).user?.first_name || (passengerLanguage === 'uz' ? 'Haydovchi' : passengerLanguage === 'ru' ? 'Водитель' : 'Driver'),
+            location: offer.from_text
+          }),
+          data: {
+            type: 'driver_arrived',
+            offer_id: String(offer.id),
+            passenger_join_id: passengerJoin.id
+          }
+        }, passengerLanguage);
+      }
+    } else {
+      // Check if driver is within 10 minutes
+      const proximityCheck = isWithinMinutes(
+        driverLat,
+        driverLon,
+        offer.from_lat,
+        offer.from_lng,
+        10
+      );
+
+      if (proximityCheck.within && !passengerJoin.driver_10min_notified_at) {
+        // Send 10-minute notification
+        await passengerJoin.update({
+          driver_10min_notified_at: new Date()
+        });
+
+        // Send 10-minute notification to passenger
+        await this.notifyPassenger(passengerJoin.passenger_id, {
+          type: 'driver_10min_away',
+          title: t('push.driver10MinAwayTitle', passengerLanguage),
+          body: t('push.driver10MinAwayBody', passengerLanguage, {
+            driverName: (offer as any).user?.display_name || (offer as any).user?.first_name || (passengerLanguage === 'uz' ? 'Haydovchi' : passengerLanguage === 'ru' ? 'Водитель' : 'Driver'),
+            minutes: String(proximityCheck.estimatedMinutes)
+          }),
+          data: {
+            type: 'driver_10min_away',
+            offer_id: String(offer.id),
+            passenger_join_id: passengerJoin.id,
+            estimated_minutes: String(proximityCheck.estimatedMinutes)
+          }
+        }, passengerLanguage);
+      }
+    }
+
+    // Reload to get updated values
+    await passengerJoin.reload();
+
+    return {
+      arrived: !!passengerJoin.driver_arrived_at,
+      within_10min: !!passengerJoin.driver_10min_notified_at,
+      estimated_minutes: isWithinMinutes(
+        driverLat,
+        driverLon,
+        offer.from_lat,
+        offer.from_lng,
+        10
+      ).estimatedMinutes
+    };
+  }
+
+  /**
    * Send push notification to driver
    */
   private static async notifyDriver(
@@ -521,18 +690,25 @@ export class OfferPassengerService {
       title: string;
       body: string;
       data: Record<string, string>;
-    }
+    },
+    language: Language = 'uz'
   ) {
     try {
-      // Get driver's push tokens
+      // Get driver's push tokens (only driver app tokens)
       const tokens = await PushToken.findAll({
-        where: { user_id: driverId, is_active: true }
+        where: { 
+          user_id: driverId, 
+          app: 'driver',
+          is_active: true 
+        }
       });
 
       if (tokens.length === 0) {
-        console.log(`No active push tokens found for driver ${driverId}`);
+        console.log(`No active push tokens found for driver ${driverId} (driver app)`);
         return;
       }
+
+      console.log(`Sending push notification to driver ${driverId} (${tokens.length} tokens)`);
 
       // Send to all tokens
       await Promise.all(
@@ -544,11 +720,13 @@ export class OfferPassengerService {
               body: notification.body,
               data: notification.data
             });
+            console.log(`✅ Push sent to driver ${driverId} token: ${token.token.substring(0, 20)}...`);
           } catch (error) {
             console.error(`Failed to send push to driver ${driverId}:`, error);
             // Deactivate invalid tokens
-            if (error instanceof Error && error.message.includes('invalid')) {
+            if (error instanceof Error && (error.message.includes('invalid') || error.message.includes('not-registered'))) {
               await token.update({ is_active: false });
+              console.log(`Deactivated invalid token for driver ${driverId}`);
             }
           }
         })
@@ -568,18 +746,25 @@ export class OfferPassengerService {
       title: string;
       body: string;
       data: Record<string, string>;
-    }
+    },
+    language: Language = 'uz'
   ) {
     try {
-      // Get passenger's push tokens
+      // Get passenger's push tokens (only user app tokens)
       const tokens = await PushToken.findAll({
-        where: { user_id: passengerId, is_active: true }
+        where: { 
+          user_id: passengerId, 
+          app: 'user',
+          is_active: true 
+        }
       });
 
       if (tokens.length === 0) {
-        console.log(`No active push tokens found for passenger ${passengerId}`);
+        console.log(`No active push tokens found for passenger ${passengerId} (user app)`);
         return;
       }
+
+      console.log(`Sending push notification to passenger ${passengerId} (${tokens.length} tokens)`);
 
       // Send to all tokens
       await Promise.all(
@@ -591,11 +776,13 @@ export class OfferPassengerService {
               body: notification.body,
               data: notification.data
             });
+            console.log(`✅ Push sent to passenger ${passengerId} token: ${token.token.substring(0, 20)}...`);
           } catch (error) {
             console.error(`Failed to send push to passenger ${passengerId}:`, error);
             // Deactivate invalid tokens
-            if (error instanceof Error && error.message.includes('invalid')) {
+            if (error instanceof Error && (error.message.includes('invalid') || error.message.includes('not-registered'))) {
               await token.update({ is_active: false });
+              console.log(`Deactivated invalid token for passenger ${passengerId}`);
             }
           }
         })

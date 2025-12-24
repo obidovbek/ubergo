@@ -188,6 +188,8 @@ export default {
     driverJoinRequestNotFound: 'Запрос водителя на присоединение не найден',
     noPermissionViewDrivers: 'У вас нет разрешения на просмотр водителей для этого объявления',
     cannotCancelConfirmed: 'Нельзя отменить подтвержденный запрос',
+    cannotJoinAfterRejected: 'Вы не можете присоединиться к этому объявлению, так как ваш предыдущий запрос был отклонен',
+    cannotJoinAfterCancelled: 'Вы не можете присоединиться к этому объявлению, так как вы отменили свой предыдущий запрос',
   },
 
   // Driver License specific messages
@@ -224,6 +226,55 @@ export default {
     photoFormatInvalid: 'Формат фото неверен',
     photoSizeTooLarge: 'Размер фото слишком большой',
     photoRequired: 'Фото обязательно',
+  },
+
+  // Push notification messages
+  push: {
+    // Passenger join request (to driver)
+    passengerJoinRequestTitle: '🎯 Новый запрос пассажира',
+    passengerJoinRequestBody: '{name} хочет присоединиться к вашей поездке из {from} в {to}. Запрашивает {seats} место(а).',
+    
+    // Join confirmed (to passenger)
+    joinConfirmedTitle: '✅ Запрос подтвержден!',
+    joinConfirmedBody: 'Поздравляем! Ваша поездка из {from} в {to} подтверждена. Свяжитесь с водителем.',
+    
+    // Join rejected (to passenger)
+    joinRejectedTitle: '❌ Запрос отклонен',
+    joinRejectedBody: 'К сожалению, ваш запрос на поездку из {from} в {to} был отклонен. Проверьте другие предложения.',
+    
+    // Passenger cancelled (to driver)
+    passengerCancelledTitle: '⚠️ Пассажир отменил',
+    passengerCancelledBody: 'Пассажир отменил вашу поездку из {from} в {to}. {status} запрос был отменен.',
+    
+    // Driver join request (to passenger)
+    driverJoinRequestTitle: '🚗 Новое предложение водителя',
+    driverJoinRequestBody: '{name} хочет отвезти вас из {from} в {to}. Цена: {price} {currency}',
+    
+    // Driver request confirmed (to driver)
+    driverRequestConfirmedTitle: '✅ Предложение принято!',
+    driverRequestConfirmedBody: 'Отлично! Ваша поездка из {from} в {to} подтверждена. Свяжитесь с пассажиром.',
+    
+    // Driver request rejected (to driver)
+    driverRequestRejectedTitle: '❌ Предложение отклонено',
+    driverRequestRejectedBody: 'К сожалению, ваше предложение на поездку из {from} в {to} было отклонено. Проверьте другие предложения.',
+    
+    // Driver request cancelled (to passenger)
+    driverRequestCancelledTitle: '⚠️ Водитель отменил',
+    driverRequestCancelledBody: 'Водитель отменил вашу поездку из {from} в {to}. Найдите других водителей.',
+    
+    // Offer cancelled by driver (to passenger)
+    offerCancelledByDriverTitle: '❌ Поездка отменена',
+    offerCancelledByDriverBody: 'К сожалению, ваша поездка из {from} в {to} была отменена водителем. Найдите другие предложения.',
+    
+    // Offer cancelled by passenger (to driver)
+    offerCancelledByPassengerTitle: '❌ Поездка отменена',
+    offerCancelledByPassengerBody: 'Пассажир отменил поездку из {from} в {to}. Проверьте другие предложения.',
+    
+    // Driver arrival notifications (to passenger)
+    driver10MinAwayTitle: '⏰ Водитель приближается',
+    driver10MinAwayBody: '{driverName} прибудет в течение {minutes} минут. Пожалуйста, будьте готовы!',
+    driverArrivedTitle: '✅ Водитель прибыл',
+    driverArrivedBody: '{driverName} ждет вас в {location}. Пожалуйста, выходите!',
   },
 };
 

@@ -189,6 +189,8 @@ export default {
     driverJoinRequestNotFound: 'Haydovchi qo\'shilish so\'rovi topilmadi',
     noPermissionViewDrivers: 'Sizda bu e\'lon uchun haydovchilarni ko\'rish uchun ruxsat yo\'q',
     cannotCancelConfirmed: 'Tasdiqlangan so\'rovni bekor qilish mumkin emas',
+    cannotJoinAfterRejected: 'Siz bu e\'longa qo\'shila olmaysiz, chunki sizning oldingi so\'rovingiz rad etilgan',
+    cannotJoinAfterCancelled: 'Siz bu e\'longa qo\'shila olmaysiz, chunki siz o\'z so\'rovingizni bekor qilgansiz',
   },
 
   // Driver License specific messages
@@ -225,6 +227,55 @@ export default {
     photoFormatInvalid: 'Rasm formati noto\'g\'ri',
     photoSizeTooLarge: 'Rasm hajmi juda katta',
     photoRequired: 'Rasm majburiy',
+  },
+
+  // Push notification messages
+  push: {
+    // Passenger join request (to driver)
+    passengerJoinRequestTitle: '🎯 Yangi yo\'lovchi so\'rovi',
+    passengerJoinRequestBody: '{name} sizning {from} dan {to} ga safaringizga qo\'shilmoqchi. {seats} ta o\'rin so\'rayapti.',
+    
+    // Join confirmed (to passenger)
+    joinConfirmedTitle: '✅ So\'rovingiz tasdiqlandi!',
+    joinConfirmedBody: 'Tabriklaymiz! {from} dan {to} ga safaringiz tasdiqlandi. Haydovchi bilan bog\'laning.',
+    
+    // Join rejected (to passenger)
+    joinRejectedTitle: '❌ So\'rovingiz rad etildi',
+    joinRejectedBody: 'Afsus, {from} dan {to} ga safaringizga so\'rovingiz rad etildi. Boshqa takliflarni ko\'rib chiqing.',
+    
+    // Passenger cancelled (to driver)
+    passengerCancelledTitle: '⚠️ Yo\'lovchi bekor qildi',
+    passengerCancelledBody: 'Yo\'lovchi {from} dan {to} ga safaringizdan chiqdi. {status} so\'rov bekor qilindi.',
+    
+    // Driver join request (to passenger)
+    driverJoinRequestTitle: '🚗 Yangi haydovchi taklifi',
+    driverJoinRequestBody: '{name} sizni {from} dan {to} ga olib borishni taklif qilmoqda. Narx: {price} {currency}',
+    
+    // Driver request confirmed (to driver)
+    driverRequestConfirmedTitle: '✅ Taklifingiz qabul qilindi!',
+    driverRequestConfirmedBody: 'Ajoyib! {from} dan {to} ga safaringiz tasdiqlandi. Yo\'lovchi bilan bog\'laning.',
+    
+    // Driver request rejected (to driver)
+    driverRequestRejectedTitle: '❌ Taklifingiz rad etildi',
+    driverRequestRejectedBody: 'Afsus, {from} dan {to} ga safaringizga taklifingiz rad etildi. Boshqa takliflarni ko\'rib chiqing.',
+    
+    // Driver request cancelled (to passenger)
+    driverRequestCancelledTitle: '⚠️ Haydovchi bekor qildi',
+    driverRequestCancelledBody: 'Haydovchi {from} dan {to} ga safaringizdan chiqdi. Boshqa haydovchilarni qidiring.',
+    
+    // Offer cancelled by driver (to passenger)
+    offerCancelledByDriverTitle: '❌ Safar bekor qilindi',
+    offerCancelledByDriverBody: 'Afsus, {from} dan {to} ga safaringiz haydovchi tomonidan bekor qilindi. Boshqa takliflarni qidiring.',
+    
+    // Offer cancelled by passenger (to driver)
+    offerCancelledByPassengerTitle: '❌ Safar bekor qilindi',
+    offerCancelledByPassengerBody: 'Yo\'lovchi {from} dan {to} ga safaringizni bekor qildi. Boshqa takliflarni ko\'rib chiqing.',
+    
+    // Driver arrival notifications (to passenger)
+    driver10MinAwayTitle: '⏰ Haydovchi yaqinlashmoqda',
+    driver10MinAwayBody: '{driverName} {minutes} daqiqa ichida yetib keladi. Tayyor bo\'ling!',
+    driverArrivedTitle: '✅ Haydovchi yetib keldi',
+    driverArrivedBody: '{driverName} {location} da sizni kutmoqda. Tezroq chiqing!',
   },
 };
 

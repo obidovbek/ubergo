@@ -11,6 +11,7 @@ import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
+import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
 
 interface LoginCredentials {
   email: string;
@@ -56,6 +57,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     initializeAuth();
   }, []);
+
+  // Register push token when authenticated (DRIVER APP)
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    if (state.token) {
+      registerPushTokenWithBackend(state.token).catch((error) => {
+        console.error('Failed to register push token:', error);
+      });
+      unsubscribe = subscribeTokenRefresh(state.token);
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [state.token]);
 
   // Refresh user data when app comes to foreground
   useEffect(() => {
@@ -149,12 +164,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               type: AUTH_ACTIONS.LOGIN,
               payload: { user: serverUser, token },
             });
+
+            // Register push token with backend (DRIVER APP)
+            registerPushTokenWithBackend(token).catch((error) => {
+              console.error('Failed to register push token on init:', error);
+            });
           } else {
             console.warn('AuthContext: Unexpected response format, using stored user');
             // Fallback to stored user if server response is unexpected
             dispatch({
               type: AUTH_ACTIONS.LOGIN,
               payload: { user, token },
+            });
+
+            // Register push token with backend (DRIVER APP)
+            registerPushTokenWithBackend(token).catch((error) => {
+              console.error('Failed to register push token on init:', error);
             });
           }
         } catch (apiError) {
@@ -163,6 +188,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           dispatch({
             type: AUTH_ACTIONS.LOGIN,
             payload: { user, token },
+          });
+
+          // Register push token with backend (DRIVER APP)
+          registerPushTokenWithBackend(token).catch((error) => {
+            console.error('Failed to register push token on init:', error);
           });
         }
       }
@@ -336,6 +366,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({
         type: AUTH_ACTIONS.LOGIN,
         payload: { user: user as any, token: access },
+      });
+
+      // Register push token with backend after successful login (DRIVER APP)
+      registerPushTokenWithBackend(access).catch((error) => {
+        console.error('Failed to register push token after OTP verification:', error);
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to verify OTP';

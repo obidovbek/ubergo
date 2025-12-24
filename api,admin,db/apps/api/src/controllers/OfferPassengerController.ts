@@ -170,5 +170,41 @@ export class OfferPassengerController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/driver/passengers/:id/location
+   * Driver updates their location for arrival tracking
+   */
+  static async updateDriverLocation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.userId;
+      
+      if (!userId) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      const { id } = req.params;
+      const { lat, lng } = req.body;
+
+      if (!lat || !lng) {
+        throw new AppError('Latitude and longitude are required', 400);
+      }
+
+      const result = await OfferPassengerService.updateDriverLocation(
+        userId,
+        id,
+        parseFloat(lat),
+        parseFloat(lng),
+        req
+      );
+
+      return successResponse(res, { 
+        ...result,
+        message: 'Location updated successfully' 
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 

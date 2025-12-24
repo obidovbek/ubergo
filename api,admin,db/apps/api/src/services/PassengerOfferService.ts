@@ -21,6 +21,9 @@ import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
 import type { Request } from 'express';
+import { getLanguageFromHeaders } from '../i18n/config.js';
+import { t } from '../i18n/translator.js';
+import type { Language } from '../i18n/types.js';
 
 interface CreatePassengerOfferData {
   from_text: string;
@@ -355,20 +358,26 @@ export class PassengerOfferService {
 
     await offer.update({ status: 'cancelled' });
 
+    // Get driver language preference (default to uz)
+    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    
     // Send push notifications to all interested drivers
     if (interestedDrivers.length > 0) {
       await Promise.all(
         interestedDrivers.map(async (driverJoin) => {
           await this.notifyDriver(driverJoin.driver_id, {
             type: 'offer_cancelled_by_passenger',
-            title: 'Ride Request Cancelled',
-            body: `The ride request from ${offer.from_text} to ${offer.to_text} has been cancelled`,
+            title: t('push.offerCancelledByPassengerTitle', driverLanguage),
+            body: t('push.offerCancelledByPassengerBody', driverLanguage, {
+              from: offer.from_text,
+              to: offer.to_text
+            }),
             data: {
               type: 'offer_cancelled_by_passenger',
               offer_id: String(offer.id),
               driver_join_id: driverJoin.id
             }
-          });
+          }, driverLanguage);
         })
       );
     }
@@ -604,18 +613,25 @@ export class PassengerOfferService {
       title: string;
       body: string;
       data: Record<string, string>;
-    }
+    },
+    language: Language = 'uz'
   ) {
     try {
-      // Get driver's push tokens
+      // Get driver's push tokens (only driver app tokens)
       const tokens = await PushToken.findAll({
-        where: { user_id: driverId, is_active: true }
+        where: { 
+          user_id: driverId, 
+          app: 'driver',
+          is_active: true 
+        }
       });
 
       if (tokens.length === 0) {
-        console.log(`No active push tokens found for driver ${driverId}`);
+        console.log(`No active push tokens found for driver ${driverId} (driver app)`);
         return;
       }
+
+      console.log(`Sending push notification to driver ${driverId} (${tokens.length} tokens)`);
 
       // Send to all tokens
       await Promise.all(
@@ -627,11 +643,13 @@ export class PassengerOfferService {
               body: notification.body,
               data: notification.data
             });
+            console.log(`✅ Push sent to driver ${driverId} token: ${token.token.substring(0, 20)}...`);
           } catch (error) {
             console.error(`Failed to send push to driver ${driverId}:`, error);
             // Deactivate invalid tokens
-            if (error instanceof Error && error.message.includes('invalid')) {
+            if (error instanceof Error && (error.message.includes('invalid') || error.message.includes('not-registered'))) {
               await token.update({ is_active: false });
+              console.log(`Deactivated invalid token for driver ${driverId}`);
             }
           }
         })
