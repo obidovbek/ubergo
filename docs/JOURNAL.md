@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-07-21 (3) — OR-002 / T-012 deleted-user logout
+- **Task:** Owner security bug OR-002 — deleted passenger/driver still gets into the app
+- **Done:** Full fix (App + API). API `authenticate` middleware now verifies the user still
+  exists (401 if deleted). Both apps attach the HTTP status from `/auth/me` and, on 401/403/404,
+  clear the cache and return to the login/OTP screen (driver also on foreground). Kept cache
+  fallback for network errors (offline). `tsc`: no new errors (backend 290 = same as HEAD).
+- **Decisions:** App + API (owner-approved). Blocked/pending_delete stay on BlockedScreen; only
+  deleted → login. DB errors pass through (no false-logout on outage).
+- **Problems:** Backend has a big pre-existing `tsc` backlog (290 errors) — runs on tsx in dev;
+  out of scope. User app has no foreground-refresh handler (reopen path covers it).
+- **Next:** Owner device test (login → admin delete → reopen → login); then commit.
+- **Commit:** proposed `fix(auth): log out deleted users + reject deleted tokens (OR-002)`
+
+---
+
+## 2026-07-21 (2) — OR-001 / T-011 OTP resume
+- **Task:** Owner bug OR-001 — OTP screen jumps to main menu after backgrounding
+- **Done:** Root-caused (app killed in background + no nav persistence). Implemented a
+  targeted fix in BOTH apps: `utils/pendingOtp.ts` + `AuthNavigator` resume-to-OTP +
+  save/clear in the OTP screen + clear on logout. `tsc` clean for all changed files.
+- **Decisions:** Both apps, targeted persistence (not full nav-state). Deferred the
+  splash/NavigationContainer refactor — not needed for this fix.
+- **Problems:** Can't run the RN apps headless here; behavior needs a device test.
+  ESLint isn't configured in either app (no flat config) — used `tsc` instead.
+- **Next:** Owner rebuilds an app and verifies resume; then commit + mark done.
+- **Commit:** proposed `fix(otp): resume OTP screen after app is backgrounded (OR-001)`
+
+---
+
 ## 2026-07-21
 - **Task:** Adopt the project-control-kit (CLAUDE.md + docs/ + slash commands)
 - **Done:** Installed `CLAUDE.md`, `docs/` (ARCHITECTURE, TODO, PLAN, JOURNAL), and

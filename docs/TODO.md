@@ -7,11 +7,19 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-001 (P1) Verify & finish passenger→offer join flow — passenger joins, driver
-  gets notified, driver confirms/rejects, passenger gets notified. Last commit says
-  "user joins to driver offer but **not checked**". → see `docs/PLAN.md`
+- [ ] T-011 (P1) **[OWNER OR-001]** OTP screen resets to main menu after the app is
+  backgrounded/killed — should resume the OTP screen. Affects driver + user apps.
+  **Fix implemented in both apps (tsc clean); awaiting owner device test.**
+  → see `docs/OWNER_REQUESTS.md`
+- [ ] T-012 (P1) **[OWNER OR-002]** Deleted user still gets into the app (cached token
+  trusted) — app must log out to the login/OTP screen; API must reject deleted tokens.
+  Affects driver + user apps + backend. **Fix implemented (App + API), tsc clean;
+  awaiting owner device test.** → see `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-001 (P1) Verify & finish passenger→offer join flow — passenger joins, driver
+  gets notified, driver confirms/rejects, passenger gets notified. Last commit says
+  "user joins to driver offer but **not checked**".
 - [ ] T-002 (P1) Driver offer wizard screen (mobile, 4 steps) — create/edit offer UI
   (`driver-app-standalone/screens/OfferWizardScreen.tsx`, currently missing)
 - [ ] T-003 (P2) Admin passengers page shows empty — registered passengers not listed

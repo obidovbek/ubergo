@@ -21,6 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
+import { savePendingOtp, clearPendingOtp } from '../utils/pendingOtp';
 
 const theme = createTheme('light');
 
@@ -46,6 +47,14 @@ export const OTPVerificationScreen: React.FC = () => {
       setDriverId(user.id.toString());
     }
   }, [user]);
+
+  // Remember we're on the OTP step so a background/app-kill resumes here with the
+  // phone prefilled, instead of dropping to the main menu (OR-001).
+  useEffect(() => {
+    if (phoneNumber || routeUserId) {
+      savePendingOtp({ phone: phoneNumber, userId: routeUserId });
+    }
+  }, [phoneNumber, routeUserId]);
 
   // Handle navigation after successful authentication
   // RootNavigator will switch from AuthNavigator to ProfileCompletionNavigator or MainNavigator
@@ -107,6 +116,8 @@ export const OTPVerificationScreen: React.FC = () => {
       
       console.log('OTP verified successfully');
       setVerificationSuccess(true);
+      // Verification done — don't resume the OTP screen anymore.
+      clearPendingOtp();
       showToast.success(t('common.success'), t('otpVerification.phoneVerified'));
       
       // Auth context will update and RootNavigator will automatically check
@@ -146,6 +157,7 @@ export const OTPVerificationScreen: React.FC = () => {
           t('otpVerification.errorNoAttemptsMessage')
         );
         
+        clearPendingOtp();
         setTimeout(() => {
           navigation.navigate('PhoneRegistration');
         }, 2000);
@@ -157,6 +169,17 @@ export const OTPVerificationScreen: React.FC = () => {
 
   const handleContinue = () => {
     handleVerify();
+  };
+
+  // The user wants to change the phone number. Clear the resume marker and go to
+  // phone registration — works whether OTP is a pushed screen or the resumed root.
+  const handleEditPhone = () => {
+    clearPendingOtp();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('PhoneRegistration');
+    }
   };
 
   const handleResendCode = async () => {
@@ -209,7 +232,7 @@ export const OTPVerificationScreen: React.FC = () => {
           <Text style={styles.label}>{t('userDetails.phone')}</Text>
           <View style={styles.infoValueContainer}>
             <Text style={styles.infoValue}>{phoneNumber}</Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={handleEditPhone}>
               <Text style={styles.editIcon}>✏️</Text>
             </TouchableOpacity>
           </View>

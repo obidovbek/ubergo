@@ -264,7 +264,12 @@ export const getCurrentUser = async (token: string) => {
     }
 
     if (!response.ok) {
-      throw new Error(data.message || `Failed to get user info: ${response.status} ${response.statusText}`);
+      // Surface the HTTP status so callers can tell "account deleted / token
+      // rejected" (401/403/404) apart from a network failure (OR-002).
+      const error: any = new Error(data.message || `Failed to get user info: ${response.status} ${response.statusText}`);
+      error.response = { status: response.status, data };
+      error.status = response.status;
+      throw error;
     }
 
     return data;

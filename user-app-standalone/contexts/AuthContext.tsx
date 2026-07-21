@@ -11,6 +11,7 @@ import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
 import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
+import { clearPendingOtp } from '../utils/pendingOtp';
 
 interface LoginCredentials {
   email: string;
@@ -110,8 +111,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               payload: { user, token },
             });
           }
-        } catch (error) {
-          // If status check fails, use stored user
+        } catch (error: any) {
+          const status = error?.response?.status ?? error?.status;
+          if (status === 401 || status === 403 || status === 404) {
+            // Account was deleted / token rejected — clear the cache and drop to the
+            // login screen instead of trusting the stored user (OR-002).
+            console.warn(`Account invalid on init (status ${status}), logging out`);
+            await Promise.all([
+              AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+              AsyncStorage.removeItem(STORAGE_KEYS.USER),
+              clearPendingOtp(),
+            ]);
+            return; // stay unauthenticated → AuthNavigator (login/OTP); `finally` clears loading
+          }
+          // Network/server error — keep the stored user so the app still works offline.
           console.warn('Failed to verify user status, using stored user:', error);
           dispatch({
             type: AUTH_ACTIONS.LOGIN,
@@ -223,6 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        clearPendingOtp(),
       ]);
 
       console.log('AuthContext: Dispatching logout action...');

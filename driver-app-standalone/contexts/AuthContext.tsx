@@ -12,6 +12,7 @@ import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
 import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
+import { clearPendingOtp } from '../utils/pendingOtp';
 
 interface LoginCredentials {
   email: string;
@@ -109,9 +110,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 payload: serverUser,
               });
             }
-          } catch (error) {
-            console.warn('AuthContext: Failed to refresh user data on foreground:', error);
-            // Don't throw error, just log it - app can continue with existing user data
+          } catch (error: any) {
+            const status = error?.response?.status ?? error?.status;
+            if (status === 401 || status === 403 || status === 404) {
+              // Account deleted while the app was open — log out to the login screen (OR-002).
+              console.warn(`AuthContext: Account invalid on foreground (status ${status}), logging out`);
+              await logout();
+            } else {
+              console.warn('AuthContext: Failed to refresh user data on foreground:', error);
+              // Don't throw error, just log it - app can continue with existing user data
+            }
           }
         }
       }
@@ -182,9 +190,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.error('Failed to register push token on init:', error);
             });
           }
-        } catch (apiError) {
-          console.warn('AuthContext: Failed to fetch current user from server, using stored user:', apiError);
-          // If API call fails, use stored user (might be offline)
+        } catch (apiError: any) {
+          const status = apiError?.response?.status ?? apiError?.status;
+          if (status === 401 || status === 403 || status === 404) {
+            // Account was deleted / token rejected — clear the cache and drop to the
+            // login screen instead of trusting the stored user (OR-002).
+            console.warn(`AuthContext: Account invalid on init (status ${status}), logging out`);
+            await Promise.all([
+              AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+              AsyncStorage.removeItem(STORAGE_KEYS.USER),
+              clearPendingOtp(),
+            ]);
+            return; // stay unauthenticated → AuthNavigator (login/OTP); `finally` clears loading
+          }
+
+          console.warn('AuthContext: Failed to fetch current user (network?), using stored user:', apiError);
+          // Network/server error — keep the stored user so the app still works offline.
           dispatch({
             type: AUTH_ACTIONS.LOGIN,
             payload: { user, token },
@@ -302,6 +323,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        clearPendingOtp(),
       ]);
 
       console.log('AuthContext: Dispatching logout action...');
