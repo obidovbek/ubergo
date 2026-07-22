@@ -13,7 +13,8 @@
       "Bash(npx --no-install eslint --version)",
       "Bash(npx tsc *)",
       "Bash(grep -E \"middleware[/\\\\\\\\\\\\\\\\]auth\")",
-      "Bash(grep -E \"contexts[/\\\\\\\\\\\\\\\\]AuthContext|api[/\\\\\\\\\\\\\\\\]auth\\\\.ts\")"
+      "Bash(grep -E \"contexts[/\\\\\\\\\\\\\\\\]AuthContext|api[/\\\\\\\\\\\\\\\\]auth\\\\.ts\")",
+      "PowerShell(git add -A)"
     ]
   }
 }

@@ -50,20 +50,35 @@ export const OTPVerificationScreen: React.FC = () => {
   }, [phoneNumber]);
 
   const handleOtpChange = (text: string, index: number) => {
-    // Only allow numbers
-    if (text && !/^\d+$/.test(text)) return;
+    // Keep digits only (ignore any non-numeric input)
+    const digits = text.replace(/\D/g, '');
+    if (text && !digits) return;
+
+    // SMS autofill / paste (OR-003): the OS can drop the whole code into one box.
+    // Spread it across the 4 boxes and auto-submit.
+    if (digits.length > 1) {
+      const filled = ['', '', '', ''];
+      for (let i = 0; i < 4; i++) filled[i] = digits[i] ?? '';
+      setOtp(filled);
+      const lastIndex = Math.min(digits.length, 4) - 1;
+      inputRefs.current[lastIndex]?.focus();
+      if (digits.length >= 4) {
+        handleVerify(filled.join(''));
+      }
+      return;
+    }
 
     const newOtp = [...otp];
-    newOtp[index] = text;
+    newOtp[index] = digits;
     setOtp(newOtp);
 
     // Auto-focus next input
-    if (text && index < 3) {
+    if (digits && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
 
     // Auto-submit when all digits entered
-    const newOtpCode = [...newOtp].join('');
+    const newOtpCode = newOtp.join('');
     if (newOtpCode.length === 4) {
       handleVerify(newOtpCode);
     }
@@ -234,8 +249,15 @@ export const OTPVerificationScreen: React.FC = () => {
                     onChangeText={(text) => handleOtpChange(text, index)}
                     onKeyPress={(e) => handleKeyPress(e, index)}
                     keyboardType="number-pad"
-                    maxLength={1}
+                    // First box accepts the full code so an Android SMS autofill dump
+                    // (e.g. "1234") isn't truncated; handleOtpChange spreads it (OR-003).
+                    maxLength={index === 0 ? 4 : 1}
                     selectTextOnFocus
+                    // OTP autofill: iOS offers the code above the keyboard; Android
+                    // autofills it into the first box.
+                    textContentType="oneTimeCode"
+                    autoComplete={index === 0 ? 'sms-otp' : 'off'}
+                    importantForAutofill="yes"
                   />
                   <View
                     style={[

@@ -12,6 +12,7 @@
 |----|--------|-----|-----------------|-----------|
 | OR-001 | 🔨 in progress | driver + user apps | OTP screen loses its place → jumps to main menu after backgrounding | T-011 |
 | OR-002 | 🔨 in progress | driver + user + API | Deleted user still gets into the app (cached token trusted) → must return to login | T-012 |
+| OR-003 | 🔨 in progress | user app | Auto-read the OTP SMS so the code fills itself | T-013 |
 
 ---
 
@@ -97,3 +98,65 @@ Admin delete is a **hard delete** (`user.destroy()` in `AdminPassengerService.de
 - App `contexts/AuthContext.tsx` (both): on 401/403/404 during init → clears the cache and drops
   to the login/OTP screen (keeps the cache only on network errors); driver also handles it on
   foreground. Owner still needs to confirm on device (log in → delete in admin → reopen → login).
+
+---
+
+## OR-003 — Auto-read the OTP SMS (code fills itself)
+
+**Reported:** 2026-07-21 · **App:** user app (+ API/Eskiz if full) · **Board:** T-013
+
+**Original (Uzbek):**
+> "Bu yerda smsni òzi oqidigan qikish kerak pasida qanaqadir aji buji xarfli kod
+> kesa òzi oqiyverarkanu shunaqa"
+
+**Translation:**
+> Here we should make it auto-read the SMS. If the code comes with some kind of
+> gibberish lettered string at the end, [Android] reads it by itself — like that.
+
+**Findings (from code):**
+- The OTP SMS text is **hardcoded** in `OtpService.sendSms`:
+  `Код верификации для входа к мобильному приложению UbexGo: ${code}` (from `4546`, via Eskiz).
+  This exactly matches the **approved Eskiz template** (screenshot) — changing it needs a NEW
+  approved template.
+- Applies to the **user app** (it receives the SMS). The **driver app** gets its code via a
+  **push to the user app**, so SMS auto-read doesn't apply to the driver app the same way.
+- The "gibberish lettered code" the owner means = the **11-char app hash** that Android's
+  **SMS Retriever API** requires at the end of the SMS to auto-deliver it to the app.
+
+**Two options (owner to choose) — see `docs/PLAN.md` (T-013):**
+- **A — one-tap autofill (lightweight):** add `autoComplete="sms-otp"` (Android) +
+  `textContentType="oneTimeCode"` (iOS) to the user-app OTP input, and accept the full code
+  when the OS dumps it in. No Eskiz change, no native module. Usually one tap, not guaranteed
+  zero-tap.
+- **B — full auto-read (SMS Retriever, zero taps):** native module in the user app + append the
+  app hash to the SMS. Requires: backend appends the hash (env), a **new Eskiz template approved**
+  with the hash, and the hash must match the release signing key. Bigger job + external dependency.
+- Recommendation: ship **A** now; do **B** if the owner wants fully automatic (owner handles the
+  Eskiz template re-approval; hash provided after the module is added).
+
+**Decision (2026-07-21):** Owner chose **Option A** (one-tap autofill now). B deferred.
+
+**Option A (implemented 2026-07-21):** `user-app-standalone/screens/OTPVerificationScreen.tsx` —
+added `textContentType="oneTimeCode"` + `importantForAutofill="yes"` to the OTP inputs,
+`autoComplete="sms-otp"` + `maxLength={4}` on the first box, and `handleOtpChange` spreads a
+multi-digit autofill dump across the 4 boxes and auto-submits. tsc clean. **Keep this — it helps
+iOS.**
+
+**Device test result (2026-07-21, Samsung S24 / SM_S928U1): Android did NOT auto-fill.** Expected —
+`autoComplete="sms-otp"` is reliable on iOS but not on Android (needs Gboard + Google autofill;
+Samsung Keyboard won't). There is **no pure-JS Android auto-read**; Android needs a native Google
+API. Next-step options (both need a native dependency + rebuild):
+- **A.5 — SMS User Consent API:** one-tap "allow read" dialog → auto-fills. **No Eskiz change,
+  no hash.** Reliable on Android. ← recommended.
+- **B — SMS Retriever API:** zero-tap, but needs the 11-char app hash → a NEW approved Eskiz
+  template.
+
+**Decision (2026-07-21, final):** Owner chose **B — SMS Retriever (hash)** — zero-tap, no read
+dialog, no SMS permission (the seamless, standard approach). Not yet implemented. Plan of record
+in `docs/PLAN.md` (T-013):
+- **Claude:** add the SMS Retriever native module to the user app (verify RN 0.81 New-Arch compat
+  first), wire the listener in `OTPVerificationScreen`, print the app hash (debug + release), and
+  append the hash to the OTP SMS behind a new `ESKIZ_OTP_APP_HASH` env in `OtpService.sendSms`.
+- **Owner:** register + get approved a new Eskiz template that includes the hash line; set the env.
+- ⚠️ Watch the **140-byte SMS limit** (current Cyrillic text is byte-heavy) and that the **release**
+  hash is what production SMS must contain. Keep the shipped Option A props (they help iOS).

@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-07-21 (5) — OR-003 / T-013 decision + HANDOFF
+- **Task:** OR-003 — decide the OTP auto-read approach; hand off to next session
+- **Done:** Shipped Option A (JS autofill). Device-tested on Samsung S24 → **Android did NOT
+  auto-fill** (expected JS limitation; iOS still benefits). Explained the native options.
+- **Decisions:** Owner chose the **SMS Retriever (hash)** path — zero-tap, no read dialog, no SMS
+  permission (over User Consent, which pops a dialog each time). Plan of record written in PLAN.md.
+- **Problems / watch-outs for next session:** (1) RN 0.81 **New Architecture** compat of the SMS
+  lib — verify before wiring. (2) SMS Retriever needs the message **≤140 bytes** — current Cyrillic
+  text is byte-heavy; measure with the hash. (3) **release** hash (not debug) is what prod SMS needs.
+- **Next (new chat / /start-day):** PLAN.md Step 1 — add the SMS Retriever module to the user app
+  (ask before finalizing the dep), then wire listener + hash + backend env; owner does the Eskiz
+  template + env + release test.
+- **Commit:** ⚠️ still UNCOMMITTED: OR-003 Option A (`OTPVerificationScreen.tsx`) + docs. Proposed
+  `feat(otp): one-tap SMS autofill on the user app OTP screen (OR-003)`. Also still pending: device
+  tests for OR-001 (T-011) and OR-002 (T-012), and the k3s deploy 401 (kubectl/k3s certs) on `fstu`.
+
+## 2026-07-21 (4) — OR-003 / T-013 OTP SMS autofill
+- **Task:** Owner request OR-003 — auto-read the OTP SMS (user app)
+- **Done:** Option A: added `textContentType="oneTimeCode"` + `autoComplete="sms-otp"` +
+  `importantForAutofill` to the user-app OTP inputs; box 0 takes the full code and
+  `handleOtpChange` spreads an autofill dump across the 4 boxes + auto-submits. tsc clean.
+- **Decisions:** superseded by entry (5) — moved from A/Consent to SMS Retriever (hash).
+- **Next:** see entry (5).
+- **Commit:** proposed `feat(otp): one-tap SMS autofill on the user app OTP screen (OR-003)`
+
+---
+
 ## 2026-07-21 (3) — OR-002 / T-012 deleted-user logout
 - **Task:** Owner security bug OR-002 — deleted passenger/driver still gets into the app
 - **Done:** Full fix (App + API). API `authenticate` middleware now verifies the user still

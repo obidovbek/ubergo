@@ -4,54 +4,79 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ⏸️ **Parked:** T-011 (OR-001 OTP resume) — code done in both apps, awaiting the owner's
-> device test. Tracked in `docs/TODO.md` + `docs/OWNER_REQUESTS.md`.
+> ⏸️ **Parked (awaiting owner device test — implemented, on `main` @ 6c006a4):**
+> - T-011 (OR-001 OTP resume) — both apps.
+> - T-012 (OR-002 deleted-user logout) — App + API.
 
 ## Task
-- **ID / name:** T-012 (owner request OR-002) — deleted user must be logged out to the login screen
-- **Goal (definition of "done"):** After an admin deletes a passenger/driver, that person's
-  app (on next open or when brought to foreground) detects the account is gone and returns to
-  the **login/OTP ("SMS") screen**. And the deleted token stops working on the API immediately.
-- **Why now:** Owner-reported security issue; a deleted account keeps full access via cache.
-- **Approved:** App + API (full fix).
+- **ID / name:** T-013 (owner request OR-003) — auto-read the OTP SMS (user app), **zero-tap**
+- **Goal (definition of "done"):** On the user app OTP screen, when the SMS arrives the code
+  fills and submits **automatically, with no dialog and no tap** (Android), verified on a device.
+- **Why now:** Owner request. Chose the seamless, industry-standard path.
 
-## Steps
-- [x] 1. Owner approval → App + API (full fix). (approved 2026-07-21)
-- [x] 2. App `api/auth.ts getCurrentUser` (both apps): attach HTTP status to the thrown error.
-- [x] 3. App `AuthContext.initializeAuth` (both apps): on 401/403/404 → clear storage, don't
-  log in (→ login/OTP); keep cached-user fallback only for network errors.
-- [x] 4. Driver app foreground refresh: on 401/403/404 → `logout()`. (User app has no foreground
-  refresh handler; its init path covers the reopen case — noted as possible follow-up.)
-- [x] 5. API `middleware/auth.ts`: after `verifyToken`, load the user by id; if missing → 401.
-  DB errors pass through as 500 (won't false-logout on an outage). Blocked/pending_delete still
-  pass (app shows BlockedScreen). Admin routes use a separate middleware — unaffected.
-- [ ] 6. **Owner: test end-to-end** — log in on device → delete that user in the admin panel →
-  reopen/foreground the app → it returns to the login/OTP screen. ← **NEXT (owner action)**
-- [ ] 7. After test passes: OR-002 → done, move T-012 to Done, journal + commit.
+## Decision (2026-07-21)
+- Option A (JS `autoComplete`/`textContentType`) is **already shipped** (helps iOS) but **does
+  NOT auto-fill on Android** (confirmed on Samsung S24). Keep it — don't revert.
+- Android needs a native Google API. Owner picked the **SMS Retriever API (hash)** — zero-tap,
+  no "read SMS" dialog, no SMS permission. Cost = the 11-char app hash must be in the SMS, so a
+  **new Eskiz template** is needed.
+- Division of labor (owner's words): **Claude** adds the native module + prints the app hash
+  (debug + release) and adds a backend env to append it; **Owner** registers + gets the new
+  Eskiz template approved.
 
-## Files touched
-- API: `api,admin,db/apps/api/src/middleware/auth.ts`.
-- App (× both apps): `api/auth.ts` (getCurrentUser status), `contexts/AuthContext.tsx`
-  (init 401→logout; driver also foreground 401→logout).
+## Steps — CLAUDE
+- [ ] 1. Pick a maintained SMS Retriever library for the **user app** and verify it builds with
+  **RN 0.81 New Architecture** (Expo 54). Candidate: `react-native-otp-verify` (SMS Retriever).
+  ⚠️ Verify new-arch compat FIRST — if it fails, consider an Expo config-plugin / alternative.
+  (Ask before finalizing the dependency — CLAUDE.md rule 4.)
+- [ ] 2. Wire it in `user-app-standalone/screens/OTPVerificationScreen.tsx`: start the retriever
+  on mount; on SMS received, parse the 4-digit code → fill boxes → auto-submit; clean up on
+  unmount. KEEP the existing Option A props (iOS).
+- [ ] 3. Print the app hash for **debug AND release** via the lib's `getHash()`. Give the
+  **RELEASE** hash to the owner (that's the one production SMS must contain). Release hash comes
+  from the user-app release keystore.
+- [ ] 4. Backend `api,admin,db/apps/api/src/services/OtpService.ts` (`sendSms`): append the hash
+  to the SMS via a NEW env var `ESKIZ_OTP_APP_HASH`, only when set. Format: `<msg>\n<hash>`.
+  ⚠️ Check the total stays **≤ 140 bytes** (see risk below).
+- [ ] 5. Coordinate with owner (below); once the template is approved + env set, test end-to-end.
 
-## Verification so far
-- `tsc`: no NEW errors anywhere. Backend total 290 = identical to HEAD (project has a large
-  pre-existing tsc backlog; dev runs on `tsx`, which ignores it). Apps: 41 (driver) / 12 (user),
-  unchanged from before. Behaviour still needs the device test (step 6).
+## Steps — OWNER
+- [ ] O1. After Claude gives the hash: register a **new Eskiz template** whose text = the current
+  message **plus the hash line**, and get it approved (moderation every 3h, weekdays 10:00–16:00).
+- [ ] O2. Set `ESKIZ_OTP_APP_HASH=<release hash>` in the backend env (test3 + prod).
+- [ ] O3. Test on a **release** build: request SMS → code auto-fills + submits, zero taps.
 
-## Risks / open questions
-- Latency: one DB lookup per authenticated request (owner accepted the trade-off; cache later).
-- Offline: init/foreground keep the cached session on network/5xx errors — only 401/403/404 logs out.
-- User app has no foreground-refresh handler, so a warm foreground won't re-check until the next
-  cold start. Reopen (the common path, esp. given OR-001 kills) is covered. Follow-up if needed.
+## Files to touch
+- `user-app-standalone/`: `screens/OTPVerificationScreen.tsx` + native config (autolink / maybe a
+  config plugin) + the new dependency.
+- `api,admin,db/apps/api/src/services/OtpService.ts` (`sendSms`).
+
+## Risks / open questions (READ before coding)
+- **New Architecture compat:** RN 0.81 defaults to New Arch; many SMS libs are old. Verify the
+  chosen lib builds/runs before wiring UI. This is the #1 risk.
+- **140-byte SMS limit:** SMS Retriever only delivers messages **≤140 bytes**. The current text
+  is Cyrillic (`Код верификации…`, ~62 chars) — Cyrillic is 2 bytes/char in UTF-8, so it's already
+  ~100+ bytes. Adding `\n` + 11-char hash may **exceed 140 bytes** → Retriever won't fire.
+  **Measure it**; if over, the Eskiz template may need a SHORTER message (e.g. Latin/English).
+- **Hash is signing-key specific:** debug build → debug hash; release build → release hash. The
+  approved Eskiz template carries ONE hash, so **test on a release build with the release hash**
+  (or temporarily use the debug hash for a debug-build test).
+- Driver app is out of scope (its code arrives via push to the user app, not SMS).
 
 ## Session notes (one line per work session)
-- 2026-07-21: Root-caused, documented OR-002/T-012, plan approved (App + API).
-- 2026-07-21: Implemented — middleware DB check + both apps drop the cache & go to login on a
-  401 (init + driver foreground). tsc clean (no new errors). Awaiting device test.
+- 2026-07-21: Shipped Option A (JS). Device test: Android didn't auto-fill (expected). Owner chose
+  the **hash / SMS Retriever** path. Documented for handoff; implementation not started.
 
 ## Resume point (for the next chat)
-Code complete across backend + both apps; typechecks add nothing new. Next action = **step 6**:
-owner tests (log in → admin deletes the user → reopen app → lands on login). If it works →
-step 7 (commit + mark done). Key files: `middleware/auth.ts`, both apps' `contexts/AuthContext.tsx`
-and `api/auth.ts`.
+**Next action = Step 1 (CLAUDE):** add an SMS Retriever library to the **user app** and confirm it
+builds under RN 0.81 New Architecture — ask the owner before finalizing the dependency. Then wire
+the listener (Step 2), print the app hash (Step 3, give the RELEASE hash to the owner), and append
+the hash to the SMS behind `ESKIZ_OTP_APP_HASH` (Step 4). Owner then does O1–O3 (new Eskiz
+template + env + release-build test). Watch the **140-byte SMS limit** and **new-arch compat**.
+Option A is already in place in `OTPVerificationScreen.tsx` — keep it. SMS text is built in
+`OtpService.sendSms`.
+
+## ⚠️ Uncommitted at handoff
+Working tree (Windows) has **uncommitted** OR-003 Option A + these docs. Not yet committed:
+`user-app-standalone/screens/OTPVerificationScreen.tsx` + `docs/*`. Consider committing before
+switching machines (proposed: `feat(otp): one-tap SMS autofill on the user app OTP screen (OR-003)`).
