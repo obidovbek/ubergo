@@ -98,10 +98,17 @@ Windows/PowerShell trust it; **Node and Java ship their own truststores and do n
 ## Risks / open questions (READ before coding)
 - **New Architecture compat:** RN 0.81 defaults to New Arch; many SMS libs are old. Verify the
   chosen lib builds/runs before wiring UI. This is the #1 risk.
-- ~~**140-byte SMS limit**~~ ✅ **RESOLVED 2026-07-22 — measured, it fits.**
-  `Код верификации для входа к мобильному приложению UbexGo: 1234` = 62 chars / **105 bytes** UTF-8.
-  Plus `\n` + 11-char hash = **117 bytes**, under the 140-byte limit with 23 bytes of headroom.
-  **No shorter/Latin template needed** — the Eskiz template can keep the current Cyrillic wording.
+- ⚠️ **SMS length — I GOT THIS WRONG ONCE. Two different limits apply; both must pass.**
+  1. **140 bytes** — SMS Retriever's delivery cap. Old text + hash = 117 bytes → passes.
+  2. **70 CHARACTERS (UCS-2)** — the single-segment cap for Cyrillic. This is the binding one.
+  The original text is **62 chars**, leaving only 8, but `\n` + an 11-char hash needs **12**.
+  → 74 chars = **2 SMS segments**. Eskiz showed this as «74 символов, всего SMS - 2 шт».
+  A split SMS costs double **and SMS Retriever generally won't fire on it**, so the feature breaks.
+  ✅ **FIX: shorten the Russian** (no need to switch to Latin). Approved wording to register:
+  `Код верификации UbexGo: 0000` + newline + `<11-char hash>` = **40 chars → 1 SMS**.
+  Note the code placeholder is `0000` (matches the existing approved template's convention), and
+  **the hash must be on its own last line**, not space-appended after the code.
+  ⚠️ If the wording ever changes again, re-check **chars ≤ 70**, not just bytes.
 - **Hash is signing-key specific:** debug build → debug hash; release build → release hash. The
   approved Eskiz template carries ONE hash, so **test on a release build with the release hash**
   (or temporarily use the debug hash for a debug-build test).

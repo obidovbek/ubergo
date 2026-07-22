@@ -27,6 +27,12 @@ interface EskizSendResponse {
 /** Android SMS Retriever only delivers messages up to 140 bytes. */
 const SMS_RETRIEVER_MAX_BYTES = 140;
 
+/**
+ * Cyrillic SMS is encoded as UCS-2, where a single segment holds 70 characters.
+ * Going over splits the SMS: double cost, and SMS Retriever stops working.
+ */
+const SMS_UCS2_SINGLE_SEGMENT_CHARS = 70;
+
 class OtpService {
   private eskizToken: string | null = null;
   private eskizTokenExpiry: number = 0;
@@ -112,25 +118,36 @@ class OtpService {
   /**
    * Build the OTP SMS text.
    *
-   * When ESKIZ_OTP_APP_HASH is set, the Android SMS Retriever app hash is appended
-   * on its own line so the user app can auto-read the code with zero taps (OR-003).
-   * SMS Retriever ONLY delivers messages of at most 140 bytes, so we measure the
-   * UTF-8 length (the text is Cyrillic = 2 bytes/char) and skip the hash rather
-   * than silently send an SMS the retriever would never deliver.
+   * Each variant must match an APPROVED Eskiz template exactly, or Eskiz rejects the
+   * send. Two different templates are in play:
+   *  - no hash  -> the original long text (approved 2025-10-20), used until the owner
+   *                sets ESKIZ_OTP_APP_HASH. Keeps today's behaviour byte-for-byte.
+   *  - hash set -> the SHORT text + the hash on its own last line (OR-003), which the
+   *                owner registers separately.
+   *
+   * The short text is required, not cosmetic: Cyrillic SMS is UCS-2, so a single
+   * segment holds only 70 CHARACTERS. The long text (62) plus "\n" + an 11-char hash
+   * is 74 -> it splits into 2 segments, which costs double AND stops SMS Retriever
+   * from firing (it only handles single-part messages).
    */
   private buildOtpMessage(code: string): string {
-    const message = `Код верификации для входа к мобильному приложению UbexGo: ${code}`;
     const hash = config.eskiz.otpAppHash;
-    if (!hash) return message;
+    if (!hash) {
+      return `Код верификации для входа к мобильному приложению UbexGo: ${code}`;
+    }
 
-    const withHash = `${message}\n${hash}`;
+    const withHash = `Код верификации UbexGo: ${code}\n${hash}`;
+
+    // Guard both limits: the retriever's delivery cap and the single-segment cap.
     const bytes = Buffer.byteLength(withHash, 'utf8');
-    if (bytes > SMS_RETRIEVER_MAX_BYTES) {
+    const chars = withHash.length;
+    if (bytes > SMS_RETRIEVER_MAX_BYTES || chars > SMS_UCS2_SINGLE_SEGMENT_CHARS) {
       console.warn(
-        `OTP SMS with app hash is ${bytes} bytes (> ${SMS_RETRIEVER_MAX_BYTES}); ` +
-          'SMS Retriever would ignore it. Sending without the hash — shorten the message.'
+        `OTP SMS with app hash is ${chars} chars / ${bytes} bytes (limits: ` +
+          `${SMS_UCS2_SINGLE_SEGMENT_CHARS} chars, ${SMS_RETRIEVER_MAX_BYTES} bytes). ` +
+          'It would split or be ignored by SMS Retriever. Sending the plain message instead.'
       );
-      return message;
+      return `Код верификации для входа к мобильному приложению UbexGo: ${code}`;
     }
     return withHash;
   }

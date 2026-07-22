@@ -169,8 +169,18 @@ in `docs/PLAN.md` (T-013):
   for the SMS, extracts the 4 digits and submits with zero taps. iOS Option A props kept.
 - API: `OtpService.buildOtpMessage()` appends the hash **only when `ESKIZ_OTP_APP_HASH` is set**.
 
-✅ **140-byte risk RESOLVED — the wording does NOT have to change.** Measured:
-current message = **105 bytes**; with newline + 11-char hash = **117 bytes** (limit 140).
+⚠️ **CORRECTION (2026-07-22, after the owner's first Eskiz submission).** I first said the wording
+could stay, based on the 140-**byte** retriever cap (117 ≤ 140 ✅). That measured the wrong limit.
+Cyrillic SMS is **UCS-2 → 70 CHARACTERS per segment**; the old text (62) + `\n` + an 11-char hash
+= **74 chars → 2 SMS**, exactly as Eskiz reported («74 символов, всего SMS - 2 шт»). A split SMS
+costs double **and SMS Retriever won't fire on it**. → **The Russian text must be SHORTENED**
+(staying in Cyrillic is fine): `Код верификации UbexGo: 0000` + hash line = **40 chars → 1 SMS**.
+Backend updated to send exactly that when the hash is set (commit below).
+
+**Also caught in that first submission:** the hash was appended on the SAME line after the code
+(`...UbexGo: 1234 FA+9qCX9VSu`) — it must be on its **own last line**. And `FA+9qCX9VSu` was a
+**placeholder Claude invented for illustration**, not a real hash; the real one comes from a
+release build (step 1).
 
 ✅ **Safe to deploy right now.** With the env var unset the SMS is **byte-identical** to today's,
 so the currently-approved Eskiz template keeps working. Nothing changes until the var is set.
@@ -179,8 +189,12 @@ so the currently-approved Eskiz template keeps working. Nothing changes until th
 1. **Get the RELEASE app hash.** Someone runs a **release** build of the user app, opens the OTP
    screen, and reads the log line `[OR-003] SMS Retriever app hash:`. ⚠️ A *debug* build prints a
    *different* hash — production needs the **release** one (it is tied to the signing key).
-2. **Register a new Eskiz template** = the current text + a newline + that hash. Get it approved
-   (moderation every 3h, weekdays 10:00–16:00).
+2. **Register a new Eskiz template** — the SHORT text, with the hash on its OWN LAST LINE:
+   ```
+   Код верификации UbexGo: 0000
+   <11-char release hash>
+   ```
+   Get it approved (moderation every 3h, weekdays 10:00–16:00).
 3. **Only after approval**, set `ESKIZ_OTP_APP_HASH=<release hash>` in the backend env
    (`infra/compose/docker-compose.yml` next to `ESKIZ_EMAIL` + `infra/compose/.env`; and the k8s
    test3 secret). Setting it before the template is approved would make Eskiz **reject the SMS**.
