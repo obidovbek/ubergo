@@ -42,6 +42,11 @@ export const config = {
     password: process.env.ESKIZ_PASSWORD || '',
     token: process.env.ESKIZ_TOKEN || '', // Direct token (alternative to email/password)
     apiUrl: process.env.ESKIZ_API_URL || 'https://notify.eskiz.uz/api',
+    // Android SMS Retriever app hash (OR-003). When set, it's appended to the OTP
+    // SMS so the user app can read the code with zero taps. Must match the hash of
+    // the SIGNING KEY of the installed build (release hash for production), and the
+    // Eskiz template must be registered WITH this line or the SMS is rejected.
+    otpAppHash: process.env.ESKIZ_OTP_APP_HASH || '',
   },
   ivr: {
     apiUrl: process.env.IVR_API_URL || '',

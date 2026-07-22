@@ -24,6 +24,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
 import { savePendingOtp, clearPendingOtp } from '../utils/pendingOtp';
+import { startOtpListener, getAppHashes } from '../utils/smsRetriever';
 
 const theme = createTheme('light');
 
@@ -40,6 +41,8 @@ export const OTPVerificationScreen: React.FC = () => {
   const [attempts, setAttempts] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(3);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  // Guards against a double submit when the SMS arrives while the user is typing.
+  const submittedRef = useRef(false);
 
   // Remember we're on the OTP step so a background/app-kill resumes here with the
   // phone prefilled, instead of dropping to the main menu (OR-001).
@@ -48,6 +51,34 @@ export const OTPVerificationScreen: React.FC = () => {
       savePendingOtp({ phone: phoneNumber });
     }
   }, [phoneNumber]);
+
+  // Keep a ref to the latest handleVerify so the SMS listener (registered once)
+  // never calls a stale closure.
+  const handleVerifyRef = useRef<(code?: string) => void>(() => {});
+
+  // SMS Retriever (OR-003, Android): the code fills and submits with zero taps.
+  // iOS keeps the keyboard-suggestion autofill via the TextInput props below.
+  useEffect(() => {
+    const stop = startOtpListener(
+      (code) => {
+        if (submittedRef.current) return;
+        submittedRef.current = true;
+        setOtp(code.split(''));
+        handleVerifyRef.current(code);
+      },
+      { length: 4 }
+    );
+    return stop;
+  }, []);
+
+  // Step 3: print the app signature hash needed by the Eskiz SMS template.
+  // Debug build -> debug hash; release build -> release hash (that's the one prod needs).
+  useEffect(() => {
+    if (!__DEV__) return;
+    getAppHashes().then((hashes) => {
+      if (hashes.length) console.log('[OR-003] SMS Retriever app hash:', hashes);
+    });
+  }, []);
 
   const handleOtpChange = (text: string, index: number) => {
     // Keep digits only (ignore any non-numeric input)
@@ -80,6 +111,7 @@ export const OTPVerificationScreen: React.FC = () => {
     // Auto-submit when all digits entered
     const newOtpCode = newOtp.join('');
     if (newOtpCode.length === 4) {
+      submittedRef.current = true;
       handleVerify(newOtpCode);
     }
   };
@@ -135,6 +167,8 @@ export const OTPVerificationScreen: React.FC = () => {
         // Clear OTP input fields after incorrect attempt
         setOtp(['', '', '', '']);
         inputRefs.current[0]?.focus();
+        // Allow a later SMS (e.g. a resent code) to auto-submit again.
+        submittedRef.current = false;
         
         // Show error with remaining attempts
         showToast.error(
@@ -158,6 +192,8 @@ export const OTPVerificationScreen: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  handleVerifyRef.current = handleVerify;
 
   const handleContinue = () => {
     handleVerify();
@@ -184,6 +220,8 @@ export const OTPVerificationScreen: React.FC = () => {
       setRemainingAttempts(3);
       setOtp(['', '', '', '']);
       inputRefs.current[0]?.focus();
+      // The new SMS should be able to auto-submit.
+      submittedRef.current = false;
     } catch (error) {
       handleBackendError(error, {
         t,

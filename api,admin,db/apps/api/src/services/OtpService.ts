@@ -24,6 +24,9 @@ interface EskizSendResponse {
   id?: string;
 }
 
+/** Android SMS Retriever only delivers messages up to 140 bytes. */
+const SMS_RETRIEVER_MAX_BYTES = 140;
+
 class OtpService {
   private eskizToken: string | null = null;
   private eskizTokenExpiry: number = 0;
@@ -107,6 +110,32 @@ class OtpService {
   }
 
   /**
+   * Build the OTP SMS text.
+   *
+   * When ESKIZ_OTP_APP_HASH is set, the Android SMS Retriever app hash is appended
+   * on its own line so the user app can auto-read the code with zero taps (OR-003).
+   * SMS Retriever ONLY delivers messages of at most 140 bytes, so we measure the
+   * UTF-8 length (the text is Cyrillic = 2 bytes/char) and skip the hash rather
+   * than silently send an SMS the retriever would never deliver.
+   */
+  private buildOtpMessage(code: string): string {
+    const message = `Код верификации для входа к мобильному приложению UbexGo: ${code}`;
+    const hash = config.eskiz.otpAppHash;
+    if (!hash) return message;
+
+    const withHash = `${message}\n${hash}`;
+    const bytes = Buffer.byteLength(withHash, 'utf8');
+    if (bytes > SMS_RETRIEVER_MAX_BYTES) {
+      console.warn(
+        `OTP SMS with app hash is ${bytes} bytes (> ${SMS_RETRIEVER_MAX_BYTES}); ` +
+          'SMS Retriever would ignore it. Sending without the hash — shorten the message.'
+      );
+      return message;
+    }
+    return withHash;
+  }
+
+  /**
    * Send OTP via SMS using Eskiz
    */
   private async sendSms(phone: string, code: string): Promise<boolean> {
@@ -123,7 +152,7 @@ class OtpService {
         '/message/sms/send',
         {
           mobile_phone: cleanPhone,
-          message: `Код верификации для входа к мобильному приложению UbexGo: ${code}`,
+          message: this.buildOtpMessage(code),
           from: '4546',
         },
         {
