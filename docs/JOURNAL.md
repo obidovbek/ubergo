@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-07-22 — OR-003 / T-013 SMS Retriever implemented + pushed
+- **Task:** OR-003 — zero-tap OTP SMS auto-read (user app + API)
+- **Done:** All CLAUDE steps of the plan (1, 2, 4, and the code half of 3).
+  Committed `9b36014` (Option A backlog + docs) and `d963cfb` (Option B), **pushed to
+  `origin/main`** so the server can deploy from the last commit.
+  - User app: `react-native-otp-verify@1.2.0` + new `utils/smsRetriever.ts` (lazy Android-only
+    require, extracts the code from the full SMS body, ignores the timeout sentinel);
+    `OTPVerificationScreen` starts/stops the listener, auto-submits, guards double-submit.
+  - API: `config.eskiz.otpAppHash` + `OtpService.buildOtpMessage()` behind `ESKIZ_OTP_APP_HASH`,
+    with the 140-byte cap enforced in code.
+- **Decisions:** (1) Did **not** use the library's `useOtpVerify` hook — it builds a
+  `NativeEventEmitter` from a *throwing Proxy at import time*, which can crash on iOS; wrapped it
+  defensively instead. (2) Put the byte check in code, not just in the docs, so a wrong hash
+  degrades to a working SMS + warning instead of silently killing autofill.
+- **Wins:** ✅ **140-byte risk resolved by measurement** — 105 B now, 117 B with the hash, so the
+  Cyrillic wording stays and the owner does NOT need a reworded template.
+  ✅ With the env unset the SMS is **byte-identical to today's**, so deploying is safe before the
+  new Eskiz template is approved.
+- **Problems / honest status:** **Nothing has run on a device.** Verification so far is static
+  only: `tsc` (user app 12 / API 290 errors, both = pre-existing baseline, none mine), a Gradle
+  compile of the native module (BUILD SUCCESSFUL), and Node unit-tests of the code-extraction (8/8)
+  and message-building (3/3). Zero-tap is unproven until a real SMS on a real phone.
+  Also corrected a mistake from the previous session: I had conflated same-named npm packages —
+  the installed lib is an **old-style bridge module**, not a TurboModule (works via New-Arch
+  interop; most likely thing to break on a future RN upgrade).
+  **Environment:** Avast Web/Mail Shield re-signs HTTPS, which breaks npm, Gradle **and git push**
+  (Node/Java/git each have their own truststore). Worked around per-command without disabling
+  TLS checks; a permanent fix is still owner's call.
+- **Next:** Owner: (1) release build → read `[OR-003] SMS Retriever app hash:`, (2) new Eskiz
+  template with that hash, (3) only after approval set `ESKIZ_OTP_APP_HASH`, (4) zero-tap test.
+  Still also pending: device tests for OR-001 (T-011) and OR-002 (T-012).
+- **Commit:** `d963cfb` (pushed). Uncommitted leftover: `.claude/settings.json` (permission
+  entries only, unrelated to the feature).
+
+---
+
 ## 2026-07-21 (5) — OR-003 / T-013 decision + HANDOFF
 - **Task:** OR-003 — decide the OTP auto-read approach; hand off to next session
 - **Done:** Shipped Option A (JS autofill). Device-tested on Samsung S24 → **Android did NOT

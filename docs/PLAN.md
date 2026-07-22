@@ -131,6 +131,26 @@ Build cmds in this environment: `$env:NODE_OPTIONS="--use-system-ca"; npm run an
 ⚠️ In this environment, prefix npm with `$env:NODE_OPTIONS="--use-system-ca"` and Gradle with the
 `GRADLE_OPTS` truststore — see the Avast section above.
 
+## 📌 For the NEXT CHAT — read this first
+**State:** all OR-003 code is written, committed (`d963cfb`) and **pushed to `origin/main`**.
+The working tree is clean apart from `.claude/settings.json` (permission entries, ignore it).
+**Claude has nothing left to code on T-013.** The remaining work is physical/owner work:
+a release build to read the hash → Eskiz template → env var → device test (see Steps 3/O1–O3).
+
+If the owner comes back with the hash and an approved template, the only action is setting the
+env var (owner does that; `infra/**` is off-limits per CLAUDE.md rule 4) and testing.
+If instead they want to move on, the board's next cards are **T-011/T-012 device tests** (both
+implemented, awaiting confirmation) or **T-001** (passenger→offer join flow).
+
+⚠️ **Environment (will bite immediately):** Avast Web/Mail Shield re-signs HTTPS, so **npm,
+Gradle and git push all fail** on certificate errors out of the box. Fixes that worked, per
+command — see the Avast section below for the full detail:
+- npm → `$env:NODE_OPTIONS="--use-system-ca"`
+- Gradle → `GRADLE_OPTS` pointing at a cacerts copy containing the Avast root
+- git → `git -c http.sslCAInfo=<bundle with Avast root> push`
+The scratchpad copies are temporary and will be gone; regenerate them by exporting the Avast root
+from `Cert:\LocalMachine\Root`, or (better) ask the owner to fix this permanently.
+
 ## Not yet verified (be honest about this)
 Everything so far is **static verification only** — `tsc`, a Gradle module compile, and a Node
 unit-test of the regex. The app has **never been run** and no SMS has been received. The zero-tap

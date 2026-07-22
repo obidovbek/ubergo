@@ -160,3 +160,32 @@ in `docs/PLAN.md` (T-013):
 - **Owner:** register + get approved a new Eskiz template that includes the hash line; set the env.
 - ⚠️ Watch the **140-byte SMS limit** (current Cyrillic text is byte-heavy) and that the **release**
   hash is what production SMS must contain. Keep the shipped Option A props (they help iOS).
+
+### Option B implemented — 2026-07-22 (commit `d963cfb`, pushed to `origin/main`)
+
+**All the code is written and on `main`. Nothing has been tested on a phone yet.**
+
+- User app: `react-native-otp-verify@1.2.0` + new `utils/smsRetriever.ts`; the OTP screen listens
+  for the SMS, extracts the 4 digits and submits with zero taps. iOS Option A props kept.
+- API: `OtpService.buildOtpMessage()` appends the hash **only when `ESKIZ_OTP_APP_HASH` is set**.
+
+✅ **140-byte risk RESOLVED — the wording does NOT have to change.** Measured:
+current message = **105 bytes**; with newline + 11-char hash = **117 bytes** (limit 140).
+
+✅ **Safe to deploy right now.** With the env var unset the SMS is **byte-identical** to today's,
+so the currently-approved Eskiz template keeps working. Nothing changes until the var is set.
+
+**What the owner still has to do (in this order):**
+1. **Get the RELEASE app hash.** Someone runs a **release** build of the user app, opens the OTP
+   screen, and reads the log line `[OR-003] SMS Retriever app hash:`. ⚠️ A *debug* build prints a
+   *different* hash — production needs the **release** one (it is tied to the signing key).
+2. **Register a new Eskiz template** = the current text + a newline + that hash. Get it approved
+   (moderation every 3h, weekdays 10:00–16:00).
+3. **Only after approval**, set `ESKIZ_OTP_APP_HASH=<release hash>` in the backend env
+   (`infra/compose/docker-compose.yml` next to `ESKIZ_EMAIL` + `infra/compose/.env`; and the k8s
+   test3 secret). Setting it before the template is approved would make Eskiz **reject the SMS**.
+4. Test on a release build: request a code → it should fill and submit with **zero taps**.
+
+⚠️ **Known weakness (not a blocker):** the chosen library is an old-style bridge module (it works
+on RN 0.81 via the New-Arch interop layer, verified by compiling it). It is the most likely thing
+to break on a future React Native upgrade. Alternative if it ever does: `react-native-otp-auto-verify`.

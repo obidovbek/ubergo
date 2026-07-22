@@ -15,10 +15,11 @@
   trusted) — app must log out to the login/OTP screen; API must reject deleted tokens.
   Affects driver + user apps + backend. **Fix implemented (App + API), tsc clean;
   awaiting owner device test.** → see `docs/OWNER_REQUESTS.md`
-- [ ] T-013 (P2) **[OWNER OR-003]** Auto-read the OTP SMS (user app). Option A (JS autofill)
-  shipped (helps iOS); Android didn't auto-fill (expected). **Decided: SMS Retriever (hash),
-  zero-tap.** Not yet implemented — Claude adds the native module + backend hash env; owner
-  registers a new Eskiz template with the hash. → see `docs/PLAN.md` + `docs/OWNER_REQUESTS.md`
+- [ ] T-013 (P2) **[OWNER OR-003]** Auto-read the OTP SMS (user app), zero-tap via SMS Retriever.
+  **All code DONE + pushed (`d963cfb`); safe to deploy — SMS unchanged until the env var is set.**
+  ⏳ Blocked on owner: (1) release build → read the app hash from the log, (2) new Eskiz template
+  with that hash approved, (3) then set `ESKIZ_OTP_APP_HASH`, (4) zero-tap device test.
+  ⚠️ Never device-tested yet. → see `docs/PLAN.md` + `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
 - [ ] T-001 (P1) Verify & finish passenger→offer join flow — passenger joins, driver
