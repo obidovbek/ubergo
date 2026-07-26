@@ -151,6 +151,8 @@ export default {
     errorEmail: 'Email обязателен',
     errorEmailInvalid: 'Неверный формат email',
     errorPhone: 'Пожалуйста, введите полный номер телефона',
+    errorPhoneOwnNumber: 'Это ваш основной номер. Введите другой',
+    errorPhoneDuplicate: 'Этот номер уже добавлен',
     errorAllFields: 'Пожалуйста, заполните все обязательные поля',
     successTitle: 'Успешно!',
     successMessage: 'Регистрация завершена успешно',

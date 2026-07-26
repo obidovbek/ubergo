@@ -468,12 +468,27 @@ export const EditProfileScreen: React.FC = () => {
     }
 
     const fullPhone = `${activeCountry.code}${digits}`;
-    if (!additionalPhones.includes(fullPhone)) {
-      setAdditionalPhones([...additionalPhones, fullPhone]);
-      setCurrentPhoneInput('');
-      if (textInputRef.current) {
-        textInputRef.current.clear();
-      }
+
+    // Reject the user's own primary number (compare digits-only, since the primary
+    // may be stored/formatted differently than `${code}${digits}`). Owner request:
+    // an additional number must not repeat the main number.
+    const onlyDigits = (v: string) => v.replace(/\D/g, '');
+    if (onlyDigits(fullPhone) === onlyDigits(phoneNumber)) {
+      showToast.warning(t('common.error'), t('userDetails.errorPhoneOwnNumber'));
+      return;
+    }
+
+    // Reject a duplicate among the already-added additional numbers (with feedback —
+    // previously this failed silently).
+    if (additionalPhones.some((p) => onlyDigits(p) === onlyDigits(fullPhone))) {
+      showToast.warning(t('common.error'), t('userDetails.errorPhoneDuplicate'));
+      return;
+    }
+
+    setAdditionalPhones([...additionalPhones, fullPhone]);
+    setCurrentPhoneInput('');
+    if (textInputRef.current) {
+      textInputRef.current.clear();
     }
   };
 

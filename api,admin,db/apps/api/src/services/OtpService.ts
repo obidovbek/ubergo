@@ -122,13 +122,18 @@ class OtpService {
    * send. Two different templates are in play:
    *  - no hash  -> the original long text (approved 2025-10-20), used until the owner
    *                sets ESKIZ_OTP_APP_HASH. Keeps today's behaviour byte-for-byte.
-   *  - hash set -> the SHORT text + the hash on its own last line (OR-003), which the
+   *  - hash set -> a SHORTER text + the hash on its own last line (OR-003), which the
    *                owner registers separately.
    *
-   * The short text is required, not cosmetic: Cyrillic SMS is UCS-2, so a single
-   * segment holds only 70 CHARACTERS. The long text (62) plus "\n" + an 11-char hash
-   * is 74 -> it splits into 2 segments, which costs double AND stops SMS Retriever
-   * from firing (it only handles single-part messages).
+   * The shorter text is required, not cosmetic: Cyrillic SMS is UCS-2, so a single
+   * segment holds only 70 CHARACTERS. The original long text (62) plus "\n" + an
+   * 11-char hash is 74 -> it splits into 2 segments, which costs double AND stops SMS
+   * Retriever from firing (it only handles single-part messages).
+   *
+   * Eskiz Пункт 2 requires a verification-code SMS to name both the PURPOSE ("для
+   * входа") and the RESOURCE ("приложение UbexGo"); a bare "Код верификации UbexGo"
+   * gets rejected. The wording below satisfies Пункт 2 and, with the hash, is 63
+   * chars = 1 segment. This text must match an APPROVED Eskiz template exactly.
    */
   private buildOtpMessage(code: string): string {
     const hash = config.eskiz.otpAppHash;
@@ -136,7 +141,7 @@ class OtpService {
       return `Код верификации для входа к мобильному приложению UbexGo: ${code}`;
     }
 
-    const withHash = `Код верификации UbexGo: ${code}\n${hash}`;
+    const withHash = `Код верификации для входа в приложение UbexGo: ${code}\n${hash}`;
 
     // Guard both limits: the retriever's delivery cap and the single-segment cap.
     const bytes = Buffer.byteLength(withHash, 'utf8');

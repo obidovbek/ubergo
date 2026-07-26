@@ -151,6 +151,8 @@ export default {
     errorEmail: 'Email is required',
     errorEmailInvalid: 'Invalid email format',
     errorPhone: 'Please enter complete phone number',
+    errorPhoneOwnNumber: 'This is your primary number. Enter a different one',
+    errorPhoneDuplicate: 'This number has already been added',
     errorAllFields: 'Please fill all required fields',
     successTitle: 'Success!',
     successMessage: 'Registration completed successfully',

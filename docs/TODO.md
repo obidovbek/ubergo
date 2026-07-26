@@ -21,6 +21,13 @@
   with that hash approved, (3) then set `ESKIZ_OTP_APP_HASH`, (4) zero-tap device test.
   ⚠️ Never device-tested yet. → see `docs/PLAN.md` + `docs/OWNER_REQUESTS.md`
 
+- [ ] T-014 (P2) **[OWNER OR-004]** Remove the country from the city/location text on
+  "Safar so'rov yaratish" (user app). **Done — `buildLocationText` drops country;
+  label + saved text now `city, province`. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
+- [ ] T-015 (P2) **[OWNER OR-005]** Additional-phones field accepts the user's own primary
+  number (user app, registration + edit profile). **Done — `addPhoneNumber` now rejects the
+  primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
+
 ## 📋 Next (ready to start)
 - [ ] T-001 (P1) Verify & finish passenger→offer join flow — passenger joins, driver
   gets notified, driver confirms/rejects, passenger gets notified. Last commit says

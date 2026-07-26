@@ -13,6 +13,53 @@
 | OR-001 | 🔨 in progress | driver + user apps | OTP screen loses its place → jumps to main menu after backgrounding | T-011 |
 | OR-002 | 🔨 in progress | driver + user + API | Deleted user still gets into the app (cached token trusted) → must return to login | T-012 |
 | OR-003 | 🔨 in progress | user app | Auto-read the OTP SMS so the code fills itself | T-013 |
+| OR-004 | ✅ done | user app | When picking cities, drop the country from the location text | T-014 |
+| OR-005 | ✅ done | user app | Additional-phones field accepts the user's OWN primary number | T-015 |
+
+---
+
+## OR-005 — Additional phone accepts the user's own primary number
+
+**Reported:** 2026-07-23 · **App:** user · **Board:** T-015
+
+**Original (Uzbek):**
+> "registratsiya paytida pastdagi qoshimcha raqamda yana ozinikii kiritsa qabul qilyapdi"
+
+**Translation:**
+> During registration, in the additional-number field at the bottom, if you enter your
+> own [primary] number again, it accepts it.
+
+**Root cause (found in code):** `addPhoneNumber()` only checked
+`!additionalPhones.includes(fullPhone)` — a duplicate check *among the additional numbers*.
+It never compared against the primary `phoneNumber`, so the main number could be re-added.
+The duplicate case also failed **silently** (no toast).
+
+**Fix (2026-07-23):** in both `UserDetailsScreen.tsx` (registration) and
+`EditProfileScreen.tsx` (edit profile), `addPhoneNumber()` now (a) rejects the primary
+number (digits-only compare, warns via new `userDetails.errorPhoneOwnNumber`) and
+(b) rejects a duplicate additional number with feedback (`userDetails.errorPhoneDuplicate`).
+New keys added to uz/en/ru. tsc unchanged (12 pre-existing errors, none new). ⏳ awaiting device test.
+
+---
+
+## OR-004 — Remove the country when selecting cities
+
+**Reported:** 2026-07-23 · **App:** user · **Board:** T-014
+
+**Original (Uzbek):**
+> "Shaharlarni tanlashda mamlakatni olib tashlash kerak"
+
+**Translation:**
+> When selecting cities, the country must be removed.
+
+**Context:** On "Safar so'rov yaratish" the chosen route showed
+`Farg'ona shahri, Farg'ona viloyati, O'zbekiston`. Every ride is inside Uzbekistan,
+so the country is noise.
+
+**Fix (2026-07-23):** `buildLocationText()` in
+`user-app-standalone/screens/CreatePassengerOfferScreen.tsx` no longer appends the
+country — the label + saved text are now `city, province` (both from/to sides).
+The country selector step is unchanged. tsc unaffected. ⏳ awaiting owner device test.
 
 ---
 

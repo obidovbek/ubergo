@@ -191,10 +191,12 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     province: GeoOption | null,
     city: GeoOption | null
   ): string => {
+    // Country is intentionally omitted (owner request): every ride is inside
+    // Uzbekistan, so showing/saving "O‘zbekiston" is noise. `country` is still
+    // selected upstream — it just doesn't appear in the location text.
     const parts: string[] = [];
     if (city) parts.push(city.name);
     if (province) parts.push(province.name);
-    if (country) parts.push(country.name);
     return parts.join(', ') || '';
   };
 

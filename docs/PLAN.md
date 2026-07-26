@@ -34,9 +34,13 @@
   added `utils/smsRetriever.ts` (lazy/defensive wrapper) + listener & auto-submit in the screen.
   Option A props kept for iOS. `tsc` clean (12 pre-existing errors only); `extractOtp` unit-tested
   8/8 including a hash that contains digits.
-- [~] 3. Print the app hash via `getHash()`. **Code done** (logs `[OR-003] SMS Retriever app hash:`
-  on the OTP screen in `__DEV__`). ⏳ **Still needs a real build/device to read the value**, and the
-  **RELEASE** hash must come from a release build (debug build → debug hash). Give RELEASE to owner.
+- [x] 3. Print the app hash via `getHash()`. **Code done** (logs `[OR-003] SMS Retriever app hash:`).
+  ✅ **RESOLVED 2026-07-23 without a device** — computed directly from `debug.keystore` (Google's
+  SMS Retriever algorithm) for `com.obidovbek94.UbexGoUser`. **APP HASH = `JtArsQcEBm9`**
+  (cert SHA-256 `fac6…3b9c`). Note: [android/app/build.gradle:118] signs **release with the
+  debug keystore**, so debug hash = release hash for now → this ONE hash is valid for both today.
+  ⚠️ **PRODUCTION CAVEAT:** when a real release keystore is introduced, this hash changes — the
+  Eskiz template AND `ESKIZ_OTP_APP_HASH` must be recomputed from the new `.jks`.
 - [x] 4. Backend: append the hash behind `ESKIZ_OTP_APP_HASH`. ✅ **DONE 2026-07-22** —
   `config.eskiz.otpAppHash` + `OtpService.buildOtpMessage()`; enforces the 140-byte cap in code
   (drops the hash + warns rather than sending an SMS the retriever would ignore). tsc = 290
@@ -105,7 +109,10 @@ Windows/PowerShell trust it; **Node and Java ship their own truststores and do n
   → 74 chars = **2 SMS segments**. Eskiz showed this as «74 символов, всего SMS - 2 шт».
   A split SMS costs double **and SMS Retriever generally won't fire on it**, so the feature breaks.
   ✅ **FIX: shorten the Russian** (no need to switch to Latin). Approved wording to register:
-  `Код верификации UbexGo: 0000` + newline + `<11-char hash>` = **40 chars → 1 SMS**.
+  `Код верификации для входа в приложение UbexGo: 0000` + newline + `JtArsQcEBm9` = **63 chars → 1 SMS**.
+  ⚠️ **Eskiz Пункт 2** rejected the ultra-short `Код верификации UbexGo: 0000` (2026-07-23):
+  a code SMS MUST name the purpose ("для входа") AND resource ("приложение UbexGo").
+  This wording satisfies Пункт 2 and is still 1 segment.
   Note the code placeholder is `0000` (matches the existing approved template's convention), and
   **the hash must be on its own last line**, not space-appended after the code.
   ⚠️ If the wording ever changes again, re-check **chars ≤ 70**, not just bytes.

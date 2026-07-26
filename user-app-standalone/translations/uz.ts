@@ -155,6 +155,8 @@ export default {
     errorEmail: 'Email majburiy',
     errorEmailInvalid: "Email formati noto'g'ri",
     errorPhone: "Iltimos telefon raqamini to'liq kiriting",
+    errorPhoneOwnNumber: "Bu sizning asosiy raqamingiz. Boshqa raqam kiriting",
+    errorPhoneDuplicate: "Bu raqam allaqachon qo'shilgan",
     errorAllFields: "Iltimos barcha majburiy maydonlarni to'ldiring",
     successTitle: 'Muvaffaqiyatli!',
     successMessage: 'Registratsiya muvaffaqiyatli yakunlandi',

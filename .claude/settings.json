@@ -14,7 +14,20 @@
       "Bash(npx tsc *)",
       "Bash(grep -E \"middleware[/\\\\\\\\\\\\\\\\]auth\")",
       "Bash(grep -E \"contexts[/\\\\\\\\\\\\\\\\]AuthContext|api[/\\\\\\\\\\\\\\\\]auth\\\\.ts\")",
-      "PowerShell(git add -A)"
+      "PowerShell(git add -A)",
+      "WebFetch(domain:registry.npmjs.org)",
+      "WebSearch",
+      "WebFetch(domain:api.npmjs.org)",
+      "WebFetch(domain:github.com)",
+      "PowerShell(Write-Output \"=== proxy env ===\"; \"HTTP_PROXY=$env:HTTP_PROXY\"; \"HTTPS_PROXY=$env:HTTPS_PROXY\"; \"NODE_EXTRA_CA_CERTS=$env:NODE_EXTRA_CA_CERTS\"; Write-Output \"=== npm proxy/ca ===\"; npm config get proxy; npm config get https-proxy; npm config get cafile; npm config get strict-ssl)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://registry.npmjs.org/react-native-otp-verify\" -UseBasicParsing -TimeoutSec 30; \"PowerShell TLS OK, status $\\($r.StatusCode\\)\" } catch { \"PowerShell TLS FAILED: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $env:NODE_OPTIONS=\"--use-system-ca\"; npm install react-native-otp-verify@^1.2.0 2>&1 | Select-Object -Last 25)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\\\\android\"; $env:GRADLE_OPTS=\"-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT\"; ./gradlew :react-native-otp-verify:assembleDebug --no-daemon 2>&1 | Select-Object -Last 30)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; npx tsc --noEmit 2>&1 | Select-Object -Last 20; \"exit=$LASTEXITCODE\")",
+      "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testExtract.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testMsg.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testMsg2.js\")",
+      "Bash(git stash *)"
     ]
   }
 }
