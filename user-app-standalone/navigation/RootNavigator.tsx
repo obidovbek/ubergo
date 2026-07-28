@@ -39,9 +39,18 @@ export const RootNavigator: React.FC = () => {
       return <BlockedScreen />;
     }
 
-    // User is authenticated, check if profile is complete
-    const profileComplete = (user as any)?.profile_complete !== false;
-    
+    // User is authenticated, check if profile is complete.
+    // Decide from data that is actually present: a MISSING `profile_complete` used to mean
+    // "complete" here, so a half-registered passenger landed in the main menu (OR-006).
+    // When the flag is absent (older API build) fall back to the profile itself — a registered
+    // user has a name, a passenger who only verified the OTP has neither. `display_name` is
+    // checked too because older `/auth/me` replies carry it while omitting `first_name`.
+    const rawProfileComplete = (user as any)?.profile_complete;
+    const profileComplete =
+      typeof rawProfileComplete === 'boolean'
+        ? rawProfileComplete
+        : !!((user as any)?.first_name || (user as any)?.display_name);
+
     if (!profileComplete) {
       // Profile is incomplete, show profile completion screen
       console.log('RootNavigator: Profile incomplete, showing ProfileCompletionNavigator');

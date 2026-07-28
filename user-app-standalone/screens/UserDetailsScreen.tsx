@@ -29,6 +29,11 @@ import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
 import { useCountries } from '../hooks/useCountries';
 import type { CountryOption } from '../types/country';
+import {
+  clearRegistrationDraft,
+  loadRegistrationDraft,
+  saveRegistrationDraft,
+} from '../utils/registrationDraft';
 
 const theme = createTheme('light');
 const placeholderColor = theme.palette.text.secondary;
@@ -100,8 +105,72 @@ export const UserDetailsScreen: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tempDate, setTempDate] = useState(new Date());
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const textInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
+
+  // Resume a half-finished registration with the fields already typed (OR-006).
+  useEffect(() => {
+    let mounted = true;
+    loadRegistrationDraft(phoneNumber)
+      .then((draft) => {
+        if (!mounted) return;
+        if (draft) {
+          setFirstName(draft.firstName || '');
+          setLastName(draft.lastName || '');
+          setFatherName(draft.fatherName || '');
+          setGender(draft.gender || '');
+          setBirthDate(draft.birthDate || '');
+          setEmail(draft.email || '');
+          setUserId(draft.userId || '');
+          setPromoCode(draft.promoCode || '');
+          setAdditionalPhones(draft.additionalPhones || []);
+          const parsed = draft.birthDate ? parseDate(draft.birthDate) : null;
+          if (parsed) {
+            setSelectedDate(parsed);
+          }
+        }
+      })
+      .finally(() => {
+        if (mounted) setDraftLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Persist what has been typed. Debounced so a keystroke isn't an AsyncStorage write,
+  // and gated on `draftLoaded` so the empty initial state can't wipe a stored draft.
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const timer = setTimeout(() => {
+      saveRegistrationDraft({
+        phone: phoneNumber,
+        firstName,
+        lastName,
+        fatherName,
+        gender,
+        birthDate,
+        email,
+        userId,
+        promoCode,
+        additionalPhones,
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    draftLoaded,
+    phoneNumber,
+    firstName,
+    lastName,
+    fatherName,
+    gender,
+    birthDate,
+    email,
+    userId,
+    promoCode,
+    additionalPhones,
+  ]);
 
   useEffect(() => {
     if (countries.length === 0) {
@@ -382,24 +451,32 @@ export const UserDetailsScreen: React.FC = () => {
         throw new Error(data.message || 'Failed to update profile');
       }
 
-      // Update user in context with profile_complete flag
-      if (data.data && data.data.user) {
-        // Ensure profile_complete is set to true after successful update
-        const updatedUser = {
-          ...data.data.user,
-          profile_complete: true
-        };
-        updateUser(updatedUser);
-        console.log('User updated with profile_complete: true', updatedUser);
+      // Trust the server's own verdict on completeness. Forcing `profile_complete: true`
+      // here used to let the app in even when the backend still considered the profile
+      // unfinished — the same "half-registered user inside the app" bug as OR-006.
+      const savedUser = data.data?.user;
+      const serverSaysComplete = savedUser?.profile_complete === true;
+
+      if (savedUser) {
+        updateUser(savedUser);
+        console.log('User updated, profile_complete =', savedUser.profile_complete);
       }
 
-      console.log('Profile updated successfully');
+      if (!serverSaysComplete) {
+        // Stay on the form (RootNavigator keeps us here) and keep the draft so nothing
+        // typed is lost.
+        showToast.warning(t('common.error'), t('userDetails.errorIncompleteSaved'));
+        return;
+      }
+
+      // Registration finished — the draft has served its purpose.
+      await clearRegistrationDraft();
 
       showToast.success(
         t('userDetails.successTitle'),
         t('userDetails.successMessage')
       );
-      
+
       // User will automatically navigate to main app via RootNavigator
       // since they are now authenticated and profile is complete
       console.log('Registration complete, navigating to main app...');

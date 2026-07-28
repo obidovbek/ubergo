@@ -4,168 +4,149 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ⏸️ **Parked (awaiting owner device test — implemented, on `main` @ 6c006a4):**
-> - T-011 (OR-001 OTP resume) — both apps.
-> - T-012 (OR-002 deleted-user logout) — App + API.
+> ⏸️ **Parked (implemented, awaiting owner device test):**
+> - T-011 (OR-001 OTP resume) — both apps · T-012 (OR-002 deleted-user logout) — App + API
+> - T-014 (OR-004 country in city text) · T-015 (OR-005 own number as extra phone) — user app
+> - ✅ Their code **is committed** (`5b315a6`) — the older "uncommitted" note was stale.
 
 ## Task
-- **ID / name:** T-013 (owner request OR-003) — auto-read the OTP SMS (user app), **zero-tap**
-- **Goal (definition of "done"):** On the user app OTP screen, when the SMS arrives the code
-  fills and submits **automatically, with no dialog and no tap** (Android), verified on a device.
-- **Why now:** Owner request. Chose the seamless, industry-standard path.
+- **ID / name:** T-016 (owner request OR-006) — a half-finished registration must **resume on the
+  registration screen**, not drop the passenger into the main menu. (user app + API)
+- **Goal (definition of "done"):** Passenger verifies the OTP, does **not** submit the profile form,
+  then kills / restarts the app. On relaunch the app opens **UserDetails (registration)**, not the
+  main menu — verified on a device. Fully-registered users are unaffected (still land on Home).
+- **Why now:** Owner request OR-006, reported 2026-07-27. A half-registered passenger currently
+  gets into the app with no name/gender at all, which also pollutes offers and the admin panel.
 
-## Decision (2026-07-21)
-- Option A (JS `autoComplete`/`textContentType`) is **already shipped** (helps iOS) but **does
-  NOT auto-fill on Android** (confirmed on Samsung S24). Keep it — don't revert.
-- Android needs a native Google API. Owner picked the **SMS Retriever API (hash)** — zero-tap,
-  no "read SMS" dialog, no SMS permission. Cost = the 11-char app hash must be in the SMS, so a
-  **new Eskiz template** is needed.
-- Division of labor (owner's words): **Claude** adds the native module + prints the app hash
-  (debug + release) and adds a backend env to append it; **Owner** registers + gets the new
-  Eskiz template approved.
+## Root cause (already traced in code — 2026-07-27)
+1. `POST /auth/verify-otp` **does** return `profile_complete` → straight after the code is entered
+   `RootNavigator` correctly shows `ProfileCompletionNavigator`. So the bug is not there.
+2. **`GET /auth/me` never returns `profile_complete`** — neither in its Sequelize `attributes`
+   nor in the JSON body ([AuthController.v2.ts:536-558](api,admin,db/apps/api/src/controllers/AuthController.v2.ts#L536-L558)).
+3. On every cold start `initializeAuth()` **replaces** the cached user with that reply
+   ([AuthContext.tsx:101](user-app-standalone/contexts/AuthContext.tsx#L101)) → the flag is gone.
+4. `RootNavigator` routes on `profile_complete !== false`
+   ([RootNavigator.tsx:43](user-app-standalone/navigation/RootNavigator.tsx#L43)) →
+   `undefined !== false` = **true** → `MainNavigator` = the main menu. 💥
 
-## Steps — CLAUDE
-- [x] 1. Pick a maintained SMS Retriever library for the **user app** and verify it builds with
-  **RN 0.81 New Architecture** (Expo 54). ✅ **DONE 2026-07-22** — owner approved
-  `react-native-otp-verify@1.2.0`; installed; **`:react-native-otp-verify:assembleDebug`
-  BUILD SUCCESSFUL** under Gradle 8.14.3 / AGP 8.x. `tsc` = 12 pre-existing errors, none from the lib.
-  See "Step 1 findings" below — the npm package is NOT the TurboModule repo its README suggests.
-- [x] 2. Wire it in `user-app-standalone/screens/OTPVerificationScreen.tsx`. ✅ **DONE 2026-07-22** —
-  added `utils/smsRetriever.ts` (lazy/defensive wrapper) + listener & auto-submit in the screen.
-  Option A props kept for iOS. `tsc` clean (12 pre-existing errors only); `extractOtp` unit-tested
-  8/8 including a hash that contains digits.
-- [x] 3. Print the app hash via `getHash()`. **Code done** (logs `[OR-003] SMS Retriever app hash:`).
-  ✅ **RESOLVED 2026-07-23 without a device** — computed directly from `debug.keystore` (Google's
-  SMS Retriever algorithm) for `com.obidovbek94.UbexGoUser`. **APP HASH = `JtArsQcEBm9`**
-  (cert SHA-256 `fac6…3b9c`). Note: [android/app/build.gradle:118] signs **release with the
-  debug keystore**, so debug hash = release hash for now → this ONE hash is valid for both today.
-  ⚠️ **PRODUCTION CAVEAT:** when a real release keystore is introduced, this hash changes — the
-  Eskiz template AND `ESKIZ_OTP_APP_HASH` must be recomputed from the new `.jks`.
-- [x] 4. Backend: append the hash behind `ESKIZ_OTP_APP_HASH`. ✅ **DONE 2026-07-22** —
-  `config.eskiz.otpAppHash` + `OtpService.buildOtpMessage()`; enforces the 140-byte cap in code
-  (drops the hash + warns rather than sending an SMS the retriever would ignore). tsc = 290
-  pre-existing errors, none mine. Verified: no env → **byte-identical to today's SMS (105 B)**;
-  with hash → 117 B; over-long hash → safely dropped.
-  ⏳ **Owner must still add `ESKIZ_OTP_APP_HASH` to the deploy env** (see below) — until then the
-  behaviour is unchanged, which is why this is safe to deploy before the template is approved.
-- [ ] 5. Coordinate with owner (below); once the template is approved + env set, test end-to-end.
+So it is an **API omission** amplified by two app-side defaults ("unknown ⇒ complete", and a
+destructive cache overwrite). Fix the API; harden the app so a missing field can never re-route.
 
-## Steps — OWNER
-- [ ] O1. After Claude gives the hash: register a **new Eskiz template** whose text = the current
-  message **plus the hash line**, and get it approved (moderation every 3h, weekdays 10:00–16:00).
-  Template text (wording unchanged — it fits in 140 bytes):
-  `Код верификации для входа к мобильному приложению UbexGo: 1234` + newline + `<release hash>`
-- [ ] O2. Set `ESKIZ_OTP_APP_HASH=<release hash>` in the backend env (test3 + prod).
-  **Claude did NOT edit these — they are `.env` / `infra/**` (CLAUDE.md rule 4).** Two places:
-  - `api,admin,db/infra/compose/docker-compose.yml` — add `ESKIZ_OTP_APP_HASH: ${ESKIZ_OTP_APP_HASH}`
-    next to `ESKIZ_EMAIL` (~line 59), and the value in `infra/compose/.env`.
-  - k8s test3: add it to the secret/env used by `infra/k8s/overlays/test3/.env`.
-  ⚠️ Leave it UNSET until the new template is approved — an SMS whose text doesn't match an
-  approved Eskiz template gets rejected. Unset = today's exact message, so deploying early is safe.
-- [ ] O3. Test on a **release** build: request SMS → code auto-fills + submits, zero taps.
+## Approach
+Server-side truth first, app-side defence second — smallest change that removes the whole class of
+bug, no new dependency, no schema change, no migration.
+- API: make `/auth/me` return the same profile shape the rest of the app already relies on.
+- App: **merge** the server user over the cached one instead of overwriting it, so any field the
+  server omits keeps its known value instead of silently becoming `undefined`.
+- App: stop `UserDetailsScreen` from forcing `profile_complete: true` locally — trust the server,
+  otherwise the app can strand a user inside the app with an incomplete profile (same bug class).
 
-## Files to touch
-- `user-app-standalone/`: `screens/OTPVerificationScreen.tsx` + native config (autolink / maybe a
-  config plugin) + the new dependency.
-- `api,admin,db/apps/api/src/services/OtpService.ts` (`sendSms`).
+## Steps
+- [x] 1. **API** — ✅ `getCurrentUser` (`/auth/me`) now selects and returns `profile_complete`
+  (defaulted to `false`) plus `first_name`, `last_name`, `father_name`, `gender`, `birth_date`,
+  `additional_phones`. Purely additive; no route/DB change.
+  **Also fixed `UserController.updateProfile`:** it set `profile_complete` from
+  `email && … && birth_date`, fields the sign-up form treats as OPTIONAL, then silently corrected
+  itself two lines later. Now one honest check — `first_name && last_name && gender`, computed from
+  the saved record so a partial PUT can't undo it. Behaviour is equivalent; the meaning is now
+  single. This mattered once the app started trusting the flag (step 4).
+- [x] 2. **App** — ✅ `AuthContext.initializeAuth()` merges `{ ...storedUser, ...serverUser }`
+  instead of replacing. The blocked and active branches were byte-identical, so they collapsed into
+  one path. A field the API omits can no longer erase a known value.
+- [x] 3. **App** — ✅ `RootNavigator` routes on an explicit boolean: `profile_complete` when it is
+  a real boolean, otherwise a fallback to `first_name || display_name`. **`display_name` is in the
+  fallback deliberately** — the *old* `/auth/me` sends it but not `first_name`, so without it a
+  new app build hitting a not-yet-deployed API would have thrown *registered* users onto the
+  sign-up form. Fully-registered users are unaffected either way.
+- [x] 4. **App** — ✅ `UserDetailsScreen.handleSubmit()` uses the server's returned
+  `profile_complete` instead of hard-coding `true`. If the server says `false`, the user stays on
+  the form with a warning (`userDetails.errorIncompleteSaved`, added to uz/en/ru) and the draft is
+  kept. Only a real `true` clears the draft and lets `RootNavigator` move on.
+- [x] 5. **App** — ✅ new `utils/registrationDraft.ts` (mirrors `utils/pendingOtp.ts`): saves the
+  typed fields debounced 400 ms, restores them on mount, 7-day TTL. Cleared on successful submit,
+  on logout, and on the OR-002 deleted-account path. **Tagged with the phone number** and dropped
+  if a *different* phone is registering, so one person's draft can never appear in another's form.
+- [x] 6. **Static verification** — ✅ `npx tsc --noEmit`: user app **12 errors = baseline**, API
+  **290 = baseline**, none in any touched file. `npm run lint` is broken repo-wide (ESLint 9 with no
+  flat config) — pre-existing, unrelated, not caused by this task.
+- [ ] 7. **Owner** — deploy the API to test3, then device-test: verify OTP → close the app from
+  recents → reopen → must land on the registration form, **with the typed fields still there**.
+  Then finish registration → reopen → must land on Home.
 
-## Step 1 findings (2026-07-22) — READ BEFORE STEP 2
-- **Installed:** `react-native-otp-verify@1.2.0` (owner-approved).
-- ⚠️ **Package identity trap.** The npm package `react-native-otp-verify` is published from
-  `github.com/faizalshap/react-native-otp-verify` (Java pkg `com.faizal.OtpVerify`). The
-  `pushpender-singh-ap/react-native-otp-verify` GitHub repo advertising "TurboModules / RN >= 0.76"
-  is a **different, unaffiliated repo reusing the same name in its docs**. Don't trust that README
-  for this dependency. Same-author alternates: `@pushpendersingh/react-native-otp-verify` (~1.7k/wk),
-  `react-native-otp-auto-verify` (~2k/wk); `react-native-otp-verify-remastered` is **deprecated**.
-- **It is a LEGACY bridge module, not a TurboModule**: no `codegenConfig`, no `cpp/`, plain
-  `ReactPackage`, devDeps pinned to RN 0.63 / React 16. It works under New Arch via the **interop
-  layer** — fine today, but it is the thing most likely to break on a future RN upgrade.
-- **It nevertheless BUILDS.** Its `build.gradle` looks scary (`com.facebook.react:react-native:+`
-  = the pre-0.71 Maven coordinate, and an AGP 3.6.1 classpath) but Expo's RN Gradle plugin
-  substitutes/normalizes these at the root project. Verified empirically, not assumed.
-- **API available** (`lib/typescript/index.d.ts`): `getHash()`, `getOtp()`, `startOtpListener()`,
-  `addListener()`, `removeListener()`, and a `useOtpVerify({numberOfDigits})` hook.
-  The hook is the cleanest fit for Step 2 (gives `otp`, `hash`, `startListener`, `stopListener`).
-
-## ⚠️ Environment blocker: Avast breaks TLS for npm AND Gradle (fixed per-command, NOT globally)
-**Avast Web/Mail Shield re-signs HTTPS** with its own root (`CN=Avast Web/Mail Shield Root`).
-Windows/PowerShell trust it; **Node and Java ship their own truststores and do not** → every
-`npm install` fails `UNABLE_TO_VERIFY_LEAF_SIGNATURE` and every Gradle dependency fetch fails
-`PKIX path building failed`. Nothing was disabled and no global config was changed. Workarounds used:
-- **npm:** `$env:NODE_OPTIONS="--use-system-ca"` before `npm install` (Node 22 reads the Windows store).
-- **Gradle:** a copy of the Adoptium-17 `cacerts` with the Avast root imported, passed via
-  `$env:GRADLE_OPTS="-Djavax.net.ssl.trustStore=<path> -Djavax.net.ssl.trustStorePassword=changeit"`.
-  Scratchpad copy is temporary. **Permanent fix (owner's choice):** either disable Avast HTTPS
-  scanning, or import the Avast root into the JDK cacerts / set `NODE_EXTRA_CA_CERTS` for good.
-  Note Gradle uses `~/.gradle/jdks/eclipse_adoptium-17-...`, **not** `JAVA_HOME` (Android Studio jbr).
+## Files actually touched (all uncommitted)
+- `api,admin,db/apps/api/src/controllers/AuthController.v2.ts` — `getCurrentUser` only
+- `api,admin,db/apps/api/src/controllers/UserController.ts` — `updateProfile` completeness rule
+- `user-app-standalone/contexts/AuthContext.tsx` — `initializeAuth` merge + draft cleared on
+  logout and on the deleted-account path
+- `user-app-standalone/navigation/RootNavigator.tsx` — profile-complete decision
+- `user-app-standalone/screens/UserDetailsScreen.tsx` — draft load/save + trust the server
+- `user-app-standalone/utils/registrationDraft.ts` — **NEW**
+- `user-app-standalone/translations/{uz,en,ru}.ts` — `userDetails.errorIncompleteSaved`
 
 ## Risks / open questions (READ before coding)
-- **New Architecture compat:** RN 0.81 defaults to New Arch; many SMS libs are old. Verify the
-  chosen lib builds/runs before wiring UI. This is the #1 risk.
-- ⚠️ **SMS length — I GOT THIS WRONG ONCE. Two different limits apply; both must pass.**
-  1. **140 bytes** — SMS Retriever's delivery cap. Old text + hash = 117 bytes → passes.
-  2. **70 CHARACTERS (UCS-2)** — the single-segment cap for Cyrillic. This is the binding one.
-  The original text is **62 chars**, leaving only 8, but `\n` + an 11-char hash needs **12**.
-  → 74 chars = **2 SMS segments**. Eskiz showed this as «74 символов, всего SMS - 2 шт».
-  A split SMS costs double **and SMS Retriever generally won't fire on it**, so the feature breaks.
-  ✅ **FIX: shorten the Russian** (no need to switch to Latin). Approved wording to register:
-  `Код верификации для входа в приложение UbexGo: 0000` + newline + `JtArsQcEBm9` = **63 chars → 1 SMS**.
-  ⚠️ **Eskiz Пункт 2** rejected the ultra-short `Код верификации UbexGo: 0000` (2026-07-23):
-  a code SMS MUST name the purpose ("для входа") AND resource ("приложение UbexGo").
-  This wording satisfies Пункт 2 and is still 1 segment.
-  Note the code placeholder is `0000` (matches the existing approved template's convention), and
-  **the hash must be on its own last line**, not space-appended after the code.
-  ⚠️ If the wording ever changes again, re-check **chars ≤ 70**, not just bytes.
-- **Hash is signing-key specific:** debug build → debug hash; release build → release hash. The
-  approved Eskiz template carries ONE hash, so **test on a release build with the release hash**
-  (or temporarily use the debug hash for a debug-build test).
-- Driver app is out of scope (its code arrives via push to the user app, not SMS).
+- ✅ **ANSWERED 2026-07-27:** "resume from the registration point" means **both** — open the
+  registration screen *and* keep the fields already typed. Step 5 is therefore in scope.
+- ⚠️ **Deploy order.** The API fix must reach test3 **before** the app build is tested, otherwise
+  step 3 is doing all the work alone. Steps 2+3 are written so an old API still behaves correctly.
+- ⚠️ **Merge instead of replace (step 2)** has a cost: a field the server *deliberately* clears
+  (e.g. email removed by an admin) would keep the stale cached value until the next login. Accepted
+  — the alternative is today's bug. Status/blocked handling is unaffected (`status` is always sent).
+- ⚠️ **Don't over-tighten step 3.** Flipping the default to "unknown ⇒ incomplete" would trap
+  *existing, fully-registered* users on the registration form if any endpoint omits the flag. The
+  check must key off data that is present.
+- **Driver app is out of scope** (owner said "yolovchi" = passenger). Its `RootNavigator` uses a
+  different `checkDriverProfile` path — worth a separate look later, not now.
+- No DB schema change, no migration, no new dependency → CLAUDE.md rule 4 is not triggered.
+- Environment: Avast still breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"` for npm,
+  `GRADLE_OPTS` truststore for Gradle, `git -c http.sslCAInfo=...` for push).
 
 ## Session notes (one line per work session)
-- 2026-07-21: Shipped Option A (JS). Device test: Android didn't auto-fill (expected). Owner chose
-  the **hash / SMS Retriever** path. Documented for handoff; implementation not started.
-- 2026-07-22: Committed Option A + docs (`9b36014`). **Step 1 DONE**: installed
-  `react-native-otp-verify@1.2.0` (owner-approved) and proved it compiles (`assembleDebug`
-  BUILD SUCCESSFUL). Found the package-identity trap + legacy-bridge fact, and diagnosed the
-  Avast TLS interception that was blocking npm and Gradle. No app source changed yet.
-- 2026-07-22 (2): **Step 2 DONE** (+ Step 3 code). Added `utils/smsRetriever.ts` and wired the
-  listener + zero-tap auto-submit into `OTPVerificationScreen.tsx`. **Measured the SMS: 117 bytes
-  with the hash — the 140-byte risk is resolved, template wording can stay.** Not yet run on a device.
-- 2026-07-22 (3): **Step 4 DONE** — backend builds the SMS via `buildOtpMessage()` behind
-  `ESKIZ_OTP_APP_HASH`, with the 140-byte cap enforced in code. Committed for server deploy.
-  All CLAUDE steps now done except reading the hash off a real build (Step 3's device half).
+- 2026-07-27: Task created; root cause traced end-to-end in code before writing the plan.
+- 2026-07-27 (2): **Steps 1-6 DONE** — API `/auth/me` now returns `profile_complete`; app merges
+  instead of overwriting the cached user; `RootNavigator` decides from present data; submit trusts
+  the server; registration draft persisted + phone-tagged. tsc at baseline in both projects.
+  Not run on a device; API not deployed. Uncommitted.
 
 ## Resume point (for the next chat)
-**All code for OR-003 is written and committed. What remains is device/owner work.**
-**Next action = Step 3's remaining half (needs a real build):** run the user app on Android, open
-the OTP screen, read the `[OR-003] SMS Retriever app hash:` log line. A **debug** build prints the
-**debug** hash; the Eskiz template needs the **RELEASE** hash, so build release (release keystore)
-to get the value for the owner. Then owner does O1 (template) → O2 (env) → O3 (release test).
-Build cmds in this environment: `$env:NODE_OPTIONS="--use-system-ca"; npm run android` (user app).
-⚠️ In this environment, prefix npm with `$env:NODE_OPTIONS="--use-system-ca"` and Gradle with the
-`GRADLE_OPTS` truststore — see the Avast section above.
+**All Claude-side work (steps 1-6) is implemented; only step 7 — owner deploy + device test —
+remains.** Verification so far is **static only**: `tsc` at baseline (12 app / 290 API) and code
+reading. Nothing has been run on a device, and the API fix is **not deployed to test3**, so the
+old `/auth/me` is still live and the bug still reproduces until it is.
+
+**Owner's next actions:** (1) deploy the API to test3, (2) build the user app, (3) verify OTP →
+kill the app from recents → reopen → must land on the registration form with the typed fields
+still filled, (4) finish registration → reopen → must land on Home.
+
+⚠️ **Uncommitted on disk:** only this task's changes (T-014/T-015 landed in `5b315a6`).
+Commit still needs owner approval (CLAUDE.md rule).
+⚠️ Environment: Avast still breaks npm/Gradle/git TLS — `$env:NODE_OPTIONS="--use-system-ca"` for
+npm, `GRADLE_OPTS` truststore for Gradle, `git -c http.sslCAInfo=<bundle>` for push.
 
 ## 📌 For the NEXT CHAT — read this first
-**State:** all OR-003 code is written, committed (`d963cfb`) and **pushed to `origin/main`**.
-The working tree is clean apart from `.claude/settings.json` (permission entries, ignore it).
-**Claude has nothing left to code on T-013.** The remaining work is physical/owner work:
-a release build to read the hash → Eskiz template → env var → device test (see Steps 3/O1–O3).
+**State (2026-07-27):** T-016 / OR-006 — **code complete, unverified, uncommitted, undeployed.**
+Steps 1-6 done; **step 7 (owner deploy + device test) is the only thing left.**
 
-If the owner comes back with the hash and an approved template, the only action is setting the
-env var (owner does that; `infra/**` is off-limits per CLAUDE.md rule 4) and testing.
-If instead they want to move on, the board's next cards are **T-011/T-012 device tests** (both
-implemented, awaiting confirmation) or **T-001** (passenger→offer join flow).
+**First three things to do in the new chat:**
+1. **Ask whether the API was deployed to test3 and whether the device test passed.**
+   - Passed → tick step 7, mark T-016 done on the board, OR-006 ✅, then `/end-day` or `/new-task`.
+   - Failed → the debug order is: (a) `adb logcat` for `RootNavigator: Auth state:` and the
+     `Profile incomplete` / `Profile complete` line — it prints which navigator was chosen;
+     (b) curl `/auth/me` with a real token and check `profile_complete` is in the JSON;
+     (c) only then look at the app.
+2. **Offer the commit** (still needs approval — 13 files):
+   `fix(auth): resume half-finished registration instead of the main menu (OR-006)`
+3. If the owner wants new work instead, the board's remaining cards are the four parked
+   device-test confirmations (T-011/T-012/T-014/T-015) or fresh work **T-001** (passenger→offer
+   join flow) / **T-002** (driver offer wizard).
 
-⚠️ **Environment (will bite immediately):** Avast Web/Mail Shield re-signs HTTPS, so **npm,
-Gradle and git push all fail** on certificate errors out of the box. Fixes that worked, per
-command — see the Avast section below for the full detail:
-- npm → `$env:NODE_OPTIONS="--use-system-ca"`
-- Gradle → `GRADLE_OPTS` pointing at a cacerts copy containing the Avast root
-- git → `git -c http.sslCAInfo=<bundle with Avast root> push`
-The scratchpad copies are temporary and will be gone; regenerate them by exporting the Avast root
-from `Cert:\LocalMachine\Root`, or (better) ask the owner to fix this permanently.
+**Do NOT re-investigate the root cause** — it is fully written up in the "Root cause" section
+above and in `docs/OWNER_REQUESTS.md` (OR-006). **Do not repeat the static verification** unless
+files changed: `tsc` was at baseline (user app 12 / API 290) after the last edit.
 
-## Not yet verified (be honest about this)
-Everything so far is **static verification only** — `tsc`, a Gradle module compile, and a Node
-unit-test of the regex. The app has **never been run** and no SMS has been received. The zero-tap
-flow is unproven until a device test with an approved template containing the hash.
+**Two things that look like bugs but are deliberate** (don't "fix" them):
+- `RootNavigator`'s fallback accepts `display_name`, not only `first_name` — see step 3.
+- `AuthContext` merges rather than replaces the cached user — see the Risks section.
+
+**Known blind spot:** the driver app was left out of scope, but it consumes the same `/auth/me`
+and has its own `RootNavigator` + `checkDriverProfile`. It may have the same class of bug. Worth a
+card if the owner reports it.

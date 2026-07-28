@@ -533,8 +533,15 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
 
     const payload = verifyAccessToken(token);
 
+    // `profile_complete` and the profile fields must be here: the apps rebuild their cached
+    // user from this reply on every cold start, so anything missing here is read as "unknown"
+    // and a half-registered user gets routed into the main app instead of the sign-up form (OR-006).
     const user = await User.findByPk(payload.userId, {
-      attributes: ['id', 'phone_e164', 'email', 'display_name', 'is_verified', 'role', 'status', 'created_at', 'updated_at'],
+      attributes: [
+        'id', 'phone_e164', 'email', 'display_name', 'is_verified', 'role', 'status',
+        'first_name', 'last_name', 'father_name', 'gender', 'birth_date',
+        'additional_phones', 'profile_complete', 'created_at', 'updated_at',
+      ],
     });
 
     if (!user) {
@@ -553,6 +560,13 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
         is_verified: user.is_verified,
         role: user.role,
         status: user.status,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        father_name: user.father_name,
+        gender: user.gender,
+        birth_date: user.birth_date,
+        additional_phones: user.additional_phones,
+        profile_complete: user.profile_complete ?? false,
         created_at: user.created_at,
         updated_at: user.updated_at,
       },

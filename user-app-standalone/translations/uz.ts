@@ -161,6 +161,7 @@ export default {
     successTitle: 'Muvaffaqiyatli!',
     successMessage: 'Registratsiya muvaffaqiyatli yakunlandi',
     errorUpdate: "Profil yangilashda xatolik yuz berdi",
+    errorIncompleteSaved: "Ma'lumotlar saqlandi, lekin registratsiya hali tugallanmagan. Iltimos, majburiy maydonlarni tekshiring",
   },
 
   // Menu Screen (Home)

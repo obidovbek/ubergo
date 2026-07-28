@@ -27,7 +27,12 @@
       "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testExtract.js\")",
       "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testMsg.js\")",
       "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\f319d146-08ad-4e66-8fed-badd02bd3b60\\\\scratchpad\\\\testMsg2.js\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(cd \"d:/projects/UbexGo/user-app-standalone\" && echo \"==== signingConfigs / keystore refs in build.gradle ====\" && grep -nE \"signingConfig|storeFile|keystore|debug \\\\{|release \\\\{\" android/app/build.gradle && echo \"\" && echo \"==== keystores present in android/app ====\" && ls -la android/app/*.keystore android/app/*.jks 2>/dev/null; echo \"==== global debug keystore ====\" && ls -la ~/.android/debug.keystore 2>/dev/null)",
+      "Read(//c/Users/Bekzod/.android/**)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'AuthController\\\\.v2|UserController' }\\) | Select-Object -First 20)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"ERRORS: \" + \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'UserDetailsScreen|RootNavigator|registrationDraft' }\\))"
     ]
   }
 }

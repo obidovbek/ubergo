@@ -12,6 +12,7 @@ import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
 import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
 import { clearPendingOtp } from '../utils/pendingOtp';
+import { clearRegistrationDraft } from '../utils/registrationDraft';
 
 interface LoginCredentials {
   email: string;
@@ -86,24 +87,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const currentUser = await AuthAPI.getCurrentUser(token);
           if (currentUser.data) {
-            const serverUser = currentUser.data;
-            // Update user with latest status from server
-            if (serverUser.status === 'blocked' || serverUser.status === 'pending_delete') {
-              // User is blocked, update local state but don't logout yet
-              // RootNavigator will handle showing blocked screen
-              await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
-              dispatch({
-                type: AUTH_ACTIONS.LOGIN,
-                payload: { user: serverUser, token },
-              });
-            } else {
-              // User is active, proceed normally
-              await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
-              dispatch({
-                type: AUTH_ACTIONS.LOGIN,
-                payload: { user: serverUser, token },
-              });
-            }
+            // MERGE, don't replace: a field the endpoint doesn't send must keep its cached
+            // value instead of becoming `undefined`. `/auth/me` used to omit `profile_complete`,
+            // which silently turned a half-registered user into a "complete" one and sent them
+            // to the main menu instead of back to the sign-up form (OR-006).
+            const serverUser = { ...user, ...currentUser.data };
+            // A blocked / pending_delete user is still stored and dispatched — RootNavigator
+            // shows the blocked screen from `status`.
+            await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(serverUser));
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN,
+              payload: { user: serverUser, token },
+            });
           } else {
             // Fallback to stored user if server check fails
             dispatch({
@@ -121,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
               AsyncStorage.removeItem(STORAGE_KEYS.USER),
               clearPendingOtp(),
+              clearRegistrationDraft(),
             ]);
             return; // stay unauthenticated → AuthNavigator (login/OTP); `finally` clears loading
           }
@@ -237,6 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
         clearPendingOtp(),
+        clearRegistrationDraft(),
       ]);
 
       console.log('AuthContext: Dispatching logout action...');

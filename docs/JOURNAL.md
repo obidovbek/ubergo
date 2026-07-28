@@ -5,6 +5,75 @@
 
 ---
 
+## 2026-07-27 — OR-006 / T-016 half-finished registration → main menu (fix implemented)
+- **Task:** New owner request OR-006 (T-016): "chala registratsiya qilsa registratsiya joyidan
+  boshlab ketmasakan. GLavniy menyuga borib qolarkan yolovchi" — a half-finished registration must
+  resume on the registration form instead of dropping the passenger into the main menu (user app).
+- **Done:** Root cause traced, plan approved, **steps 1-6 implemented** (step 7 = owner deploy +
+  device test).
+  - **API:** `GET /auth/me` now returns `profile_complete` + the profile fields (it returned
+    neither). Also rewrote `UserController.updateProfile`'s completeness rule — it required `email`
+    and `birth_date`, which the sign-up form treats as **optional**, then silently corrected itself
+    two lines later.
+  - **User app:** `AuthContext.initializeAuth()` now **merges** the server user over the cached one
+    instead of replacing it; `RootNavigator` decides completeness from data that is actually
+    present; `UserDetailsScreen` trusts the server's `profile_complete` instead of forcing `true`;
+    new `utils/registrationDraft.ts` keeps the typed fields so the resumed form is pre-filled.
+- **Root cause (the interesting part):** not a navigation bug at all. `/auth/me` never sent
+  `profile_complete`, and the app **overwrote** its cached user with that reply on every cold start,
+  so the flag became `undefined` — and `RootNavigator` read `undefined !== false` as **complete**
+  → `MainNavigator`. One API omission, amplified by two unsafe app defaults ("unknown ⇒ complete"
+  and a destructive cache overwrite). Fixed all three so the class of bug is gone, not just this
+  instance.
+- **Decisions:** (1) Owner confirmed "resume from the registration point" means **both** — open the
+  form *and* keep what was typed — so the draft is in scope. (2) The draft is **tagged with the
+  phone number** and dropped if a different phone registers, so one person's half-typed name can
+  never appear in someone else's form. (3) `RootNavigator`'s fallback deliberately accepts
+  `display_name`, not just `first_name`: the *old* `/auth/me` sends `display_name` but not
+  `first_name`, so a stricter check would have thrown **registered** users onto the sign-up form
+  during the window where a new app build meets a not-yet-deployed API.
+- **Problems / honest status:** **Nothing has run on a device and the API is NOT deployed** — on
+  test3 the old `/auth/me` is still live, so the bug still reproduces until the owner deploys.
+  Verification is static only: `tsc` at baseline (user app 12, API 290 pre-existing errors, none in
+  any touched file). `npm run lint` fails repo-wide (ESLint 9 with no flat config) — pre-existing,
+  unrelated. Also corrected a **stale note** carried in PLAN.md: T-014/T-015 were described as
+  uncommitted, but they landed in `5b315a6`.
+- **Board hygiene:** *Now* held 4 cards, all implemented and only awaiting device tests, so they
+  moved to a new **⏸️ Parked — awaiting owner device test** section and *Now* holds only T-016.
+- **Next:** Owner: (1) deploy the API to test3 **first**, (2) build the user app, (3) verify OTP →
+  kill from recents → reopen → must land on the registration form **with the typed fields still
+  there**, (4) finish registration → reopen → must land on Home.
+- **Commit:** ⚠️ **NOT committed** — 13 files on disk awaiting approval. Proposed message:
+  `fix(auth): resume half-finished registration instead of the main menu (OR-006)`.
+  `.claude/settings.json` (permission entries) is also still modified, unrelated.
+
+---
+
+## 2026-07-26 — OR-003 / T-013 ✅ zero-tap OTP auto-read VERIFIED on device
+- **Task:** OR-003 — finish + verify zero-tap OTP SMS auto-read (user app + API)
+- **Done:** **Zero-tap works on a real device** (user app, test3 env) — request OTP → code
+  auto-fills and auto-submits, no dialog, no tap. First real end-to-end test; everything before
+  was static only. Owner set `ESKIZ_OTP_APP_HASH` in the test3 `.env` (picked up by the
+  `ubexgo-test3-env` configMapGenerator on redeploy), registered/approved the Eskiz template,
+  and confirmed delivery + auto-read. T-013 marked done on the board; OR-003 → ✅.
+- **Decisions / big catch:** **The real app hash is `asNtyBnPVzB`, not `JtArsQcEBm9`.** The running
+  build logged `[OR-003] SMS Retriever app hash: ["asNtyBnPVzB"]` via `getHash()` — the authoritative
+  value SMS Retriever actually matches. The earlier `JtArsQcEBm9` was a wrong static keystore
+  computation from a past session (an Eskiz template had even been approved with it). Corrected the
+  env, the docs, and the `or003-sms-app-hash` memory. **Lesson: trust `getHash()` on a real build
+  over any hand-computed keystore hash.**
+- **Problems / carry-forward:** `android/app/debug.keystore` is **not committed to git** and signs
+  both debug+release (`build.gradle:118`), so `asNtyBnPVzB` only holds for builds from this machine's
+  current keystore — a real production release `.jks` (or a clean prebuild elsewhere) changes it →
+  must redo the Eskiz template + env then. Also: register a production-grade Eskiz template for the
+  `asNtyBnPVzB` wording before real users (test send delivered on a test number).
+- **Next:** Owner continues in a new chat. Board's remaining items are device-test confirmations for
+  T-011/T-012/T-014/T-015 (all implemented) or fresh work T-001 (join flow) / T-002 (offer wizard).
+- **Commit:** ⚠️ **NOT committed** — T-014/T-015 app changes + today's doc updates are on disk,
+  awaiting approval. `.claude/settings.json` also modified (permission entries).
+
+---
+
 ## 2026-07-22 — OR-003 / T-013 SMS Retriever implemented + pushed
 - **Task:** OR-003 — zero-tap OTP SMS auto-read (user app + API)
 - **Done:** All CLAUDE steps of the plan (1, 2, 4, and the code half of 3).

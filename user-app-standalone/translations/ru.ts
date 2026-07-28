@@ -157,6 +157,7 @@ export default {
     successTitle: 'Успешно!',
     successMessage: 'Регистрация завершена успешно',
     errorUpdate: 'Ошибка обновления профиля',
+    errorIncompleteSaved: 'Данные сохранены, но регистрация ещё не завершена. Проверьте обязательные поля',
   },
 
   menu: {

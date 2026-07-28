@@ -12,11 +12,49 @@
 |----|--------|-----|-----------------|-----------|
 | OR-001 | 🔨 in progress | driver + user apps | OTP screen loses its place → jumps to main menu after backgrounding | T-011 |
 | OR-002 | 🔨 in progress | driver + user + API | Deleted user still gets into the app (cached token trusted) → must return to login | T-012 |
-| OR-003 | 🔨 in progress | user app | Auto-read the OTP SMS so the code fills itself | T-013 |
+| OR-003 | ✅ done | user app | Auto-read the OTP SMS so the code fills itself | T-013 |
 | OR-004 | ✅ done | user app | When picking cities, drop the country from the location text | T-014 |
 | OR-005 | ✅ done | user app | Additional-phones field accepts the user's OWN primary number | T-015 |
+| OR-006 | 🔨 in progress | user app + API | Half-finished registration → app opens the main menu instead of resuming the registration form | T-016 |
 
 ---
+
+## OR-006 — Half-finished registration jumps to the main menu
+
+**Reported:** 2026-07-27 · **App:** user (passenger) · **Board:** T-016
+
+**Original (Uzbek):**
+> "chala registratsiya qilsa registratsiya joyidan boshlab ketmasakan. GLavniy menyuga
+> borib qolarkan yolovchi (mobileAppda)"
+
+**Translation:**
+> If someone registers only halfway, it should carry on from the registration point.
+> [Instead] it ends up going to the main menu — passenger (in the mobile app).
+
+**Root cause (found in code, 2026-07-27 — not yet device-confirmed):**
+The OTP verify response *does* carry `profile_complete` (`AuthController.v2.ts:262`), so right
+after verifying the code the app correctly shows `UserDetailsScreen`. But **`GET /auth/me` does
+not return `profile_complete` at all** — its `attributes` list and JSON body omit it
+(`AuthController.v2.ts:536-558`). On the next cold start `AuthProvider.initializeAuth()` calls
+`/auth/me` and **overwrites the cached user with that reply**
+(`contexts/AuthContext.tsx:101`), so the flag becomes `undefined`. `RootNavigator` then does
+`profile_complete !== false` (`navigation/RootNavigator.tsx:43`) → `undefined !== false` → **true**
+→ `MainNavigator` = the main menu. The half-registered passenger is dropped into the app with no
+profile instead of back on the registration form.
+
+Two independent defects, both need fixing:
+1. **API:** `/auth/me` drops `profile_complete` (and the profile fields) from its response.
+2. **App:** the "unknown ⇒ complete" default plus a destructive cache overwrite turn a missing
+   field into a wrong route.
+
+**Fix (2026-07-27):** `/auth/me` now returns `profile_complete` + the profile fields;
+`AuthContext` **merges** the server user over the cached one instead of replacing it;
+`RootNavigator` decides from data that is present; `UserDetailsScreen` trusts the server's
+`profile_complete` instead of forcing `true`; and a new `utils/registrationDraft.ts` keeps the
+typed fields so the resumed form is pre-filled (owner confirmed both readings were meant).
+Also cleaned up `UserController.updateProfile`, which computed `profile_complete` from fields the
+form treats as optional. tsc at baseline in both projects.
+⏳ **Needs the API deployed to test3, then an owner device test** — nothing has run on a device.
 
 ## OR-005 — Additional phone accepts the user's own primary number
 
@@ -250,3 +288,32 @@ so the currently-approved Eskiz template keeps working. Nothing changes until th
 ⚠️ **Known weakness (not a blocker):** the chosen library is an old-style bridge module (it works
 on RN 0.81 via the New-Arch interop layer, verified by compiling it). It is the most likely thing
 to break on a future React Native upgrade. Alternative if it ever does: `react-native-otp-auto-verify`.
+
+### ✅ VERIFIED DONE on device — 2026-07-26
+
+**Zero-tap works.** On the user app (test3 env), requesting an OTP now auto-fills and auto-submits
+the code with **no dialog and no tap**. End-to-end confirmed on a real device — the first non-static
+verification of the whole feature.
+
+⚠️ **The real app hash is `asNtyBnPVzB`, NOT `JtArsQcEBm9`.** The running build logged
+`[OR-003] SMS Retriever app hash: ["asNtyBnPVzB"]` via `getHash()` (the exact algorithm SMS
+Retriever matches against, so it is authoritative). The earlier `JtArsQcEBm9` was a **static
+keystore computation from a past session that was simply wrong** — the owner even got an Eskiz
+template approved with it before we caught this. **Lesson: trust `getHash()` on a real build over
+any hand-computed keystore hash.**
+
+**Working configuration:**
+- Backend env `ESKIZ_OTP_APP_HASH=asNtyBnPVzB` (test3: `infra/k8s/overlays/test3/.env`, picked up
+  by the `ubexgo-test3-env` configMapGenerator on redeploy).
+- Eskiz message delivered = `Код верификации для входа в приложение UbexGo: <code>\nasNtyBnPVzB`
+  (single Cyrillic segment, satisfies Eskiz Пункт 2). Owner confirmed this text delivers via Eskiz.
+
+⚠️ **Two carry-forward caveats (not blockers for test-production):**
+1. **`android/app/debug.keystore` is NOT committed to git.** `build.gradle:118` signs both debug and
+   release with it, so `asNtyBnPVzB` holds only for builds from this machine's current keystore. A
+   clean prebuild / different machine / real release `.jks` regenerates the key → **different hash →
+   zero-tap breaks**. Before shipping a real production release: create a permanent release keystore,
+   read *its* `getHash()`, then redo the Eskiz template + `ESKIZ_OTP_APP_HASH` once.
+2. **Register a production Eskiz template for the `asNtyBnPVzB` wording.** The owner's test send
+   delivered (test number), but before real users, an *approved* template matching that exact text
+   must exist or production API sends could be rejected.

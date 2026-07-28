@@ -157,6 +157,7 @@ export default {
     successTitle: 'Success!',
     successMessage: 'Registration completed successfully',
     errorUpdate: 'Error updating profile',
+    errorIncompleteSaved: 'Your details were saved, but registration is not finished yet. Please check the required fields',
   },
 
   menu: {

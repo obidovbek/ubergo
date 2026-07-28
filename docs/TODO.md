@@ -7,6 +7,16 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-016 (P1) **[OWNER OR-006]** Half-finished registration → the app opens the main menu
+  instead of resuming the registration form (user app + API). Root cause: `/auth/me` omitted
+  `profile_complete`. **Fix implemented (API + app), incl. draft pre-fill; tsc at baseline.
+  Needs the API deployed to test3, then an owner device test.**
+  → see `docs/PLAN.md`, `docs/OWNER_REQUESTS.md`
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. All of their code is committed (T-014/T-015 in
+> `5b315a6`). Move a card back to *Now* only if a device test **fails**.
 - [ ] T-011 (P1) **[OWNER OR-001]** OTP screen resets to main menu after the app is
   backgrounded/killed — should resume the OTP screen. Affects driver + user apps.
   **Fix implemented in both apps (tsc clean); awaiting owner device test.**
@@ -15,12 +25,6 @@
   trusted) — app must log out to the login/OTP screen; API must reject deleted tokens.
   Affects driver + user apps + backend. **Fix implemented (App + API), tsc clean;
   awaiting owner device test.** → see `docs/OWNER_REQUESTS.md`
-- [ ] T-013 (P2) **[OWNER OR-003]** Auto-read the OTP SMS (user app), zero-tap via SMS Retriever.
-  **All code DONE + pushed (`d963cfb`); safe to deploy — SMS unchanged until the env var is set.**
-  ⏳ Blocked on owner: (1) release build → read the app hash from the log, (2) new Eskiz template
-  with that hash approved, (3) then set `ESKIZ_OTP_APP_HASH`, (4) zero-tap device test.
-  ⚠️ Never device-tested yet. → see `docs/PLAN.md` + `docs/OWNER_REQUESTS.md`
-
 - [ ] T-014 (P2) **[OWNER OR-004]** Remove the country from the city/location text on
   "Safar so'rov yaratish" (user app). **Done — `buildLocationText` drops country;
   label + saved text now `city, province`. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
@@ -48,6 +52,9 @@
 - [ ] T-010 (P3) Add a real test suite (none exists today)
 
 ## ✅ Done (newest on top)
+- [x] T-013 (OR-003) Zero-tap OTP SMS auto-read via SMS Retriever (user app + API) —
+  **device-verified 2026-07-26.** Real app hash = `asNtyBnPVzB` (not the earlier `JtArsQcEBm9`);
+  `ESKIZ_OTP_APP_HASH=asNtyBnPVzB` set in test3. ⚠️ hash changes with a real release keystore.
 - [x] Push notifications: per-app FCM tokens + driver app registration fixed — 2026
 - [x] Driver offers: backend API + status machine + admin moderation UI — 2026
 - [x] Driver app: offers list screen (filters, status badges) — 2026

@@ -141,21 +141,19 @@ export class UserController {
       if (promo_code !== undefined) updateData.promo_code = promo_code;
       if (referral_id !== undefined) updateData.referral_id = referral_id;
       
-      // Set profile_complete to true only if all required fields are present
-      updateData.profile_complete = !!(email && first_name && last_name && birth_date && gender);
-      
       await user.update(updateData);
 
-      // Check if profile is now complete
-      const isComplete =
-        user.first_name &&
-        user.last_name &&
-        user.gender;
+      // A profile counts as complete once it has the fields the sign-up form actually
+      // requires — name and gender. (Email and birth date are optional in the app, so
+      // demanding them here marked finished registrations as incomplete.) Computed from
+      // the saved record, not the request body, so a partial PUT can't undo it.
+      // The apps route on this flag, so it must mean exactly one thing (OR-006).
+      const isComplete = !!(user.first_name && user.last_name && user.gender);
 
-      if (isComplete && !user.profile_complete) {
-        await user.update({ profile_complete: true });
+      if (isComplete !== user.profile_complete) {
+        await user.update({ profile_complete: isComplete });
       }
-;
+
       console.log('Profile updated successfully');
       console.log('Profile complete:', user.profile_complete);
 
