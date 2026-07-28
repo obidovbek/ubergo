@@ -185,15 +185,21 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   (20 additive columns + 2 FK indexes + `max_price_per_seat DROP NOT NULL`) and
   `PassengerOffer.ts` (attributes, creation-optionals, `init` fields, new exported types).
   API `tsc`: 290 errors before / 290 after, **identical set**.
-- [ ] 1b. **Apply the migration — DEFERRED TO THE test3 DEPLOY (owner decision, 2026-07-28).**
-  ⚠️ Not applied to any DB yet. Locally `npm run db:migrate` fails because the dev DB is the
-  Docker service `postgres` (`infra/compose/docker-compose.dev.yml`, host port **5433**, creds in
-  `api,admin,db/.env`) and Docker Desktop is off; the Windows PostgreSQL 16 service on 5432 is a
-  different, unrelated instance. **Consequence:** steps 2–7 are written blind — the first real
-  run of the SQL happens on test3, so `npm run db:migrate` there is the first true test of the
-  migration, and steps 8/9 (verification) cannot finish before it. If a local test is wanted
-  later: start Docker Desktop, then
-  `docker compose -f infra/compose/docker-compose.dev.yml up -d postgres` and re-run.
+- [x] 1b. **Migration applied on test3 — 2026-07-28, `migrated (0.040s)`, no errors.**
+  Verified in `information_schema`: all 12 spot-checked columns present, `max_price_per_seat`
+  now nullable, `is_urgent`/`road_pickup`/`woman_in_car` NOT NULL with defaults.
+  Committed + pushed as `7e49b5e`, then run inside the running API pod (the image is built
+  without the file, so it was `kubectl cp`-ed in first). **Recipe for the next migration:**
+  ```
+  POD=$(kubectl get pods -n test3 -l app=ubexgo-api-test3 -o jsonpath='{.items[0].metadata.name}')
+  kubectl cp "<migration>.cjs" "test3/$POD:/app/src/database/migrations/<migration>.cjs" -c api
+  kubectl exec -it -n test3 $POD -c api -- sh   # then: cd /app && npm run db:migrate
+  ```
+  The pod has `NODE_ENV=production` + `DB_*` from the configMap, so sequelize-cli picks the
+  production config by itself. ⚠️ The image is built with `npm install --omit=dev` and
+  `sequelize-cli` is a devDependency — if it is missing, `npm install --no-save sequelize-cli`
+  inside the pod first. **Never applied to a local DB** (Docker Desktop is off; the Windows
+  PostgreSQL 16 on 5432 is an unrelated instance) — test3 is the only DB with these columns.
 - [ ] 2. **API** — `PassengerOfferService`/controller: accept + validate + return the new
   fields (create, list, detail). `seats_needed` computed server-side as the sum of
   `seat_counts` when provided (or 4/3 for salon scopes); `max_price_per_seat` validated **only
@@ -240,9 +246,10 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
 ## Session notes (one line per work session)
 - 2026-07-28: OR-007/8/9 logged from owner's Figma message; board updated; owner picked T-018,
   approved migrations-in-plan and data-only special order; plan written.
-- 2026-07-28 (3): Step 1a done — migration file + `PassengerOffer.ts` written, tsc at baseline
-  (290/290 identical). Migration **not applied** (no reachable dev DB — Docker down). Two Figma
-  corrections recorded: vehicle class is a 5-option radio group (Econom/Turistik added) and
+- 2026-07-28 (3): **Step 1 DONE.** Migration file + `PassengerOffer.ts` written (tsc 290/290,
+  identical set), committed + pushed as `7e49b5e`, and **applied on test3** by the owner via
+  `kubectl cp` + `npm run db:migrate` inside the API pod — clean, 0.040s. Two Figma corrections
+  recorded: vehicle class is a 5-option radio group (Econom/Turistik added) and
   `004…Tanlov oynasi.png` is the driver-offer selection window, not the route/time popup. Also
   corrected the stale note that T-017 was uncommitted — it is in `a1ecedd`.
 - 2026-07-28 (2): **Owner APPROVED the plan** (including the migration). Plan hardened for a
@@ -251,19 +258,21 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   No code yet — implementation starts at step 1 in the next session.
 
 ## Resume point (for the next chat)
-**Step 1a is done (migration file + model, uncommitted on disk). Next: step 2 (API layer) —
-`PassengerOfferService` + the two controllers accept / validate / return the new fields.**
+**Step 1 is DONE and live on test3 (`7e49b5e`, migration applied 2026-07-28). Next: step 2
+(API layer) — `PassengerOfferService` + the two controllers accept / validate / return the new
+fields.**
 Read in this order: (1) `figma_images/K_buyurtma001Yangi.png`, (2) this file fully,
 (3) `docs/OWNER_REQUESTS.md` OR-007. Every design decision is already taken — the "Owner
 decisions" and "UI behaviour spec" sections are binding; only truly new ambiguities justify a
 question to the owner.
 
-⚠️ **Step 1b (running the migration) is deliberately deferred to the test3 deploy** (owner
-decision, 2026-07-28) — see its note above. Nothing can be tested end-to-end until a DB actually
-has the columns, so plan on verifying steps 2–7 only after that deploy. Migration safety:
-additive columns + one `DROP NOT NULL` only; `.cjs` extension; run `npm run db:migrate` from
-`api,admin,db/apps/api` (quote the comma path).
-
-Uncommitted on disk right now: the new migration `.cjs`, `PassengerOffer.ts`, and the docs.
-`.claude/settings.json` + `.gitignore` are also modified (unrelated) — leave them out of feature
-commits.
+**Environment facts a fresh chat must know:**
+- **test3 already has the new columns**; **no local DB exists** (Docker Desktop off, the Windows
+  PostgreSQL 16 on 5432 is unrelated). So steps 2–7 are written without a local run, and every
+  real test happens on test3 after a deploy. Deploy order stays: **API first, then the app**.
+- The API pod still runs the **old image** — the new model code goes live only at the next
+  `./api,admin,db/infra/k8s/overlays/test3/deploy.sh` run. Harmless: unused columns.
+- Baselines to compare against: API `tsc` **290**, user app **12**, driver app **41** errors.
+- Git TLS is broken by Avast — push with `git -c http.sslBackend=schannel push origin main`.
+- `.claude/settings.json` + `.gitignore` are modified for unrelated reasons — keep them out of
+  feature commits.

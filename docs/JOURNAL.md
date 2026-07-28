@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-07-28 (2) — T-018 / OR-007 step 1: passenger_offers schema for the new order screen
+- **Task:** First implementation step of the approved T-018 plan — the DB migration + model for
+  the ~20 new fields of the Figma order screen.
+- **Done:** New migration `20260728000001-extend-passenger-offers-figma.cjs` (departure/arrival
+  windows, settlement level + landmarks, payment type + payer phone, `seat_counts` JSONB,
+  `seat_position_any`, `salon_scope`, `vehicle_class`, `vehicle_types`, 5 flags, pitak text,
+  `special_order` JSONB, 2 FK indexes) and `PassengerOffer.ts` (new exported types, attributes,
+  creation-optionals, `init` fields). Committed + pushed as `7e49b5e`, then **applied on test3**
+  by the owner — `migrated (0.040s)`, 12/12 spot-checked columns verified in `information_schema`.
+- **Decisions:** (1) Everything additive/nullable, plus a single `max_price_per_seat DROP NOT
+  NULL` — the new form has no price field at all, prices live only inside the special order.
+  (2) VARCHAR + app-level validation instead of PG enums, so a new payment method or vehicle
+  class never needs a migration. (3) Owner chose to skip a local DB run and migrate straight on
+  test3 — so steps 2–7 are written without a local database to test against.
+- **Two Figma corrections** (the PNG beat the plan text): vehicle class is **one radio group of
+  five** — Standart/Comfort/Biznes/**Econom**/**Turistik**, not 3 classes plus a vehicle-type
+  checkbox row (`vehicle_types` stays in the schema, unused by the UI). And
+  `004…Tanlov oynasi.png` is **not** the route/time popup — it is the driver-offer selection
+  window (Qidiruv/Takliflar, driver + car info, seat/price grid). No mock exists for the
+  route/time editor, which has to be settled with the owner before step 4.
+- **Migration recipe learned (worth reusing):** the API image is built with
+  `npm install --omit=dev`, so the migration file is not in it and `sequelize-cli` may be missing.
+  `kubectl cp` the `.cjs` into the running pod, then `npm run db:migrate` inside it — the pod's
+  `NODE_ENV=production` + configMap `DB_*` make sequelize-cli pick the right config by itself.
+  Written down in `docs/PLAN.md` step 1b.
+- **Problems:** none in the migration. `\d passenger_offers | grep …` looked like a failure
+  ("exit code 1") — that was only psql's pager getting SIGPIPE'd; `information_schema` confirmed
+  everything. Also corrected the stale note claiming T-017 was uncommitted — it is in `a1ecedd`.
+- **Next:** step 2 — `PassengerOfferService` + `PassengerOfferController` /
+  `PublicPassengerOfferController` accept, validate and return the new fields; `seats_needed`
+  computed server-side; `max_price_per_seat` validated only when provided.
+- **Commit:** `7e49b5e` (schema + model). Docs updated separately.
+
+---
+
 ## 2026-07-28 — T-017 driver app: infinite profile-check loop after OTP login (fix implemented)
 - **Task:** Owner reported from a live Metro log: after entering the OTP the driver app "refreshed
   loading and registration many times". New card T-017 (P1).

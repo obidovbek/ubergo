@@ -10,9 +10,8 @@
 - [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
   (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
   steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
-  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Step 1a done
-  (migration file + model written, tsc at baseline); the migration itself is applied on test3 at
-  deploy time (owner decision) — no local DB run. Next: step 2, the API layer.**
+  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Step 1 DONE —
+  migration + model committed (`7e49b5e`) and applied on test3. Next: step 2, the API layer.**
   → `docs/OWNER_REQUESTS.md` OR-007
 
 ## ⏸️ Parked — implemented, awaiting owner device test
