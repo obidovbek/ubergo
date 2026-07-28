@@ -7,18 +7,22 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-017 (P1) **Driver app: infinite profile-check loop after OTP login.** The app flickered
-  between the splash and registration screens and hammered `/auth/me` + the driver-status endpoint
-  until the server rate-limited it. Root cause: `AuthContext` handed out new function identities on
-  every render, so `RootNavigator`'s `checkDriverProfile` effect re-fired itself — and it was
-  watching `profile_complete`, a *user*-record flag that is already `true` for drivers with an
-  empty driver profile. **Fix implemented; tsc at baseline. Needs an owner device test.**
-  → see `docs/PLAN.md`
+- [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
+  (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
+  steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
+  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Step 1a done
+  (migration file + model written, tsc at baseline); the migration itself is applied on test3 at
+  deploy time (owner decision) — no local DB run. Next: step 2, the API layer.**
+  → `docs/OWNER_REQUESTS.md` OR-007
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. All of their code is committed (T-014/T-015 in
-> `5b315a6`, T-016 in `2a76e12`). Move a card back to *Now* only if a device test **fails**.
+> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
+> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
+- [ ] T-017 (P1) Driver app: infinite profile-check loop after OTP login — `AuthContext` identity
+  churn + a wrong `profile_complete` watcher made `RootNavigator` re-check forever until the API
+  rate-limited the app. **Fix implemented (4 files) and committed (`a1ecedd`); tsc at baseline.
+  Awaiting owner device test.** → see `docs/JOURNAL.md` 2026-07-28
 - [ ] T-016 (P1) **[OWNER OR-006]** Half-finished registration → the app opens the main menu
   instead of resuming the registration form (user app + API). Root cause: `/auth/me` omitted
   `profile_complete`. **Fix implemented (API + app) incl. draft pre-fill and committed (`2a76e12`);
@@ -40,6 +44,12 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-019 (P1) **[OWNER OR-008]** User registration → Figma layout (`K_Reg001.png`); move the
+  referral block (Tel/ID/PROMO) to a second screen. App-only; backend fields already exist.
+  → `docs/OWNER_REQUESTS.md` OR-008
+- [ ] T-020 (P2) **[OWNER OR-009]** Driver vehicle usage: add "Firmaga/Shaxsga ishlayman — faqat
+  shafyorman" option (`D_Vehicle.png`); selecting "O'zimniki" disables "Ijara". **Needs a DB enum
+  migration** + `DriverPersonalInfoScreen` logic. → `docs/OWNER_REQUESTS.md` OR-009
 - [ ] T-001 (P1) Verify & finish passenger→offer join flow — passenger joins, driver
   gets notified, driver confirms/rejects, passenger gets notified. Last commit says
   "user joins to driver offer but **not checked**".

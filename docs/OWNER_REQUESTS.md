@@ -16,6 +16,81 @@
 | OR-004 | ✅ done | user app | When picking cities, drop the country from the location text | T-014 |
 | OR-005 | ✅ done | user app | Additional-phones field accepts the user's OWN primary number | T-015 |
 | OR-006 | 🔨 in progress | user app + API | Half-finished registration → app opens the main menu instead of resuming the registration form | T-016 |
+| OR-007 | 🆕 new | user app + API (+driver app views) | Rebuild the intercity order ("zakaz") screen to the Figma design | T-018 |
+| OR-008 | 🆕 new | user app | Registration screen → Figma layout; referral/promo block moves to the NEXT screen | T-019 |
+| OR-009 | 🆕 new | driver app + API | Vehicle usage: add "faqat shafyorman" option; "O'zimniki" disables "Ijara" | T-020 |
+
+---
+
+## OR-007 — Intercity order screen must match the Figma design
+
+**Reported:** 2026-07-28 · **App:** user (passenger) + API; driver app shows these offers · **Board:** T-018
+
+**Original (Uzbek):**
+> "Zakazni oynasi biz shunaqa bo'lish keregi. Qidiruvga bossa alohida kichikroq oyna chiqib
+> borib kelish malumotlarini vaqtlarini kiritishi kerak. Odam qoshishda +ni bossa erkak yoki
+> ayolni tanlab qo'shadi. Maxsus buyurtmani bossa yo'lovchi keyin pastidagi menyu chiqadi."
+> · "Tumanlarni tanlashda alohida chiqadigan oyna."
+> · General: "Ozi hohlagan figmaga yaqinlashtirib o'zgartirish kerak, va mantiqiy ishlashi ham.
+> Har hil telefonlarda bir hil muammosiz ishlashi kerak."
+
+**Translation:**
+> The order window must look like this [Figma `K_buyurtma001Yangi.png`]. Tapping the search
+> [route] field opens a separate, smaller window to enter the trip locations and times
+> [`004Shaharlar aro K3 Tanlov oynasi.png`] — district selection happens in that popup.
+> When adding a passenger, tapping **+** picks male or female. Tapping **Maxsus buyurtma**
+> reveals the paid special-order panel below (per-seat prices, fixed price, waiting fee).
+> Get as close to the Figma as possible, make it work logically, identically on all phones.
+
+**Design refs:** `figma_images/K_buyurtma001Yangi.png` (+ `K_buyurtma001.png`, `-1`),
+`figma_images/004Shaharlar aro K3 Tanlov oynasi.png`, Figma project `Ubex102025`.
+
+**Known gap (checked 2026-07-28):** the `passenger_offers` table/model only stores
+from/to + `start_at` + `seats_needed` + `max_price_per_seat` + 3 booleans + note. The Figma adds
+urgency, departure/arrival time windows, payment type, gendered seat counts by position, salon
+options, vehicle class, several new flags, landmark texts and the whole special-order block —
+**needs a schema extension + API + user-app UI + driver-app offer views.** Biggest of the three.
+
+## OR-008 — Registration screen → Figma layout; referral block to the next screen
+
+**Reported:** 2026-07-28 · **App:** user (passenger) · **Board:** T-019
+
+**Original (Uzbek):**
+> "Registratsiyani imkon bo'lsa shu ko'rinishga qilish kerak. Promo kodni keyingi oynaga olish
+> kerak." · [on the Tel/ID/PROMO block] "Shuni keyingi oynaga olish kerak."
+
+**Translation:**
+> If possible, make registration look like this [`K_Reg001.png`]. The promo code — and the whole
+> referral block (Tel / ID / PROMO) — must move to the **next** screen.
+
+**Design refs:** `figma_images/K_Reg001.png` (+ `-1`, `K_Reg002*`, `K_Reg003*`,
+`K_RegShablon*`).
+
+**Note (checked 2026-07-28):** `users.promo_code` / `users.referral_id` already exist and
+`PUT /users/profile` accepts them — this is app-side only (split `UserDetailsScreen` into two
+steps, keep the T-016 draft persistence working across both).
+
+## OR-009 — Vehicle usage: "faqat shafyorman" option; "O'zimniki" disables "Ijara"
+
+**Reported:** 2026-07-28 · **App:** driver + API · **Board:** T-020
+
+**Original (Uzbek):**
+> "O'zimniki deb tanlasa ijara o'chib qolish kerak." · "O'zgargan joyi bor — faqat shafyorman
+> degani qo'shilgan."
+
+**Translation:**
+> If the driver selects "O'zimniki" (my own car), the "Ijara" (rented) usage option must become
+> disabled. The Figma's change: a new usage option **"Firmaga/Shaxsga ishlayman — faqat
+> shafyorman"** (I work for a firm/person, I'm only the driver) was added.
+
+**Design refs:** `figma_images/D_Vehicle.png`. Current UI:
+`DriverPersonalInfoScreen.tsx` (ownership `own | other_person | company`, usage
+`rent | free_use`).
+
+**Note (checked 2026-07-28):** `enum_driver_profiles_vehicle_usage_type` is a Postgres enum
+(`rent`,`free_use`) — the new option **needs a DB enum migration** + model/service/app updates.
+Interpretation to confirm: "ijara o'chib qolish" read as *disable* Ijara when the car is your own
+(you can't rent your own car); if "O'zimniki" + an already-selected "Ijara", the selection resets.
 
 ---
 
