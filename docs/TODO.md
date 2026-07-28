@@ -7,16 +7,23 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-016 (P1) **[OWNER OR-006]** Half-finished registration → the app opens the main menu
-  instead of resuming the registration form (user app + API). Root cause: `/auth/me` omitted
-  `profile_complete`. **Fix implemented (API + app), incl. draft pre-fill; tsc at baseline.
-  Needs the API deployed to test3, then an owner device test.**
-  → see `docs/PLAN.md`, `docs/OWNER_REQUESTS.md`
+- [ ] T-017 (P1) **Driver app: infinite profile-check loop after OTP login.** The app flickered
+  between the splash and registration screens and hammered `/auth/me` + the driver-status endpoint
+  until the server rate-limited it. Root cause: `AuthContext` handed out new function identities on
+  every render, so `RootNavigator`'s `checkDriverProfile` effect re-fired itself — and it was
+  watching `profile_complete`, a *user*-record flag that is already `true` for drivers with an
+  empty driver profile. **Fix implemented; tsc at baseline. Needs an owner device test.**
+  → see `docs/PLAN.md`
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
 > only need the owner to confirm on a phone. All of their code is committed (T-014/T-015 in
-> `5b315a6`). Move a card back to *Now* only if a device test **fails**.
+> `5b315a6`, T-016 in `2a76e12`). Move a card back to *Now* only if a device test **fails**.
+- [ ] T-016 (P1) **[OWNER OR-006]** Half-finished registration → the app opens the main menu
+  instead of resuming the registration form (user app + API). Root cause: `/auth/me` omitted
+  `profile_complete`. **Fix implemented (API + app) incl. draft pre-fill and committed (`2a76e12`);
+  tsc at baseline. Needs the API deployed to test3, then an owner device test.**
+  → see `docs/OWNER_REQUESTS.md`
 - [ ] T-011 (P1) **[OWNER OR-001]** OTP screen resets to main menu after the app is
   backgrounded/killed — should resume the OTP screen. Affects driver + user apps.
   **Fix implemented in both apps (tsc clean); awaiting owner device test.**

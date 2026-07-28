@@ -32,7 +32,10 @@
       "Read(//c/Users/Bekzod/.android/**)",
       "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count)",
       "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'AuthController\\\\.v2|UserController' }\\) | Select-Object -First 20)",
-      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"ERRORS: \" + \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'UserDetailsScreen|RootNavigator|registrationDraft' }\\))"
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"ERRORS: \" + \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'UserDetailsScreen|RootNavigator|registrationDraft' }\\))",
+      "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; npx tsc --noEmit)",
+      "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $after = npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"; $after | Out-File -Encoding utf8 \"$env:TEMP\\\\ubexgo_tsc_after.txt\"; \"AFTER total: $\\($after.Count\\)\")",
+      "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $before = npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"; $before | Out-File -Encoding utf8 \"$env:TEMP\\\\ubexgo_tsc_before.txt\"; \"BEFORE total: $\\($before.Count\\)\")"
     ]
   }
 }

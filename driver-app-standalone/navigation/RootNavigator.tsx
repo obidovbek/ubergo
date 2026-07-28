@@ -3,7 +3,7 @@
  * Main navigation entry point with authentication routing
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
@@ -12,26 +12,30 @@ import { ProfileCompletionNavigator } from './ProfileCompletionNavigator';
 import { BlockedScreen } from '../screens/BlockedScreen';
 import { SplashScreen } from '../components/SplashScreen';
 import { getDriverProfileStatus } from '../api/driver';
+import { subscribeDriverProfileChanged } from '../utils/driverProfileEvents';
 import * as AuthAPI from '../api/auth';
 
 export const RootNavigator: React.FC = () => {
   const { isAuthenticated, user, isLoading, token, logout, updateUser } = useAuth();
   const [checkingProfile, setCheckingProfile] = useState(false);
   const [driverProfileComplete, setDriverProfileComplete] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userStatus, setUserStatus] = useState<string | undefined>((user as any)?.status);
   const navigationRef = useNavigationContainerRef();
+  // The check writes the user object (via updateUser), so a second call arriving while
+  // one is running would re-enter through its own re-render. Let the first one finish.
+  const checkInFlightRef = useRef(false);
+
+  const currentStatus = (user as any)?.status;
 
   // Update userStatus state when user object changes
   useEffect(() => {
-    const currentStatus = (user as any)?.status;
     if (currentStatus !== userStatus) {
       console.log('RootNavigator: User status changed from', userStatus, 'to', currentStatus);
       setUserStatus(currentStatus);
     }
-  }, [(user as any)?.status, user]);
+  }, [currentStatus, userStatus]);
 
-  console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading, userStatus: (user as any)?.status });
+  console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading, userStatus: currentStatus });
 
   // Function to check driver profile status and refresh user data
   const checkDriverProfile = useCallback(async () => {
@@ -40,10 +44,16 @@ export const RootNavigator: React.FC = () => {
       return;
     }
 
+    if (checkInFlightRef.current) {
+      console.log('RootNavigator: Driver profile check already running, skipping');
+      return;
+    }
+    checkInFlightRef.current = true;
+
     try {
       setCheckingProfile(true);
       console.log('RootNavigator: Checking driver profile status...');
-      
+
       // Refresh user data from server to get latest status (in case admin changed the driver status)
       try {
         const currentUserResponse = await AuthAPI.getCurrentUser(token);
@@ -100,38 +110,35 @@ export const RootNavigator: React.FC = () => {
       // For other errors, assume profile is incomplete to be safe
       setDriverProfileComplete(false);
     } finally {
+      checkInFlightRef.current = false;
       setCheckingProfile(false);
     }
   }, [isAuthenticated, token, logout, updateUser]);
 
-  // Check driver profile status when authenticated, when refresh is triggered, or when user changes
+  // Re-check when the AUTH IDENTITY changes — and only then.
+  //
+  // Deliberately NOT keyed on the `user` object or on `user.profile_complete` (T-017):
+  // the check itself calls `updateUser()`, so any dep derived from the user object
+  // re-triggers the very effect that produced it. That was an infinite loop —
+  // two API calls and a splash-screen flash per iteration, until the server
+  // rate-limited the app. `profile_complete` was also the wrong signal: it belongs to
+  // the *user* record and is already `true` for drivers with an empty driver profile.
   useEffect(() => {
-    if (isAuthenticated && token && user) {
-      console.log('RootNavigator: Auth state changed, checking driver profile...', { 
-        isAuthenticated, 
-        hasToken: !!token, 
-        userId: user?.id 
-      });
+    if (isAuthenticated && token && user?.id) {
+      console.log('RootNavigator: Auth changed, checking driver profile...', { userId: user.id });
       checkDriverProfile();
+    } else {
+      setDriverProfileComplete(false);
     }
-  }, [isAuthenticated, token, refreshTrigger, user?.id]); // Also trigger when user ID changes (new login)
-  
-  // Also check when user profile_complete changes (to handle profile completion)
-  useEffect(() => {
-    if (isAuthenticated && token && user) {
-      const profileComplete = (user as any)?.profile_complete;
-      console.log('RootNavigator: User profile_complete changed:', profileComplete);
-      // Re-check profile status when profile_complete flag changes
-      // This ensures navigation switches when profile is marked as complete
-      if (profileComplete === true) {
-        checkDriverProfile();
-      }
-    }
-  }, [(user as any)?.profile_complete, user?.id, isAuthenticated, token, checkDriverProfile]); // Trigger when profile_complete or user ID changes
+  }, [isAuthenticated, token, user?.id, checkDriverProfile]);
+
+  // A registration screen just saved a step that may have completed the profile.
+  // This is the explicit replacement for the old `profile_complete` watcher.
+  useEffect(() => subscribeDriverProfileChanged(checkDriverProfile), [checkDriverProfile]);
 
   // Profile status is checked:
-  // 1. On initial mount (useEffect above)
-  // 2. After taxi license submission (DriverTaxiLicenseScreen calls checkDriverProfileStatus)
+  // 1. When the auth identity changes (effect above)
+  // 2. When a registration screen calls notifyDriverProfileChanged()
   // No polling needed - prevents unnecessary API calls
 
   // Show splash screen while checking auth state or profile
@@ -148,12 +155,12 @@ export const RootNavigator: React.FC = () => {
       return <AuthNavigator />;
     }
 
-    // Check user status (use state variable to ensure we have latest value)
-    const currentUserStatus = (user as any)?.status || userStatus;
-    console.log('RootNavigator: Checking user status:', { 
-      currentUserStatus, 
+    // Check user status (fall back to the state copy in case the user object lags)
+    const currentUserStatus = currentStatus || userStatus;
+    console.log('RootNavigator: Checking user status:', {
+      currentUserStatus,
       userStatusState: userStatus,
-      user: user ? { id: user.id, status: (user as any)?.status } : null 
+      user: user ? { id: user.id, status: currentStatus } : null
     });
     
     if (currentUserStatus === 'blocked' || currentUserStatus === 'pending_delete') {

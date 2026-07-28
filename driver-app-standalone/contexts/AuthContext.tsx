@@ -3,7 +3,15 @@
  * Provides authentication state and methods throughout the app
  */
 
-import React, { createContext, useReducer, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useReducer,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  ReactNode,
+} from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authReducer, initialAuthState, AuthState } from './auth-reducer/auth.reducer';
@@ -54,6 +62,61 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
 
+  // Latest state, readable from callbacks that must NOT be re-created when it changes.
+  // Every method below is memoized with no state deps (see the note on `value`), so a
+  // callback that needs the current token reads it through here instead of a closure.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // Defined first because the AppState effect below depends on it.
+  const logout = useCallback(async () => {
+    try {
+      console.log('AuthContext: Starting logout process...');
+
+      // Call logout endpoint if token exists
+      const token = stateRef.current.token;
+      if (token) {
+        console.log('AuthContext: Calling logout API endpoint...');
+        try {
+          await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.logout}`, {
+            method: 'POST',
+            headers: getHeaders(token),
+          });
+          console.log('AuthContext: Logout API call successful');
+        } catch (apiError) {
+          console.warn('AuthContext: Logout API call failed, but continuing with local logout:', apiError);
+        }
+      }
+
+      console.log('AuthContext: Clearing local storage...');
+      // Clear storage
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        clearPendingOtp(),
+      ]);
+
+      console.log('AuthContext: Dispatching logout action...');
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      console.log('AuthContext: Logout completed successfully');
+    } catch (error) {
+      console.error('AuthContext: Logout error:', error);
+      // Still clear local state even if API call fails
+      try {
+        await Promise.all([
+          AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+          AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        ]);
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        console.log('AuthContext: Local logout completed despite error');
+      } catch (clearError) {
+        console.error('AuthContext: Failed to clear storage:', clearError);
+        // Force logout even if storage clear fails
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      }
+    }
+  }, []);
+
   // Initialize auth state from storage on mount
   useEffect(() => {
     initializeAuth();
@@ -79,8 +142,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active' && isMounted) {
-        // Get current state from reducer (not from closure)
-        const currentState = state;
+        // Read the live state, not a render-time closure. Listing `state` in the deps
+        // instead (as this used to) re-registers the OS listener on every state change.
+        const currentState = stateRef.current;
         if (currentState.isAuthenticated && currentState.token) {
           // App came to foreground, refresh user data to get latest status
           try {
@@ -131,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isMounted = false;
       subscription.remove();
     };
-  }, [state.isAuthenticated, state.token, state]);
+  }, [logout]);
 
   const initializeAuth = async () => {
     try {
@@ -224,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
@@ -260,9 +324,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const register = async (data: RegisterData) => {
+  const register = useCallback(async (data: RegisterData) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
@@ -298,56 +362,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
-    try {
-      console.log('AuthContext: Starting logout process...');
-      
-      // Call logout endpoint if token exists
-      if (state.token) {
-        console.log('AuthContext: Calling logout API endpoint...');
-        try {
-          await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.logout}`, {
-            method: 'POST',
-            headers: getHeaders(state.token),
-          });
-          console.log('AuthContext: Logout API call successful');
-        } catch (apiError) {
-          console.warn('AuthContext: Logout API call failed, but continuing with local logout:', apiError);
-        }
-      }
+  // `logout` is defined near the top of the component — the AppState effect needs it.
 
-      console.log('AuthContext: Clearing local storage...');
-      // Clear storage
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER),
-        clearPendingOtp(),
-      ]);
-
-      console.log('AuthContext: Dispatching logout action...');
-      dispatch({ type: AUTH_ACTIONS.LOGOUT });
-      console.log('AuthContext: Logout completed successfully');
-    } catch (error) {
-      console.error('AuthContext: Logout error:', error);
-      // Still clear local state even if API call fails
-      try {
-        await Promise.all([
-          AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-          AsyncStorage.removeItem(STORAGE_KEYS.USER),
-        ]);
-        dispatch({ type: AUTH_ACTIONS.LOGOUT });
-        console.log('AuthContext: Local logout completed despite error');
-      } catch (clearError) {
-        console.error('AuthContext: Failed to clear storage:', clearError);
-        // Force logout even if storage clear fails
-        dispatch({ type: AUTH_ACTIONS.LOGOUT });
-      }
-    }
-  };
-
-  const updateUser = async (user: User) => {
+  const updateUser = useCallback(async (user: User) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
       dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
@@ -357,9 +376,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Still dispatch the update even if storage fails
       dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: user });
     }
-  };
+  }, []);
 
-  const sendOtp = async (phone?: string, channel: 'sms' | 'call' | 'push' = 'sms', opts?: { userId?: string }) => {
+  const sendOtp = useCallback(async (phone?: string, channel: 'sms' | 'call' | 'push' = 'sms', opts?: { userId?: string }) => {
     try {
       // Don't set global loading state for OTP sending
       // This prevents interference with navigation
@@ -369,9 +388,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const verifyOtp = async (phone: string | undefined, code: string, opts?: { userId?: string }) => {
+  const verifyOtp = useCallback(async (phone: string | undefined, code: string, opts?: { userId?: string }) => {
     try {
       // Don't set global loading state for OTP verification
       // This prevents interference with navigation and 3-attempt logic
@@ -399,9 +418,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const googleSignIn = async (idToken: string) => {
+  const googleSignIn = useCallback(async (idToken: string) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       
@@ -423,9 +442,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const appleSignIn = async (idToken: string) => {
+  const appleSignIn = useCallback(async (idToken: string) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       
@@ -447,9 +466,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const facebookSignIn = async (accessToken: string) => {
+  const facebookSignIn = useCallback(async (accessToken: string) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       
@@ -471,20 +490,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const value: AuthContextType = {
-    ...state,
-    login,
-    register,
-    logout,
-    updateUser,
-    googleSignIn,
-    appleSignIn,
-    facebookSignIn,
-    sendOtp,
-    verifyOtp,
-  };
+  // LOAD-BEARING (T-017), not cosmetic. Every method above is memoized with no state
+  // deps so that `value` changes only when `state` does. Consumers memoize their own
+  // callbacks on these functions — `RootNavigator.checkDriverProfile` depends on
+  // `logout` and `updateUser` — and that callback is in an effect's dep array. Hand out
+  // fresh function identities on every render and the effect re-fires, calls
+  // `updateUser`, changes state, re-renders this provider… an infinite check loop.
+  // If you add a method here, memoize it too and read live state via `stateRef`.
+  const value = useMemo<AuthContextType>(
+    () => ({
+      ...state,
+      login,
+      register,
+      logout,
+      updateUser,
+      googleSignIn,
+      appleSignIn,
+      facebookSignIn,
+      sendOtp,
+      verifyOtp,
+    }),
+    [
+      state,
+      login,
+      register,
+      logout,
+      updateUser,
+      googleSignIn,
+      appleSignIn,
+      facebookSignIn,
+      sendOtp,
+      verifyOtp,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

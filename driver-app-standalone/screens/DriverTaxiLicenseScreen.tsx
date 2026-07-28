@@ -28,6 +28,7 @@ import { showToast } from '../utils/toast';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import { updateTaxiLicense, getDriverProfile, getDriverProfileStatus, uploadImage } from '../api/driver';
+import { notifyDriverProfileChanged } from '../utils/driverProfileEvents';
 
 const theme = createTheme('light');
 
@@ -869,8 +870,6 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             showToast.success(t('common.success'), t('driver.registrationComplete'));
 
             // Update user in auth context to mark profile as complete
-            // RootNavigator will detect the profile_complete change and automatically
-            // switch from ProfileCompletionNavigator to MainNavigator (MenuScreen)
             if (user) {
               await updateUser({
                 ...user,
@@ -878,9 +877,11 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               } as any);
             }
 
-            // RootNavigator has a useEffect that watches for profile_complete changes
-            // and will automatically re-check profile status and switch navigators
-            // No additional action needed - the navigation will happen automatically
+            // Tell RootNavigator to re-check the driver profile so it swaps
+            // ProfileCompletionNavigator for MainNavigator (MenuScreen). This has to be
+            // explicit: RootNavigator deliberately ignores the user object here (T-017),
+            // because its own check writes to it and used to loop forever.
+            notifyDriverProfileChanged();
           } else {
             // Profile not complete yet, but data is saved
             showToast.info(t('common.info'), 'Ma\'lumotlar saqlandi. Profil tekshirilmoqda...');

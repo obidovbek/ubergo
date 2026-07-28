@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-07-28 — T-017 driver app: infinite profile-check loop after OTP login (fix implemented)
+- **Task:** Owner reported from a live Metro log: after entering the OTP the driver app "refreshed
+  loading and registration many times". New card T-017 (P1).
+- **Root cause (the interesting part):** a render-identity feedback loop, not a navigation bug.
+  `RootNavigator.checkDriverProfile()` calls `updateUser(serverUser)` with a freshly parsed object,
+  so state always changes → `AuthProvider` re-renders → `logout`/`updateUser`/`value` are plain
+  inline definitions, so every consumer gets **new function identities** → `checkDriverProfile`
+  (a `useCallback` depending on them) gets a new identity → the effect that lists it in its deps
+  re-fires → back to the start. Two API calls and one splash flash per iteration. **It only stopped
+  because the API rate-limited the app** — the tell-tale `JSON Parse error: Unexpected character:
+  T` at the end of the log is a non-JSON error page, which skipped `updateUser` and broke the cycle.
+- **Second bug found on the way:** that effect watched `user.profile_complete`, which lives on the
+  **user** record (`first_name && last_name && gender`). The **driver** profile is a separate
+  record, so a driver can legitimately have `profile_complete: true` and an empty driver profile —
+  exactly the logged account (id 13). So it was both looping *and* watching the wrong signal.
+- **Done:** `AuthContext` — all nine methods `useCallback`ed with no state deps, `value` `useMemo`ed,
+  `logout` moved to the top and reading a new `stateRef`. `RootNavigator` — two effects collapsed
+  into one keyed on auth identity only, `profile_complete` watcher removed, `checkInFlightRef`
+  guard, dead `refreshTrigger` deleted. New `utils/driverProfileEvents.ts` (module pub/sub) carries
+  the explicit "a registration step was saved" signal; `DriverTaxiLicenseScreen` emits it.
+- **Decisions:** (1) Replace the `profile_complete` side-channel with an **explicit event** rather
+  than tightening the deps — the taxi-license screen used to switch navigators purely as a
+  side-effect of the loop, so without it a driver who finished registration would have been stuck
+  on the registration stack. That regression was the main risk of this fix. (2) Also fixed the
+  `AppState` effect, whose deps included the whole `state` object (it re-registered the OS listener
+  on every state change); reading `stateRef.current` gives the handler *fresher* state than the old
+  closure did. (3) Left `updateUser({ profile_complete: true })` in place — it writes a real flag
+  other code reads; it is just no longer the navigation trigger.
+- **Problems / honest status:** **Nothing has run on a device.** Verification is static only: driver
+  app `tsc` — **41 errors before, 41 after, identical set** (line numbers normalised, measured
+  against a `git stash` of exactly these files). All 41 are pre-existing and unrelated. `npm run
+  lint` still fails repo-wide (ESLint 9, no flat config) — pre-existing.
+- **Note:** this is the blind spot T-016 flagged in writing ("the driver app has its own
+  `RootNavigator` + `checkDriverProfile`, may have the same class of bug"). It turned out to be a
+  *different* bug in the same place. Also noticed T-016 was committed by the owner as `2a76e12`;
+  PLAN/TODO notes calling it "uncommitted" were corrected.
+- **Next:** Owner: rebuild the driver app, enter the OTP, and confirm the Metro log shows
+  `Checking driver profile status...` **once** with no splash flicker; then finish registration
+  through the taxi-license step and confirm it lands on the main menu.
+- **Commit:** ⚠️ **NOT committed** — 4 files awaiting approval. Proposed message:
+  `fix(driver): stop the infinite driver-profile check loop after OTP login (T-017)`
+
+---
+
 ## 2026-07-27 — OR-006 / T-016 half-finished registration → main menu (fix implemented)
 - **Task:** New owner request OR-006 (T-016): "chala registratsiya qilsa registratsiya joyidan
   boshlab ketmasakan. GLavniy menyuga borib qolarkan yolovchi" — a half-finished registration must
