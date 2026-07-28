@@ -35,7 +35,16 @@
       "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"ERRORS: \" + \\($out -split \"`n\" | Where-Object { $_ -match '^\\\\S+\\\\\\(\\\\d+,\\\\d+\\\\\\): error' }\\).Count; \\($out -split \"`n\" | Where-Object { $_ -match 'UserDetailsScreen|RootNavigator|registrationDraft' }\\))",
       "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; npx tsc --noEmit)",
       "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $after = npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"; $after | Out-File -Encoding utf8 \"$env:TEMP\\\\ubexgo_tsc_after.txt\"; \"AFTER total: $\\($after.Count\\)\")",
-      "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $before = npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"; $before | Out-File -Encoding utf8 \"$env:TEMP\\\\ubexgo_tsc_before.txt\"; \"BEFORE total: $\\($before.Count\\)\")"
+      "PowerShell($env:NODE_OPTIONS=\"--use-system-ca\"; Set-Location \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $before = npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"; $before | Out-File -Encoding utf8 \"$env:TEMP\\\\ubexgo_tsc_before.txt\"; \"BEFORE total: $\\($before.Count\\)\")",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\UbexGo\"; foreach \\($f in @\\(\"user-app-standalone\\\\screens\\\\CreatePassengerOfferScreen.tsx\",\"user-app-standalone\\\\screens\\\\UserDetailsScreen.tsx\",\"driver-app-standalone\\\\screens\\\\DriverVehicleScreen.tsx\"\\)\\) { \"{0} : {1} lines\" -f $f, \\(Get-Content $f | Measure-Object -Line\\).Lines })",
+      "Bash(npm run *)",
+      "Bash(node -e \"const m=require\\('./src/database/migrations/20260728000001-extend-passenger-offers-figma.cjs'\\); console.log\\('loaded ok, exports:', Object.keys\\(m\\)\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', Object.keys\\(p.dependencies\\).join\\(', '\\)\\); console.log\\('devDeps:', Object.keys\\(p.devDependencies||{}\\).join\\(', '\\)\\)\")",
+      "Bash(git commit -m '@ *)",
+      "Bash(sed '$d')",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git -c http.sslBackend=schannel push origin main)"
     ]
   }
 }

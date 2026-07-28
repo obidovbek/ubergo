@@ -2,3 +2,5 @@
 
 # Obsidian editor state (vault config, not project memory)
 .obsidian/
+
+/figma_images
