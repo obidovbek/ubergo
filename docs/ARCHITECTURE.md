@@ -50,7 +50,9 @@ flowchart TD
 | Driver offers | Create/submit/publish + status machine | ✅ backend done | `.../src/` + `DriverOffer` model |
 | Passenger join | Passenger joins an offer, driver confirms/rejects | 🔨 **wired end-to-end in both apps**, audited 2026-08-02, 3 fixes landed, 14 open (T-026) | `.../src/` (passenger/driver offer routes) |
 | Admin panel | Offer moderation, user/passenger management | ✅ done | `api,admin,db/apps/admin/src/` |
-| Push notifications | Per-app FCM tokens (`user` / `driver`) | ✅ done (recently fixed) | API push services + app `PushService.ts` |
+| Push notifications | Per-app FCM tokens (`user` / `driver`); sending + foreground handling | ✅ done (recently fixed) | API push services + app `PushService.ts` |
+| — Tapping a notification | Opens the relevant screen instead of the main menu | 🔨 **built 2026-08-02 in BOTH apps** (`setupNotificationTapHandler` + `utils/notificationRouting.ts`); handles background **and** cold start via a parked-intent queue. **Never tested on a device** — the cold-start path is the risky half | both apps: `services/PushService.ts`, `utils/notificationRouting.ts`, `navigation/RootNavigator.tsx` |
+| Document photos | Driver uploads licence/passport/vehicle photos | 🔨 upload was always fine; **display was broken** until 2026-08-02 — a host-less `/uploads/...` was handed to `<Image>` in **18 fields across 5 screens** | `driver-app-standalone/utils/imageUrl.ts` + the Driver\* screens |
 | Driver app | Auth, profile, vehicle, offers list | 🔨 in progress | `driver-app-standalone/` |
 | — Offer wizard (4 steps) | Create/edit offer UI | 🔨 **built & wired** (3900 lines, registered in `MainNavigator`), not device-verified — was wrongly marked "planned" until 2026-08-02 | `driver-app-standalone/screens/OfferWizardScreen.tsx` |
 | User app | Auth, browse & join offers | 🔨 in progress | `user-app-standalone/` |
@@ -71,8 +73,18 @@ UbexGo/
 │   ├── infra/                 ← docker compose, nginx, k8s  (ask before editing)
 │   └── tmp/                   ← ⚠️ STALE duplicates — ignore
 ├── driver-app-standalone/     ← React Native / Expo (driver)
+│   └── utils/
+│       ├── notificationRouting.ts  ← push-tap → screen, with a parked-intent queue
+│       ├── imageUrl.ts             ← /uploads/... → absolute URL (strips the /api suffix)
+│       └── dateLimits.ts           ← document date bounds for the hand-rolled pickers
 └── user-app-standalone/       ← React Native / Expo (passenger)
+    ├── components/MenuButton.tsx   ← hamburger → Home (the app has no drawer)
+    └── utils/notificationRouting.ts ← same push-tap queue, own route map
 ```
+
+> **Shared-by-copy, not by package.** The two apps are standalone, so
+> `notificationRouting.ts` exists in both with the same shape but different route
+> maps. A change to one is not a change to the other — check both.
 
 ## 5. Main data flow (passenger joins an offer)
 

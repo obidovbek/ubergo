@@ -133,17 +133,27 @@ without it.
 - `.claude/settings.json` keeps picking up permission-prompt changes — keep it out of commits.
 
 ## Session notes (one line per work session)
-- **2026-08-02** — card created from OR-012; **items 2, 3 and 7 fixed immediately.** The keyboard
-  complaints (2, 3 and half of 4) were all one missing `KeyboardAvoidingView`. Three owner
-  decisions taken: payment becomes booleans, the waiting fee becomes an admin setting, and item 1
-  is a **bug** in the existing gender picker rather than a request for seat-position shifting.
+- **2026-08-02** — card created from OR-012; **items 2, 3 and 7 fixed and committed (`9ab9b2c`);
+  item 1 diagnosed.** The keyboard complaints (2, 3 and half of 4) were all one missing
+  `KeyboardAvoidingView`. Three owner decisions taken: payment becomes booleans, the waiting fee
+  becomes an admin setting, and item 1 is a **bug** in the existing gender picker rather than a
+  request for seat-position shifting. Item 1's hunt found **no defect in the components** — the
+  suspect is a silently disabled control, which needs the owner's repro.
 
 ## Resume point (for the next chat)
-**Steps 1-2 are DONE** (items 2, 3, 7). **Start at step 3** — diagnose the seat gender picker and
-report the cause before changing anything.
+**Steps 1-3 are DONE and committed (`9ab9b2c`). Working tree clean.**
 
-⚠️ **THREE cards are uncommitted in the same working tree** — T-027 (user app + API + a migration
-that has never been run), T-030 (driver app), and now T-031. Separate them when committing, or the
-history becomes unreadable.
+🛑 **Step 4 cannot start until the owner answers one question:** when the gender sheet did not
+appear, **was a salon option ticked?** If yes, the cause is `seatsLocked` (`:118`) disabling both
+steppers with no explanation, and the fix is to show why (and/or move the salon options above the
+steppers, since they override the seats). If no, it is a different bug and the diagnosis restarts
+from what they see on the device — do **not** invent a fix.
+
+**Everything that does not depend on that answer is steps 5-9** and can proceed in parallel:
+the payment migration + API + UI (items 5-6), then the admin waiting-fee setting (item 4).
+Start with **step 5**, and ask before running the migration against test3.
+
+⚠️ **T-027's migration (`20260802000002-add-referral-phone-to-users.cjs`) has still never been run**,
+and the user app already sends `referral_phone`. Until it is applied, that field silently vanishes.
 
 **Baselines to compare `tsc` against:** API **282**, admin **0**, user app **12**, driver app **36**.

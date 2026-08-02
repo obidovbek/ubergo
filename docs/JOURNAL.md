@@ -5,6 +5,62 @@
 
 ---
 
+## 2026-08-02 (4) — four cards in one day; two audits proved the owner right, and three of my own conclusions wrong
+- **Task:** started the day on T-025 bookkeeping, then **T-026A** (offer concurrency), then three
+  owner batches arrived back-to-back — **OR-010 → T-027**, **OR-011 → T-030**, **OR-012 → T-031**.
+- **T-026A — overbooking.** `confirmPassenger` read `seats_free`, checked it, then wrote it back with
+  nothing in between: two concurrent confirms both passed and **4 seats sold on a 2-seat offer**.
+  Also nothing enforced a single front seat, and a driver could confirm onto a **cancelled** offer.
+  One mechanism closed all four: `sequelize.transaction()` + `lock: tx.LOCK.UPDATE` on the offer row.
+  ⚠️ **The lock had to be on the offer row ALONE** — Postgres refuses `FOR UPDATE` on the nullable
+  side of an outer join, which is exactly what Sequelize emits when `lock` meets `include`. The
+  obvious implementation would have been a **production 500**, not a compile error.
+- **T-027 — OR-010, seven user-app fixes.** Three needed **no backend work at all** because the API
+  already had what they needed and nobody had wired it up. The push tap was the opposite: **no tap
+  handler existed in either app**, so a tapped notification had never done anything but cold-open
+  the app. That needed a parked-intent queue — on a cold start the tap fires before the navigator
+  exists, and the destination screens do not mount until the user is authenticated.
+- **T-030 — OR-011. The audit was the valuable part.** The owner said photo uploads work and asked
+  me to check. **They were right.** Uploads are fine; the break is on the way *back* — the server
+  returns a host-less `/uploads/...` and every screen hands that straight to `<Image>`, which needs
+  an absolute URL. It looked fine right after picking because the screen shows the **local file**.
+  The admin panel had already solved this correctly, so I copied its helper instead of inventing one.
+- **Three of my own conclusions had to be corrected mid-task.** Worth recording, because each was
+  stated confidently before being checked:
+  1. "10 photo fields across 4 screens" → actually **18 across 5**; my first sweep grepped for the
+     wrong string and missed `DriverVehicleScreen` entirely.
+  2. "Use `maximumDate`/`minimumDate`" → **impossible**: these screens hand-roll their pickers, which
+     is *why* those props appear nowhere in the app. The limits had to go into the generators.
+  3. "`fetchGeoSettlements` is dead code" → it was **already wired**; what was missing was mahallas.
+- **Decisions:** (1) payment becomes `payment_cash` + `payment_card` booleans plus a **separate**
+  `paid_by_friend`, keeping `payment_type` for one release so already-installed apps do not lose
+  data; (2) the waiting fee becomes an **admin setting**, not a passenger input, and waiting time
+  stays **stored but uncounted** — the owner was explicit it exists only to keep passengers punctual;
+  (3) OR-012 item 1 is a **bug in the existing gender picker**, not a request for seat-position
+  shifting; (4) OR-011 item 3 **deferred** by the owner.
+- **Problems / carry-forward:**
+  - 🛑 **T-030 step 7 is blocked**: the driver's address cascade is *already* complete, so "pull the
+    base I gave" is most likely **empty dropdowns = a data problem in the admin Excel upload**, which
+    cannot be checked without the DB.
+  - 🛑 **T-031 item 1**: no defect found in `SeatStepper`/`GenderPickSheet`. Strong suspect is
+    `seatsLocked = salonScope !== null`, which disables both steppers **with no on-screen reason**,
+    from checkboxes drawn *below* them. Needs the owner's repro.
+  - ⚠️ **`npm run lint` is broken in both RN apps** — eslint 9 with **no config file at all**. The
+    API's does run: 26,273 problems, ~all `␍` CRLF noise. Logged as **T-032**.
+  - **T-027's migration has still never been run**, and the app already sends `referral_phone`.
+  - New follow-ups logged, not absorbed: **T-028** (`MainStackParamList` lists 3 of 9 routes, so the
+    whole user app navigates via `(navigation as any)`), **T-029** (mahalla stored as text only).
+- **Verification (honest): nothing ran on a device or a DB all day.** `tsc` held at baseline on all
+  four projects through every card (API **282** · admin **0** · user **12** · driver **36**), with
+  every in-file error **proven pre-existing via `git stash`**. 29/29 + 30/30 + 21/21 runtime checks
+  on pure functions and i18n keys. **Ten cards now await the owner's phone.**
+- **Next:** the owner's two answers (T-030 step 7, T-031 item 1), then **one testing session** — run
+  T-027's migration, deploy, rebuild both apps once, and walk the backlog rather than adding to it.
+- **Commit:** owner committed three times — `7119daa` (T-026A), `24ad170` (T-027), `9ab9b2c`
+  (T-030 + T-031 items 2/3/7). Working tree clean.
+
+---
+
 ## 2026-08-02 (3) — two offer audits, T-025 created, seven fixes; one root cause behind five bugs
 - **Task:** Owner: "check driver app create offer logic both in frontend and backend, there should
   not be any unexpected error" — then the same treatment for the passenger-connection leg.

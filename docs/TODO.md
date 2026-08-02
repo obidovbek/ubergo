@@ -20,24 +20,32 @@
   `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
   → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
 
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. → `docs/OWNER_REQUESTS.md` OR-012, `docs/PLAN.md`
+
 - [ ] T-030 (P1) **[OWNER OR-011]** Four driver-app fixes from the software owner.
   Reported 2026-08-02, all grounded in code the same day.
-  1. **Document date limits.** No `maximumDate`/`minimumDate` anywhere in the driver app. Issue
-  dates must be ≤ today; valid-until dates ≥ today. `DriverLicenseScreen` hand-rolls a future check
-  for `issue_date` only (:343, :651-661, hard-coded Uzbek message); **`DriverPassportScreen` and
-  `DriverTaxiLicenseScreen` have no limits at all** (5 unguarded date fields between them).
-  2. **Photos — audit, not a known break.** Owner says uploads work; find whether anything in the
-  path is broken. ⚠️ **Already confirmed:** 4 screens do `asset.type || 'image/jpeg'`, but
-  expo-image-picker's `asset.type` is `'image'|'video'|…`, **not** a MIME type (`asset.mimeType`
-  is) — so every upload builds a malformed `data:image;base64,…` URL.
-  3. **Wire the geo levels the admin panel already holds.** Not an import: all six levels have
-  Excel upload in admin and the API serves administrative-areas/settlements/neighborhoods.
-  `api/driver.ts` already defines `fetchGeoAdministrativeAreas` (:312) and `fetchGeoSettlements`
-  (:320) — the `api/geo.ts` shim re-exports **only 3 of them** and no driver screen asks for the
-  rest. Same shape as OR-010 item 7.
-  4. **Offer-note placeholder** → "bagajim to'la, yo'lda to'xtamaymiz, aeroportga ulgirishimiz
-  kerak" (`offerWizard.notePlaceholder`, uz/ru/en). A string change.
-  → `docs/OWNER_REQUESTS.md` OR-011, `docs/PLAN.md`
+  **Steps 1-6 + 8 DONE + committed (`9ab9b2c`).** The photo audit proved the owner right — uploads
+  work; the break was a host-less `/uploads/...` path handed to `<Image>`, **18 fields across 5
+  screens**. Dates: `maximumDate` was the wrong tool (these screens hand-roll their pickers), so the
+  limits went into the generators via a new `utils/dateLimits.ts`, incl. the **typed-input** paths.
+  18 hard-coded strings removed. `tsc` all four at baseline; 29/29 runtime checks.
+  🛑 **Step 7 BLOCKED on the owner** (deferred 2026-08-02): the driver's address cascade is *already*
+  complete, so OR-011 item 3 is either the offer-wizard route picker or **empty dropdowns = a data
+  problem in the admin upload**. Steps 9-10 (rebuild + smoke test, commit) also owner's.
+  ⚠️ Plan is **`docs/PLAN-T030.md`**. → `docs/OWNER_REQUESTS.md` OR-011
+  The four items (dates · photos · geo levels · note placeholder) are written up in full, with line
+  numbers, in `docs/OWNER_REQUESTS.md` OR-011 — not repeated here.
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
@@ -200,6 +208,12 @@
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+- [ ] T-032 (P2) **`npm run lint` cannot run in either RN app.** Both have eslint **9** but **no
+  `eslint.config.js` and no `.eslintrc`** — the documented command in `CLAUDE.md` fails instantly,
+  so nothing has been linted in the apps for as long as that has been true. The API's *does* run:
+  **26,273 problems, almost all `␍` prettier/CRLF noise** on Windows, which drowns the ~300 real
+  findings (`no-explicit-any`, unused imports). Needs a flat config per app + a line-ending
+  decision (`.gitattributes` / `endOfLine: 'auto'`). Found 2026-08-02 during `/end-day`.
 - [ ] T-029 (P3) `PassengerOffer` has `from_settlement_id` / `to_settlement_id` but **no
   neighborhood (mahalla) id columns**, so the mahalla T-027 added to the trip location picker is
   stored as **text only** inside `from_text` / `to_text` — selectable and visible, but not
