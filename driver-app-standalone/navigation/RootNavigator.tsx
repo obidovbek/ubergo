@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef, flushPendingNotification } from '../utils/notificationRouting';
 import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
 import { AuthNavigator } from './AuthNavigator';
@@ -20,12 +21,22 @@ export const RootNavigator: React.FC = () => {
   const [checkingProfile, setCheckingProfile] = useState(false);
   const [driverProfileComplete, setDriverProfileComplete] = useState(false);
   const [userStatus, setUserStatus] = useState<string | undefined>((user as any)?.status);
-  const navigationRef = useNavigationContainerRef();
+  // Was a hook-local `useNavigationContainerRef()` that nothing ever read. It is
+  // now the module-level ref from notificationRouting, so a notification tapped
+  // before React mounted can still navigate once the container is ready.
   // The check writes the user object (via updateUser), so a second call arriving while
   // one is running would re-enter through its own re-render. Let the first one finish.
   const checkInFlightRef = useRef(false);
 
   const currentStatus = (user as any)?.status;
+
+  // A notification tapped on a cold start is parked until there is somewhere to
+  // send it. The destinations live in MainNavigator, which only mounts once the
+  // driver is authenticated AND their profile check has passed — so retry
+  // whenever that state changes, not just once on mount.
+  useEffect(() => {
+    flushPendingNotification();
+  }, [isAuthenticated, isLoading, checkingProfile, driverProfileComplete, userStatus]);
 
   // Update userStatus state when user object changes
   useEffect(() => {
@@ -182,7 +193,7 @@ export const RootNavigator: React.FC = () => {
   };
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} onReady={flushPendingNotification}>
       {getNavigator()}
     </NavigationContainer>
   );

@@ -19,6 +19,115 @@
 | OR-007 | 🆕 new | user app + API (+driver app views) | Rebuild the intercity order ("zakaz") screen to the Figma design | T-018 |
 | OR-008 | 🆕 new | user app | Registration screen → Figma layout; referral/promo block moves to the NEXT screen | T-019 |
 | OR-009 | 🆕 new | driver app + API | Vehicle usage: add "faqat shafyorman" option; "O'zimniki" disables "Ijara" | T-020 |
+| OR-011 | 📋 planned | driver app (+ audit of the photo path) | Licence date limits (issue ≤ today, valid-until ≥ today), photos audit, wire the geo levels the admin panel already holds, offer-note placeholder | T-030 |
+| OR-010 | 📋 planned | user app + API (+driver app for the push tap) | Batch of 7 from the software owner: referral block one-of-three + grey placeholder, birth-date keyboard jump, unread-message badge, push tap must open the message, hamburger menu icon, settlement/mahalla cascade | T-027 |
+
+---
+
+## OR-011 — Four driver-app fixes from the software owner (batch)
+
+**Reported:** 2026-08-02 · **App:** driver app (item 2 also audits the API) · **Board:** T-030
+
+**Original (Uzbek, verbatim):**
+> Driverapp
+> letsenziya boshqaladan berilgan sanalarda shu kundan shu kungacha degan joylarda bugungu
+> chislodan ot'ib ketmasin. berishda gacha amala qilish muddatiga kechagi yoki olndingi chislolarni
+> kirita olmaasligi kerak.
+> rasmlarni ham ishlaydigan qilish kerak.
+> tuman shahar aholi puntkt mammuriyga man begran bazani torting.
+> driver appda elon yaratishda kulrangda qoshimcha malumotga bagajim to'la, yo'lda to'xtolmaymiz
+> aeroportga ulgirishimiz kerak
+
+**Translation (4 items):**
+> 1. On the licence/document "from this date — to this date" fields: an **issue** date must never
+>    go past today, and a **valid-until** date must not accept yesterday or any earlier day.
+> 2. Make the **photos** work too.
+> 3. Pull in the database I gave you for **district / city / settlement / administrative area**.
+> 4. In the driver app's offer creation, the **additional-info** field should show grey example
+>    text: "bagajim to'la, yo'lda to'xtamaymiz, aeroportga ulgirishimiz kerak".
+
+**Grounded in code 2026-08-02:**
+- Item 1: **no `maximumDate` / `minimumDate` anywhere in the driver app.**
+  `DriverLicenseScreen` *does* hand-roll a future check for `issue_date` (:343, :651-661, with a
+  hard-coded Uzbek message at :661), but `DriverPassportScreen` (`issue_date`, `expiry_date`) and
+  `DriverTaxiLicenseScreen` (`license_issue_date`, `license_sheet_valid_from`,
+  `license_sheet_valid_until`) have **no such limits at all**.
+- Item 2: uploads are base64 data URLs; API body limit is 10 MB, so size is not the issue.
+  ⚠️ **Confirmed bug in 4 screens** (`DriverLicenseScreen:535`, `DriverPassportScreen:338`,
+  `DriverPersonalInfoScreen:892`, `DriverTaxiLicenseScreen:695`): `const mimeType = asset.type ||
+  'image/jpeg'`. In the installed expo-image-picker `asset.type` is
+  `'image' | 'video' | 'livePhoto' | 'pairedVideo'` — **not** a MIME type; the real one is
+  `asset.mimeType`. So every pick builds `data:image;base64,…`, a malformed data URL, and the
+  `'image/jpeg'` fallback is unreachable.
+- Item 3: **the data is already reachable** — all six geo levels have Excel upload in the admin
+  panel, and the API serves `/city-districts/:id/administrative-areas`, `/settlements` and
+  `/neighborhoods`. `driver-app-standalone/api/driver.ts` already defines
+  `fetchGeoAdministrativeAreas` (:312) and `fetchGeoSettlements` (:320) — but the `api/geo.ts`
+  shim re-exports **only** countries/provinces/city-districts, and no driver screen asks for the
+  deeper levels. Same shape as OR-010 item 7 in the user app.
+- Item 4: the field exists — `OfferWizardScreen:2498`, `placeholder={t('offerWizard.notePlaceholder')}`.
+  Current text is "Masalan: Chekmayman, 1 ta kichik sumka" (uz/ru/en all present). A string change.
+
+**Owner decisions 2026-08-02:** (1) the geo base is loaded **through the admin dashboard**, so
+item 3 is a wiring job in the app, not a data import; (2) photo **uploads work** as far as the
+owner can tell — item 2 is an **audit**: find whether anything in that path is broken, and report.
+
+---
+
+## OR-010 — Seven fixes from the software owner (batch)
+
+**Reported:** 2026-08-02 · **App:** user app + API (item 5 also driver app) · **Board:** T-027
+
+**Original (Uzbek, verbatim):**
+> UserApp
+> Bonus olish uchun
+> tel raqam
+> id raqam kod kiritilishida faqat bittasini kiritish imkoni bo'lsin
+> ushbu oinada bonus olish uchun ozini tel raqami turmasligi kerak +998901234567  raqami tursin
+> kulrang bo'lib.
+>  Tugilgan sanani kirtishda klavyatura ochilsa tepaga chiqib ketib qolyapdi sal pastroqda turish
+> kerak .
+>  user appda yangi sobsheniya kesa uvedemleniya belgisi chiqadigan qilish kerak menyudan
+> ochmaslik uchun. kooonvertimi yoki xatxhanimi iconkasi paydo bolishi kerak
+> sistemni uvidemleniya bolib korinnganda bo'ssa srazu osha xatti prilojeniya ochish kerak
+> tevadagi uvedemleniyani hozir glavniy menyu ochilib qolyapdi.
+> chap tomonga gamburger qilib menyuga iconka qilish kerak
+> tuman shaharlarni aholi punti va mahalla tumanga birikmapdi.
+>
+> agar bu ishlarni  qaysidur qismi driver app ham tegishli bolsa driver app ga ham bir yola qilish
+> kerak.
+
+**Translation (7 items):**
+> 1. In the "get a bonus" block, only **one** of phone / ID / promo code may be filled in.
+> 2. In that block the user's **own** phone number must not be shown — show `+998901234567` in
+>    grey as a placeholder instead.
+> 3. Entering the birth date: when the keyboard opens the field jumps too far up. It should sit
+>    a bit lower.
+> 4. When a new message arrives, show a notification badge (envelope / mailbox icon) so the user
+>    does not have to open the menu to find out.
+> 5. Tapping a system push notification must open **that message**. Right now it opens the main menu.
+> 6. Put a hamburger icon on the left to open the menu.
+> 7. Settlements (aholi punkti) and mahallas are not linked to the district.
+>
+> And: wherever any of this also applies to the **driver app**, do it there at the same time.
+
+**Grounded in code 2026-08-02 (see `docs/PLAN.md` "Current state" for line numbers):**
+- Items 1–2: `UserDetailsScreen.tsx:663-700`. The phone field currently holds the user's **own**
+  number and is `editable={false}`; the backend stores only `promo_code` + `referral_id` and has
+  **no referrer-phone column**.
+- Item 3: `UserDetailsScreen.tsx:717` — `onFocus={scrollToEnd}` scrolls the form to its very bottom.
+- Item 4: the API already returns an `unread` count (`NotificationController.ts:50`) — **no backend
+  work needed**.
+- Item 5: **no push-tap handler exists in either app** (`onNotificationOpenedApp` /
+  `getInitialNotification` appear only in `node_modules`). So this applies to the driver app too.
+- Item 6: no menu button anywhere; `MenuScreen` is a plain stack screen in `MainNavigator`.
+- Item 7: the API already exposes **both** `/city-districts/:id/settlements` and
+  `/city-districts/:id/neighborhoods`; the app's `api/geo.ts` has no neighborhoods function and its
+  cascade stops at city/district.
+
+**Owner decisions 2026-08-02:** (1) add a real `referral_phone` column — migration approved;
+(2) item 7 means the **trip location picker** (`GeoSelectModal` / `LocationCard`), not the profile
+address; (3) keep T-019's Figma re-layout separate — fix the referral block in place.
 
 ---
 

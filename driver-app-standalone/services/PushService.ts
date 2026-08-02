@@ -188,3 +188,45 @@ export function setupForegroundNotificationHandler(onNotificationReceived?: (mes
   return unsubscribe;
 }
 
+/**
+ * Handle the driver TAPPING a notification (OR-010 item 5).
+ *
+ * Two separate paths, and missing either one is the usual bug:
+ *   - onNotificationOpenedApp: the app was in the background and got resumed;
+ *   - getInitialNotification: the app was DEAD and the tap launched it. This one
+ *     fires once, immediately, long before the navigator exists — which is why
+ *     the callback parks the destination instead of navigating straight away.
+ *
+ * @param onTap receives the notification's `data` payload.
+ * @returns an unsubscribe function.
+ */
+export function setupNotificationTapHandler(onTap: (data: any) => void) {
+  if (Platform.OS === 'web') {
+    console.log('Notification tap handler not supported on web platform');
+    return () => { };
+  }
+
+  // Background -> tapped -> resumed
+  const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage: any) => {
+    console.log('Notification tapped (app was backgrounded):', remoteMessage);
+    if (remoteMessage?.data) {
+      onTap(remoteMessage.data);
+    }
+  });
+
+  // Killed -> tapped -> launched. Resolves null on a normal launch.
+  messaging()
+    .getInitialNotification()
+    .then((remoteMessage: any) => {
+      if (remoteMessage?.data) {
+        console.log('Notification tapped (app was closed):', remoteMessage);
+        onTap(remoteMessage.data);
+      }
+    })
+    .catch((error: any) => {
+      console.warn('getInitialNotification failed:', error);
+    });
+
+  return unsubscribe;
+}
+

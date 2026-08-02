@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { MenuButton } from '../components/MenuButton';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -460,6 +461,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
         >
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
+        <MenuButton />
         <Text style={styles.headerTitle}>{t('passengerOffers.title')}</Text>
         <TouchableOpacity
           style={styles.addButton}

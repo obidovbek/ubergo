@@ -16,7 +16,12 @@ import { SplashScreen } from './components/SplashScreen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './utils/toast';
 import { ConfirmDialogProvider } from './utils/confirmDialog';
-import { ensurePushPermission, setupForegroundNotificationHandler } from './services/PushService';
+import {
+  ensurePushPermission,
+  setupForegroundNotificationHandler,
+  setupNotificationTapHandler,
+} from './services/PushService';
+import { handleNotificationTap } from './utils/notificationRouting';
 
 // Register background message handler at module level (only for native platforms)
 // This must be at module level for background notifications to work
@@ -49,6 +54,7 @@ export default function App() {
 
     // Only setup push notifications on native platforms
     let unsubscribeForeground: (() => void) | undefined;
+    let unsubscribeTap: (() => void) | undefined;
     if (Platform.OS !== 'web') {
       // Request push permissions on startup
       ensurePushPermission().catch((error) => {
@@ -57,12 +63,21 @@ export default function App() {
 
       // Setup foreground notification handler
       unsubscribeForeground = setupForegroundNotificationHandler();
+
+      // Tapping a notification must open the message, not the main menu (OR-010).
+      // Registered here rather than inside the navigator because the cold-start
+      // half fires once, immediately — handleNotificationTap parks it until
+      // RootNavigator is ready.
+      unsubscribeTap = setupNotificationTapHandler(handleNotificationTap);
     }
 
     return () => {
       unsubscribe();
       if (unsubscribeForeground) {
         unsubscribeForeground();
+      }
+      if (unsubscribeTap) {
+        unsubscribeTap();
       }
     };
   }, []);

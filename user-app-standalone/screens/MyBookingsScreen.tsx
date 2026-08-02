@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MenuButton } from '../components/MenuButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as OffersAPI from '../api/offers';
 import { useAuth } from '../hooks/useAuth';
@@ -340,6 +341,7 @@ export default function MyBookingsScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
+        <MenuButton />
         <Text style={styles.headerTitle}>{t('myBookings.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>

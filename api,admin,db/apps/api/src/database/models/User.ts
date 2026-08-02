@@ -23,6 +23,8 @@ export interface UserAttributes {
   additional_phones?: string[] | null;
   promo_code?: string | null;
   referral_id?: string | null;
+  /** Referrer's phone (OR-010). Not the user's own number. */
+  referral_phone?: string | null;
   profile_complete: boolean;
   /** The person's own UI language — what push notifications must be written in. */
   language?: string | null;
@@ -32,7 +34,7 @@ export interface UserAttributes {
 
 // Creation attributes (optional fields during creation)
 export interface UserCreationAttributes
-  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'profile_complete' | 'language' | 'created_at' | 'updated_at'> {}
+  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'referral_phone' | 'profile_complete' | 'language' | 'created_at' | 'updated_at'> {}
 
 // User model class
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -53,6 +55,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare additional_phones?: string[] | null;
   declare promo_code?: string | null;
   declare referral_id?: string | null;
+  declare referral_phone?: string | null;
   declare profile_complete: boolean;
   declare language?: string | null;
   declare readonly created_at: Date;
@@ -164,6 +167,10 @@ export function initUser(sequelize: Sequelize) {
       },
       referral_id: {
         type: DataTypes.TEXT,
+        allowNull: true
+      },
+      referral_phone: {
+        type: DataTypes.STRING(20),
         allowNull: true
       },
       profile_complete: {

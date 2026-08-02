@@ -3,8 +3,9 @@
  * Main navigation entry point with authentication routing
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef, flushPendingNotification } from '../utils/notificationRouting';
 import { useAuth } from '../hooks/useAuth';
 import { MainNavigator } from './MainNavigator';
 import { AuthNavigator } from './AuthNavigator';
@@ -16,6 +17,14 @@ export const RootNavigator: React.FC = () => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
   console.log('RootNavigator: Auth state:', { isAuthenticated, user: user?.id, isLoading });
+
+  // A notification tapped on a cold start is parked until there is somewhere to
+  // send it. The destinations live in MainNavigator, which only mounts once the
+  // user is authenticated and their profile is complete — so retry whenever that
+  // state changes, not just once on mount.
+  useEffect(() => {
+    flushPendingNotification();
+  }, [isAuthenticated, isLoading, user]);
 
   // Show splash screen while checking auth state
   if (isLoading) {
@@ -63,7 +72,7 @@ export const RootNavigator: React.FC = () => {
   };
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={flushPendingNotification}>
       {getNavigator()}
     </NavigationContainer>
   );

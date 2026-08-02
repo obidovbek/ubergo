@@ -20,6 +20,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MenuButton } from '../components/MenuButton';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
@@ -200,6 +201,7 @@ export const NotificationsScreen: React.FC = () => {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
+        <MenuButton color="#10B981" />
         <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         {unreadCount > 0 ? (
           <TouchableOpacity

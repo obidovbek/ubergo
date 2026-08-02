@@ -162,6 +162,7 @@ export default {
 
   menu: {
     title: 'TAXI',
+    openMenu: 'Menu',
     subtitle: 'Select country',
     uzbekistan: 'Uzbekistan',
     guest: 'Guest',
@@ -387,6 +388,7 @@ export default {
     fromLabel: 'From:',
     toLabel: 'To:',
     selectSettlement: 'Select settlement',
+    selectNeighborhood: 'Select neighborhood',
     landmarkPlaceholder: 'Landmark (e.g. next to the notary)',
     geoNoResults: 'Nothing found',
     urgent: 'right now (urgent)',

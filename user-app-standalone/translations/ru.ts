@@ -162,6 +162,7 @@ export default {
 
   menu: {
     title: 'ТАКСИ',
+    openMenu: 'Меню',
     subtitle: 'Выберите страну',
     uzbekistan: 'Узбекистан',
     guest: 'Гость',
@@ -387,6 +388,7 @@ export default {
     fromLabel: 'Откуда:',
     toLabel: 'Куда:',
     selectSettlement: 'Выберите массив / СГМ',
+    selectNeighborhood: 'Выберите махаллю',
     landmarkPlaceholder: 'Ориентир (например: рядом с нотариусом)',
     geoNoResults: 'Ничего не найдено',
     urgent: 'сейчас (срочно)',

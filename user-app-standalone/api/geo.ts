@@ -73,3 +73,12 @@ export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOp
   return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`);
 };
 
+/**
+ * Mahallas. Like settlements these hang off the CITY DISTRICT, not off the
+ * settlement — so the two are siblings, not a chain. Also optional: plenty of
+ * districts have none, and an empty list is normal rather than an error.
+ */
+export const fetchGeoNeighborhoods = async (cityDistrictId: number): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`);
+};
+

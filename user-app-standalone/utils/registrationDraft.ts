@@ -29,6 +29,8 @@ export interface RegistrationDraft {
   email?: string;
   userId?: string;
   promoCode?: string;
+  /** Referrer's phone (OR-010) — not the registering user's own number. */
+  referralPhone?: string;
   additionalPhones?: string[];
   at: number;
 }
@@ -47,6 +49,7 @@ const hasContent = (draft: RegistrationDraftInput): boolean =>
     draft.email?.trim() ||
     draft.userId?.trim() ||
     draft.promoCode?.trim() ||
+    draft.referralPhone?.trim() ||
     (draft.additionalPhones && draft.additionalPhones.length > 0)
   );
 

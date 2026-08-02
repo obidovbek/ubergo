@@ -28,6 +28,8 @@ export interface LocationValue {
   province: GeoOption | null;
   cityDistrict: GeoOption | null;
   settlement: GeoOption | null;
+  /** Mahalla. A sibling of `settlement`, not a child — both hang off the district. */
+  neighborhood: GeoOption | null;
   landmark: string;
 }
 
@@ -35,17 +37,21 @@ export const emptyLocation: LocationValue = {
   province: null,
   cityDistrict: null,
   settlement: null,
+  neighborhood: null,
   landmark: '',
 };
 
 /**
- * "Farg'ona viloyat, Farg'ona tumani, Chimyon QFY/ Natarius yonida"
+ * "Farg'ona viloyat, Farg'ona tumani, Chimyon QFY, Yangiobod MFY/ Natarius yonida"
  * Country is intentionally left out (OR-004).
  */
 export const buildLocationText = (value: LocationValue): string => {
-  const parts = [value.province?.name, value.cityDistrict?.name, value.settlement?.name].filter(
-    (part): part is string => !!part
-  );
+  const parts = [
+    value.province?.name,
+    value.cityDistrict?.name,
+    value.settlement?.name,
+    value.neighborhood?.name,
+  ].filter((part): part is string => !!part);
 
   const landmark = value.landmark.trim();
   if (parts.length === 0) return landmark;
@@ -53,7 +59,7 @@ export const buildLocationText = (value: LocationValue): string => {
   return landmark ? `${parts.join(', ')}/ ${landmark}` : parts.join(', ');
 };
 
-type PickerType = 'province' | 'cityDistrict' | 'settlement';
+type PickerType = 'province' | 'cityDistrict' | 'settlement' | 'neighborhood';
 
 interface LocationCardProps {
   label: string;
@@ -79,6 +85,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   const [provinces, setProvinces] = useState<GeoOption[]>([]);
   const [cityDistricts, setCityDistricts] = useState<GeoOption[]>([]);
   const [settlements, setSettlements] = useState<GeoOption[]>([]);
+  const [neighborhoods, setNeighborhoods] = useState<GeoOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState<PickerType | null>(null);
   // A failed load used to be console.error only, which left the user staring at
@@ -171,17 +178,55 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     };
   }, [cityDistrictId]);
 
+  // Mahallas hang off the same district as settlements, so this mirrors the
+  // effect above rather than chaining off it.
+  useEffect(() => {
+    if (!cityDistrictId) {
+      setNeighborhoods([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    GeoAPI.fetchGeoNeighborhoods(cityDistrictId)
+      .then((items) => {
+        if (cancelled) return;
+        setNeighborhoods(items);
+        setLoadFailed(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load neighborhoods:', err);
+        if (!cancelled) setLoadFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cityDistrictId]);
+
   const handleSelect = (option: GeoOption) => {
     switch (picker) {
       case 'province':
         // Everything below the changed level is no longer valid
-        onChange({ ...value, province: option, cityDistrict: null, settlement: null });
+        onChange({
+          ...value,
+          province: option,
+          cityDistrict: null,
+          settlement: null,
+          neighborhood: null,
+        });
         break;
       case 'cityDistrict':
-        onChange({ ...value, cityDistrict: option, settlement: null });
+        onChange({ ...value, cityDistrict: option, settlement: null, neighborhood: null });
         break;
       case 'settlement':
         onChange({ ...value, settlement: option });
+        break;
+      case 'neighborhood':
+        onChange({ ...value, neighborhood: option });
         break;
     }
     setPicker(null);
@@ -192,17 +237,27 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       ? t('passengerOffers.selectProvince')
       : picker === 'cityDistrict'
         ? t('passengerOffers.selectCity')
-        : t('passengerOffers.selectSettlement');
+        : picker === 'neighborhood'
+          ? t('passengerOffers.selectNeighborhood')
+          : t('passengerOffers.selectSettlement');
 
   const pickerOptions =
-    picker === 'province' ? provinces : picker === 'cityDistrict' ? cityDistricts : settlements;
+    picker === 'province'
+      ? provinces
+      : picker === 'cityDistrict'
+        ? cityDistricts
+        : picker === 'neighborhood'
+          ? neighborhoods
+          : settlements;
 
   const pickerSelectedId =
     picker === 'province'
       ? (value.province?.id ?? null)
       : picker === 'cityDistrict'
         ? (value.cityDistrict?.id ?? null)
-        : (value.settlement?.id ?? null);
+        : picker === 'neighborhood'
+          ? (value.neighborhood?.id ?? null)
+          : (value.settlement?.id ?? null);
 
   const summary = buildLocationText(value);
 
@@ -251,6 +306,29 @@ export const LocationCard: React.FC<LocationCardProps> = ({
           {!!value.settlement ? (
             <TouchableOpacity
               onPress={() => onChange({ ...value, settlement: null })}
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-down" size={18} color="#6B7280" />
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* Mahalla — same rule as settlements: only offered where the district has any */}
+      {!!value.cityDistrict && neighborhoods.length > 0 && (
+        <TouchableOpacity
+          style={styles.select}
+          onPress={() => setPicker('neighborhood')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.selectText, !value.neighborhood && styles.selectPlaceholder]}>
+            {value.neighborhood?.name || t('passengerOffers.selectNeighborhood')}
+          </Text>
+          {!!value.neighborhood ? (
+            <TouchableOpacity
+              onPress={() => onChange({ ...value, neighborhood: null })}
               hitSlop={8}
             >
               <Ionicons name="close-circle" size={18} color="#9CA3AF" />

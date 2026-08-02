@@ -19,6 +19,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { Ionicons } from '@expo/vector-icons';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const theme = createTheme('light');
 
@@ -45,6 +47,7 @@ export const MenuScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<MenuScreenNavigationProp>();
   const { t } = useTranslation();
+  const { unreadCount } = useNotifications();
   const [selectedCountry, setSelectedCountry] = useState(t('menu.uzbekistan'));
 
   // Taxi options with translation keys
@@ -98,15 +101,39 @@ export const MenuScreen: React.FC = () => {
             <View style={styles.logoContainer}>
               <Text style={styles.logo}>{t('auth.appName')}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.profileButton}
-              onPress={handleProfilePress}
-              activeOpacity={0.7}
-            >
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileInitial}>{userInitial}</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {/* Unread messages — visible without opening the menu. The count
+                  comes from NotificationContext, which already reloads when a
+                  push arrives in the foreground, so this stays live. */}
+              <TouchableOpacity
+                style={styles.mailButton}
+                // `as any` matches the rest of this file (see the CreatePassengerOffer
+                // call above): MainStackParamList still lists only 3 of the
+                // navigator's 9 routes, so 'Notifications' is not in the type yet.
+                onPress={() => (navigation as any).navigate('Notifications')}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('notifications.title')}
+              >
+                <Ionicons name="mail-outline" size={24} color="#111827" />
+                {unreadCount > 0 && (
+                  <View style={styles.mailBadge}>
+                    <Text style={styles.mailBadgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={handleProfilePress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileInitial}>{userInitial}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -203,6 +230,38 @@ const styles = StyleSheet.create({
   },
   profileInitial: {
     fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mailButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Sits on the icon's top-right corner. overflow stays visible because the
+  // badge deliberately spills outside the button's bounds.
+  mailBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mailBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
   },

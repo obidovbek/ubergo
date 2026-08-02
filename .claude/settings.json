@@ -87,7 +87,8 @@
       "Bash(grep -E \",\\\\s*[0-9]{3}\\\\s*\\\\\\)\")",
       "Bash(grep -v \"^\\\\s*//\")",
       "Bash(node --check confirm-race.mjs)",
-      "Bash(node -e \"import\\('./confirm-race.mjs'\\).catch\\(e=>console.log\\('parse-only check:', e.message\\)\\)\")"
+      "Bash(node -e \"import\\('./confirm-race.mjs'\\).catch\\(e=>console.log\\('parse-only check:', e.message\\)\\)\")",
+      "Bash(node t027-i18n.mjs)"
     ]
   }
 }

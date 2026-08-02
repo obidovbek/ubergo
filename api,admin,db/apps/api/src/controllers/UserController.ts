@@ -112,6 +112,7 @@ export class UserController {
         additional_phones,
         promo_code,
         referral_id,
+        referral_phone,
       } = req.body;
 
       console.log('=== Update Profile Debug ===');
@@ -140,6 +141,7 @@ export class UserController {
       if (additional_phones !== undefined) updateData.additional_phones = additional_phones;
       if (promo_code !== undefined) updateData.promo_code = promo_code;
       if (referral_id !== undefined) updateData.referral_id = referral_id;
+      if (referral_phone !== undefined) updateData.referral_phone = referral_phone;
       
       await user.update(updateData);
 

@@ -18,6 +18,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
 } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { UserDetailsNavigationProp } from '../navigation/types';
@@ -37,6 +38,9 @@ import {
 
 const theme = createTheme('light');
 const placeholderColor = theme.palette.text.secondary;
+
+// Breathing room left above a field when the keyboard scrolls it into view.
+const FIELD_SCROLL_MARGIN = 24;
 
 
 const formatPhoneForCountry = (value: string, country: CountryOption): string => {
@@ -96,6 +100,9 @@ export const UserDetailsScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  // Referrer's phone — NOT the user's own. This field used to display the user's
+  // own (locked) number, which told them nothing and blocked the bonus flow.
+  const [referralPhone, setReferralPhone] = useState('');
   const [additionalPhones, setAdditionalPhones] = useState<string[]>([]);
   const [currentPhoneInput, setCurrentPhoneInput] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
@@ -124,6 +131,7 @@ export const UserDetailsScreen: React.FC = () => {
           setEmail(draft.email || '');
           setUserId(draft.userId || '');
           setPromoCode(draft.promoCode || '');
+          setReferralPhone(draft.referralPhone || '');
           setAdditionalPhones(draft.additionalPhones || []);
           const parsed = draft.birthDate ? parseDate(draft.birthDate) : null;
           if (parsed) {
@@ -154,6 +162,7 @@ export const UserDetailsScreen: React.FC = () => {
         email,
         userId,
         promoCode,
+        referralPhone,
         additionalPhones,
       });
     }, 400);
@@ -169,6 +178,7 @@ export const UserDetailsScreen: React.FC = () => {
     email,
     userId,
     promoCode,
+    referralPhone,
     additionalPhones,
   ]);
 
@@ -361,8 +371,44 @@ export const UserDetailsScreen: React.FC = () => {
     }
   };
 
-  const scrollToEnd = () => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+  // ── Referral block: exactly one of phone / ID / promo ──────────────────────
+  // The three are alternative ways of naming the SAME referrer, so filling two
+  // is meaningless. Rather than validating on submit and rejecting, the other
+  // two are disabled the moment one has a value — the rule is visible instead of
+  // being a surprise at the end of a long form.
+  const referralChoice: 'phone' | 'id' | 'promo' | null = referralPhone
+    ? 'phone'
+    : userId
+      ? 'id'
+      : promoCode
+        ? 'promo'
+        : null;
+
+  // Clearing the active field re-enables the other two, so the user can switch
+  // without restarting the form.
+  const isReferralFieldDisabled = (field: 'phone' | 'id' | 'promo') =>
+    referralChoice !== null && referralChoice !== field;
+
+  // Focusing a field used to call scrollToEnd(), which jumped to the bottom of
+  // the WHOLE form — so a field in the middle (the birth date especially) ended
+  // up above the visible area once the keyboard was up. Instead, remember where
+  // each field sits and scroll just that field into view.
+  const fieldOffsets = useRef<Record<string, number>>({});
+
+  const rememberFieldOffset = (key: string) => (event: LayoutChangeEvent) => {
+    fieldOffsets.current[key] = event.nativeEvent.layout.y;
+  };
+
+  const scrollToField = (key: string) => () => {
+    const offset = fieldOffsets.current[key];
+    if (offset === undefined) {
+      return;
+    }
+    // Leave a little room above so the field's label stays readable.
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(offset - FIELD_SCROLL_MARGIN, 0),
+      animated: true,
+    });
   };
 
   const formatPhoneNumber = (text: string, country?: CountryOption | null) => {
@@ -403,6 +449,15 @@ export const UserDetailsScreen: React.FC = () => {
       newErrors.email = t('userDetails.errorEmailInvalid');
     }
 
+    // The referral phone names whoever invited you, so it cannot be your own —
+    // same rule (and same message) as the additional-phones field, T-015.
+    if (referralPhone.trim()) {
+      const onlyDigits = (v: string) => v.replace(/\D/g, '');
+      if (onlyDigits(referralPhone) === onlyDigits(phoneNumber)) {
+        newErrors.referralPhone = t('userDetails.errorPhoneOwnNumber');
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -430,6 +485,7 @@ export const UserDetailsScreen: React.FC = () => {
         additional_phones: additionalPhones,
         promo_code: promoCode || undefined,
         referral_id: userId || undefined,
+        referral_phone: referralPhone || undefined,
       };
 
       console.log('Submitting profile data:', JSON.stringify(profileData, null, 2));
@@ -660,47 +716,56 @@ export const UserDetailsScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Phone Number */}
-          <View style={styles.inputGroup}>
+          {/* Referrer's phone — a placeholder, never the user's own number */}
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('referralPhone')}>
             <Text style={styles.label}>{t('userDetails.phone')}</Text>
             <TextInput
-              style={styles.input}
-              value={phoneNumber}
-              editable={false}
+              style={[styles.input, isReferralFieldDisabled('phone') && styles.inputDisabled]}
+              placeholder="+998901234567"
+              placeholderTextColor={placeholderColor}
+              value={referralPhone}
+              onChangeText={setReferralPhone}
+              keyboardType="phone-pad"
+              maxLength={20}
+              editable={!isLoading && !isReferralFieldDisabled('phone')}
+              onFocus={scrollToField('referralPhone')}
             />
+            {!!errors.referralPhone && (
+              <Text style={styles.errorText}>{errors.referralPhone}</Text>
+            )}
           </View>
 
           {/* User ID */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('userId')}>
             <Text style={styles.label}>{t('userDetails.userId')}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isReferralFieldDisabled('id') && styles.inputDisabled]}
               placeholder={t('userDetails.userIdPlaceholder')}
               placeholderTextColor={placeholderColor}
               value={userId}
               onChangeText={setUserId}
               keyboardType="number-pad"
-              editable={!isLoading}
-              onFocus={scrollToEnd}
+              editable={!isLoading && !isReferralFieldDisabled('id')}
+              onFocus={scrollToField('userId')}
             />
           </View>
 
           {/* Promo Code */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('promoCode')}>
             <Text style={styles.label}>{t('userDetails.promoCode')}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isReferralFieldDisabled('promo') && styles.inputDisabled]}
               placeholder={t('userDetails.promoCodePlaceholder')}
               placeholderTextColor={placeholderColor}
               value={promoCode}
               onChangeText={setPromoCode}
-              editable={!isLoading}
-              onFocus={scrollToEnd}
+              editable={!isLoading && !isReferralFieldDisabled('promo')}
+              onFocus={scrollToField('promoCode')}
             />
           </View>
 
           {/* Birth Date */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('birthDate')}>
             <Text style={styles.label}>
               {t('userDetails.birthDate')}
             </Text>
@@ -714,7 +779,7 @@ export const UserDetailsScreen: React.FC = () => {
                 maxLength={10}
                 placeholderTextColor={placeholderColor}
                 editable={!isLoading}
-                onFocus={scrollToEnd}
+                onFocus={scrollToField('birthDate')}
               />
               <TouchableOpacity
                 style={styles.calendarButton}
@@ -846,7 +911,7 @@ export const UserDetailsScreen: React.FC = () => {
           </View>
 
           {/* Email */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('email')}>
             <Text style={styles.label}>
               {t('userDetails.email')}
             </Text>
@@ -864,14 +929,14 @@ export const UserDetailsScreen: React.FC = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               editable={!isLoading}
-              onFocus={scrollToEnd}
+              onFocus={scrollToField('email')}
             />
             <Text style={styles.helperText}>{t('userDetails.emailHelper')}</Text>
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           {/* Additional Contact */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} onLayout={rememberFieldOffset('additionalPhone')}>
             <Text style={styles.label}>
               {t('userDetails.additionalPhones')}
             </Text>
@@ -933,7 +998,7 @@ export const UserDetailsScreen: React.FC = () => {
                   maxLength={activeCountry ? getFormattedMaxLength(activeCountry) : 20}
                   editable={!isLoading}
                   ref={textInputRef}
-                  onFocus={scrollToEnd}
+                  onFocus={scrollToField('additionalPhone')}
                 />
 
               </View>
@@ -1073,6 +1138,12 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#EF4444',
     borderWidth: 2,
+  },
+  // Greyed out while another referral field holds the value — the one-of-three
+  // rule is shown, not enforced only at submit time.
+  inputDisabled: {
+    backgroundColor: '#F3F4F6',
+    color: '#9CA3AF',
   },
   helperText: {
     ...theme.typography.caption,

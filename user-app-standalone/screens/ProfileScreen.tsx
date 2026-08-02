@@ -20,6 +20,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { useNavigation } from '@react-navigation/native';
+import { MenuButton } from '../components/MenuButton';
 
 const theme = createTheme('light');
 
@@ -140,6 +141,7 @@ export const ProfileScreen: React.FC = () => {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
+        <MenuButton color="#10B981" />
         <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>

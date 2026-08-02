@@ -167,6 +167,7 @@ export default {
   // Menu Screen (Home)
   menu: {
     title: 'TAXI',
+    openMenu: 'Menyu',
     subtitle: 'Mamlakatni tanlang',
     uzbekistan: "O'zbekiston",
     guest: 'Mehmon',
@@ -401,6 +402,7 @@ export default {
     fromLabel: 'Qayerdan:',
     toLabel: 'Qayerga:',
     selectSettlement: 'Mavze / QFY tanlang',
+    selectNeighborhood: 'Mahalla tanlang',
     landmarkPlaceholder: 'Mo\'ljal (masalan: Notarius yonida)',
     geoNoResults: 'Hech narsa topilmadi',
     urgent: 'hozioq (srochno)',

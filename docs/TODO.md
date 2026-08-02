@@ -20,10 +20,65 @@
   `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
   → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
 
+- [ ] T-030 (P1) **[OWNER OR-011]** Four driver-app fixes from the software owner.
+  Reported 2026-08-02, all grounded in code the same day.
+  1. **Document date limits.** No `maximumDate`/`minimumDate` anywhere in the driver app. Issue
+  dates must be ≤ today; valid-until dates ≥ today. `DriverLicenseScreen` hand-rolls a future check
+  for `issue_date` only (:343, :651-661, hard-coded Uzbek message); **`DriverPassportScreen` and
+  `DriverTaxiLicenseScreen` have no limits at all** (5 unguarded date fields between them).
+  2. **Photos — audit, not a known break.** Owner says uploads work; find whether anything in the
+  path is broken. ⚠️ **Already confirmed:** 4 screens do `asset.type || 'image/jpeg'`, but
+  expo-image-picker's `asset.type` is `'image'|'video'|…`, **not** a MIME type (`asset.mimeType`
+  is) — so every upload builds a malformed `data:image;base64,…` URL.
+  3. **Wire the geo levels the admin panel already holds.** Not an import: all six levels have
+  Excel upload in admin and the API serves administrative-areas/settlements/neighborhoods.
+  `api/driver.ts` already defines `fetchGeoAdministrativeAreas` (:312) and `fetchGeoSettlements`
+  (:320) — the `api/geo.ts` shim re-exports **only 3 of them** and no driver screen asks for the
+  rest. Same shape as OR-010 item 7.
+  4. **Offer-note placeholder** → "bagajim to'la, yo'lda to'xtamaymiz, aeroportga ulgirishimiz
+  kerak" (`offerWizard.notePlaceholder`, uz/ru/en). A string change.
+  → `docs/OWNER_REQUESTS.md` OR-011, `docs/PLAN.md`
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
+> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
+- [ ] T-027 (P1) **[OWNER OR-010]** Seven fixes from the software owner (user app; the push-tap one
+  also driver app). Reported 2026-08-02, all grounded in code the same day.
+  1–2. Referral ("bonus") block: only **one** of phone / ID / promo may be filled, and the field
+  must stop showing the user's **own** number — grey `+998901234567` placeholder instead.
+  ⚠️ Needs a new `referral_phone` column (**migration — owner approved**); today the backend stores
+  only `promo_code` + `referral_id`.
+  3. Birth date jumps too far up when the keyboard opens (`onFocus={scrollToEnd}`).
+  4. Unread-message badge (envelope icon) — **API already returns `unread`, no backend work**.
+  5. Tapping a push must open **that message**; today it opens the main menu. ⚠️ **No push-tap
+  handler exists in either app** — so this is new work in the user app *and* the driver app.
+  6. Hamburger icon on the left to open the menu (`MenuScreen` is a plain stack screen today).
+  7. Settlement + mahalla not linked to the district — **the API already has both endpoints**; the
+  app's `api/geo.ts` has no neighborhoods function and its cascade stops at city/district.
+  **Owner decisions 2026-08-02:** real `referral_phone` column; item 7 = the **trip location
+  picker** (`GeoSelectModal`/`LocationCard`), not the profile address; T-019's Figma re-layout
+  stays a separate card.
+  **Steps 1–10 ALL DONE 2026-08-02** — all seven items implemented; `tsc` API **282** · admin **0**
+  · user **12** · driver **36**, zero new errors; 30/30 i18n runtime checks. Two follow-ups logged
+  rather than absorbed (**T-028**, **T-029**).
+  **🛑 Only step 11 (owner: run the migration, deploy, rebuild BOTH apps, smoke test) and step 12
+  (commit) remain.** ⚠️ **Migration FIRST, then API, then the apps** — the app already sends
+  `referral_phone` and the API drops unknown fields, so a user would watch their input vanish.
+  Nothing has run on a device. ⚠️ Its plan is **`docs/PLAN-T027.md`** (moved intact 2026-08-02).
+  → `docs/OWNER_REQUESTS.md` OR-010, `docs/PLAN-T027.md` step 11
 - [ ] T-026A (P1) **Offer concurrency: the confirmPassenger overbooking race + the single front seat.**
-  The two genuine overbooking paths carved out of T-026 part A (audit 2, 2026-08-02 (3)) — the only
-  findings there that lose money rather than throw a 500.
-  1. **Lost-update race.** `confirmPassenger` (`OfferPassengerService.ts:263-276`) reads
+  **Committed + deployed to test3 by the owner 2026-08-02.** Parked for T-027 — nothing left is
+  Claude's; the 5 smoke tests in `docs/PLAN-T026A.md` step 8 have **not** been run, and the race has
+  no other coverage of any kind. Repro script is written but never executed.
+  Fixed via one mechanism (`sequelize.transaction()` + `lock: tx.LOCK.UPDATE` on the offer row),
+  plus the new `offers.frontSeatTaken` key in three locales. ⚠️ The lock had to be taken on the
+  offer row **alone**: Postgres refuses `FOR UPDATE` on the nullable side of an outer join, which
+  is what Sequelize emits when `lock` meets `include` — the obvious version would have 500'd in
+  production. `tsc` API **282 → 282**, the two in-file errors **proven pre-existing** via
+  `git stash`; 21/21 i18n runtime checks. API-only — neither app needed a rebuild.
+  ⚠️ Its plan is **`docs/PLAN-T026A.md`** (moved intact 2026-08-02). The four defects it closed:
+  1. **Lost-update race.** `confirmPassenger` (`OfferPassengerService.ts:263-276`) read
      `offer.seats_free`, checks it, then writes `seats_free - n` with nothing in between. Two
      concurrent confirms both pass the check and **4 seats sell on a 2-seat offer**. `cancelJoin`
      (:429-431) restores seats the same unsafe way, so both must move together or the race relocates.
@@ -33,22 +88,6 @@
   3. Rides along, same lines: no transaction spans the join update and the offer update in either
      function, and `confirmPassenger` never re-checks that the offer is still `published` and not
      yet started — so a driver can confirm passengers onto a **cancelled** offer.
-  **Owner decisions 2026-08-02:** app-level enforcement only (row lock in a transaction, no
-  migration, no schema change); T-025 parked to keep *Now* at two.
-  **Steps 1–7 DONE 2026-08-02** — all four defects fixed in `OfferPassengerService.ts` via one
-  mechanism (`sequelize.transaction()` + `lock: tx.LOCK.UPDATE` on the offer row), plus the new
-  `offers.frontSeatTaken` key in three locales. ⚠️ The lock had to be taken on the offer row
-  **alone**: Postgres refuses `FOR UPDATE` on the nullable side of an outer join, which is what
-  Sequelize emits when `lock` meets `include` — the obvious version would have 500'd in production.
-  `tsc` API **282 → 282**, the two in-file errors **proven pre-existing** via `git stash`; 21/21
-  i18n runtime checks. API-only — **neither app needs a rebuild for this card**.
-  **🛑 Only step 8 (owner: deploy + 5 tests, incl. the concurrency repro script) and step 9
-  (commit) remain.** Nothing has run against a DB. → `docs/PLAN.md`
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
-> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
 - [ ] T-025 (P1) **Driver offer create/edit: unblock the geo import + two create-offer hotfixes.**
   Parked 2026-08-02 to make room for T-026A — **not finished**, but nothing left is Claude's.
   Absorbs **T-022** (the missing `api/geo.ts`) as step 1 — and it was *not* a port: the driver app's
@@ -161,6 +200,18 @@
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+- [ ] T-029 (P3) `PassengerOffer` has `from_settlement_id` / `to_settlement_id` but **no
+  neighborhood (mahalla) id columns**, so the mahalla T-027 added to the trip location picker is
+  stored as **text only** inside `from_text` / `to_text` — selectable and visible, but not
+  filterable. Needs two nullable columns + a migration if mahalla-level matching is ever wanted.
+  Also worth deciding then: `CreatePassengerOfferScreen:239` picks the geo point as
+  `settlement ?? cityDistrict`, ignoring the mahalla, which may have finer coordinates.
+  Found 2026-08-02 during T-027 step 4.
+- [ ] T-028 (P3) User app: `MainStackParamList` (`navigation/types.ts:17-21`) lists only **3 of the
+  navigator's 9 routes**, so screens navigate through `(navigation as any)` and lose all route/param
+  checking — `navigate('Typo')` compiles fine. Bring the type in line with `MainNavigator` and drop
+  the casts. Found 2026-08-02 during T-027 step 3; the convention was matched rather than fixed so
+  the card stayed tight.
 - [ ] T-021 (P2) Driver app: the passenger-offer **detail screen does not exist**. Tapping a card
   calls `navigate('PassengerOfferDetails')` (`SearchPassengerOffersScreen.tsx:498`, cast to `any`
   so it compiles) but no such route is registered anywhere — the tap goes nowhere. Pre-existing,
