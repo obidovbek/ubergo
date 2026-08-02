@@ -5,6 +5,72 @@
 
 ---
 
+## 2026-08-02 (3) — two offer audits, T-025 created, seven fixes; one root cause behind five bugs
+- **Task:** Owner: "check driver app create offer logic both in frontend and backend, there should
+  not be any unexpected error" — then the same treatment for the passenger-connection leg.
+  Two end-to-end audits, then a new card (**T-025**) and steps 1–7 of it.
+- **The single root cause worth remembering:** `price_per_seat` / `front_price_per_seat` are
+  `DECIMAL(10,2)`, pg returns numeric as a **string**, and nothing overrides that
+  (no `setTypeParser` anywhere in the project). Arithmetic (`*`, `-`) coerces and is safe, so this
+  hid for months — but **`<` and `>` between two strings are lexicographic**, and
+  `"12000.00" < "5000.00"` is `true`. That one fact caused three separate user-visible bugs in
+  three different files, in both the API and the user app.
+- **Audit 1 — driver create-offer (16 findings).** Worst three, all fixed:
+  1. **Editing any offer with a front-seat price 400s.** The string comparison above, in
+     `DriverOfferService.validateOfferData`. Any offer whose front price has more digits than the
+     base (60000 vs 5000 — the app's own placeholder) could not be edited at all.
+  2. **Every edit re-sold booked seats.** `updateOffer` reset `seats_free = seats_total`, and the
+     wizard always sends `seats_total`, so it fired on *every* edit. Overbooking.
+  3. `driver-app-standalone/api/geo.ts` was missing (**T-022**) — but it was never a port: the
+     app's own `api/driver.ts` already exported all four symbols, so a 3-line re-export shim did it.
+- **Audit 2 — passenger↔driver-offer connection leg (17 findings).** The headline: **this leg is
+  fully wired in both apps** (`OfferDetailsScreen` → join; `OffersListScreen` → `OfferPassengers` →
+  confirm/reject), unlike the OfferDriver leg reviewed on 2026-08-02 (2) which has no UI at all.
+  So these are live bugs. Worst three, all fixed:
+  4. **Passengers were charged a front-seat premium that was never displayed.** Same string
+     comparison, this time in `OfferDetailsScreen.tsx:192`. It gated the price banner, the premium
+     and the breakdown — but **not the front-seat toggle** — while the server charged on plain
+     truthiness of the string. Tick the box, see no price, get billed.
+  5. **A cancelled offer gave the passenger a blank screen.** `successResponse` is
+     `(res, data, message?, statusCode?)`, so `successResponse(res, {offer:null}, 404)` put the
+     **404 in the message slot** and answered HTTP **200 / success:true**. The app's `!response.ok`
+     check sailed past it and `if (!offer) return null` rendered nothing, with no way back.
+  6. Every price rendered as `60 000.00` — `formatNumberWithSpaces` did `num.toString()` on the
+     DECIMAL string.
+- **Decisions:** (1) **T-022 absorbed into T-025** as step 1 rather than kept as its own card, so
+  *Now* stayed at two. (2) **T-018's plan was preserved** at `docs/PLAN-T018.md` instead of being
+  overwritten by `/new-task` — it is still live at step 9 and holds 450 lines of context.
+  (3) **Scope held deliberately narrow**: 3 of 16 findings, then 3 of 17, all user-visible; the
+  other 27 went to **T-026**, because they fire only on malicious/broken input and taking them now
+  would have stalled T-018 for days. Owner approved the split. (4) `formatNumberWithSpaces` was
+  **not** made null-tolerant — the 2026-08-02 decision to let `tsc` police null call sites stands.
+- **The lesson repeated itself.** API `tsc` went 285 → 282, and **the three errors that disappeared
+  were the three bugs I had just fixed** — TypeScript had flagged every `successResponse` arg-order
+  slip as `Argument of type 'number' is not assignable to parameter of type 'string'` and all three
+  were sitting unread in the baseline. This is the *second* time in two days the backlog turned out
+  to contain real defects (2026-08-02: the driver app's missing `formatNumberWithSpaces` export).
+  **The baselines are a bug queue, not noise.**
+- **Verification (honest status): nothing ran on a device or against a DB.** `tsc`: API
+  **285 → 282**, user app **12 → 12**, driver app **40 → 36**, admin **0** — zero new errors
+  anywhere. 27/27 + 20/20 runtime checks on the pure functions. Two bugs were **proven, not
+  assumed**, by re-running the check scripts against a `git stash` of the pre-fix code. Step 3's
+  `seats_free` arithmetic has **no** runtime coverage (it needs a DB) and is verified by reading
+  only — smoke test 8(d) is its only real test.
+- **Problems / carry-forward:** T-026 now holds 27 findings across both legs — the same defect
+  classes in two services (mass assignment, 500-instead-of-4xx, unguarded `response.json()`,
+  missing transactions). Two genuine overbooking paths remain open there: a **lost-update race** in
+  `confirmPassenger` (two concurrent confirms both pass the seat check) and **nothing enforcing a
+  single front seat**. Also: I dated everything 2026-08-03 while writing and had to correct
+  `PLAN.md`/`TODO.md` back to 2026-08-02 at end-day.
+- **Next:** Owner — deploy the API to test3 and rebuild **both** apps (the user app carries fixes
+  now, which earlier T-025 sessions did not), then walk the seven smoke tests in `docs/PLAN.md`
+  step 8. Then commit step 9, and T-018 unparks from `docs/PLAN-T018.md`.
+- **Commit:** owner committed twice mid-session — `5a57781` (docs + board) and `0371cbd`
+  (T-025 steps 1–3). **Steps 5–7 are NOT committed** — 6 files awaiting approval, message proposed
+  in `docs/PLAN.md`.
+
+---
+
 ## 2026-08-02 (2) — driver-connection review, six owner decisions, deployed to test3
 - **Task:** Owner asked for the same end-to-end review as the create-offer one, applied to the
   passenger-create + driver-connection path — "don't miss anything".

@@ -56,6 +56,13 @@ export default function OfferDetailsScreen() {
     try {
       setLoading(true);
       const data = await OffersAPI.getOfferDetails(offerId);
+      // Defensive: an empty offer used to reach the render as `null` and draw a blank
+      // screen with no way back. Routing it through the catch below gives the passenger
+      // a toast and a goBack() instead. (The API answering an unavailable offer with
+      // HTTP 200 + offer:null is fixed server-side too — this is the second layer.)
+      if (!data) {
+        throw new Error(t('errors.notFound'));
+      }
       setOffer(data);
     } catch (error: any) {
       const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
@@ -189,7 +196,14 @@ export default function OfferDetailsScreen() {
   }
   
   // Check if front seat pricing is available
-  const hasFrontSeatPricing = offer.front_price_per_seat && offer.front_price_per_seat > offer.price_per_seat;
+  // Prices come back from the API as DECIMAL strings (pg returns numeric as a string),
+  // so `>` between them was lexicographic: "12000.00" > "5000.00" evaluated to FALSE.
+  // That hid the front-seat price banner, the premium and the breakdown for the common
+  // case (front price with more digits than the base) while the server charged the
+  // premium anyway — OfferPassengerService decides on truthiness, not on this test.
+  const hasFrontSeatPricing =
+    offer.front_price_per_seat != null &&
+    Number(offer.front_price_per_seat) > Number(offer.price_per_seat);
 
   return (
     <SafeAreaView style={styles.container}>

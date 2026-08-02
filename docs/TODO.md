@@ -16,7 +16,7 @@
   across two review rounds + 6 owner decisions implemented — see `docs/JOURNAL.md` 2026-08-02 (2).
   🛑 Still blocked on the geo import (now **T-025 step 1**) before the driver side can be verified.
   Step 10 is the owner's: walk `docs/CHECKLIST.md` on two phones.**
-  ⚠️ **Its plan now lives in `docs/PLAN-T018.md`** (moved intact 2026-08-03 so T-025 could use
+  ⚠️ **Its plan now lives in `docs/PLAN-T018.md`** (moved intact 2026-08-02 (3) so T-025 could use
   `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
   → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
 
@@ -25,10 +25,23 @@
   own `api/driver.ts` already exports all four symbols, so it is a 3-line re-export shim. Plus the
   two create-offer defects that bite in normal use: editing any offer with a front-seat price 400s
   on a **string** comparison (`"12000.00" < "5000.00"` is true), and every edit resets `seats_free`
-  to `seats_total`, re-selling seats that are already booked. Found 2026-08-03 while auditing the
-  driver create-offer flow end-to-end. → `docs/PLAN.md`
+  to `seats_total`, re-selling seats that are already booked. Found 2026-08-02 (3) while auditing the
+  driver create-offer flow end-to-end.
+  **Steps 1–7 ALL DONE 2026-08-02 (3).** Steps 1–3 committed by the owner as `0371cbd`; **steps
+  5–7 are uncommitted** (6 files). Steps 5–7 came from a second audit (passenger↔driver-offer leg)
+  and are all user-visible: the passenger was **charged a front-seat premium that was never
+  displayed** (same string-compare root cause, user app this time); a cancelled offer gave a
+  **blank screen with no way back** (`successResponse`'s 404 landed in the *message* slot → HTTP
+  200 + `offer:null`); and every price rendered as `60 000.00`.
+  `tsc` API **285 → 282** (the 3 removed errors *are* the 3 arg-order bugs — they were hiding in
+  the baseline), user **12 → 12**, driver **40 → 36**, admin **0**; 27/27 + 20/20 runtime checks;
+  two bugs reproduced against pre-fix code.
+  **🛑 Only step 8 (owner: deploy API + rebuild BOTH apps, 7 smoke tests) and step 9 (commit)
+  remain.** Nothing has run on a device or a DB. → `docs/PLAN.md`
 
-> **T-022 is absorbed into T-025 step 1** — do not start it separately.
+> **T-022 is absorbed into T-025 step 1** — code-complete and committed in `0371cbd`, but the
+> driver search screen has **not been opened on a device yet**, so it is not "done" until smoke
+> test 8(a) passes. Do not start it as a separate card.
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
@@ -59,19 +72,48 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
-- [ ] T-026 (P1) **Driver-offer backend + app hardening** — the rest of the 2026-08-03 audit that
-  T-025 deliberately left alone. Backend: `DriverOfferService.updateOffer` still spreads `req.body`
-  into the model (`user_id`/`status`/`seats_free`/`reviewed_by` are client-writable — the same
-  mass-assignment hole already fixed in `PassengerOfferService`); `validateOfferData` checks no
-  types and no presence, so a missing `vehicle_id`, a non-numeric `seats_total`/`price_per_seat` or
-  a garbage `start_at` all become **500s**; non-numeric `:id` → 500 instead of 404 on 6 endpoints;
+- [ ] T-026 (P1) **Offer backend + app hardening** — everything the two 2026-08-02 (3) audits found
+  that T-025 deliberately left alone. **Both audits produced the same defect classes in two
+  different services**, so fix them as one sweep, not twice.
+
+  **A. Passenger↔driver-offer connection leg** (audit 2, findings 4–17). ⚠️ Unlike the OfferDriver
+  leg, this one **is fully wired in both apps** (`OfferDetailsScreen` → join; `OffersListScreen` →
+  `OfferPassengers` → confirm/reject) — so these fire in real use, not hypothetically.
+  *Overbooking:* `confirmPassenger` (`OfferPassengerService.ts:263-276`) reads `seats_free`, checks,
+  then writes `seats_free - n` — two concurrent confirms both pass and 4 seats sell on a 2-seat
+  offer (needs a transaction + row lock or `decrement()`); no transaction spans the join update and
+  the offer update in either `confirmPassenger` or `cancelJoin` (:422-432); **nothing enforces that
+  there is only one front seat** — N passengers can each book it and all be confirmed;
+  `confirmPassenger` never checks the offer is still published and not yet started, so a driver can confirm
+  passengers onto a **cancelled** offer and decrement its seats.
+  *500s:* `seats_requested` is type-unchecked **and** checked in the wrong order — the availability
+  test (:121) runs before the range test (:126), so `"abc"` passes both and dies as `NaN` in
+  Postgres (journal defect #2, never applied here); `2.5` passes and Postgres rounds it to 3 seats;
+  `parseInt(offerId)` → `NaN` → 500 (`OfferPassengerController:30`, `:110`); `?status=<garbage>` →
+  ENUM error → 500 (`:86`, journal #5); `?date=<garbage>` → RangeError → 500
+  (`PublicOfferController:45`, journal #6); non-UUID `:id` → 500 on confirm/reject/cancel/location.
+  *Smaller:* `if (!lat || !lng)` (`:189`) rejects **0** as missing, and `"abc"` slips through to
+  `NaN`; `min_rating` filters **after** pagination and `total` is the filtered page length, not the
+  real count (latent — `SearchOffersScreen` does not paginate yet); **no rate limiter on any route**
+  in `offer-passenger.routes.ts` and no cap on `limit` in the public browse; the `language`
+  parameter of `notifyDriver`/`notifyPassenger` is **dead** (declared, defaulted, never referenced);
+  3 unguarded `response.json()` in `driver-app-standalone/api/offerPassengers.ts` (:56, :93, :131).
+
+  **B. Driver-offer create/edit** (audit 1) — ⚠️ **T-025 already fixed 3 of these; what is left:**
+  Backend: `DriverOfferService.updateOffer` still spreads `req.body` into the model — `user_id`,
+  `status`, `currency`, `rejection_reason`, `reviewed_by` and `reviewed_at` are client-writable (the
+  same mass-assignment hole already fixed in `PassengerOfferService`). *`seats_free` and `start_at`
+  are NOT — the explicit keys sit after the spread and win; T-025 verified this.*
+  `validateOfferData` still checks no **presence** and no types outside the two price fields T-025
+  covered, so a missing `vehicle_id`, a non-numeric `seats_total` or a garbage `start_at` are still
+  **500s**; non-numeric `:id` → 500 instead of 404 on 6 endpoints;
   stops are inserted outside a transaction with no cap and can collide on the unique
   `(offer_id, order_no)` index; `front_price ≥ price` is not checked against the stored row on
   PATCH; `archiveOffer` has no status check and strands confirmed passengers silently.
   Driver app: 8 unguarded `response.json()` calls in `api/driverOffers.ts` (+ all of `api/driver.ts`)
   — the offer limiter returns a **plain-text** body, so the 21st create in 15 min throws
   `JSON Parse error`; `parseLocationText` fans out country×province city fetches when opening an
-  offer for edit; hard-coded Uzbek strings in `OfferWizardScreen`. Found 2026-08-03.
+  offer for edit; hard-coded Uzbek strings in `OfferWizardScreen`. Found 2026-08-02 (3).
 - [ ] T-023 (P1) **Driver app: "I'll take this order" screen.** The driver can browse passenger
   orders but has **no way to offer on one** — `joinPassengerOffer` exists in
   `driver-app-standalone/api/passengerOffers.ts` with zero call sites, and the only navigation

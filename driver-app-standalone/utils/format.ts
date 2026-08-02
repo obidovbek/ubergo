@@ -27,8 +27,17 @@ export const formatNumber = (num: number): string => {
 /**
  * Format number with spaces as thousand separators (better readability)
  */
-export const formatNumberWithSpaces = (num: number): string => {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+export const formatNumberWithSpaces = (num: number | string): string => {
+  // Money columns are DECIMAL, and pg returns numeric as a STRING, so the API sends
+  // "5000.00". The old `num.toString()` fed that straight to the thousands regex and
+  // rendered "5 000.00". Round first, and accept the string the API actually sends.
+  // Deliberately NOT null-tolerant: the 2026-08-02 decision was to let tsc police the
+  // null call sites (that is how the MyPassengerOffersScreen crash was caught).
+  const value = Math.round(Number(num));
+  if (!Number.isFinite(value)) {
+    return '';
+  }
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 };
 
 /**

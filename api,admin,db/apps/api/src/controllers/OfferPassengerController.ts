@@ -35,10 +35,14 @@ export class OfferPassengerController {
         req
       );
 
-      return successResponse(res, { 
-        passenger_join: passengerJoin,
-        message: 'Join request sent successfully. Waiting for driver confirmation.' 
-      }, 201);
+      // (res, data, message?, statusCode?) — the 201 used to sit in the message slot,
+      // so this answered 200. Harmless (the app only checks response.ok) but wrong.
+      return successResponse(
+        res,
+        { passenger_join: passengerJoin },
+        'Join request sent successfully. Waiting for driver confirmation.',
+        201
+      );
     } catch (error) {
       next(error);
     }

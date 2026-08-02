@@ -77,7 +77,9 @@ export class DriverOfferController {
 
       const offer = await DriverOfferService.createOffer(userId, req.body, req);
 
-      return successResponse(res, { offer, message: 'Offer created successfully' }, 201);
+      // (res, data, message?, statusCode?) — the 201 used to sit in the message slot,
+      // so this answered 200. Harmless (the app only checks response.ok) but wrong.
+      return successResponse(res, { offer }, 'Offer created successfully', 201);
     } catch (error) {
       next(error);
     }

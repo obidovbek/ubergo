@@ -15,25 +15,28 @@
   1. The driver's passenger-order search screen **bundles and opens** (it never has).
   2. A driver can **edit an offer that has a front-seat price** without getting a 400.
   3. Editing an offer **no longer re-sells seats that are already booked**.
-  4. No new `tsc` errors anywhere; API deployed to test3; driver app rebuilt; smoke-tested.
+  4. A passenger **sees the front-seat premium before being charged it**.
+  5. Tapping a cancelled offer shows an error instead of a **blank screen**.
+  6. Prices read `60 000`, not `60 000.00`.
+  7. No new `tsc` errors anywhere; API deployed to test3; **both** apps rebuilt; smoke-tested.
 - **Why now:** (1) unblocks T-018 step 9 and sections 6–7 of `docs/CHECKLIST.md`, which have been
   untestable since 2026-08-02; (2) the two hotfixes are one-liners in code already read, and both
   would otherwise be hit *during* the checklist walk and cost debugging time; (3) the API needs a
   redeploy before that walk anyway, so these ride along for free.
-- **Source:** end-to-end audit of the driver create-offer flow, 2026-08-03 (16 findings; this card
+- **Source:** end-to-end audit of the driver create-offer flow, 2026-08-02 (3) (16 findings; this card
   takes 3 of them, the rest are **T-026**).
 
-## Owner decisions already taken (2026-08-03 — do NOT re-ask)
+## Owner decisions already taken (2026-08-02 (3) — do NOT re-ask)
 1. **T-022 is absorbed** into this card as step 1. It is not a port: the driver app's own
    `api/driver.ts` already exports `GeoOption`, `fetchGeoCountries`, `fetchGeoProvinces`,
    `fetchGeoCityDistricts`, so a re-export shim beats copying a second geo client that would drift.
 2. **Scope is deliberately narrow.** The mass-assignment hole, the 500-instead-of-4xx sweep, the
    JSON-parse guards and the `parseLocationText` fan-out are **T-026**, not this card — they only
    fire on malicious/broken input or under a rate limiter, and taking them now would stall T-018
-   for days. Owner chose this split (2026-08-03).
+   for days. Owner chose this split (2026-08-02 (3)).
 3. **T-018's plan is preserved** in `docs/PLAN-T018.md`, not overwritten.
 
-## Current state (verified in code 2026-08-03)
+## Current state (verified in code 2026-08-02 (3))
 - `driver-app-standalone/api/geo.ts` **does not exist**; `SearchPassengerOffersScreen.tsx:27-28`
   does `import * as GeoAPI from '../api/geo'` + `import type { GeoOption }` → Metro cannot resolve
   it → that screen has never opened.
@@ -64,21 +67,21 @@ below `booked`, that is a **400 with a clear message**, not a silent clamp — t
 `min: 0` validator would otherwise throw a useless generic validation error.
 
 ## Steps
-- [x] 1. **Driver app: `api/geo.ts` re-export shim — DONE 2026-08-03.** New `api/geo.ts` re-exports
+- [x] 1. **Driver app: `api/geo.ts` re-export shim — DONE 2026-08-02 (3).** New `api/geo.ts` re-exports
   `GeoOption`, `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts` from `./driver`.
   `SearchPassengerOffersScreen.tsx` untouched; it is the **only** importer of `../api/geo` and uses
   exactly those symbols (checked). Driver app `tsc` **40 → 36**: both `Cannot find module
   '../api/geo'` errors plus two downstream `implicitly has an 'any' type` errors gone, **zero added**.
-- [x] 2. **API: front-price comparison — DONE 2026-08-03.** New private `parsePrice(value, field)`
+- [x] 2. **API: front-price comparison — DONE 2026-08-02 (3).** New private `parsePrice(value, field)`
   coerces with `Number()` and rejects non-finite input with a **400** ("must be a number") instead of
   letting it reach Postgres as a 500. Both price checks now compare numbers. Original check order and
   messages preserved, so numeric input behaves exactly as before.
-- [x] 3. **API: `seats_free` on update — DONE 2026-08-03.** `updateOffer` computes
+- [x] 3. **API: `seats_free` on update — DONE 2026-08-02 (3).** `updateOffer` computes
   `booked = offer.seats_total - offer.seats_free` and sets `seats_free = newSeatsTotal - booked`;
   shrinking `seats_total` below `booked` is a 400 naming the booked count. The explicit `seats_free`
   key sits **after** the `...data` spread, so a client-sent `seats_free` cannot override the guard
   (`start_at` likewise). The remaining mass-assignment surface is recorded in a code comment → T-026.
-- [x] 4. **Static verification — DONE 2026-08-03.** `tsc`: API **285 → 285 (identical set,
+- [x] 4. **Static verification — DONE 2026-08-02 (3).** `tsc`: API **285 → 285 (identical set,
   measured against a `git stash` of exactly this file)**, driver app **40 → 36**, user app **12**,
   admin **0**. **No new error anywhere.**
   27/27 runtime checks green via `<scratchpad>/check-driver-offer-prices.mts`
@@ -88,19 +91,72 @@ below `booked`, that is a **400 with a clear message**, not a silent clamp — t
   numeric side forces coercion, which is exactly why this hid for so long.)
   ⚠️ Step 3's arithmetic is **not** covered by a runtime check — it is inline in `updateOffer`,
   which needs a DB. It is verified by reading only, so step 5(d) is the real test.
-- [ ] 5. **Owner: deploy + smoke test.** Deploy the API to test3, rebuild the driver app. Then:
-  (a) open the passenger-order search screen — it must render at all; (b) create an offer with a
-  front-seat price of 60000 against a 5000 base; (c) reopen it for edit and save **without
-  changing the price fields** — must succeed (this is the exact repro of defect 1); (d) with one
-  confirmed passenger, edit the offer and confirm `seats_free` did not jump back up.
-- [ ] 6. **Commit** with a clear message, owner-approved.
+- [x] 5. **DONE 2026-08-02 (3). User app: the front-seat premium the passenger is never shown** (audit finding 1 —
+  the same DECIMAL-as-string root cause as step 2, opposite symptom). `OfferDetailsScreen.tsx:192`
+  compares `offer.front_price_per_seat > offer.price_per_seat` — two strings, lexicographic, so
+  `"12000.00" > "5000.00"` is **false**. `hasFrontSeatPricing` gates the price banner (:269), the
+  premium amount (:420) and the breakdown (:483) but **not the front-seat toggle**, and
+  `OfferPassengerService.ts:136` charges on plain truthiness — so the passenger ticks "front seat"
+  with no price shown anywhere and is charged the premium anyway. `Number()` both sides.
+- [x] 6. **DONE 2026-08-02 (3). API + user app: the blank screen on a cancelled offer** (audit finding 2). Three steps,
+  fixed the first two:
+  - `PublicOfferController.ts:109` — `successResponse(res, data, message?, statusCode?)`, so the
+    `404` lands in the **message** slot and the reply is HTTP **200 / success:true / offer:null**.
+    Replace with a real `AppError(…, 404)` so the app's existing error path (toast + `goBack`) fires
+    with no app change needed. Fix the same arg-order slip at `OfferPassengerController.ts:38-41`
+    and `DriverOfferController.ts:80` (both 201→200; harmless today, identical mistake).
+  - `OfferDetailsScreen.tsx:175` — `if (!offer) return null` renders a blank screen with no way
+    back. Make it toast + `goBack()`, so a null offer can never strand the passenger again even if
+    some other endpoint regresses.
+- [x] 7. **DONE 2026-08-02 (3). Both apps: prices render with `.00`** (audit finding 3). `formatNumberWithSpaces` did
+  `num.toString()`, so the DECIMAL string `"5000.00"` became **`"5 000.00"`**. Parameter widened
+  to `number | string`, `Math.round(Number(num))` before formatting, non-finite → `''`, in **both**
+  `user-app-standalone/utils/format.ts` and `driver-app-standalone/utils/format.ts`. Not made
+  `null`-tolerant — the 2026-08-02 decision to let `tsc` police null call sites still stands.
+  ⚠️ **Known edge:** `Number('')` is `0`, so an empty string now renders `"0"` where it used to
+  render `""`. No call site can pass `''` (the API sends `null` or `"5000.00"`), so this is left
+  unguarded rather than adding a branch for an unreachable input — but it is a real behaviour change.
 
-## Files to touch (verified against the repo 2026-08-03)
+- [x] **Verification of steps 5–7 — DONE 2026-08-02 (3).** `tsc`: API **285 → 282**, user app
+  **12 → 12**, driver app **36 → 36**. **Zero new errors anywhere.** The three API errors that
+  disappeared are **the three bugs themselves** — TypeScript had already flagged every
+  `successResponse` arg-order slip as `Argument of type 'number' is not assignable to parameter of
+  type 'string'`, and all three were buried in the 285-error backlog. (Same lesson as the
+  2026-08-02 journal entry: the baselines hide real bugs.) None of the user app's remaining 12
+  errors are in a touched file. 20/20 runtime checks green via `<scratchpad>/fmt.mts`, including a
+  case that records the old lexicographic result (`'12000.00' > '5000.00'` → `false`) as proof the
+  defect was real.
+  ⚠️ Only one caller of `/public/driver-offers/:id` exists (`OfferDetailsScreen` via
+  `getOfferDetails`), and it already branches on `!response.ok` — the 200→404 change was checked
+  before landing, as the risk note required.
+- [ ] 8. **Owner: deploy + smoke test.** Deploy the API to test3, rebuild **both** apps. Then:
+  (a) open the driver's passenger-order search screen — it must render at all;
+  (b) create an offer with a front-seat price of 60000 against a 5000 base;
+  (c) reopen it for edit and save **without changing the price fields** — must succeed
+  *(exact repro of defect 1, step 2)*;
+  (d) with one confirmed passenger, edit the offer — `seats_free` must **not** jump back up
+  *(only test of step 3)*;
+  (e) as a passenger, open that offer — the front-seat price and premium must be **visible**
+  *(step 5)*;
+  (f) cancel the offer as the driver, then tap it as the passenger — must show an error and go
+  back, **not** a blank screen *(step 6)*;
+  (g) confirm prices read `60 000`, not `60 000.00`, in both apps *(step 7)*.
+- [ ] 9. **Commit** with a clear message, owner-approved.
+
+## Files to touch (verified against the repo 2026-08-02 (3))
+Steps 1–4 (done):
 - **NEW** `driver-app-standalone/api/geo.ts` (3 lines, re-export only)
 - `api,admin,db/apps/api/src/services/DriverOfferService.ts` (two edits: `validateOfferData`
   ~L109-120, `updateOffer` ~L394-398)
 
-That is the whole list. Nothing else is touched.
+Steps 5–7 (added 2026-08-02 (3) after the passenger-connection audit):
+- `user-app-standalone/screens/OfferDetailsScreen.tsx` (:192 comparison, :175 null-offer guard)
+- `api,admin,db/apps/api/src/controllers/PublicOfferController.ts` (:109 → real 404)
+- `api,admin,db/apps/api/src/controllers/OfferPassengerController.ts` (:38-41 arg order)
+- `api,admin,db/apps/api/src/controllers/DriverOfferController.ts` (:80 arg order)
+- `user-app-standalone/utils/format.ts` + `driver-app-standalone/utils/format.ts`
+
+That is the whole list. Nothing else is touched. Everything else from the two audits is **T-026**.
 
 ## Risks / open questions (READ before coding)
 - ⚠️ **The mass-assignment hole stays open on the very line step 3 edits.** `updateOffer` still does
@@ -114,48 +170,87 @@ That is the whole list. Nothing else is touched.
   in T-026 (or a `decimalNumbers`/`setTypeParser` decision, which is a bigger call).
 - ⚠️ **Step 3 changes behaviour a driver may have come to expect** — raising `seats_total` now adds
   only the difference. That is the correct behaviour, but it is a change.
-- ⚠️ Step 5 is **owner-only** (needs a device + `kubectl`). Steps 1–4 are static; nothing about
+- ⚠️ **Step 5 fixes the display, not the charging rule.** `OfferPassengerService.ts:136` decides to
+  charge the premium by **truthiness** of `front_price_per_seat`, which is a non-empty string and
+  therefore always true. After step 5 the UI and the server agree, because the API refuses
+  `front < price` at creation — but the two still use different tests. Unifying them is T-026.
+- ⚠️ **Step 6 changes a status code the app already depends on.** `/public/driver-offers/:id` on a
+  non-published offer goes from HTTP **200** to **404**. `user-app-standalone/api/offers.ts:163`
+  already branches on `!response.ok`, so this is the path it was always meant to take — but grep
+  for any other caller before landing it.
+- ⚠️ **Step 7 widens a shared helper's signature.** `formatNumberWithSpaces` is called from many
+  screens in both apps; widening `number` → `number | string` is source-compatible, but the
+  rounding changes what every one of those screens renders. Re-check the `tsc` baselines after.
+- ⚠️ Step 8 is **owner-only** (needs a device + `kubectl`). Steps 1–7 are static; nothing about
   this card can be truly verified from this machine.
-- Deploy order: API first, then the driver app. Step 1 is app-only and independent of steps 2–3,
-  so a partial deploy is safe in either order here.
+- Deploy order: API first, then **both** apps. Steps 5 and 7 changed the user app, so it is no
+  longer enough to rebuild only the driver app.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`,
   `GRADLE_OPTS` truststore, `git -c http.sslBackend=schannel push origin main`).
 - `.claude/settings.json` + `.gitignore` are modified for unrelated reasons — keep them out of
   this commit.
 
 ## Session notes (one line per work session)
-- 2026-08-03: **Plan approved; steps 1–4 DONE in one session.** Two files touched, nothing else.
-  T-022 turned out to be a 3-line re-export shim, not a port (`api/driver.ts` already had all four
-  symbols) — driver `tsc` 40 → 36. The front-price bug was **reproduced against the pre-fix code**
-  (3/5 repro cases threw a false 400) and 27/27 checks pass after. API `tsc` 285 → 285, identical
-  set. Steps 5–6 are the owner's: deploy + device smoke test, then commit.
+- **2026-08-02 (3)** — the whole card, in one session: **two audits + steps 1–7 DONE.**
+  - *Audit 1* (driver create-offer, 16 findings) produced this card; owner approved it and steps
+    1–4 landed. T-022 turned out to be a **3-line re-export shim, not a port** (`api/driver.ts`
+    already exported all four symbols) — driver `tsc` 40 → 36. The front-price bug was
+    **reproduced against the pre-fix code** (3 of 5 repro cases threw the false 400) and 27/27
+    checks pass after. API `tsc` 285 → 285, identical set.
+  - *Audit 2* (passenger↔driver-offer leg, 17 findings) found that leg is **fully wired in both
+    apps** — unlike the OfferDriver leg — so its bugs are live, not theoretical. Owner approved
+    folding the three user-visible ones in as **steps 5–7** and the other 14 into **T-026**.
+  - Steps 5–7 landed the same session. API `tsc` **285 → 282**, and **the three errors that
+    vanished are the three bugs themselves** — TypeScript had flagged every `successResponse`
+    arg-order slip as `number is not assignable to string`, and all three sat unread inside the
+    baseline backlog. User 12 → 12, driver 36 → 36, zero new anywhere, 20/20 runtime checks.
+  - Owner committed twice mid-session (`5a57781` docs, `0371cbd` steps 1–3); steps 5–7 uncommitted.
 
 ## Resume point (for the next chat)
-**Steps 1–4 are DONE and verified statically. Steps 5 (owner deploy + smoke test) and 6 (commit)
-remain. Nothing is committed yet** — two files on disk:
+**Steps 1–7 are DONE and verified statically. Only step 8 (owner deploy + smoke test) and step 9
+(commit) remain — both are the owner's.** **Nothing is committed yet** — seven files on disk:
 - **NEW** `driver-app-standalone/api/geo.ts`
 - `api,admin,db/apps/api/src/services/DriverOfferService.ts`
+- `api,admin,db/apps/api/src/controllers/PublicOfferController.ts`
+- `api,admin,db/apps/api/src/controllers/OfferPassengerController.ts`
+- `api,admin,db/apps/api/src/controllers/DriverOfferController.ts`
+- `user-app-standalone/screens/OfferDetailsScreen.tsx`
+- `user-app-standalone/utils/format.ts` + `driver-app-standalone/utils/format.ts`
 
-**Step 5 is the only thing that can actually prove any of this.** Everything so far is `tsc` plus
-pure-function checks; no device, no DB, no deploy from this machine. Run the four smoke tests in
-step 5 in order — **5(c) is the exact repro** of the front-price defect and **5(d) is the only test
-of step 3's arithmetic**, which has no runtime coverage at all.
+⚠️ **Deploy the API and rebuild BOTH apps** — the user app now carries fixes too (steps 5–7), which
+earlier T-025 sessions did not. `.claude/settings.json` is modified for unrelated reasons; keep it
+out of the commit.
+
+**Step 8 is the only thing that can actually prove any of this.** Everything so far is `tsc` plus
+pure-function checks; no device, no DB, no deploy from this machine. Run its seven smoke tests in
+order — **8(c) is the exact repro** of the front-price defect and **8(d) is the only test of
+step 3's arithmetic**, which has no runtime coverage at all.
 
 The three defects and their exact evidence are written up in the **Current state** section above —
 a cold-start chat does not need to re-derive them, and should not re-audit the flow. The full
 16-finding audit that produced this card is summarised in the **T-026** entry in `docs/TODO.md`.
 
-Proposed commit message for step 6:
+Proposed commit message for step 9:
 ```
-fix(driver-offers): unblock the geo import and stop two create/edit defects (T-025)
+fix(offers): unblock the geo import and stop five price/seat defects (T-025)
+
+pg returns DECIMAL as a string and no setTypeParser overrides it, so every
+relational comparison between two price values was lexicographic. Three of the
+five bugs below are that one root cause wearing different clothes.
 
 - driver app: add api/geo.ts re-exporting the geo client from api/driver.ts, so
   SearchPassengerOffersScreen can finally bundle (absorbs T-022)
-- api: compare prices numerically — pg returns DECIMAL as a string, so
-  "12000.00" < "5000.00" was lexicographically true and rejected every edit of
-  an offer whose front price had more digits than the base price
+- api: compare prices numerically in DriverOfferService — "12000.00" < "5000.00"
+  was true, and rejected every edit of an offer whose front price had more
+  digits than the base price
 - api: keep booked seats when seats_total changes, instead of resetting
   seats_free and re-selling seats that were already confirmed
+- user app: compare prices numerically in OfferDetailsScreen — the front-seat
+  premium was hidden from the passenger while still being charged
+- api: return a real 404 for an unavailable public offer. successResponse takes
+  (res, data, message, status), so the 404 was landing in the message slot and
+  the passenger got HTTP 200 + offer:null, i.e. a blank screen
+- both apps: round in formatNumberWithSpaces so prices read 60 000, not 60 000.00
 ```
 
 **When this card is done:** T-018 unparks. Its plan is `docs/PLAN-T018.md`, still live at step 9;

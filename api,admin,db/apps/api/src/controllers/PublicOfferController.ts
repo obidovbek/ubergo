@@ -6,6 +6,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { DriverOfferService } from '../services/DriverOfferService.js';
 import { successResponse } from '../utils/response.js';
+import { AppError } from '../errors/AppError.js';
+import { getLanguageFromHeaders } from '../i18n/config.js';
+import { t } from '../i18n/translator.js';
 
 export class PublicOfferController {
   /**
@@ -104,9 +107,14 @@ export class PublicOfferController {
       const { id } = req.params;
       const offer = await DriverOfferService.getOfferById(id);
 
-      // Only return published offers
+      // Only return published offers.
+      // This used to be `successResponse(res, {offer: null, ...}, 404)` — but the
+      // signature is (res, data, message?, statusCode?), so the 404 landed in the
+      // MESSAGE slot and the reply went out as HTTP 200 / success:true / offer:null.
+      // The user app checks `!response.ok`, so it sailed past the error path and drew
+      // a blank screen. A real AppError gives the 404 the app was always waiting for.
       if (offer.status !== 'published') {
-        return successResponse(res, { offer: null, message: 'Offer not available' }, 404);
+        throw new AppError(t('offers.notAvailable', getLanguageFromHeaders(req.headers['accept-language'])), 404);
       }
 
       // Transform offer to match frontend expectations (same structure as getPublicOffers)

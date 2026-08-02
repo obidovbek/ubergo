@@ -48,11 +48,11 @@ flowchart TD
 | Database | Users, drivers, vehicles, offers, bookings, push tokens | ✅ done (grows per feature) | `.../apps/api/src/database/` |
 | Auth | Phone OTP (Eskiz), JWT access/refresh, Google SSO | 🔨 in progress | `.../src/` (auth routes/services) |
 | Driver offers | Create/submit/publish + status machine | ✅ backend done | `.../src/` + `DriverOffer` model |
-| Passenger join | Passenger joins an offer, driver confirms/rejects | 🔨 in progress — **not verified** | `.../src/` (passenger/driver offer routes) |
+| Passenger join | Passenger joins an offer, driver confirms/rejects | 🔨 **wired end-to-end in both apps**, audited 2026-08-02, 3 fixes landed, 14 open (T-026) | `.../src/` (passenger/driver offer routes) |
 | Admin panel | Offer moderation, user/passenger management | ✅ done | `api,admin,db/apps/admin/src/` |
 | Push notifications | Per-app FCM tokens (`user` / `driver`) | ✅ done (recently fixed) | API push services + app `PushService.ts` |
 | Driver app | Auth, profile, vehicle, offers list | 🔨 in progress | `driver-app-standalone/` |
-| — Offer wizard (4 steps) | Create/edit offer UI | ⬜ planned | `driver-app-standalone/screens/OfferWizardScreen.tsx` |
+| — Offer wizard (4 steps) | Create/edit offer UI | 🔨 **built & wired** (3900 lines, registered in `MainNavigator`), not device-verified — was wrongly marked "planned" until 2026-08-02 | `driver-app-standalone/screens/OfferWizardScreen.tsx` |
 | User app | Auth, browse & join offers | 🔨 in progress | `user-app-standalone/` |
 | Payments | Cash / card | ⬜ planned | — |
 | Ratings | Rate driver/passenger after trip | ⬜ planned | — |
@@ -84,14 +84,21 @@ sequenceDiagram
     participant F as Firebase
     participant DR as Driver App
     P->>A: POST /passenger/offers/:id/join
-    A->>D: reserve seat, create booking (pending)
-    A->>F: push to driver (app='driver')
+    A->>D: create booking (pending) — NO seat is held
+    A->>F: push to driver (app='driver', driver's own language)
     F-->>DR: "New passenger request"
     DR->>A: POST /driver/passengers/:id/confirm (or reject)
-    A->>D: update booking status, seats_free
-    A->>F: push to passenger (app='user')
+    A->>D: booking → confirmed, seats_free -= seats_requested
+    A->>F: push to passenger (app='user', passenger's own language)
     F-->>P: "Driver confirmed your seat"
 ```
+
+> ⚠️ **Joining does not reserve a seat** (corrected 2026-08-02 — this diagram used to say
+> "reserve seat"). `seats_free` moves **only** at confirm (`OfferPassengerService.ts:275`) and is
+> restored on cancel (:430). So any number of passengers can hold a pending request on the same
+> seat, and the driver picks. That is intended — but it is also why `confirmPassenger` needs a
+> transaction + row lock, which it does not yet have (**T-026**: two concurrent confirms both pass
+> the seat check and oversell the car).
 
 ## 6. Decision log (why we chose things)
 
