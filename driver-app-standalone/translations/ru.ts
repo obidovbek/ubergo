@@ -533,6 +533,38 @@ export default {
     daysAgo: '{count} дней назад',
   },
 
+  // T-018 — новые поля заказа пассажира (только отображение)
+  passengerOfferExtras: {
+    urgent: 'Срочно',
+    arriveBy: 'нужно прибыть до',
+    seatsFront: 'Перед',
+    seatsBack: 'Зад',
+    wholeSalon: 'Весь салон',
+    backSalonFull: 'Задний салон полностью',
+    positionAny: 'Место без разницы',
+    priceNegotiable: 'Цена договорная',
+    classStandard: 'Стандарт',
+    classComfort: 'Комфорт',
+    classBusiness: 'Бизнес',
+    classEconom: 'Эконом',
+    classTourist: 'Туристический',
+    paymentCash: 'Наличные',
+    paymentClickPayme: 'Click / Payme',
+    paymentFriend: 'Платит друг',
+    womanInCar: 'Авто, где есть женщина',
+    roofRack: 'Багажник на крыше',
+    trailer: 'Прицеп',
+    pets: 'С животным',
+    baggage: 'Есть багаж',
+    roadPickup: 'Выйдет на трассу',
+    specialOrder: 'Спецзаказ',
+    fixedPrice: 'Фиксированная цена',
+    reviewsOffers: 'Рассмотрит предложения',
+    waitingFee: 'Ожидание',
+    somPerMinute: 'сум/мин',
+    freeWaiting: 'бесплатное ожидание {count} мин',
+  },
+
   // Driver Offers
   driverOffers: {
     title: 'Мои объявления',

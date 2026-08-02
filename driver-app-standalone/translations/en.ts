@@ -533,6 +533,38 @@ export default {
     daysAgo: '{count} days ago',
   },
 
+  // T-018 — new passenger order fields (display only)
+  passengerOfferExtras: {
+    urgent: 'Urgent',
+    arriveBy: 'must arrive by',
+    seatsFront: 'Front',
+    seatsBack: 'Back',
+    wholeSalon: 'Whole salon',
+    backSalonFull: 'Entire back salon',
+    positionAny: 'Any seat position',
+    priceNegotiable: 'Price negotiable',
+    classStandard: 'Standard',
+    classComfort: 'Comfort',
+    classBusiness: 'Business',
+    classEconom: 'Econom',
+    classTourist: 'Tourist',
+    paymentCash: 'Cash',
+    paymentClickPayme: 'Click / Payme',
+    paymentFriend: 'A friend pays',
+    womanInCar: 'Car with a woman in it',
+    roofRack: 'Roof rack',
+    trailer: 'Trailer',
+    pets: 'Has a pet',
+    baggage: 'Has baggage',
+    roadPickup: 'Will wait on the road',
+    specialOrder: 'Special order',
+    fixedPrice: 'Fixed price',
+    reviewsOffers: 'Will review offers',
+    waitingFee: 'Waiting',
+    somPerMinute: 'so\'m/min',
+    freeWaiting: 'free waiting {count} min',
+  },
+
   // Driver Offers
   driverOffers: {
     title: 'My Offers',

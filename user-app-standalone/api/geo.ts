@@ -58,3 +58,11 @@ export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOpti
   return fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`);
 };
 
+/**
+ * 4th level of the hierarchy (mavze / QFY / shaharcha). Optional everywhere:
+ * many city-districts have no settlements at all, so an empty list is normal.
+ */
+export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> => {
+  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`);
+};
+

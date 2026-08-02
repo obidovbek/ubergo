@@ -68,6 +68,35 @@ export interface OfferDriver {
   };
 }
 
+// T-018 — the fields of the Figma order screen. All optional and additive, so
+// the old screens that still post the short payload keep working.
+export type PassengerOfferPaymentType = 'cash' | 'click_payme' | 'friend_pays';
+export type PassengerOfferSalonScope = 'whole_salon' | 'back_salon_full';
+export type PassengerOfferVehicleClass =
+  | 'standard'
+  | 'comfort'
+  | 'business'
+  | 'econom'
+  | 'tourist';
+
+export interface PassengerOfferSeatCounts {
+  front_male: number;
+  front_female: number;
+  back_male: number;
+  back_female: number;
+}
+
+export interface PassengerOfferSpecialOrder {
+  price_front?: number | null;
+  price_back?: number | null;
+  price_back_salon?: number | null;
+  price_whole_salon?: number | null;
+  review_driver_offers?: boolean;
+  fixed_price?: boolean;
+  waiting_fee_per_min?: number | null;
+  free_waiting_min?: number | null;
+}
+
 export interface CreatePassengerOfferData {
   from_text: string;
   from_lat?: number;
@@ -75,19 +104,41 @@ export interface CreatePassengerOfferData {
   from_country_id?: number;
   from_province_id?: number;
   from_city_id?: number;
+  from_settlement_id?: number;
+  from_landmark?: string;
   to_text: string;
   to_lat?: number;
   to_lng?: number;
   to_country_id?: number;
   to_province_id?: number;
   to_city_id?: number;
+  to_settlement_id?: number;
+  to_landmark?: string;
   start_at: string;
-  seats_needed: number;
-  max_price_per_seat: number;
+  depart_until?: string;
+  arrive_from?: string;
+  arrive_until?: string;
+  is_urgent?: boolean;
+  /** Omit it and the API derives it from seat_counts / salon_scope. */
+  seats_needed?: number;
+  /** The new form collects no price — only the special order has prices. */
+  max_price_per_seat?: number;
   currency?: string;
+  payment_type?: PassengerOfferPaymentType;
+  payer_phone?: string;
+  seat_counts?: PassengerOfferSeatCounts;
+  seat_position_any?: boolean;
+  salon_scope?: PassengerOfferSalonScope;
+  vehicle_class?: PassengerOfferVehicleClass;
   front_seat?: boolean;
   pets?: boolean;
   large_baggage?: boolean;
+  woman_in_car?: boolean;
+  roof_rack_needed?: boolean;
+  trailer?: boolean;
+  road_pickup?: boolean;
+  road_pickup_note?: string;
+  special_order?: PassengerOfferSpecialOrder;
   note?: string;
 }
 

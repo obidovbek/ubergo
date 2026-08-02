@@ -5,15 +5,66 @@
 
 import { API_BASE_URL, getHeaders, API_TIMEOUT } from '../config/api';
 
+// T-018 — the passenger side of the new Figma order screen. Everything here is
+// read-only for the driver; payer_phone is deliberately never sent by the API.
+export type PassengerOfferPaymentType = 'cash' | 'click_payme' | 'friend_pays';
+export type PassengerOfferSalonScope = 'whole_salon' | 'back_salon_full';
+export type PassengerOfferVehicleClass =
+  | 'standard'
+  | 'comfort'
+  | 'business'
+  | 'econom'
+  | 'tourist';
+
+export interface PassengerOfferSeatCounts {
+  front_male: number;
+  front_female: number;
+  back_male: number;
+  back_female: number;
+}
+
+export interface PassengerOfferSpecialOrder {
+  price_front?: number | null;
+  price_back?: number | null;
+  price_back_salon?: number | null;
+  price_whole_salon?: number | null;
+  review_driver_offers?: boolean;
+  fixed_price?: boolean;
+  waiting_fee_per_min?: number | null;
+  free_waiting_min?: number | null;
+}
+
 // Types
 export interface PassengerOffer {
   id: number;
   from_text: string;
+  from_landmark?: string | null;
   to_text: string;
+  to_landmark?: string | null;
   start_at: string;
-  max_price_per_seat: number;
+  /** End of the departure window, when the passenger gave one. */
+  depart_until?: string | null;
+  arrive_from?: string | null;
+  arrive_until?: string | null;
+  is_urgent?: boolean;
+  /** Null on offers created by the new form — it collects no price at all. */
+  max_price_per_seat: number | null;
   currency: string;
+  payment_type?: PassengerOfferPaymentType | null;
   seats_needed: number;
+  seat_counts?: PassengerOfferSeatCounts | null;
+  seat_position_any?: boolean;
+  salon_scope?: PassengerOfferSalonScope | null;
+  vehicle_class?: PassengerOfferVehicleClass | null;
+  front_seat?: boolean;
+  pets?: boolean;
+  large_baggage?: boolean;
+  woman_in_car?: boolean;
+  roof_rack_needed?: boolean;
+  trailer?: boolean;
+  road_pickup?: boolean;
+  road_pickup_note?: string | null;
+  special_order?: PassengerOfferSpecialOrder | null;
   note?: string;
   passenger: {
     id: number;

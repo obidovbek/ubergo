@@ -10,8 +10,10 @@
 - [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
   (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
   steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
-  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Step 1 DONE —
-  migration + model committed (`7e49b5e`) and applied on test3. Next: step 2, the API layer.**
+  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE — all
+  code written + statically clean 2026-07-29 (migration `7e49b5e` live on test3; API + user app +
+  driver app NOT deployed and never run). Steps 9–10 are the owner's: deploy the API to test3
+  FIRST, then build the app and test on two phones.**
   → `docs/OWNER_REQUESTS.md` OR-007
 
 ## ⏸️ Parked — implemented, awaiting owner device test
@@ -58,6 +60,10 @@
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+- [ ] T-021 (P2) Driver app: the passenger-offer **detail screen does not exist**. Tapping a card
+  calls `navigate('PassengerOfferDetails')` (`SearchPassengerOffersScreen.tsx:498`, cast to `any`
+  so it compiles) but no such route is registered anywhere — the tap goes nowhere. Pre-existing,
+  found while doing T-018 step 7. Needs a real detail screen (offer + join flow, see T-001).
 - [ ] T-004 (P2) Consolidate the ~48 scattered `.md` fix-notes into `docs/` + delete
   the stale `api,admin,db/tmp/` duplicates (Phase 2 of the doc cleanup)
 - [ ] T-005 (P2) Booking / seat-reservation system hardening (payment hooks)

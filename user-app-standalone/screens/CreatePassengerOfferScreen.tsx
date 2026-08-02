@@ -16,18 +16,37 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { createPassengerOffer, CreatePassengerOfferData } from '../api/passengerOffers';
+import {
+  createPassengerOffer,
+  type CreatePassengerOfferData,
+  type PassengerOfferPaymentType,
+  type PassengerOfferSalonScope,
+  type PassengerOfferVehicleClass,
+} from '../api/passengerOffers';
 import { useTranslation } from '../hooks/useTranslation';
 import * as GeoAPI from '../api/geo';
-import type { GeoOption } from '../api/geo';
+import {
+  LocationCard,
+  buildLocationText,
+  emptyLocation,
+  type LocationValue,
+} from '../components/passengerOffer/LocationCard';
+import { TimeWindowCard, combineDateTime } from '../components/passengerOffer/TimeWindowCard';
+import { CheckRow } from '../components/passengerOffer/CheckRow';
+import { SeatStepper, type SeatRowCounts } from '../components/passengerOffer/SeatStepper';
+import {
+  SpecialOrderPanel,
+  emptySpecialOrder,
+  hasAnySeatPrice,
+  parseMoney,
+  FREE_WAITING_MINUTES,
+  type SpecialOrderValue,
+} from '../components/passengerOffer/SpecialOrderPanel';
 
 type MainStackParamList = {
   Menu: undefined;
@@ -41,433 +60,157 @@ export const CreatePassengerOfferScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
   
-  // Geo selection states for "From" location
-  const [fromGeoModal, setFromGeoModal] = useState<{ type: 'country' | 'province' | 'city' } | null>(null);
-  const [fromGeoSearch, setFromGeoSearch] = useState('');
-  const [fromCountries, setFromCountries] = useState<GeoOption[]>([]);
-  const [fromProvinces, setFromProvinces] = useState<GeoOption[]>([]);
-  const [fromCities, setFromCities] = useState<GeoOption[]>([]);
-  const [fromCountry, setFromCountry] = useState<GeoOption | null>(null);
-  const [fromProvince, setFromProvince] = useState<GeoOption | null>(null);
-  const [fromCity, setFromCity] = useState<GeoOption | null>(null);
-  const [fromText, setFromText] = useState('');
+  // Country is fixed to Uzbekistan and never shown (OR-004 precedent)
+  const [countryId, setCountryId] = useState<number | null>(null);
 
-  // Geo selection states for "To" location
-  const [toGeoModal, setToGeoModal] = useState<{ type: 'country' | 'province' | 'city' } | null>(null);
-  const [toGeoSearch, setToGeoSearch] = useState('');
-  const [toCountries, setToCountries] = useState<GeoOption[]>([]);
-  const [toProvinces, setToProvinces] = useState<GeoOption[]>([]);
-  const [toCities, setToCities] = useState<GeoOption[]>([]);
-  const [toCountry, setToCountry] = useState<GeoOption | null>(null);
-  const [toProvince, setToProvince] = useState<GeoOption | null>(null);
-  const [toCity, setToCity] = useState<GeoOption | null>(null);
-  const [toText, setToText] = useState('');
+  // Route — the two cards of K_buyurtma001Yangi.png
+  const [fromLocation, setFromLocation] = useState<LocationValue>(emptyLocation);
+  const [toLocation, setToLocation] = useState<LocationValue>(emptyLocation);
 
-  const [geoLoading, setGeoLoading] = useState(false);
-  
-  // Date/Time picker states
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date(Date.now() + 60 * 60 * 1000)); // 1 hour from now
-  const [selectedTime, setSelectedTime] = useState(new Date(Date.now() + 60 * 60 * 1000));
-  
-  const [seatsNeeded, setSeatsNeeded] = useState('1');
-  const [maxPricePerSeat, setMaxPricePerSeat] = useState('');
-  const [frontSeat, setFrontSeat] = useState(false);
-  const [pets, setPets] = useState(false);
+  // Departure: hozioq, or a date + a from–until window
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [departDate, setDepartDate] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
+  const [departFrom, setDepartFrom] = useState<Date | null>(new Date(Date.now() + 60 * 60 * 1000));
+  const [departUntil, setDepartUntil] = useState<Date | null>(null);
+
+  // Arrival ("...gacha yetib borish kerak") — fully optional
+  const [arriveDate, setArriveDate] = useState<Date | null>(null);
+  const [arriveUntil, setArriveUntil] = useState<Date | null>(null);
+
+  // Payment — single choice despite the checkbox styling in the Figma
+  const [paymentType, setPaymentType] = useState<PassengerOfferPaymentType | null>(null);
+  const [payerPhone, setPayerPhone] = useState('+998 ');
+
+  // Vehicle class — one deselectable radio group of five
+  const [vehicleClass, setVehicleClass] = useState<PassengerOfferVehicleClass | null>(null);
+
+  // Seats: a sedan, as drawn — 1 front seat, 3 back seats
+  const [frontCounts, setFrontCounts] = useState<SeatRowCounts>({ male: 0, female: 0 });
+  const [backCounts, setBackCounts] = useState<SeatRowCounts>({ male: 0, female: 0 });
+  const [seatPositionAny, setSeatPositionAny] = useState(false);
+  const [salonScope, setSalonScope] = useState<PassengerOfferSalonScope | null>(null);
+
+  const [womanInCar, setWomanInCar] = useState(false);
   const [largeBaggage, setLargeBaggage] = useState(false);
+  const [roofRackNeeded, setRoofRackNeeded] = useState(false);
+  const [trailer, setTrailer] = useState(false);
+  const [pets, setPets] = useState(false);
+  const [roadPickup, setRoadPickup] = useState(false);
+  const [roadPickupNote, setRoadPickupNote] = useState('');
   const [note, setNote] = useState('');
+
+  // Special order — collapsed by default, posts to the same endpoint
+  const [specialExpanded, setSpecialExpanded] = useState(false);
+  const [specialOrder, setSpecialOrder] = useState<SpecialOrderValue>(emptySpecialOrder);
+
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Format number with spaces every 3 digits
-  const formatNumber = (value: string): string => {
-    // Remove all non-digit characters
-    const digits = value.replace(/\D/g, '');
-    // Add space every 3 digits from right
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  // A salon booking takes every seat, so the per-seat picker is meaningless
+  const seatsLocked = salonScope !== null;
+  const totalSeats = frontCounts.male + frontCounts.female + backCounts.male + backCounts.female;
+
+  /** Radios are deselectable: tapping the active one clears the group. */
+  const toggleSalonScope = (scope: PassengerOfferSalonScope) => {
+    setSalonScope((current) => (current === scope ? null : scope));
   };
 
-  // Parse formatted number back to number string
-  const parseNumber = (formattedValue: string): string => {
-    return formattedValue.replace(/\s/g, '');
+  const toggleVehicleClass = (option: PassengerOfferVehicleClass) => {
+    setVehicleClass((current) => (current === option ? null : option));
   };
 
-  // Calculate overall price
-  const calculateTotalPrice = (): number => {
-    const seats = parseInt(seatsNeeded) || 0;
-    const pricePerSeat = parseFloat(maxPricePerSeat) || 0;
-    return seats * pricePerSeat;
-  };
-
-  // Load initial geo data
+  // Resolve Uzbekistan once; the country itself is never shown (OR-004).
   useEffect(() => {
-    loadGeoCountries();
+    let cancelled = false;
+
+    GeoAPI.fetchGeoCountries()
+      .then((countries) => {
+        if (cancelled) return;
+        const uzbekistan = countries.find((country) =>
+          country.name.toLowerCase().includes('zbekistan')
+        );
+        setCountryId(uzbekistan?.id ?? countries[0]?.id ?? null);
+      })
+      .catch((error) => {
+        console.error('Failed to load countries:', error);
+        Alert.alert(t('common.error'), t('passengerOffers.errorLoad'));
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadGeoCountries = async () => {
-    try {
-      setGeoLoading(true);
-      const countries = await GeoAPI.fetchGeoCountries();
-      setFromCountries(countries);
-      setToCountries(countries);
-      
-      // Auto-select Uzbekistan as default country for From
-      const uzbekistan = countries.find(country => 
-        country.name.toLowerCase().includes('zbekistan')
-      );
-      if (uzbekistan && !fromCountry) {
-        setFromCountry(uzbekistan);
-        await loadFromProvinces(uzbekistan.id);
-      }
-      
-      // Auto-select Uzbekistan as default country for To
-      if (uzbekistan && !toCountry) {
-        setToCountry(uzbekistan);
-        await loadToProvinces(uzbekistan.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to load countries:', error);
-      Alert.alert(t('common.error'), 'Failed to load countries');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadFromProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const provinces = await GeoAPI.fetchGeoProvinces(countryId);
-      setFromProvinces(provinces);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      Alert.alert(t('common.error'), 'Failed to load provinces');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadFromCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const cities = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setFromCities(cities);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      Alert.alert(t('common.error'), 'Failed to load cities');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const provinces = await GeoAPI.fetchGeoProvinces(countryId);
-      setToProvinces(provinces);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      Alert.alert(t('common.error'), 'Failed to load provinces');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const cities = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setToCities(cities);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      Alert.alert(t('common.error'), 'Failed to load cities');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const buildLocationText = (
-    country: GeoOption | null,
-    province: GeoOption | null,
-    city: GeoOption | null
-  ): string => {
-    // Country is intentionally omitted (owner request): every ride is inside
-    // Uzbekistan, so showing/saving "O‘zbekiston" is noise. `country` is still
-    // selected upstream — it just doesn't appear in the location text.
-    const parts: string[] = [];
-    if (city) parts.push(city.name);
-    if (province) parts.push(province.name);
-    return parts.join(', ') || '';
-  };
-
-  const handleFromGeoSelection = async (
-    type: 'country' | 'province' | 'city',
-    option: GeoOption
-  ) => {
-    try {
-      switch (type) {
-        case 'country':
-          setFromCountry(option);
-          setFromProvince(null);
-          setFromCity(null);
-          setFromProvinces([]);
-          setFromCities([]);
-          setFromText('');
-          setErrors(prev => ({ ...prev, from_text: '' }));
-          await loadFromProvinces(option.id);
-          break;
-        case 'province':
-          setFromProvince(option);
-          setFromCity(null);
-          setFromCities([]);
-          setFromText('');
-          setErrors(prev => ({ ...prev, from_text: '' }));
-          await loadFromCities(option.id);
-          break;
-        case 'city':
-          setFromCity(option);
-          const locationText = buildLocationText(fromCountry, fromProvince, option);
-          setFromText(locationText);
-          setErrors(prev => ({ ...prev, from_text: '' }));
-          setFromGeoModal(null);
-          setFromGeoSearch('');
-          return;
-      }
-      setFromGeoModal(null);
-      setFromGeoSearch('');
-    } catch (error: any) {
-      console.error('Failed to handle geo selection:', error);
-    }
-  };
-
-  const handleToGeoSelection = async (
-    type: 'country' | 'province' | 'city',
-    option: GeoOption
-  ) => {
-    try {
-      switch (type) {
-        case 'country':
-          setToCountry(option);
-          setToProvince(null);
-          setToCity(null);
-          setToProvinces([]);
-          setToCities([]);
-          setToText('');
-          setErrors(prev => ({ ...prev, to_text: '' }));
-          await loadToProvinces(option.id);
-          break;
-        case 'province':
-          setToProvince(option);
-          setToCity(null);
-          setToCities([]);
-          setToText('');
-          setErrors(prev => ({ ...prev, to_text: '' }));
-          await loadToCities(option.id);
-          break;
-        case 'city':
-          setToCity(option);
-          const locationText = buildLocationText(toCountry, toProvince, option);
-          setToText(locationText);
-          setErrors(prev => ({ ...prev, to_text: '' }));
-          setToGeoModal(null);
-          setToGeoSearch('');
-          return;
-      }
-      setToGeoModal(null);
-      setToGeoSearch('');
-    } catch (error: any) {
-      console.error('Failed to handle geo selection:', error);
-    }
-  };
-
-  const openFromGeoModal = async (type: 'country' | 'province' | 'city') => {
-    setFromGeoSearch('');
-    if (type === 'province' && !fromCountry) {
-      Alert.alert(t('common.error'), t('passengerOffers.selectCountry'));
-      return;
-    }
-    if (type === 'city' && !fromProvince) {
-      Alert.alert(t('common.error'), t('passengerOffers.selectProvince'));
-      return;
-    }
-
-    if (type === 'province' && fromCountry) {
-      await loadFromProvinces(fromCountry.id);
-    } else if (type === 'city' && fromProvince) {
-      await loadFromCities(fromProvince.id);
-    }
-
-    setFromGeoModal({ type });
-  };
-
-  const openToGeoModal = async (type: 'country' | 'province' | 'city') => {
-    setToGeoSearch('');
-    if (type === 'province' && !toCountry) {
-      Alert.alert(t('common.error'), t('passengerOffers.selectCountry'));
-      return;
-    }
-    if (type === 'city' && !toProvince) {
-      Alert.alert(t('common.error'), t('passengerOffers.selectProvince'));
-      return;
-    }
-
-    if (type === 'province' && toCountry) {
-      await loadToProvinces(toCountry.id);
-    } else if (type === 'city' && toProvince) {
-      await loadToCities(toProvince.id);
-    }
-
-    setToGeoModal({ type });
-  };
-
-  const getFromGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (!fromGeoModal) return [];
-    
-    switch (fromGeoModal.type) {
-      case 'country':
-        options = fromCountries;
-        break;
-      case 'province':
-        options = fromProvinces;
-        break;
-      case 'city':
-        options = fromCities;
-        break;
-      default:
-        return [];
-    }
-
-    if (fromGeoSearch.trim()) {
-      const query = fromGeoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
-    return options;
-  };
-
-  const getToGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (!toGeoModal) return [];
-    
-    switch (toGeoModal.type) {
-      case 'country':
-        options = toCountries;
-        break;
-      case 'province':
-        options = toProvinces;
-        break;
-      case 'city':
-        options = toCities;
-        break;
-      default:
-        return [];
-    }
-
-    if (toGeoSearch.trim()) {
-      const query = toGeoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
-    return options;
-  };
-
-  const handleDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (event.type === 'set' && date) {
-      setSelectedDate(date);
-      updateDateTime(date, selectedTime);
-      if (Platform.OS === 'ios') {
-        setShowDatePicker(false);
-      }
-    } else if (event.type === 'dismissed') {
-      setShowDatePicker(false);
-    }
-  };
-
-  const handleTimeChange = (event: any, time?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
-    }
-    
-    if (event.type === 'set' && time) {
-      setSelectedTime(time);
-      updateDateTime(selectedDate, time);
-      if (Platform.OS === 'ios') {
-        setShowTimePicker(false);
-      }
-    } else if (event.type === 'dismissed') {
-      setShowTimePicker(false);
-    }
-  };
-
-  const updateDateTime = (date: Date, time: Date) => {
-    const combined = new Date(date);
-    combined.setHours(time.getHours());
-    combined.setMinutes(time.getMinutes());
-    combined.setSeconds(0);
-    combined.setMilliseconds(0);
-    // Store the combined date/time - we'll use it in validation and submission
-  };
-
+  /** Departure moment: "now" when urgent, otherwise the day + window start. */
   const getStartAtDate = (): Date => {
-    const combined = new Date(selectedDate);
-    combined.setHours(selectedTime.getHours());
-    combined.setMinutes(selectedTime.getMinutes());
-    combined.setSeconds(0);
-    combined.setMilliseconds(0);
-    return combined;
+    if (isUrgent) return new Date();
+    return combineDateTime(departDate, departFrom ?? departDate);
   };
 
-  const validateForm = (): boolean => {
+  /** End of the departure window — only when the passenger set one. */
+  const getDepartUntilDate = (): Date | null => {
+    if (isUrgent || !departUntil) return null;
+    return combineDateTime(departDate, departUntil);
+  };
+
+  /** "…gacha yetib borish kerak" — needs both a day and a time. */
+  const getArriveUntilDate = (): Date | null => {
+    if (!arriveDate || !arriveUntil) return null;
+    return combineDateTime(arriveDate, arriveUntil);
+  };
+
+  const validateForm = (withSpecialOrder: boolean): boolean => {
     const newErrors: Record<string, string> = {};
-    
-    const fromLocationText = fromCity
-      ? buildLocationText(fromCountry, fromProvince, fromCity)
-      : fromText.trim();
-    
-    if (!fromLocationText) {
+
+    // Province + city/district are required; settlement and landmark are not
+    // (many districts have no settlements at all).
+    if (!fromLocation.province || !fromLocation.cityDistrict) {
       newErrors.from_text = t('passengerOffers.errorFromLocation');
     }
-
-    const toLocationText = toCity
-      ? buildLocationText(toCountry, toProvince, toCity)
-      : toText.trim();
-    
-    if (!toLocationText) {
+    if (!toLocation.province || !toLocation.cityDistrict) {
       newErrors.to_text = t('passengerOffers.errorToLocation');
+    }
+
+    const startAtDate = getStartAtDate();
+
+    if (!isUrgent) {
+      if (!departFrom) {
+        newErrors.start_at = t('passengerOffers.errorTime');
+      } else if (startAtDate < new Date(Date.now() + 30 * 60 * 1000)) {
+        // Same 30-minute floor the API applies to non-urgent offers
+        newErrors.start_at = t('passengerOffers.errorTime');
+      }
+
+      const departUntilDate = getDepartUntilDate();
+      if (departUntilDate && departUntilDate < startAtDate) {
+        newErrors.start_at = t('passengerOffers.errorDepartureTime');
+      }
+    }
+
+    const arriveUntilDate = getArriveUntilDate();
+    if (arriveUntilDate && arriveUntilDate < startAtDate) {
+      newErrors.arrive_until = t('passengerOffers.errorArrivalTime');
+    }
+
+    // Either single seats or a whole-salon booking — the API needs one of them
+    if (!salonScope && totalSeats === 0) {
+      newErrors.seats = t('passengerOffers.errorSeatsRequired');
+    }
+
+    if (!paymentType) {
+      newErrors.payment_type = t('passengerOffers.errorPaymentRequired');
+    } else if (paymentType === 'friend_pays' && payerPhone.replace(/\D/g, '').length < 7) {
+      newErrors.payer_phone = t('passengerOffers.errorPayerPhone');
+    }
+
+    // The API rejects a special order without a single seat price
+    if (withSpecialOrder && !hasAnySeatPrice(specialOrder)) {
+      newErrors.special_order = t('passengerOffers.errorSpecialPrice');
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      Alert.alert(t('common.error'), t('passengerOffers.errorAllFields'));
-      return false;
-    }
-
-    setErrors({});
-
-    const seats = parseInt(seatsNeeded);
-    if (isNaN(seats) || seats < 1 || seats > 8) {
-      Alert.alert(t('common.error'), t('passengerOffers.errorSeats'));
-      return false;
-    }
-
-    const price = parseFloat(maxPricePerSeat);
-    if (isNaN(price) || price <= 0) {
-      Alert.alert(t('common.error'), t('passengerOffers.errorPrice'));
-      return false;
-    }
-
-    // Check if start time is in the future
-    const startAtDate = getStartAtDate();
-    const minDate = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-    if (startAtDate < minDate) {
-      newErrors.start_at = t('passengerOffers.errorTime');
-      setErrors(newErrors);
-      Alert.alert(t('common.error'), t('passengerOffers.errorTime'));
+      Alert.alert(t('common.error'), Object.values(newErrors)[0] || t('passengerOffers.errorAllFields'));
       return false;
     }
 
@@ -475,41 +218,84 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
+  const handleSubmit = async (withSpecialOrder = false) => {
+    if (!validateForm(withSpecialOrder)) {
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const startAtDate = getStartAtDate();
+      const departUntilDate = getDepartUntilDate();
+      const arriveUntilDate = getArriveUntilDate();
 
-      // Use geo-selected location text if available, otherwise use manual text input
-      const finalFromText = fromText || (fromCity ? buildLocationText(fromCountry, fromProvince, fromCity) : '');
-      const finalToText = toText || (toCity ? buildLocationText(toCountry, toProvince, toCity) : '');
+      // Most precise geo level the passenger picked, for the map later on
+      const fromPoint = fromLocation.settlement ?? fromLocation.cityDistrict;
+      const toPoint = toLocation.settlement ?? toLocation.cityDistrict;
 
       const offerData: CreatePassengerOfferData = {
-        from_text: finalFromText.trim(),
-        from_lat: fromCity?.latitude || undefined,
-        from_lng: fromCity?.longitude || undefined,
-        from_country_id: fromCountry?.id || undefined,
-        from_province_id: fromProvince?.id || undefined,
-        from_city_id: fromCity?.id || undefined,
-        to_text: finalToText.trim(),
-        to_lat: toCity?.latitude || undefined,
-        to_lng: toCity?.longitude || undefined,
-        to_country_id: toCountry?.id || undefined,
-        to_province_id: toProvince?.id || undefined,
-        to_city_id: toCity?.id || undefined,
-        start_at: startAtDate.toISOString(),
-        seats_needed: parseInt(seatsNeeded),
-        max_price_per_seat: parseFloat(maxPricePerSeat),
+        from_text: buildLocationText(fromLocation),
+        from_lat: fromPoint?.latitude || undefined,
+        from_lng: fromPoint?.longitude || undefined,
+        from_country_id: countryId || undefined,
+        from_province_id: fromLocation.province?.id || undefined,
+        from_city_id: fromLocation.cityDistrict?.id || undefined,
+        from_settlement_id: fromLocation.settlement?.id || undefined,
+        from_landmark: fromLocation.landmark.trim() || undefined,
+        to_text: buildLocationText(toLocation),
+        to_lat: toPoint?.latitude || undefined,
+        to_lng: toPoint?.longitude || undefined,
+        to_country_id: countryId || undefined,
+        to_province_id: toLocation.province?.id || undefined,
+        to_city_id: toLocation.cityDistrict?.id || undefined,
+        to_settlement_id: toLocation.settlement?.id || undefined,
+        to_landmark: toLocation.landmark.trim() || undefined,
+        start_at: getStartAtDate().toISOString(),
+        depart_until: departUntilDate?.toISOString(),
+        arrive_until: arriveUntilDate?.toISOString(),
+        is_urgent: isUrgent,
+        // seats_needed and max_price_per_seat are deliberately absent: the API
+        // derives the seat count, and this form collects no price at all.
+        payment_type: paymentType ?? undefined,
+        payer_phone: paymentType === 'friend_pays' ? payerPhone.trim() : undefined,
+        seat_counts: salonScope
+          ? undefined
+          : {
+              front_male: frontCounts.male,
+              front_female: frontCounts.female,
+              back_male: backCounts.male,
+              back_female: backCounts.female,
+            },
+        seat_position_any: seatPositionAny,
+        salon_scope: salonScope ?? undefined,
+        vehicle_class: vehicleClass ?? undefined,
         currency: 'UZS',
-        front_seat: frontSeat,
+        // Kept in sync for the older list screens that still read front_seat.
+        // The whole salon includes the front seat; the back salon does not.
+        front_seat: salonScope
+          ? salonScope === 'whole_salon'
+          : frontCounts.male + frontCounts.female > 0,
         pets: pets,
         large_baggage: largeBaggage,
+        woman_in_car: womanInCar,
+        roof_rack_needed: roofRackNeeded,
+        trailer: trailer,
+        road_pickup: roadPickup,
+        road_pickup_note: roadPickup ? roadPickupNote.trim() || undefined : undefined,
         note: note.trim() || undefined,
+        // Stored as typed; no money moves anywhere yet (owner decision, T-006)
+        special_order: withSpecialOrder
+          ? {
+              price_front: parseMoney(specialOrder.priceFront),
+              price_back: parseMoney(specialOrder.priceBack),
+              price_back_salon: parseMoney(specialOrder.priceBackSalon),
+              price_whole_salon: parseMoney(specialOrder.priceWholeSalon),
+              review_driver_offers: specialOrder.reviewDriverOffers,
+              fixed_price: specialOrder.fixedPrice,
+              waiting_fee_per_min: parseMoney(specialOrder.waitingFeePerMin),
+              free_waiting_min: FREE_WAITING_MINUTES,
+            }
+          : undefined,
       };
 
       await createPassengerOffer(offerData);
@@ -535,23 +321,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     }
   };
 
-  const clearFromLocation = () => {
-    setFromCountry(null);
-    setFromProvince(null);
-    setFromCity(null);
-    setFromProvinces([]);
-    setFromCities([]);
-    setFromText('');
-  };
 
-  const clearToLocation = () => {
-    setToCountry(null);
-    setToProvince(null);
-    setToCity(null);
-    setToProvinces([]);
-    setToCities([]);
-    setToText('');
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -571,367 +341,241 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Route Card */}
+        {/* Route + times — inline, exactly as drawn on K_buyurtma001Yangi.png */}
         <View style={styles.routeCard}>
-          <Text style={styles.cardTitle}>{t('passengerOffers.route')}</Text>
-          
-          {/* From Location */}
-          <View style={styles.routeRow}>
-            <View style={styles.routeDot} />
-            <View style={styles.routeContent}>
-              <Text style={styles.routeLabel}>{t('passengerOffers.fromRequired')}</Text>
-              
-              {/* Country */}
-              <TouchableOpacity
-                style={[styles.selectInput, errors.from_text && styles.inputError]}
-                onPress={() => openFromGeoModal('country')}
-              >
-                <Text style={styles.selectInputText}>
-                  {fromCountry?.name || t('passengerOffers.selectCountry')}
-                </Text>
-              </TouchableOpacity>
+          <LocationCard
+            label={t('passengerOffers.fromLabel')}
+            countryId={countryId}
+            value={fromLocation}
+            onChange={setFromLocation}
+            accent="start"
+            error={errors.from_text}
+          />
 
-              {/* Province */}
-              {fromCountry && (
-                <TouchableOpacity
-                  style={[styles.selectInput, { marginTop: 8 }]}
-                  onPress={() => openFromGeoModal('province')}
-                  disabled={fromProvinces.length === 0}
-                >
-                  <Text style={styles.selectInputText}>
-                    {fromProvince?.name || t('passengerOffers.selectProvince')}
-                  </Text>
-                </TouchableOpacity>
-              )}
+          <TimeWindowCard
+            variant="departure"
+            date={departDate}
+            onDateChange={setDepartDate}
+            fromTime={departFrom}
+            onFromTimeChange={setDepartFrom}
+            untilTime={departUntil}
+            onUntilTimeChange={setDepartUntil}
+            urgent={isUrgent}
+            onUrgentChange={setIsUrgent}
+            error={errors.start_at}
+          />
 
-              {/* City */}
-              {fromProvince && (
-                <TouchableOpacity
-                  style={[styles.selectInput, { marginTop: 8 }]}
-                  onPress={() => openFromGeoModal('city')}
-                  disabled={fromCities.length === 0}
-                >
-                  <Text style={styles.selectInputText}>
-                    {fromCity?.name || t('passengerOffers.selectCity')}
-                  </Text>
-                </TouchableOpacity>
-              )}
+          <LocationCard
+            label={t('passengerOffers.toLabel')}
+            countryId={countryId}
+            value={toLocation}
+            onChange={setToLocation}
+            accent="end"
+            error={errors.to_text}
+          />
 
-              {/* Location Display or Manual Input */}
-              <View style={{ marginTop: 8 }}>
-                {fromCity ? (
-                  <View style={styles.locationDisplay}>
-                    <Text style={styles.locationText}>
-                      {buildLocationText(fromCountry, fromProvince, fromCity)}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.clearLocationButton}
-                      onPress={clearFromLocation}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="close-circle" size={20} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TextInput
-                    style={[styles.input, errors.from_text && styles.inputError]}
-                    value={fromText}
-                    onChangeText={setFromText}
-                    placeholder={t('passengerOffers.orEnterManually')}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                )}
-              </View>
-
-              {errors.from_text && (
-                <Text style={styles.errorText}>{errors.from_text}</Text>
-              )}
-            </View>
-          </View>
-          
-          <View style={styles.routeConnector}>
-            <View style={styles.routeLine} />
-            <View style={styles.routeArrowContainer}>
-              <Ionicons name="arrow-down" size={20} color="#10B981" />
-            </View>
-          </View>
-          
-          {/* To Location */}
-          <View style={styles.routeRow}>
-            <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
-            <View style={styles.routeContent}>
-              <Text style={styles.routeLabel}>{t('passengerOffers.toRequired')}</Text>
-              
-              {/* Country */}
-              <TouchableOpacity
-                style={[styles.selectInput, errors.to_text && styles.inputError]}
-                onPress={() => openToGeoModal('country')}
-              >
-                <Text style={styles.selectInputText}>
-                  {toCountry?.name || t('passengerOffers.selectCountry')}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Province */}
-              {toCountry && (
-                <TouchableOpacity
-                  style={[styles.selectInput, { marginTop: 8 }]}
-                  onPress={() => openToGeoModal('province')}
-                  disabled={toProvinces.length === 0}
-                >
-                  <Text style={styles.selectInputText}>
-                    {toProvince?.name || t('passengerOffers.selectProvince')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* City */}
-              {toProvince && (
-                <TouchableOpacity
-                  style={[styles.selectInput, { marginTop: 8 }]}
-                  onPress={() => openToGeoModal('city')}
-                  disabled={toCities.length === 0}
-                >
-                  <Text style={styles.selectInputText}>
-                    {toCity?.name || t('passengerOffers.selectCity')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Location Display or Manual Input */}
-              <View style={{ marginTop: 8 }}>
-                {toCity ? (
-                  <View style={styles.locationDisplay}>
-                    <Text style={styles.locationText}>
-                      {buildLocationText(toCountry, toProvince, toCity)}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.clearLocationButton}
-                      onPress={clearToLocation}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="close-circle" size={20} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TextInput
-                    style={[styles.input, errors.to_text && styles.inputError]}
-                    value={toText}
-                    onChangeText={setToText}
-                    placeholder={t('passengerOffers.orEnterManually')}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                )}
-              </View>
-
-              {errors.to_text && (
-                <Text style={styles.errorText}>{errors.to_text}</Text>
-              )}
-            </View>
-          </View>
+          <TimeWindowCard
+            variant="arrival"
+            date={arriveDate}
+            onDateChange={setArriveDate}
+            untilTime={arriveUntil}
+            onUntilTimeChange={setArriveUntil}
+            error={errors.arrive_until}
+          />
         </View>
 
-        {/* Date & Time Card */}
+        {/* Payment ("To'lov turi") — single choice, the Figma draws checkboxes */}
         <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>{t('passengerOffers.dateTime')}</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('passengerOffers.dateRequired')}</Text>
-            <TouchableOpacity
-              style={[styles.dateInput, errors.start_at && styles.inputError]}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateInputText}>
-                {selectedDate.toLocaleDateString('uz-UZ')}
-              </Text>
-            </TouchableOpacity>
-            {errors.start_at && (
-              <Text style={styles.errorText}>{errors.start_at}</Text>
+          <Text style={styles.cardTitle}>{t('passengerOffers.paymentTitle')}</Text>
+
+          <View style={styles.inlineRow}>
+            <CheckRow
+              label={t('passengerOffers.paymentCash')}
+              checked={paymentType === 'cash'}
+              onPress={() => setPaymentType(paymentType === 'cash' ? null : 'cash')}
+            />
+            <CheckRow
+              label={t('passengerOffers.paymentClickPayme')}
+              checked={paymentType === 'click_payme'}
+              onPress={() => setPaymentType(paymentType === 'click_payme' ? null : 'click_payme')}
+            />
+          </View>
+
+          <CheckRow
+            label={t('passengerOffers.paymentFriend')}
+            checked={paymentType === 'friend_pays'}
+            onPress={() => setPaymentType(paymentType === 'friend_pays' ? null : 'friend_pays')}
+          />
+
+          {/* The friend may well be abroad — the number is typed in full */}
+          {paymentType === 'friend_pays' && (
+            <TextInput
+              style={[styles.plainInput, !!errors.payer_phone && styles.inputError]}
+              value={payerPhone}
+              onChangeText={setPayerPhone}
+              placeholder={t('passengerOffers.payerPhonePlaceholder')}
+              placeholderTextColor="#9CA3AF"
+              keyboardType="phone-pad"
+              maxLength={20}
+            />
+          )}
+
+          {!!errors.payment_type && <Text style={styles.errorText}>{errors.payment_type}</Text>}
+          {!!errors.payer_phone && <Text style={styles.errorText}>{errors.payer_phone}</Text>}
+        </View>
+
+        {/* Vehicle class — one deselectable group of five */}
+        <View style={styles.detailsCard}>
+          <Text style={styles.cardTitle}>{t('passengerOffers.vehicleClass')}</Text>
+
+          <View style={styles.inlineRow}>
+            <CheckRow
+              label={t('passengerOffers.classStandard')}
+              shape="radio"
+              checked={vehicleClass === 'standard'}
+              onPress={() => toggleVehicleClass('standard')}
+            />
+            <CheckRow
+              label={t('passengerOffers.classComfort')}
+              shape="radio"
+              checked={vehicleClass === 'comfort'}
+              onPress={() => toggleVehicleClass('comfort')}
+            />
+            <CheckRow
+              label={t('passengerOffers.classBusiness')}
+              shape="radio"
+              checked={vehicleClass === 'business'}
+              onPress={() => toggleVehicleClass('business')}
+            />
+          </View>
+
+          <CheckRow
+            label={t('passengerOffers.classEconom')}
+            shape="radio"
+            checked={vehicleClass === 'econom'}
+            onPress={() => toggleVehicleClass('econom')}
+          />
+          <CheckRow
+            label={t('passengerOffers.classTourist')}
+            shape="radio"
+            checked={vehicleClass === 'tourist'}
+            onPress={() => toggleVehicleClass('tourist')}
+          />
+        </View>
+
+        {/* Seats */}
+        <View style={styles.detailsCard}>
+          <View style={styles.seatsHeader}>
+            <Text style={styles.cardTitle}>{t('passengerOffers.seatsTitle')}</Text>
+            {totalSeats > 0 && !seatsLocked && (
+              <View style={styles.seatTotalBadge}>
+                <Text style={styles.seatTotalText}>{totalSeats}</Text>
+              </View>
             )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('passengerOffers.timeRequired')}</Text>
-            <TouchableOpacity
-              style={[styles.dateInput, errors.start_at && styles.inputError]}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text style={styles.dateInputText}>
-                {selectedTime.toLocaleTimeString('uz-UZ', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-                })}
-              </Text>
-            </TouchableOpacity>
+          <SeatStepper
+            label={t('passengerOffers.seatRowFront')}
+            counts={frontCounts}
+            capacity={1}
+            disabled={seatsLocked}
+            onChange={setFrontCounts}
+          />
+          <SeatStepper
+            label={t('passengerOffers.seatRowBack')}
+            counts={backCounts}
+            capacity={3}
+            disabled={seatsLocked}
+            onChange={setBackCounts}
+          />
+
+          <CheckRow
+            label={t('passengerOffers.seatPositionAny')}
+            checked={seatPositionAny}
+            onPress={() => setSeatPositionAny(!seatPositionAny)}
+            disabled={seatsLocked}
+          />
+
+          <View style={styles.inlineRow}>
+            <CheckRow
+              label={t('passengerOffers.salonWhole')}
+              shape="radio"
+              checked={salonScope === 'whole_salon'}
+              onPress={() => toggleSalonScope('whole_salon')}
+            />
+            <CheckRow
+              label={t('passengerOffers.salonBackFull')}
+              shape="radio"
+              checked={salonScope === 'back_salon_full'}
+              onPress={() => toggleSalonScope('back_salon_full')}
+            />
           </View>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              minimumDate={new Date()}
-              onChange={handleDateChange}
+          <CheckRow
+            label={t('passengerOffers.womanInCar')}
+            checked={womanInCar}
+            onPress={() => setWomanInCar(!womanInCar)}
+          />
+
+          {!!errors.seats && <Text style={styles.errorText}>{errors.seats}</Text>}
+        </View>
+
+        {/* Baggage, animals, pitak */}
+        <View style={styles.detailsCard}>
+          <CheckRow
+            label={t('passengerOffers.baggage')}
+            checked={largeBaggage}
+            onPress={() => setLargeBaggage(!largeBaggage)}
+          />
+
+          <View style={styles.inlineRow}>
+            <CheckRow
+              label={t('passengerOffers.roofRack')}
+              checked={roofRackNeeded}
+              onPress={() => setRoofRackNeeded(!roofRackNeeded)}
+            />
+            <CheckRow
+              label={t('passengerOffers.trailer')}
+              checked={trailer}
+              onPress={() => setTrailer(!trailer)}
+            />
+          </View>
+
+          <CheckRow
+            label={t('passengerOffers.animals')}
+            checked={pets}
+            onPress={() => setPets(!pets)}
+          />
+
+          <CheckRow
+            label={t('passengerOffers.roadPickup')}
+            checked={roadPickup}
+            onPress={() => setRoadPickup(!roadPickup)}
+            emphasis="danger"
+          />
+
+          {roadPickup && (
+            <TextInput
+              style={styles.noteInput}
+              value={roadPickupNote}
+              onChangeText={setRoadPickupNote}
+              placeholder={t('passengerOffers.roadPickupPlaceholder')}
+              placeholderTextColor="#9CA3AF"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
             />
           )}
-
-          {showTimePicker && (
-            <DateTimePicker
-              value={selectedTime}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              is24Hour={true}
-              onChange={handleTimeChange}
-            />
-          )}
         </View>
 
-        {/* Seats & Price Card */}
+        {/* Qo'shimcha ma'lumot */}
         <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>{t('passengerOffers.seatsBudget')}</Text>
-          
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <View style={[styles.infoIconContainer, { backgroundColor: '#D1FAE5' }]}>
-                <Ionicons name="people" size={24} color="#10B981" />
-              </View>
-              <Text style={styles.infoLabel} numberOfLines={2}>{t('passengerOffers.seatsNeededRequired')}</Text>
-              <TextInput
-                style={styles.numberInput}
-                value={formatNumber(seatsNeeded)}
-                onChangeText={(text) => {
-                  const parsed = parseNumber(text);
-                  if (parsed === '' || (!isNaN(parseInt(parsed)) && parseInt(parsed) >= 0 && parseInt(parsed) <= 8)) {
-                    setSeatsNeeded(parsed);
-                  }
-                }}
-                placeholder="1"
-                keyboardType="number-pad"
-                placeholderTextColor="#9CA3AF"
-                textAlign="center"
-              />
-              <View style={styles.currencySpacer} />
-            </View>
-            
-            <View style={styles.infoCard}>
-              <View style={[styles.infoIconContainer, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="cash" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.infoLabel} numberOfLines={2}>{t('passengerOffers.maxPricePerSeatRequired')}</Text>
-              <TextInput
-                style={styles.numberInput}
-                value={formatNumber(maxPricePerSeat)}
-                onChangeText={(text) => {
-                  const parsed = parseNumber(text);
-                  if (parsed === '' || (!isNaN(parseFloat(parsed)) && parseFloat(parsed) >= 0)) {
-                    setMaxPricePerSeat(parsed);
-                  }
-                }}
-                placeholder="50 000"
-                keyboardType="numeric"
-                placeholderTextColor="#9CA3AF"
-                textAlign="center"
-              />
-              <Text style={styles.currencyText}>UZS</Text>
-            </View>
-          </View>
-
-          {/* Overall Price Display */}
-          {(seatsNeeded && maxPricePerSeat && parseInt(seatsNeeded) > 0 && parseFloat(maxPricePerSeat) > 0) && (
-            <View style={styles.totalPriceContainer}>
-              <View style={styles.totalPriceDivider} />
-              <View style={styles.totalPriceContent}>
-                <View style={styles.totalPriceIconContainer}>
-                  <Ionicons name="calculator" size={20} color="#10B981" />
-                </View>
-                <View style={styles.totalPriceTextContainer}>
-                  <Text style={styles.totalPriceLabel}>{t('passengerOffers.totalPrice') || 'Jami narx'}</Text>
-                  <Text style={styles.totalPriceValue}>
-                    {formatNumber(calculateTotalPrice().toString())} UZS
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Options Card */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>{t('passengerOffers.additionalOptions')}</Text>
-          
-          <View style={styles.optionsContainer}>
-            {/* Front Seat */}
-            <TouchableOpacity
-              style={[styles.optionRow, frontSeat && styles.optionRowActive]}
-              onPress={() => setFrontSeat(!frontSeat)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionContent}>
-                <View style={[styles.optionIconContainer, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="car-sport" size={20} color="#3B82F6" />
-                </View>
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionTitle}>{t('passengerOffers.frontSeat')}</Text>
-                  <Text style={styles.optionDescription}>{t('passengerOffers.frontSeatDescription')}</Text>
-                </View>
-              </View>
-              <View style={[styles.toggleSwitch, frontSeat && styles.toggleSwitchActive]}>
-                <View style={[styles.toggleSwitchThumb, frontSeat && styles.toggleSwitchThumbActive]} />
-              </View>
-            </TouchableOpacity>
-
-            {/* Pets */}
-            <TouchableOpacity
-              style={[styles.optionRow, pets && styles.optionRowActive]}
-              onPress={() => setPets(!pets)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionContent}>
-                <View style={[styles.optionIconContainer, { backgroundColor: '#FEF3C7' }]}>
-                  <Ionicons name="paw" size={20} color="#F59E0B" />
-                </View>
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionTitle}>{t('passengerOffers.pets')}</Text>
-                  <Text style={styles.optionDescription}>{t('passengerOffers.petsDescription')}</Text>
-                </View>
-              </View>
-              <View style={[styles.toggleSwitch, pets && styles.toggleSwitchActive]}>
-                <View style={[styles.toggleSwitchThumb, pets && styles.toggleSwitchThumbActive]} />
-              </View>
-            </TouchableOpacity>
-
-            {/* Large Baggage */}
-            <TouchableOpacity
-              style={[styles.optionRow, largeBaggage && styles.optionRowActive]}
-              onPress={() => setLargeBaggage(!largeBaggage)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionContent}>
-                <View style={[styles.optionIconContainer, { backgroundColor: '#E0E7FF' }]}>
-                  <Ionicons name="bag" size={20} color="#6366F1" />
-                </View>
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionTitle}>{t('passengerOffers.largeBaggage')}</Text>
-                  <Text style={styles.optionDescription}>{t('passengerOffers.largeBaggageDescription')}</Text>
-                </View>
-              </View>
-              <View style={[styles.toggleSwitch, largeBaggage && styles.toggleSwitchActive]}>
-                <View style={[styles.toggleSwitchThumb, largeBaggage && styles.toggleSwitchThumbActive]} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Note Card */}
-        <View style={styles.detailsCard}>
-          <View style={styles.noteHeader}>
-            <Ionicons name="chatbubble-ellipses" size={20} color="#10B981" />
-            <Text style={styles.cardTitle}>{t('passengerOffers.additionalNotes')}</Text>
-          </View>
+          <Text style={[styles.cardTitle, styles.cardTitleDanger]}>
+            {t('passengerOffers.additionalInfo')}
+          </Text>
           <TextInput
             style={styles.noteInput}
-            placeholder={t('passengerOffers.notesPlaceholder')}
+            placeholder={t('passengerOffers.additionalInfoPlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={note}
             onChangeText={setNote}
@@ -941,245 +585,38 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           />
         </View>
 
+        {/* Both buttons scroll with the form, as drawn — the green one first,
+            then the special order below it */}
+        <View style={styles.submitWrapper}>
+          <TouchableOpacity
+            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            onPress={() => handleSubmit(false)}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                <Text style={styles.submitButtonText}>{t('passengerOffers.submitOrder')}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <SpecialOrderPanel
+          expanded={specialExpanded}
+          onToggle={() => setSpecialExpanded(!specialExpanded)}
+          value={specialOrder}
+          onChange={setSpecialOrder}
+          onSubmit={() => handleSubmit(true)}
+          disabled={isLoading}
+          error={errors.special_order}
+        />
+
         <View style={styles.bottomSpacing} />
       </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-              <Text style={styles.submitButtonText}>{t('passengerOffers.createButton')}</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* From Location Geo Modal */}
-      {fromGeoModal && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!fromGeoModal}
-          onRequestClose={() => {
-            setFromGeoModal(null);
-            setFromGeoSearch('');
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setFromGeoModal(null);
-                setFromGeoSearch('');
-              }}
-            />
-            <View style={styles.modalContentWrapper}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
-                    {fromGeoModal.type === 'country' && t('passengerOffers.selectCountry')}
-                    {fromGeoModal.type === 'province' && t('passengerOffers.selectProvince')}
-                    {fromGeoModal.type === 'city' && t('passengerOffers.selectCity')}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setFromGeoModal(null);
-                      setFromGeoSearch('');
-                    }}
-                    style={styles.modalCloseButton}
-                  >
-                    <Text style={styles.modalCloseText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.modalSearchBox}>
-                  <View style={styles.modalSearchContainer}>
-                    <Text style={styles.modalSearchIcon}>🔍</Text>
-                    <TextInput
-                      style={styles.modalSearchInput}
-                      placeholder={t('searchOffers.searchPlaceholder')}
-                      placeholderTextColor="#9CA3AF"
-                      value={fromGeoSearch}
-                      onChangeText={setFromGeoSearch}
-                    />
-                    {fromGeoSearch.length > 0 && (
-                      <TouchableOpacity
-                        onPress={() => setFromGeoSearch('')}
-                        style={styles.modalSearchClear}
-                      >
-                        <Text style={styles.modalSearchClearText}>×</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {geoLoading ? (
-                  <View style={styles.modalLoading}>
-                    <ActivityIndicator size="small" color="#10B981" />
-                  </View>
-                ) : getFromGeoOptions().length === 0 ? (
-                  <View style={styles.modalEmpty}>
-                    <Text style={styles.modalEmptyText}>
-                      {fromGeoSearch.trim() ? t('searchOffers.noRidesAvailable') : t('common.info')}
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={getFromGeoOptions()}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => {
-                      const isSelected =
-                        (fromGeoModal.type === 'country' && fromCountry?.id === item.id) ||
-                        (fromGeoModal.type === 'province' && fromProvince?.id === item.id) ||
-                        (fromGeoModal.type === 'city' && fromCity?.id === item.id);
-
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.modalItem,
-                            isSelected && styles.modalItemSelected,
-                          ]}
-                          onPress={() => handleFromGeoSelection(fromGeoModal.type, item)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {isSelected && <Text style={styles.modalCheck}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    }}
-                    style={styles.modalList}
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* To Location Geo Modal */}
-      {toGeoModal && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!toGeoModal}
-          onRequestClose={() => {
-            setToGeoModal(null);
-            setToGeoSearch('');
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setToGeoModal(null);
-                setToGeoSearch('');
-              }}
-            />
-            <View style={styles.modalContentWrapper}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
-                    {toGeoModal.type === 'country' && t('passengerOffers.selectCountry')}
-                    {toGeoModal.type === 'province' && t('passengerOffers.selectProvince')}
-                    {toGeoModal.type === 'city' && t('passengerOffers.selectCity')}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setToGeoModal(null);
-                      setToGeoSearch('');
-                    }}
-                    style={styles.modalCloseButton}
-                  >
-                    <Text style={styles.modalCloseText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.modalSearchBox}>
-                  <View style={styles.modalSearchContainer}>
-                    <Text style={styles.modalSearchIcon}>🔍</Text>
-                    <TextInput
-                      style={styles.modalSearchInput}
-                      placeholder={t('searchOffers.searchPlaceholder')}
-                      placeholderTextColor="#9CA3AF"
-                      value={toGeoSearch}
-                      onChangeText={setToGeoSearch}
-                    />
-                    {toGeoSearch.length > 0 && (
-                      <TouchableOpacity
-                        onPress={() => setToGeoSearch('')}
-                        style={styles.modalSearchClear}
-                      >
-                        <Text style={styles.modalSearchClearText}>×</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {geoLoading ? (
-                  <View style={styles.modalLoading}>
-                    <ActivityIndicator size="small" color="#10B981" />
-                  </View>
-                ) : getToGeoOptions().length === 0 ? (
-                  <View style={styles.modalEmpty}>
-                    <Text style={styles.modalEmptyText}>
-                      {toGeoSearch.trim() ? t('searchOffers.noRidesAvailable') : t('common.info')}
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={getToGeoOptions()}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => {
-                      const isSelected =
-                        (toGeoModal.type === 'country' && toCountry?.id === item.id) ||
-                        (toGeoModal.type === 'province' && toProvince?.id === item.id) ||
-                        (toGeoModal.type === 'city' && toCity?.id === item.id);
-
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.modalItem,
-                            isSelected && styles.modalItemSelected,
-                          ]}
-                          onPress={() => handleToGeoSelection(toGeoModal.type, item)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {isSelected && <Text style={styles.modalCheck}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    }}
-                    style={styles.modalList}
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
     </SafeAreaView>
   );
 };
@@ -1243,67 +680,52 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 16,
   },
-  routeRow: {
+  // T-018 — sections of the Figma order screen
+  cardTitleDanger: {
+    color: '#DC2626',
+  },
+  // Wraps instead of overflowing: the labels differ a lot in length per language
+  inlineRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: 16,
   },
-  routeDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+  plainInput: {
+    marginTop: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    fontSize: 15,
+    color: '#111827',
+  },
+  seatsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  seatTotalBadge: {
+    minWidth: 32,
+    height: 32,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     backgroundColor: '#10B981',
-    marginRight: 16,
-    marginTop: 4,
-  },
-  routeContent: {
-    flex: 1,
-  },
-  routeLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  selectInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 16,
+    alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    marginBottom: 16,
   },
-  selectInputText: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '500',
+  seatTotalText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  input: {
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 16,
-    color: '#111827',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+  submitWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
   inputError: {
     borderColor: '#EF4444',
@@ -1314,45 +736,6 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginTop: 6,
     fontWeight: '600',
-  },
-  locationDisplay: {
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1.5,
-    borderColor: '#10B981',
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '600',
-    flex: 1,
-  },
-  clearLocationButton: {
-    marginLeft: 12,
-  },
-  routeConnector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 6,
-    marginVertical: 12,
-  },
-  routeLine: {
-    width: 2,
-    height: 24,
-    backgroundColor: '#E5E7EB',
-    marginRight: 12,
-  },
-  routeArrowContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F0FDF4',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   detailsCard: {
     backgroundColor: '#FFFFFF',
@@ -1365,166 +748,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 15,
-    color: '#111827',
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  dateInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 16,
-    justifyContent: 'center',
-    minHeight: 52,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  dateInputText: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'stretch',
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    minHeight: 200,
-  },
-  infoIconContainer: {
-    width: 52,
-    height: 52,
-    minHeight: 52,
-    maxHeight: 52,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '700',
-    marginBottom: 10,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    height: 32,
-    minHeight: 32,
-    maxHeight: 32,
-    lineHeight: 16,
-  },
-  numberInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    padding: 14,
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-    width: '100%',
-    height: 56,
-    minHeight: 56,
-    maxHeight: 56,
-    textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  currencyText: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    marginTop: 4,
-    fontWeight: '600',
-    height: 16,
-    lineHeight: 16,
-    textAlign: 'center',
-    width: '100%',
-  },
-  currencySpacer: {
-    height: 16,
-    marginTop: 4,
-    width: '100%',
-  },
-  totalPriceContainer: {
-    marginTop: 20,
-    paddingTop: 20,
-  },
-  totalPriceDivider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-  totalPriceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#10B981',
-  },
-  totalPriceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  totalPriceTextContainer: {
-    flex: 1,
-  },
-  totalPriceLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  totalPriceValue: {
-    fontSize: 24,
-    color: '#059669',
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
   },
   noteInput: {
     borderWidth: 2,
@@ -1539,19 +762,6 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 100,
-  },
-  footer: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 5,
   },
   submitButton: {
     flexDirection: 'row',
@@ -1576,233 +786,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContentWrapper: {
-    width: '95%',
-    maxHeight: '95%',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    width: '100%',
-    maxHeight: '95%',
-    minHeight: '70%',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  modalTitle: {
-    fontSize: 20,
-    color: '#111827',
-    fontWeight: '700',
-    flex: 1,
-    letterSpacing: -0.5,
-  },
-  modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    fontSize: 20,
-    color: '#6B7280',
-    fontWeight: '600',
-    lineHeight: 20,
-  },
-  modalSearchBox: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  modalSearchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 12,
-    minHeight: 52,
-  },
-  modalSearchIcon: {
-    fontSize: 18,
-    marginRight: 10,
-    color: '#6B7280',
-  },
-  modalSearchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-    paddingVertical: 0,
-    fontWeight: '500',
-  },
-  modalSearchClear: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSearchClearText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
-    lineHeight: 16,
-  },
-  modalList: {
-    maxHeight: 500,
-    backgroundColor: '#FFFFFF',
-  },
-  modalLoading: {
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  modalEmpty: {
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  modalEmptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
-  },
-  modalItemSelected: {
-    backgroundColor: '#F0FDF4',
-    borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-    borderBottomColor: '#D1FAE5',
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-    fontWeight: '500',
-    letterSpacing: -0.2,
-  },
-  modalItemTextSelected: {
-    color: '#059669',
-    fontWeight: '600',
-  },
-  modalCheck: {
-    fontSize: 20,
-    color: '#10B981',
-    fontWeight: '700',
-    marginLeft: 12,
-  },
-  optionsContainer: {
-    gap: 12,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    padding: 16,
-  },
-  optionRowActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  optionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  optionDescription: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  toggleSwitch: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-    position: 'relative',
-  },
-  toggleSwitchActive: {
-    backgroundColor: '#10B981',
-  },
-  toggleSwitchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    left: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  toggleSwitchThumbActive: {
-    left: 'auto',
-    right: 2,
   },
 });

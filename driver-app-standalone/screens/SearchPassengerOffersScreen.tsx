@@ -28,6 +28,7 @@ import * as GeoAPI from '../api/geo';
 import type { GeoOption } from '../api/geo';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { PassengerOfferExtras } from '../components/offers/PassengerOfferExtras';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
@@ -514,9 +515,14 @@ export default function SearchPassengerOffersScreen() {
           <View style={styles.routeDot} />
           <View style={styles.routeContent}>
             <Text style={styles.routeLabel}>FROM</Text>
-            <Text style={styles.routeText} numberOfLines={1}>
+            <Text style={styles.routeText} numberOfLines={2}>
               {item.from_text}
             </Text>
+            {!!item.from_landmark && (
+              <Text style={styles.landmarkText} numberOfLines={1}>
+                {item.from_landmark}
+              </Text>
+            )}
           </View>
         </View>
         
@@ -529,9 +535,14 @@ export default function SearchPassengerOffersScreen() {
           <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
           <View style={styles.routeContent}>
             <Text style={styles.routeLabel}>TO</Text>
-            <Text style={styles.routeText} numberOfLines={1}>
+            <Text style={styles.routeText} numberOfLines={2}>
               {item.to_text}
             </Text>
+            {!!item.to_landmark && (
+              <Text style={styles.landmarkText} numberOfLines={1}>
+                {item.to_landmark}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -562,15 +573,27 @@ export default function SearchPassengerOffersScreen() {
         </View>
       </View>
 
+      {/* Everything the new order screen added — windows, seats, class, flags */}
+      <PassengerOfferExtras offer={item} />
+
       {/* Footer Section */}
       <View style={styles.offerFooter}>
-        <View style={styles.budgetBadge}>
-          <Text style={styles.budgetLabel}>Max Budget</Text>
-          <Text style={styles.budgetValue}>
-            {formatNumberWithSpaces(item.max_price_per_seat)} {item.currency}
-          </Text>
-          <Text style={styles.budgetPerSeat}>per seat</Text>
-        </View>
+        {/* Offers from the new form carry no price — only the special order has one */}
+        {item.max_price_per_seat === null || item.max_price_per_seat === undefined ? (
+          <View style={styles.budgetBadge}>
+            <Text style={styles.budgetValue}>
+              {t('passengerOfferExtras.priceNegotiable')}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.budgetBadge}>
+            <Text style={styles.budgetLabel}>Max Budget</Text>
+            <Text style={styles.budgetValue}>
+              {formatNumberWithSpaces(item.max_price_per_seat)} {item.currency}
+            </Text>
+            <Text style={styles.budgetPerSeat}>per seat</Text>
+          </View>
+        )}
         
         <TouchableOpacity
           style={styles.viewButton}
@@ -1244,6 +1267,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#111827',
+  },
+  // mo'ljal — the landmark the passenger typed (T-018)
+  landmarkText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   routeConnector: {
     flexDirection: 'row',

@@ -44,7 +44,24 @@
       "Bash(sed '$d')",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(git -c http.sslBackend=schannel push origin main)"
+      "Bash(git -c http.sslBackend=schannel push origin main)",
+      "Bash(npx tsx *)",
+      "PowerShell($file = \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\\\\screens\\\\CreatePassengerOfferScreen.tsx\"; $scratch = \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\070ab8c0-2021-4c4d-ac01-48863933f16e\\\\scratchpad\"; $lines = Get-Content $file; $new = Get-Content \"$scratch\\\\new-geo-block.txt\"; $out = $lines[0..94] + $new + $lines[417..\\($lines.Count-1\\)]; Set-Content -Path $file -Value $out -Encoding utf8; Write-Output \"was $\\($lines.Count\\) lines, now $\\($out.Count\\) lines\")",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '  // Load initial geo data' '  const validateForm = \\(\\): boolean => {' __TRACKED_VAR__/new-geo-block.txt)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '  const validateForm = \\(\\): boolean => {' '  return \\( *)",
+      "Bash(grep -n \"^  return \\($\" screens/CreatePassengerOfferScreen.tsx)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '  const validateForm = \\(\\): boolean => {' '  return \\(' __TRACKED_VAR__/new-submit-block.txt)",
+      "Bash(node -e ' *)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '  const validateForm = \\(\\): boolean => {' '\\\\r\\\\n  return \\(\\\\r\\\\n' __TRACKED_VAR__/new-submit-block.txt)",
+      "Bash(grep -n \"{/\\\\* Route Card \\\\*/}\\\\|{/\\\\* Seats & Price Card \\\\*/}\\\\|{/\\\\* From Location Geo Modal \\\\*/}\\\\|</SafeAreaView>\" screens/CreatePassengerOfferScreen.tsx)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '        {/* Route Card */}' '        {/* Seats & Price Card */}' __TRACKED_VAR__/new-route-jsx.txt)",
+      "Bash(grep -n \"{/\\\\* From Location Geo Modal \\\\*/}\\\\|</SafeAreaView>\" screens/CreatePassengerOfferScreen.tsx)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '  const validateForm = \\(\\): boolean => {' '\\\\r\\\\n\\\\r\\\\n  return \\(\\\\r\\\\n' __TRACKED_VAR__/new-submit-2.txt)",
+      "Bash(node __TRACKED_VAR__/splice.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx '        {/* Seats & Price Card */}' '        <View style={styles.bottomSpacing} />' __TRACKED_VAR__/new-form-jsx.txt)",
+      "Bash(node __TRACKED_VAR__/prune-styles.mjs user-app-standalone/screens/CreatePassengerOfferScreen.tsx --write)",
+      "Bash(xargs -I{} echo \"DRIVER APP: {} \\(baseline 41\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\);console.log\\('expo:',p.dependencies.expo,'RN:',p.dependencies['react-native']\\)\")",
+      "Bash(node -e \"const a=require\\('./app.json'\\).expo;console.log\\('name:',a.name,'| slug:',a.slug,'| package:',a.android&&a.android.package,'| version:',a.version\\)\")"
     ]
   }
 }

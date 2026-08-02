@@ -534,6 +534,38 @@ export default {
     daysAgo: '{count} kun oldin',
   },
 
+  // T-018 — yo'lovchi buyurtmasining yangi maydonlari (faqat ko'rsatish uchun)
+  passengerOfferExtras: {
+    urgent: 'Shoshilinch',
+    arriveBy: 'gacha yetib borish',
+    seatsFront: 'Old',
+    seatsBack: 'Orqa',
+    wholeSalon: 'Butun salon',
+    backSalonFull: 'Orqa salon to\'liq',
+    positionAny: 'Joyi farqi yo\'q',
+    priceNegotiable: 'Narx kelishiladi',
+    classStandard: 'Standart',
+    classComfort: 'Comfort',
+    classBusiness: 'Biznes',
+    classEconom: 'Econom',
+    classTourist: 'Turistik',
+    paymentCash: 'Naqd',
+    paymentClickPayme: 'Click / Payme',
+    paymentFriend: 'Do\'sti to\'laydi',
+    womanInCar: 'Ayol kishi bor avto',
+    roofRack: 'Tom bagajnik',
+    trailer: 'Pritsept',
+    pets: 'Hayvon bor',
+    baggage: 'Bagaj bor',
+    roadPickup: 'Yo\'lga chiqib turadi',
+    specialOrder: 'Maxsus buyurtma',
+    fixedPrice: 'O\'zgarmas narx',
+    reviewsOffers: 'Takliflarni ko\'rib chiqadi',
+    waitingFee: 'Kutish',
+    somPerMinute: 'so\'m/min',
+    freeWaiting: 'bepul kutish {count} min',
+  },
+
   // Driver Offers
   driverOffers: {
     title: 'Mening e\'lonlarim',
