@@ -177,8 +177,11 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   - `api/passengerOffers.ts` (type additions)
   - `screens/SearchPassengerOffersScreen.tsx` (cards + detail: urgency, windows, landmarks,
     seat breakdown, class/types, flags, special prices — read-only). ⚠️ This file already has
-    pre-existing tsc errors (`../api/geo` missing there) — part of the 41-error baseline,
-    don't fix unless it blocks.
+    pre-existing tsc errors (`../api/geo` missing there) — part of the 41-error baseline.
+    🛑 **Corrected 2026-08-02: it DOES block.** `driver-app-standalone/api/geo.ts` does not
+    exist, so Metro cannot resolve the import at line 27 and this screen has never opened. The
+    user app's `api/geo.ts` exports exactly the four symbols it uses (`GeoOption`,
+    `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts`) — port it.
 
 ## Steps
 - [x] 1a. **Migration + model files** — `20260728000001-extend-passenger-offers-figma.cjs`
@@ -309,6 +312,20 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   - `npm run lint` is still broken repo-wide (ESLint 9, no flat config) — pre-existing, not touched.
 - [ ] 9. **End-to-end run** — create an offer with every field set via the dev build against
   the local/test API; check it in My offers + driver app.
+  **Started 2026-08-02** — the API image is deployed on test3 and a price-less offer exists
+  (only the new API + new form can write `max_price_per_seat = NULL`). Three defects found from
+  the owner's logs and fixed, **not yet committed**:
+  - API: `app.set('trust proxy', 1)` (`app.ts:35`) — the ingress's `X-Forwarded-For` was
+    untrusted, so `express-rate-limit` keyed everyone on the ingress IP (one shared bucket).
+    One hop, not `true` — `true` lets anyone spoof the header past the OTP limiter.
+  - User app: `MyPassengerOffersScreen` crashed with `toString of null` on a price-less offer —
+    step 7 taught the driver app about null prices, the user app was never updated. Now renders
+    `passengerOffers.priceNegotiable` (+1 key × uz/ru/en); `api/passengerOffers.ts`
+    `max_price_per_seat` retyped `number | null` so tsc polices the call sites.
+  - Driver app: `formatNumberWithSpaces` was imported but never exported from its `utils/format.ts`
+    (user-app-only function) — added. Was hiding in the 41-error baseline as a real crash.
+  🛑 **Blocker before this step can finish:** port `api/geo.ts` into the driver app (see the
+  file list above) — `SearchPassengerOffersScreen` cannot bundle without it.
 - [ ] 10. **Owner** — device test on at least two different phones (small + large screen).
 
 ## Risks / open questions (READ before coding)
@@ -334,6 +351,11 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   `GRADLE_OPTS` truststore, `git -c http.sslCAInfo=...`).
 
 ## Session notes (one line per work session)
+- 2026-08-02: **Step 9 started — the API is live on test3 and the new form has written a real
+  price-less offer.** Three defects fixed from the owner's logs (trust-proxy rate limiting,
+  user-app `toString of null` on a null price, driver-app missing `formatNumberWithSpaces`
+  export). tsc: user 12 → 12, driver **41 → 40**, API 289 → 289. Uncommitted. Corrected the
+  step-7 note: the driver app's missing `api/geo.ts` is a **blocker**, not baseline noise.
 - 2026-07-29 (5): **Step 8 DONE — all code steps complete.** 67 dead styles pruned (screen
   1292 → 790 lines); final baselines user 12 / driver 41 / API 289, no new errors anywhere.
   Steps 9–10 are the owner's: deploy the API to test3 first, then build the app and test.
@@ -368,18 +390,26 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   No code yet — implementation starts at step 1 in the next session.
 
 ## Resume point (for the next chat)
-**Steps 1–8 are DONE. Every line of code for T-018 is written and statically clean; nothing has
-ever run.** Schema is live on test3 (`7e49b5e`), but the API pod still serves the **old image**,
-so today the new fields would be silently dropped. Final baselines: API **289** (one better than
-the 290 baseline), user app **12**, driver app **41** — no new error introduced anywhere.
+**Steps 1–8 are DONE. Step 9 is UNDERWAY — the code has now actually run.** The API image is
+deployed on test3 and the new order form has created at least one real offer (proof: an offer
+with `max_price_per_seat = NULL`, which only the new API + new form can write). Baselines:
+API **289**, user app **12**, driver app **40** (one better than the old 41 — a missing export
+that was a real crash).
 
-**Steps 9–10 are the owner's and cannot be done from a chat session:**
-1. **Deploy the API first** — `./api,admin,db/infra/k8s/overlays/test3/deploy.sh`. Old app + new
-   API is safe; new app + old API silently loses every new field (the T-016 discipline).
-2. Build the user app, create an offer with **every** field set (urgent and non-urgent, a salon
+**Uncommitted work sitting in the tree (2026-08-02):** the three log-driven fixes listed under
+step 9 — `app.ts` trust proxy, user-app null-price rendering + type + 3 translation files,
+driver-app `utils/format.ts`. Plus the pre-existing T-018 WIP the owner had open.
+
+**What is left:**
+1. 🛑 **Port `api/geo.ts` into the driver app** — `SearchPassengerOffersScreen:27` imports it and
+   the file does not exist, so Metro cannot bundle that screen. Copy the user app's version
+   (`GeoOption`, `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts`; adjust the
+   config import). Until this lands, no driver-side verification of T-018 is possible.
+2. Finish step 9: create an offer with **every** field set (urgent and non-urgent, a salon
    booking and a gendered seat mix, friend-pays with a foreign number, a special order), then
    check it in "My offers" and on the driver's search screen.
-3. Two phones, small + large screen, plus a font-scaling pass.
+3. Step 10 — **owner**: two phones, small + large screen, plus a font-scaling pass.
+   ⚠️ Redeploy the API before testing anything that touches the trust-proxy fix.
 
 **The four deliberate deviations from the PNG (step 6) want an explicit yes/no at that review.**
 When the device test passes: `/end-day`, then move T-018 to *Parked* or *Done*.

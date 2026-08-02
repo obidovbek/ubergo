@@ -141,7 +141,7 @@ export const searchPassengerOffers = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to search passenger offers');
     }
 
@@ -178,7 +178,7 @@ export const getPassengerOfferById = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to fetch passenger offer');
     }
 
@@ -217,7 +217,7 @@ export const joinPassengerOffer = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to join passenger offer');
     }
 
@@ -256,7 +256,7 @@ export const getMyJoinRequests = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to fetch join requests');
     }
 
@@ -293,7 +293,7 @@ export const cancelJoinRequest = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to cancel join request');
     }
 

@@ -34,6 +34,7 @@ import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
+import { getUserLanguage } from '../utils/userLanguage.js';
 
 interface CreatePassengerOfferData {
   from_text: string;
@@ -539,7 +540,13 @@ export class PassengerOfferService {
 
     // Filter by status
     if (filters.status) {
-      const validStatuses: PassengerOfferStatus[] = ['published', 'archived', 'cancelled', 'completed'];
+      const validStatuses: PassengerOfferStatus[] = [
+        'published',
+        'driver_found',
+        'archived',
+        'cancelled',
+        'completed'
+      ];
       
       if (Array.isArray(filters.status)) {
         const filteredStatuses = filters.status.filter((s): s is PassengerOfferStatus => 
@@ -621,52 +628,68 @@ export class PassengerOfferService {
    * expose the payer's phone number — a third party who never used the app.
    */
   static async getOfferById(offerId: string, userId?: number) {
+    const isOwnerView = userId !== undefined;
+
+    // The id reaches this from a public URL segment. Handing Postgres 'abc' for
+    // an integer column raises a database error the handler turns into a 500,
+    // so a bad id has to become a plain 404 here.
+    if (!/^\d+$/.test(String(offerId))) {
+      throw new AppError('Offer not found', 404);
+    }
+
     const offer = await PassengerOffer.findByPk(offerId, {
-      attributes: { exclude: userId === undefined ? ['payer_phone'] : [] },
+      attributes: { exclude: isOwnerView ? [] : ['payer_phone'] },
       include: [
         {
           model: User,
           as: 'user',
           attributes: ['id', 'first_name', 'last_name', 'display_name']
         },
-        {
-          model: OfferDriver,
-          as: 'drivers',
-          required: false,
-          include: [
-            {
-              model: User,
-              as: 'driver',
-              attributes: ['id', 'first_name', 'last_name', 'display_name']
-            },
-            {
-              model: DriverVehicle,
-              as: 'vehicle',
-              include: [
-                {
-                  model: VehicleType,
-                  as: 'type',
-                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-                },
-                {
-                  model: VehicleMake,
-                  as: 'make',
-                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-                },
-                {
-                  model: VehicleModel,
-                  as: 'model',
-                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-                },
-                {
-                  model: VehicleColor,
-                  as: 'color',
-                  attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
-                }
-              ]
-            }
-          ]
-        }
+        // Only the passenger who owns the offer sees who bid on it. This route
+        // is also served unauthenticated to drivers, and the rival bids (name,
+        // plate, price) are none of their business.
+        ...(isOwnerView
+          ? [
+              {
+                model: OfferDriver,
+                as: 'drivers',
+                required: false,
+                include: [
+                  {
+                    model: User,
+                    as: 'driver',
+                    attributes: ['id', 'first_name', 'last_name', 'display_name']
+                  },
+                  {
+                    model: DriverVehicle,
+                    as: 'vehicle',
+                    include: [
+                      {
+                        model: VehicleType,
+                        as: 'type',
+                        attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+                      },
+                      {
+                        model: VehicleMake,
+                        as: 'make',
+                        attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+                      },
+                      {
+                        model: VehicleModel,
+                        as: 'model',
+                        attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+                      },
+                      {
+                        model: VehicleColor,
+                        as: 'color',
+                        attributes: ['id', 'name', 'name_uz', 'name_ru', 'name_en']
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          : [])
       ]
     });
 
@@ -746,13 +769,16 @@ export class PassengerOfferService {
   }
 
   /**
-   * Cancel offer (published → cancelled)
+   * Cancel offer (published | driver_found → cancelled)
+   *
+   * A passenger who already picked a driver must still be able to call it off —
+   * the confirmed driver is notified below along with everyone still waiting.
    */
   static async cancelOffer(offerId: string, userId: number, req?: Request) {
     const offer = await this.getOfferById(offerId, userId);
 
-    if (offer.status !== 'published') {
-      throw new AppError('Only published offers can be cancelled', 400);
+    if (!['published', 'driver_found'].includes(offer.status)) {
+      throw new AppError('Only published or matched offers can be cancelled', 400);
     }
 
     // Get all pending and confirmed drivers before cancelling
@@ -772,13 +798,13 @@ export class PassengerOfferService {
 
     await offer.update({ status: 'cancelled' });
 
-    // Get driver language preference (default to uz)
-    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
-    
-    // Send push notifications to all interested drivers
+    // Send push notifications to all interested drivers. The language is
+    // resolved per driver — this is a list of different people, and it used to
+    // be written in the cancelling passenger's language for all of them.
     if (interestedDrivers.length > 0) {
       await Promise.all(
         interestedDrivers.map(async (driverJoin) => {
+          const driverLanguage = await getUserLanguage(driverJoin.driver_id);
           await this.notifyDriver(driverJoin.driver_id, {
             type: 'offer_cancelled_by_passenger',
             title: t('push.offerCancelledByPassengerTitle', driverLanguage),
@@ -840,6 +866,12 @@ export class PassengerOfferService {
   static async archiveOffer(offerId: string, userId: number, req?: Request) {
     const offer = await this.getOfferById(offerId, userId);
 
+    // Archiving an offer that already has a confirmed driver would strand him
+    // with no notification. Cancel it instead — that path tells him.
+    if (offer.status === 'driver_found') {
+      throw new AppError('Cancel the offer instead — a driver is already confirmed', 400);
+    }
+
     await offer.update({ status: 'archived' });
 
     // Audit log
@@ -861,8 +893,11 @@ export class PassengerOfferService {
   static async completeOffer(offerId: string, userId: number, req?: Request) {
     const offer = await this.getOfferById(offerId, userId);
 
-    if (offer.status !== 'published') {
-      throw new AppError('Only published offers can be completed', 400);
+    // 'completed' now means the ride actually happened, which requires a driver.
+    // It used to be reachable straight from 'published' — an offer nobody ever
+    // answered could be marked as a finished trip.
+    if (offer.status !== 'driver_found') {
+      throw new AppError('Only offers with a confirmed driver can be completed', 400);
     }
 
     await offer.update({ status: 'completed' });
@@ -931,13 +966,17 @@ export class PassengerOfferService {
       whereConditions.push({ to_text: { [Op.iLike]: `%${filters.to_text}%` } });
     }
 
-    // Filter by date
+    // Filter by date. An unparseable string yields an Invalid Date, which
+    // Sequelize cannot serialise (RangeError → 500), so it is dropped instead.
     if (filters.date) {
       const startOfDay = new Date(filters.date);
+      if (Number.isNaN(startOfDay.getTime())) {
+        throw new AppError('date is not a valid date', 400);
+      }
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(filters.date);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       whereConditions.push({
         start_at: {
           [Op.gte]: startOfDay,
@@ -951,9 +990,19 @@ export class PassengerOfferService {
       whereConditions.push({ seats_needed: { [Op.gte]: filters.min_seats } });
     }
 
-    // Filter by max price
+    // Filter by max price.
+    //
+    // Offers from the new form carry no price at all (T-018) — the passenger
+    // never states a budget, the driver names his own. A plain `<=` drops NULL,
+    // so a driver who typed any budget used to get an empty list even though
+    // most offers were relevant. Owner decision 2026-08-02: keep them in.
     if (filters.max_price) {
-      whereConditions.push({ max_price_per_seat: { [Op.lte]: filters.max_price } });
+      whereConditions.push({
+        [Op.or]: [
+          { max_price_per_seat: { [Op.lte]: filters.max_price } },
+          { max_price_per_seat: null }
+        ]
+      });
     }
 
     const where = whereConditions.length > 0 ? { [Op.and]: whereConditions } : {};

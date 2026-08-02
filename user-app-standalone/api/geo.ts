@@ -30,10 +30,17 @@ const fetchGeoList = async <T extends GeoOption[]>(
 
     clearTimeout(timeoutId);
 
-    const result = await response.json();
+    // Never parse before checking the status: an ingress 502/504 or a rate
+    // limiter answers with HTML/plain text, and `response.json()` would then
+    // throw "JSON Parse error: Unexpected character: T" instead of the real
+    // reason. Same trap that masked the T-017 loop.
+    const result = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to load geo data');
+      throw new Error(result?.message || `Failed to load geo data (${response.status})`);
+    }
+    if (!result || !Array.isArray(result.data)) {
+      throw new Error('Failed to load geo data');
     }
 
     return result.data as T;

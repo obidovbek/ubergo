@@ -220,6 +220,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
     switch (status) {
       case 'published':
         return '#10B981';
+      case 'driver_found':
+        return '#0EA5E9';
       case 'completed':
         return '#3B82F6';
       case 'cancelled':
@@ -235,6 +237,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
     switch (status) {
       case 'published':
         return '#D1FAE5';
+      case 'driver_found':
+        return '#E0F2FE';
       case 'completed':
         return '#DBEAFE';
       case 'cancelled':
@@ -250,6 +254,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
     switch (status) {
       case 'published':
         return 'checkmark-circle';
+      case 'driver_found':
+        return 'car';
       case 'completed':
         return 'checkmark-done-circle';
       case 'cancelled':
@@ -265,6 +271,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
     switch (status) {
       case 'published':
         return t('passengerOffers.active');
+      case 'driver_found':
+        return t('passengerOffers.driverFound');
       case 'completed':
         return t('passengerOffers.completed');
       case 'cancelled':
@@ -384,8 +392,9 @@ export const MyPassengerOffersScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Action Buttons */}
-        {item.status === 'published' && (
+        {/* Action Buttons — a matched offer stays cancellable; that path is the
+            only one that notifies the confirmed driver. */}
+        {(item.status === 'published' || item.status === 'driver_found') && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={styles.cancelButton}

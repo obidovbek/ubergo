@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-08-02 — T-018 step 9: first real run — two crashes + the rate-limiter proxy bug
+- **Task:** Owner pasted a test3 API log and a Metro log. Not a planned step — three defects
+  read straight out of the logs.
+- **Proof the deploy happened:** the app crash below can only fire on an offer whose
+  `max_price_per_seat` is NULL, and NULL can only be written by the new API + the new order
+  form. So the API image **is** deployed on test3 and step 9 has actually begun.
+- **Bug 1 — API `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`.** The ingress sets `X-Forwarded-For` but
+  Express never trusted it, so `express-rate-limit` keyed every request on the **ingress pod's
+  IP** — a single shared bucket, meaning one noisy client could lock every user out of the OTP
+  and auth limiters. Fixed: `app.set('trust proxy', 1)` in `app.ts:35`. **One** hop, not `true`:
+  with `true` anyone could spoof the header and walk past the OTP limiter entirely.
+- **Bug 2 — user app `TypeError: Cannot read property 'toString' of null`.** T-018 fallout we
+  missed. Step 7 taught the *driver* app that an offer can have no price, but nobody taught the
+  *user* app: `MyPassengerOffersScreen` still called `formatNumberWithSpaces(item.max_price_per_seat)`
+  and `format.ts:31` does `num.toString()`. It compiled because `api/passengerOffers.ts` typed the
+  field as `number` — the type was lying. Fixed the type (`number | null`, so tsc now polices the
+  call sites) and the card now shows "Narx kelishiladi", same as the driver app. +1 key × uz/ru/en.
+- **Bug 3 — driver app imported a function that was never exported.** `SearchPassengerOffersScreen`
+  imports `formatNumberWithSpaces` from `utils/format`, which only the **user** app defines —
+  `undefined is not a function` on any priced offer. It was sitting in the 41-error tsc baseline
+  unnoticed. Added the function to `driver-app-standalone/utils/format.ts`.
+- **Lesson:** the 41/12/289 tsc baselines are not just noise to keep flat — bug 3 was a real
+  runtime crash hiding inside the driver baseline, and bug 2 got through *because* a hand-written
+  API type disagreed with the schema. When a migration makes a column nullable, grep the app
+  types for that column in the same step.
+- **Still open (not fixed — owner's call):** the driver app has **no** `api/geo.ts`, but
+  `SearchPassengerOffersScreen:27` imports it. PLAN.md logged this as baseline noise; it is not —
+  Metro cannot resolve the module, so that screen has never opened. The user app's `api/geo.ts`
+  already exports the four symbols it needs, so it is a straight port.
+- **tsc:** user **12 → 12**, driver **41 → 40** (bug 3 removed one), API **289 → 289**.
+- **Next:** port `api/geo.ts` into the driver app, then resume step 9 — create an offer with
+  every field set and walk it through My offers + the driver search screen.
+- **Commit:** not committed yet.
+
+---
+
 ## 2026-07-28 (2) — T-018 / OR-007 step 1: passenger_offers schema for the new order screen
 - **Task:** First implementation step of the approved T-018 plan — the DB migration + model for
   the ~20 new fields of the Figma order screen.

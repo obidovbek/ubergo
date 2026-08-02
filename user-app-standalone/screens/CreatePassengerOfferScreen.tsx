@@ -56,6 +56,13 @@ type MainStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
+/**
+ * The API rejects non-urgent offers starting less than 30 minutes from now.
+ * The client asks for a minute more so a form submitted right on the boundary
+ * cannot pass here and then fail server-side with an untranslated 400.
+ */
+const MIN_ADVANCE_MS = 31 * 60 * 1000;
+
 export const CreatePassengerOfferScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
@@ -176,8 +183,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     if (!isUrgent) {
       if (!departFrom) {
         newErrors.start_at = t('passengerOffers.errorTime');
-      } else if (startAtDate < new Date(Date.now() + 30 * 60 * 1000)) {
-        // Same 30-minute floor the API applies to non-urgent offers
+      } else if (startAtDate < new Date(Date.now() + MIN_ADVANCE_MS)) {
         newErrors.start_at = t('passengerOffers.errorTime');
       }
 

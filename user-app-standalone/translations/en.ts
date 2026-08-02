@@ -491,6 +491,7 @@ export default {
     // My Passenger Offers
     title: 'My Ride Requests',
     active: 'Active',
+    driverFound: 'Driver found',
     completed: 'Completed',
     cancelled: 'Cancelled',
     archived: 'Archived',

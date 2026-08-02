@@ -81,6 +81,9 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   const [settlements, setSettlements] = useState<GeoOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState<PickerType | null>(null);
+  // A failed load used to be console.error only, which left the user staring at
+  // an empty list that reads exactly like "this district has no settlements".
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Deps are plain ids on purpose — passing the objects would re-fire these
   // effects on every parent render (the T-017 loop).
@@ -97,9 +100,14 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     setLoading(true);
     GeoAPI.fetchGeoProvinces(countryId)
       .then((items) => {
-        if (!cancelled) setProvinces(items);
+        if (cancelled) return;
+        setProvinces(items);
+        setLoadFailed(false);
       })
-      .catch((err) => console.error('Failed to load provinces:', err))
+      .catch((err) => {
+        console.error('Failed to load provinces:', err);
+        if (!cancelled) setLoadFailed(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -119,9 +127,14 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     setLoading(true);
     GeoAPI.fetchGeoCityDistricts(provinceId)
       .then((items) => {
-        if (!cancelled) setCityDistricts(items);
+        if (cancelled) return;
+        setCityDistricts(items);
+        setLoadFailed(false);
       })
-      .catch((err) => console.error('Failed to load city districts:', err))
+      .catch((err) => {
+        console.error('Failed to load city districts:', err);
+        if (!cancelled) setLoadFailed(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -141,9 +154,14 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     setLoading(true);
     GeoAPI.fetchGeoSettlements(cityDistrictId)
       .then((items) => {
-        if (!cancelled) setSettlements(items);
+        if (cancelled) return;
+        setSettlements(items);
+        setLoadFailed(false);
       })
-      .catch((err) => console.error('Failed to load settlements:', err))
+      .catch((err) => {
+        console.error('Failed to load settlements:', err);
+        if (!cancelled) setLoadFailed(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -253,6 +271,10 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       />
 
       {!!summary && <Text style={styles.summary}>{summary}</Text>}
+
+      {loadFailed && !loading && (
+        <Text style={styles.errorText}>{t('passengerOffers.errorLoad')}</Text>
+      )}
 
       {!!error && <Text style={styles.errorText}>{error}</Text>}
 

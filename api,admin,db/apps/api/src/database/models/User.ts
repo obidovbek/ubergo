@@ -24,13 +24,15 @@ export interface UserAttributes {
   promo_code?: string | null;
   referral_id?: string | null;
   profile_complete: boolean;
+  /** The person's own UI language — what push notifications must be written in. */
+  language?: string | null;
   created_at: Date;
   updated_at: Date;
 }
 
 // Creation attributes (optional fields during creation)
 export interface UserCreationAttributes
-  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'profile_complete' | 'created_at' | 'updated_at'> {}
+  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'profile_complete' | 'language' | 'created_at' | 'updated_at'> {}
 
 // User model class
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -52,6 +54,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare promo_code?: string | null;
   declare referral_id?: string | null;
   declare profile_complete: boolean;
+  declare language?: string | null;
   declare readonly created_at: Date;
   declare readonly updated_at: Date;
 
@@ -167,6 +170,12 @@ export function initUser(sequelize: Sequelize) {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false
+      },
+      // Nullable on purpose: existing accounts have no recorded language, and
+      // the push helpers fall back to 'uz' until the app reports one.
+      language: {
+        type: DataTypes.STRING(5),
+        allowNull: true
       },
       created_at: {
         type: DataTypes.DATE,

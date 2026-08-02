@@ -505,6 +505,7 @@ export default {
     // My Passenger Offers
     title: 'Mening safar so\'rovlarim',
     active: 'Faol',
+    driverFound: 'Haydovchi topildi',
     completed: 'Tugallangan',
     cancelled: 'Bekor qilingan',
     archived: 'Arxivlangan',

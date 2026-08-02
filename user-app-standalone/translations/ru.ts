@@ -491,6 +491,7 @@ export default {
     // My Passenger Offers
     title: 'Мои запросы на поездку',
     active: 'Активные',
+    driverFound: 'Водитель найден',
     completed: 'Завершенные',
     cancelled: 'Отмененные',
     archived: 'Архивированные',

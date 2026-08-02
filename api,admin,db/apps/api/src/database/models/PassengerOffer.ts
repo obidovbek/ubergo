@@ -5,8 +5,19 @@
 
 import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 
-// Passenger Offer status enum
-export type PassengerOfferStatus = 'published' | 'archived' | 'cancelled' | 'completed';
+/**
+ * Passenger Offer status enum.
+ *
+ * 'driver_found' sits between "the passenger picked a driver" and "the ride
+ * happened". Confirming used to jump straight to 'completed', which marked the
+ * trip finished before anyone had travelled.
+ */
+export type PassengerOfferStatus =
+  | 'published'
+  | 'driver_found'
+  | 'archived'
+  | 'cancelled'
+  | 'completed';
 
 // Stored as VARCHAR (not PG enums) — new values need no migration.
 export type PassengerOfferPaymentType = 'cash' | 'click_payme' | 'friend_pays';
@@ -440,7 +451,7 @@ export function initPassengerOffer(sequelize: Sequelize) {
         allowNull: true
       },
       status: {
-        type: DataTypes.ENUM('published', 'archived', 'cancelled', 'completed'),
+        type: DataTypes.ENUM('published', 'driver_found', 'archived', 'cancelled', 'completed'),
         allowNull: false,
         defaultValue: 'published'
       },

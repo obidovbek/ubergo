@@ -14,9 +14,19 @@ const router = Router();
 const offerActionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // Limit each user to 20 requests per windowMs
-  message: 'Too many requests, please try again later',
+  // An object, not a string: a string is sent as text/html and the apps parse
+  // every error body as JSON, so they would lose the reason.
+  message: { success: false, message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  // Key on the user, not the IP. Uzbek mobile carriers put many subscribers
+  // behind one NAT address, so an IP bucket would let one busy passenger lock
+  // everyone on that carrier out of creating offers. `authenticate` runs first
+  // (router.use above), so the user id is always there.
+  keyGenerator: (req) => {
+    const userId = (req as any).user?.userId;
+    return userId !== undefined ? `user:${userId}` : `ip:${req.ip}`;
+  },
 });
 
 // All passenger offer routes require authentication

@@ -259,6 +259,10 @@ export default {
     driverRequestRejectedBody: 'Sorry, your offer for the ride from {from} to {to} was declined. Check other offers.',
     
     // Driver request cancelled (to passenger)
+    // Another driver was chosen (to every driver who was still waiting)
+    driverNotChosenTitle: 'Another driver was chosen',
+    driverNotChosenBody: 'Another driver was picked for the order from {from} to {to}. Have a look at the other orders.',
+
     driverRequestCancelledTitle: '⚠️ Driver Cancelled',
     driverRequestCancelledBody: 'A driver cancelled from your ride from {from} to {to}. Search for other drivers.',
     

@@ -28,6 +28,7 @@ import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
+import { getUserLanguage } from '../utils/userLanguage.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
 
@@ -462,13 +463,13 @@ export class DriverOfferService {
 
     await offer.update({ status: 'cancelled' });
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
-    
-    // Send push notifications to all confirmed passengers
+    // Send push notifications to all confirmed passengers. Resolved per
+    // passenger — this is a list of different people, and it used to be written
+    // in the cancelling driver's language for all of them.
     if (confirmedPassengers.length > 0) {
       await Promise.all(
         confirmedPassengers.map(async (passengerJoin) => {
+          const passengerLanguage = await getUserLanguage(passengerJoin.passenger_id);
           await this.notifyPassenger(passengerJoin.passenger_id, {
             type: 'offer_cancelled_by_driver',
             title: t('push.offerCancelledByDriverTitle', passengerLanguage),

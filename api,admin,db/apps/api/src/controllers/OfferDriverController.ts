@@ -24,10 +24,17 @@ export class OfferDriverController {
       const { offerId } = req.params;
       const { vehicle_id, seats_offered, offered_price_per_seat, message } = req.body;
 
+      // parseInt('abc') is NaN, which reached Postgres as an integer and came
+      // back as a 500 instead of a 400.
+      const parsedOfferId = Number(offerId);
+      if (!Number.isInteger(parsedOfferId) || parsedOfferId <= 0) {
+        throw new AppError('Invalid offer id', 400);
+      }
+
       const driverJoin = await OfferDriverService.joinOffer(
         userId,
         {
-          offer_id: parseInt(offerId),
+          offer_id: parsedOfferId,
           vehicle_id,
           seats_offered,
           offered_price_per_seat,
@@ -36,10 +43,12 @@ export class OfferDriverController {
         req
       );
 
-      return successResponse(res, { 
-        driver_join: driverJoin,
-        message: 'Join request sent successfully. Waiting for passenger confirmation.' 
-      }, 201);
+      return successResponse(
+        res,
+        { driver_join: driverJoin },
+        'Join request sent successfully. Waiting for passenger confirmation.',
+        201
+      );
     } catch (error) {
       next(error);
     }
@@ -106,10 +115,12 @@ export class OfferDriverController {
       }
 
       const { offerId } = req.params;
-      const drivers = await OfferDriverService.getOfferDrivers(
-        userId,
-        parseInt(offerId)
-      );
+      const parsedOfferId = Number(offerId);
+      if (!Number.isInteger(parsedOfferId) || parsedOfferId <= 0) {
+        throw new AppError('Invalid offer id', 400);
+      }
+
+      const drivers = await OfferDriverService.getOfferDrivers(userId, parsedOfferId, req);
 
       return successResponse(res, { drivers });
     } catch (error) {

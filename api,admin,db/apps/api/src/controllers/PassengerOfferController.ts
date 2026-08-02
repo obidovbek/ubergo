@@ -77,7 +77,7 @@ export class PassengerOfferController {
 
       const offer = await PassengerOfferService.createOffer(userId, req.body, req);
 
-      return successResponse(res, { offer, message: 'Offer created successfully' }, 201);
+      return successResponse(res, { offer }, 'Offer created successfully', 201);
     } catch (error) {
       next(error);
     }

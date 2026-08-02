@@ -24,6 +24,7 @@ import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
+import { getUserLanguage } from '../utils/userLanguage.js';
 
 interface JoinPassengerOfferData {
   offer_id: number;
@@ -112,6 +113,9 @@ export class OfferDriverService {
       } else if (existingJoin.status === 'rejected') {
         throw new AppError(t('offers.cannotJoinAfterRejected', language), 400);
       } else if (existingJoin.status === 'cancelled') {
+        // Deliberate (owner, 2026-08-02): a driver who withdraws is out for
+        // good, so nobody can pester one passenger with repeated offers. The
+        // unique (offer_id, driver_id) index enforces it at the DB level too.
         throw new AppError(t('offers.cannotJoinAfterCancelled', language), 400);
       } else {
         // For any other status, use generic message
@@ -119,7 +123,12 @@ export class OfferDriverService {
       }
     }
 
-    // Check if offered seats meet the requirement
+    // The driver must have room for everyone the passenger is bringing.
+    //
+    // ⚠️ Whoever builds the driver's "offer this ride" screen: `seats_offered`
+    // defaults to 1, and since T-018 a salon booking sets seats_needed to 3
+    // (back salon) or 4 (whole car). Send the real number of free seats or
+    // every salon order will refuse the driver with this error.
     if (seats_offered < offer.seats_needed) {
       throw new AppError(t('offers.needsAtLeastSeats', language, { count: offer.seats_needed }), 400);
     }
@@ -129,13 +138,19 @@ export class OfferDriverService {
       throw new AppError(t('offers.seatsOutOfRangeDriver', language), 400);
     }
 
-    // Validate offered price
-    if (offered_price_per_seat <= 0) {
+    // Validate offered price. The Number() guard matters: `undefined <= 0` and
+    // `'abc' <= 0` are both false, so without it a malformed body slipped past
+    // this check and only blew up later as a Postgres numeric error (500).
+    const offeredPrice = Number(offered_price_per_seat);
+    if (!Number.isFinite(offeredPrice) || offeredPrice <= 0) {
       throw new AppError(t('offers.priceMustBePositive', language), 400);
     }
 
-    // Calculate total offered price
-    const totalOfferedPrice = offered_price_per_seat * offer.seats_needed;
+    // Total is per seat × what the passenger NEEDS, not × what the driver has
+    // free — she does not pay for the empty seats he happens to be carrying.
+    // Confirmed as the intended rule by the owner, 2026-08-02. Do not "fix"
+    // this to seats_offered.
+    const totalOfferedPrice = offeredPrice * offer.seats_needed;
 
     // Create driver join request
     const driverJoin = await OfferDriver.create({
@@ -143,7 +158,7 @@ export class OfferDriverService {
       driver_id: driverId,
       vehicle_id,
       seats_offered,
-      offered_price_per_seat,
+      offered_price_per_seat: offeredPrice,
       total_offered_price: totalOfferedPrice,
       currency: offer.currency,
       message,
@@ -155,8 +170,8 @@ export class OfferDriverService {
       attributes: ['id', 'first_name', 'last_name', 'display_name']
     });
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The passenger reads this, so it is written in *her* language.
+    const passengerLanguage = await getUserLanguage(offer.user_id);
     
     // Send push notification to passenger
     await this.notifyPassenger(offer.user_id, {
@@ -277,18 +292,26 @@ export class OfferDriverService {
       throw new AppError(t('offers.alreadyProcessed', language), 400);
     }
 
+    // One offer, one driver. Every other driver's row stays 'pending', so
+    // without this guard a passenger could confirm a second driver from the
+    // same list and end up with two confirmed cars for one ride.
+    if (offer.status !== 'published') {
+      throw new AppError(t('offers.alreadyProcessed', language), 400);
+    }
+
     // Confirm the driver
     await driverJoin.update({
       status: 'confirmed',
       confirmed_at: new Date()
     });
 
-    // Update offer status to completed
-    await offer.update({ status: 'completed' });
+    // A driver was picked — but nobody has travelled yet. 'completed' is set
+    // later, when the ride is actually done (owner decision 2026-08-02).
+    await offer.update({ status: 'driver_found' });
 
-    // Get driver language preference (default to uz)
-    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
-    
+    // The driver reads this, so it is written in *his* language.
+    const driverLanguage = await getUserLanguage(driverJoin.driver_id);
+
     // Send push notification to driver
     await this.notifyDriver(driverJoin.driver_id, {
       type: 'driver_request_confirmed',
@@ -304,6 +327,11 @@ export class OfferDriverService {
       }
     }, driverLanguage);
 
+    // Everyone else who was still waiting has lost. They used to be left
+    // 'pending' forever with no message at all — now they are closed out and
+    // told, each in their own language.
+    await this.rejectRemainingDrivers(offer, driverJoin.id);
+
     // Audit log
     if (req) {
       await logAudit({
@@ -315,6 +343,61 @@ export class OfferDriverService {
     }
 
     return driverJoin;
+  }
+
+  /**
+   * Close out every driver still waiting on an offer once one of them wins.
+   *
+   * Their rows used to stay 'pending' for ever: no rejection, no notification,
+   * and the driver app had no way to tell "still being considered" from "you
+   * lost weeks ago". Failures here are swallowed — the confirmation itself has
+   * already happened and must not be undone by a push problem.
+   */
+  private static async rejectRemainingDrivers(offer: any, winningJoinId: string) {
+    try {
+      const losers = await OfferDriver.findAll({
+        where: {
+          offer_id: offer.id,
+          status: 'pending',
+          id: { [Op.ne]: winningJoinId }
+        }
+      });
+
+      if (losers.length === 0) return;
+
+      const rejectedAt = new Date();
+
+      for (const loser of losers) {
+        await loser.update({
+          status: 'rejected',
+          rejection_reason: 'another_driver_chosen',
+          rejected_at: rejectedAt
+        });
+
+        // Resolved per driver: a list of losers is a list of different people.
+        const loserLanguage = await getUserLanguage(loser.driver_id);
+
+        await this.notifyDriver(
+          loser.driver_id,
+          {
+            type: 'driver_not_chosen',
+            title: t('push.driverNotChosenTitle', loserLanguage),
+            body: t('push.driverNotChosenBody', loserLanguage, {
+              from: offer.from_text,
+              to: offer.to_text
+            }),
+            data: {
+              type: 'driver_not_chosen',
+              offer_id: String(offer.id),
+              driver_join_id: loser.id
+            }
+          },
+          loserLanguage
+        );
+      }
+    } catch (error) {
+      console.error(`Failed to close out the remaining drivers of offer ${offer?.id}:`, error);
+    }
   }
 
   /**
@@ -365,8 +448,8 @@ export class OfferDriverService {
       rejected_at: new Date()
     });
 
-    // Get driver language preference (default to uz)
-    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The driver reads this, so it is written in *his* language.
+    const driverLanguage = await getUserLanguage(driverJoin.driver_id);
     
     // Send push notification to driver
     await this.notifyDriver(driverJoin.driver_id, {
@@ -433,8 +516,8 @@ export class OfferDriverService {
 
     const offer = driverJoin.offer as any;
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The passenger reads this, so it is written in *her* language.
+    const passengerLanguage = await getUserLanguage(offer.user_id);
     
     // Send push notification to passenger
     await this.notifyPassenger(offer.user_id, {
@@ -469,8 +552,11 @@ export class OfferDriverService {
    */
   static async getDriverJoinRequests(driverId: number, status?: OfferDriverStatus) {
     const where: any = { driver_id: driverId };
-    
-    if (status) {
+
+    // status is an ENUM column: an unknown value makes Postgres raise
+    // "invalid input value for enum", i.e. a 500 for a typo in the query string.
+    const allowed: OfferDriverStatus[] = ['pending', 'confirmed', 'rejected', 'cancelled'];
+    if (status && allowed.includes(status)) {
       where.status = status;
     }
 

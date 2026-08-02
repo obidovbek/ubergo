@@ -22,6 +22,7 @@ import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
+import { getUserLanguage } from '../utils/userLanguage.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
 import { isWithinMinutes, hasArrived } from '../utils/geo.js';
@@ -162,12 +163,16 @@ export class OfferPassengerService {
       attributes: ['id', 'first_name', 'last_name', 'display_name']
     });
 
+    // The driver reads this, so it is written in *his* language — not in the
+    // language of the passenger whose request triggered it.
+    const driverLanguage = await getUserLanguage(offer.user_id);
+
     // Send push notification to driver
     await this.notifyDriver(offer.user_id, {
       type: 'passenger_join_request',
-      title: t('push.passengerJoinRequestTitle', language),
-      body: t('push.passengerJoinRequestBody', language, {
-        name: passenger?.display_name || passenger?.first_name || (language === 'uz' ? 'Yo\'lovchi' : language === 'ru' ? 'Пассажир' : 'Passenger'),
+      title: t('push.passengerJoinRequestTitle', driverLanguage),
+      body: t('push.passengerJoinRequestBody', driverLanguage, {
+        name: passenger?.display_name || passenger?.first_name || (driverLanguage === 'uz' ? 'Yo\'lovchi' : driverLanguage === 'ru' ? 'Пассажир' : 'Passenger'),
         from: offer.from_text,
         to: offer.to_text,
         seats: String(seats_requested)
@@ -179,7 +184,7 @@ export class OfferPassengerService {
         passenger_join_id: passengerJoin.id,
         seats_requested: String(seats_requested)
       }
-    }, language);
+    }, driverLanguage);
 
     // Audit log
     if (req) {
@@ -270,8 +275,8 @@ export class OfferPassengerService {
       seats_free: offer.seats_free - passengerJoin.seats_requested
     });
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The passenger reads this, so it is written in *her* language.
+    const passengerLanguage = await getUserLanguage(passengerJoin.passenger_id);
     
     // Send push notification to passenger
     await this.notifyPassenger(passengerJoin.passenger_id, {
@@ -349,8 +354,8 @@ export class OfferPassengerService {
       rejected_at: new Date()
     });
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The passenger reads this, so it is written in *her* language.
+    const passengerLanguage = await getUserLanguage(passengerJoin.passenger_id);
     
     // Send push notification to passenger
     await this.notifyPassenger(passengerJoin.passenger_id, {
@@ -426,8 +431,8 @@ export class OfferPassengerService {
       });
     }
 
-    // Get driver language preference (default to uz)
-    const driverLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The driver reads this, so it is written in *his* language.
+    const driverLanguage = await getUserLanguage(offer.user_id);
     
     // Send push notification to driver
     await this.notifyDriver(offer.user_id, {
@@ -604,8 +609,8 @@ export class OfferPassengerService {
       throw new AppError('Pickup location coordinates not available', 400);
     }
 
-    // Get passenger language preference (default to uz)
-    const passengerLanguage = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
+    // The passenger reads this, so it is written in *her* language.
+    const passengerLanguage = await getUserLanguage(passengerJoin.passenger_id);
 
     // Check if driver has arrived (within 200 meters)
     if (hasArrived(driverLat, driverLon, offer.from_lat, offer.from_lng)) {

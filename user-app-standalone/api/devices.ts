@@ -2,7 +2,7 @@ import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/
 
 export const registerDevice = async (
   token: string,
-  body: { token: string; platform: 'android' | 'ios'; app?: 'user' | 'driver' }
+  body: { token: string; platform: 'android' | 'ios'; app?: 'user' | 'driver'; language?: string }
 ) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);

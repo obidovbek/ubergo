@@ -1,5 +1,19 @@
 import { Platform, PermissionsAndroid } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerDevice } from '../api/devices';
+
+/**
+ * The language this person actually reads. The API stores it on the user, so
+ * push notifications can be written in it — until now they were written in the
+ * language of whoever triggered them.
+ */
+async function getStoredLanguage(): Promise<string | undefined> {
+  try {
+    return (await AsyncStorage.getItem('@app_language')) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 // Only import Firebase messaging on native platforms
 let messaging: any = null;
@@ -111,6 +125,7 @@ export async function registerPushTokenWithBackend(apiToken: string): Promise<vo
       token,
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
       app: 'driver', // ← CRITICAL: This is the driver app
+      language: await getStoredLanguage(),
     });
 
     console.log('FCM push token registered successfully (DRIVER APP)');
@@ -135,6 +150,7 @@ export function subscribeTokenRefresh(apiToken: string) {
         token,
         platform: Platform.OS === 'ios' ? 'ios' : 'android',
         app: 'driver', // ← CRITICAL: This is the driver app
+        language: await getStoredLanguage(),
       });
       console.log('Refreshed FCM token registered successfully (DRIVER APP)');
     } catch (error) {

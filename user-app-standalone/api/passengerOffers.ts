@@ -24,7 +24,8 @@ export interface PassengerOffer {
   pets: boolean;
   large_baggage: boolean;
   note?: string;
-  status: 'published' | 'archived' | 'cancelled' | 'completed';
+  /** 'driver_found' = a driver was confirmed; the ride has not happened yet. */
+  status: 'published' | 'driver_found' | 'archived' | 'cancelled' | 'completed';
   created_at: string;
   updated_at: string;
   user?: {
@@ -380,7 +381,7 @@ export const deletePassengerOffer = async (offerId: number): Promise<void> => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to delete passenger offer');
     }
   } catch (error: any) {
@@ -414,7 +415,7 @@ export const getOfferDrivers = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to fetch drivers');
     }
 
@@ -449,7 +450,7 @@ export const confirmDriver = async (driverJoinId: string): Promise<OfferDriver> 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to confirm driver');
     }
 
@@ -488,7 +489,7 @@ export const rejectDriver = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({} as any));
       throw new Error(errorData.message || 'Failed to reject driver');
     }
 

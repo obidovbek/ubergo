@@ -259,6 +259,10 @@ export default {
     driverRequestRejectedBody: 'К сожалению, ваше предложение на поездку из {from} в {to} было отклонено. Проверьте другие предложения.',
     
     // Driver request cancelled (to passenger)
+    // Another driver was chosen (to every driver who was still waiting)
+    driverNotChosenTitle: 'Выбран другой водитель',
+    driverNotChosenBody: 'На заказ из {from} в {to} выбран другой водитель. Посмотрите другие заказы.',
+
     driverRequestCancelledTitle: '⚠️ Водитель отменил',
     driverRequestCancelledBody: 'Водитель отменил вашу поездку из {from} в {to}. Найдите других водителей.',
     

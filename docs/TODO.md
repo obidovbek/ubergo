@@ -10,11 +10,13 @@
 - [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
   (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
   steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
-  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE — all
-  code written + statically clean 2026-07-29 (migration `7e49b5e` live on test3; API + user app +
-  driver app NOT deployed and never run). Steps 9–10 are the owner's: deploy the API to test3
-  FIRST, then build the app and test on two phones.**
-  → `docs/OWNER_REQUESTS.md` OR-007
+  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE
+  2026-07-29. Step 9 UNDERWAY: API deployed to test3 and the new form has created a real offer;
+  3 defects found in the owner's logs and fixed 2026-08-02 (trust-proxy rate limiting, user-app
+  crash on a null price, driver-app missing `formatNumberWithSpaces` export) — uncommitted.
+  🛑 Blocked on porting `api/geo.ts` into the driver app before the driver side can be verified.
+  Step 10 is the owner's: two phones, small + large.**
+  → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN.md` step 9
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they

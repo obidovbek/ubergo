@@ -259,6 +259,10 @@ export default {
     driverRequestRejectedTitle: '❌ Taklifingiz rad etildi',
     driverRequestRejectedBody: 'Afsus, {from} dan {to} ga safaringizga taklifingiz rad etildi. Boshqa takliflarni ko\'rib chiqing.',
     
+    // Another driver was chosen (to every driver who was still waiting)
+    driverNotChosenTitle: 'Boshqa haydovchi tanlandi',
+    driverNotChosenBody: '{from} dan {to} ga buyurtmaga boshqa haydovchi tanlandi. Boshqa buyurtmalarni ko\'rib chiqing.',
+
     // Driver request cancelled (to passenger)
     driverRequestCancelledTitle: '⚠️ Haydovchi bekor qildi',
     driverRequestCancelledBody: 'Haydovchi {from} dan {to} ga safaringizdan chiqdi. Boshqa haydovchilarni qidiring.',
