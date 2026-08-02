@@ -17,7 +17,8 @@ export interface PassengerOffer {
   to_lng?: number;
   start_at: string;
   seats_needed: number;
-  max_price_per_seat: number;
+  // Nullable since T-018 — the new order form collects no price at all.
+  max_price_per_seat: number | null;
   currency: string;
   front_seat: boolean;
   pets: boolean;

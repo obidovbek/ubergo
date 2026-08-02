@@ -27,6 +27,13 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
 
 const app: Application = express();
 
+// Behind the k8s ingress there is exactly one proxy hop that appends the real
+// client IP to X-Forwarded-For. Trusting just that hop lets express-rate-limit
+// key on the actual caller instead of the ingress IP (and silences its
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR validation error). Trusting *all* proxies
+// would let anyone spoof X-Forwarded-For and dodge the OTP/auth limiters.
+app.set('trust proxy', 1);
+
 // Initialize Firebase Admin SDK
 initializeFirebase();
 

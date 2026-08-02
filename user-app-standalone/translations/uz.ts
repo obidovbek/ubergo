@@ -480,6 +480,7 @@ export default {
     seatsNeededRequired: 'Kerakli o\'rinlar *',
     maxPricePerSeat: 'Har bir o\'rin uchun maksimal narx',
     maxPricePerSeatRequired: 'Har bir o\'rin uchun maksimal narx *',
+    priceNegotiable: 'Narx kelishiladi',
     additionalOptions: 'Qo\'shimcha imkoniyatlar',
     frontSeat: 'Oldingi o\'rin',
     frontSeatDescription: 'Oldingi o\'rinni afzal ko\'raman',

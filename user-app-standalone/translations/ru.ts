@@ -466,6 +466,7 @@ export default {
     seatsNeededRequired: 'Необходимые места *',
     maxPricePerSeat: 'Максимальная цена за место',
     maxPricePerSeatRequired: 'Максимальная цена за место *',
+    priceNegotiable: 'Цена договорная',
     additionalOptions: 'Дополнительные возможности',
     frontSeat: 'Переднее место',
     frontSeatDescription: 'Предпочитаю переднее место',

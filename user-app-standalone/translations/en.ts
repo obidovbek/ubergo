@@ -466,6 +466,7 @@ export default {
     seatsNeededRequired: 'Seats Needed *',
     maxPricePerSeat: 'Max Price Per Seat',
     maxPricePerSeatRequired: 'Max Price Per Seat *',
+    priceNegotiable: 'Price negotiable',
     additionalOptions: 'Additional Options',
     frontSeat: 'Front Seat',
     frontSeatDescription: 'Prefer front seat',

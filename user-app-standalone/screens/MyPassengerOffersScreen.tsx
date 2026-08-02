@@ -355,14 +355,20 @@ export const MyPassengerOffersScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Price Section */}
+        {/* Price Section — offers from the new form carry no price (T-018) */}
         <View style={styles.priceSection}>
-          <View style={styles.priceHeader}>
-            <Text style={styles.priceLabel}>{t('passengerOffers.maxPricePerSeat')}</Text>
-          </View>
-          <Text style={styles.priceValue}>
-            {formatNumberWithSpaces(item.max_price_per_seat)} {item.currency}
-          </Text>
+          {item.max_price_per_seat === null || item.max_price_per_seat === undefined ? (
+            <Text style={styles.priceValue}>{t('passengerOffers.priceNegotiable')}</Text>
+          ) : (
+            <>
+              <View style={styles.priceHeader}>
+                <Text style={styles.priceLabel}>{t('passengerOffers.maxPricePerSeat')}</Text>
+              </View>
+              <Text style={styles.priceValue}>
+                {formatNumberWithSpaces(item.max_price_per_seat)} {item.currency}
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Driver Info */}
