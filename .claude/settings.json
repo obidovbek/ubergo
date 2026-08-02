@@ -82,7 +82,8 @@
       "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $a=\\(npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"\\).Count; \"api=$a \\(session start: 289\\)\"; npx tsc --noEmit 2>&1 | Select-String -Pattern \"userLanguage|DeviceController|OfferDriverService|OfferPassengerService|DriverOfferService|PassengerOfferService\")",
       "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $u=\\(npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"\\).Count; \"user=$u \\(baseline 12\\)\"; npx tsc --noEmit 2>&1 | Select-String -Pattern \"PushService|devices|MyPassengerOffers|passengerOffers\"; cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $d=\\(npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"\\).Count; \"driver=$d \\(baseline 40\\)\"; npx tsc --noEmit 2>&1 | Select-String -Pattern \"PushService|devices\")",
       "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $a=\\(npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"\\).Count; \"api=$a\"; cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\admin\"; $ad=\\(npx tsc --noEmit 2>&1 | Select-String -Pattern \"error TS\"\\).Count; \"admin=$ad\")",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(tee \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/2a646d1f-b46d-4428-a493-1a8c93c67162/scratchpad/tsc-driver-before.txt\")"
     ]
   }
 }

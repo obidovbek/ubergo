@@ -64,18 +64,30 @@ below `booked`, that is a **400 with a clear message**, not a silent clamp — t
 `min: 0` validator would otherwise throw a useless generic validation error.
 
 ## Steps
-- [ ] 1. **Driver app: `api/geo.ts` re-export shim** (was T-022). New 3-line file re-exporting the
-  four symbols from `./driver`. Leaves `SearchPassengerOffersScreen.tsx` untouched. Confirm the
-  driver app `tsc` count **drops** (the unresolved-module errors go away) and that no other file
-  imports `../api/geo` expecting something else.
-- [ ] 2. **API: front-price comparison** — `DriverOfferService.validateOfferData`. `Number()` both
-  sides; reject non-numeric `price_per_seat` / `front_price_per_seat` with a 400. Existing rules
-  (`> 0`, `>= 5000 UZS`, `front >= price`) keep their exact meaning for numeric input.
-- [ ] 3. **API: `seats_free` on update** — `DriverOfferService.updateOffer`. Preserve booked seats;
-  400 if the new `seats_total` is below what is already confirmed.
-- [ ] 4. **Static verification** — `tsc` in all four apps against the recorded baselines
-  (API **285**, admin **0**, user app **12**, driver app **40**). Expect: driver app **down**,
-  everything else identical. Report the exact before/after sets, no hand-waving.
+- [x] 1. **Driver app: `api/geo.ts` re-export shim — DONE 2026-08-03.** New `api/geo.ts` re-exports
+  `GeoOption`, `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts` from `./driver`.
+  `SearchPassengerOffersScreen.tsx` untouched; it is the **only** importer of `../api/geo` and uses
+  exactly those symbols (checked). Driver app `tsc` **40 → 36**: both `Cannot find module
+  '../api/geo'` errors plus two downstream `implicitly has an 'any' type` errors gone, **zero added**.
+- [x] 2. **API: front-price comparison — DONE 2026-08-03.** New private `parsePrice(value, field)`
+  coerces with `Number()` and rejects non-finite input with a **400** ("must be a number") instead of
+  letting it reach Postgres as a 500. Both price checks now compare numbers. Original check order and
+  messages preserved, so numeric input behaves exactly as before.
+- [x] 3. **API: `seats_free` on update — DONE 2026-08-03.** `updateOffer` computes
+  `booked = offer.seats_total - offer.seats_free` and sets `seats_free = newSeatsTotal - booked`;
+  shrinking `seats_total` below `booked` is a 400 naming the booked count. The explicit `seats_free`
+  key sits **after** the `...data` spread, so a client-sent `seats_free` cannot override the guard
+  (`start_at` likewise). The remaining mass-assignment surface is recorded in a code comment → T-026.
+- [x] 4. **Static verification — DONE 2026-08-03.** `tsc`: API **285 → 285 (identical set,
+  measured against a `git stash` of exactly this file)**, driver app **40 → 36**, user app **12**,
+  admin **0**. **No new error anywhere.**
+  27/27 runtime checks green via `<scratchpad>/check-driver-offer-prices.mts`
+  (`npx tsx`, no DB — `validateOfferData` is pure). **The bug was proven, not assumed:** the same
+  script run against a `git stash` of the pre-fix file **fails 3 of its 5 repro cases** with the
+  false 400, and passes all 5 after. (The `mixed number + string` case passed before too — one
+  numeric side forces coercion, which is exactly why this hid for so long.)
+  ⚠️ Step 3's arithmetic is **not** covered by a runtime check — it is inline in `updateOffer`,
+  which needs a DB. It is verified by reading only, so step 5(d) is the real test.
 - [ ] 5. **Owner: deploy + smoke test.** Deploy the API to test3, rebuild the driver app. Then:
   (a) open the passenger-order search screen — it must render at all; (b) create an offer with a
   front-seat price of 60000 against a 5000 base; (c) reopen it for edit and save **without
@@ -112,15 +124,39 @@ That is the whole list. Nothing else is touched.
   this commit.
 
 ## Session notes (one line per work session)
-- _(empty — first session starts at step 1)_
+- 2026-08-03: **Plan approved; steps 1–4 DONE in one session.** Two files touched, nothing else.
+  T-022 turned out to be a 3-line re-export shim, not a port (`api/driver.ts` already had all four
+  symbols) — driver `tsc` 40 → 36. The front-price bug was **reproduced against the pre-fix code**
+  (3/5 repro cases threw a false 400) and 27/27 checks pass after. API `tsc` 285 → 285, identical
+  set. Steps 5–6 are the owner's: deploy + device smoke test, then commit.
 
 ## Resume point (for the next chat)
-**Nothing implemented yet. Plan written 2026-08-03, awaiting owner approval; no code may be
-written before that (CLAUDE.md rule 3).** Start at step 1.
+**Steps 1–4 are DONE and verified statically. Steps 5 (owner deploy + smoke test) and 6 (commit)
+remain. Nothing is committed yet** — two files on disk:
+- **NEW** `driver-app-standalone/api/geo.ts`
+- `api,admin,db/apps/api/src/services/DriverOfferService.ts`
+
+**Step 5 is the only thing that can actually prove any of this.** Everything so far is `tsc` plus
+pure-function checks; no device, no DB, no deploy from this machine. Run the four smoke tests in
+step 5 in order — **5(c) is the exact repro** of the front-price defect and **5(d) is the only test
+of step 3's arithmetic**, which has no runtime coverage at all.
 
 The three defects and their exact evidence are written up in the **Current state** section above —
 a cold-start chat does not need to re-derive them, and should not re-audit the flow. The full
 16-finding audit that produced this card is summarised in the **T-026** entry in `docs/TODO.md`.
+
+Proposed commit message for step 6:
+```
+fix(driver-offers): unblock the geo import and stop two create/edit defects (T-025)
+
+- driver app: add api/geo.ts re-exporting the geo client from api/driver.ts, so
+  SearchPassengerOffersScreen can finally bundle (absorbs T-022)
+- api: compare prices numerically — pg returns DECIMAL as a string, so
+  "12000.00" < "5000.00" was lexicographically true and rejected every edit of
+  an offer whose front price had more digits than the base price
+- api: keep booked seats when seats_total changes, instead of resetting
+  seats_free and re-selling seats that were already confirmed
+```
 
 **When this card is done:** T-018 unparks. Its plan is `docs/PLAN-T018.md`, still live at step 9;
 resume by walking `docs/CHECKLIST.md`. Move T-018's plan back into `docs/PLAN.md` at that point, or

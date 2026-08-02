@@ -95,29 +95,52 @@ export class DriverOfferService {
       }
     }
 
+    // Prices arrive as EITHER numbers or strings. price_per_seat and
+    // front_price_per_seat are DECIMAL(10,2), and pg returns numeric as a string
+    // (there is no setTypeParser override in this project), so an offer loaded
+    // for edit round-trips "5000.00" straight back to us. Coerce before every
+    // comparison: `<` between two strings is lexicographic, which made
+    // "12000.00" < "5000.00" evaluate to TRUE and rejected every valid edit of an
+    // offer whose front price had more digits than the base price.
+    const price = this.parsePrice(data.price_per_seat, 'price_per_seat');
+    const frontPrice = this.parsePrice(data.front_price_per_seat, 'front_price_per_seat');
+
     // Validate price_per_seat
-    if (data.price_per_seat !== undefined) {
+    if (price !== undefined) {
       const currency = data.currency || 'UZS';
-      if (currency === 'UZS' && data.price_per_seat < this.MIN_PRICE_UZS) {
+      if (currency === 'UZS' && price < this.MIN_PRICE_UZS) {
         throw new AppError(`price_per_seat must be at least ${this.MIN_PRICE_UZS} UZS`, 400);
       }
-      if (data.price_per_seat <= 0) {
+      if (price <= 0) {
         throw new AppError('price_per_seat must be greater than 0', 400);
       }
     }
 
     // Validate front_price_per_seat (if provided)
-    if (data.front_price_per_seat !== undefined) {
-      if (data.front_price_per_seat <= 0) {
+    if (frontPrice !== undefined) {
+      if (frontPrice <= 0) {
         throw new AppError('front_price_per_seat must be greater than 0', 400);
       }
-      if (
-        data.price_per_seat !== undefined &&
-        data.front_price_per_seat < data.price_per_seat
-      ) {
+      if (price !== undefined && frontPrice < price) {
         throw new AppError('front_price_per_seat must be greater than or equal to price_per_seat', 400);
       }
     }
+  }
+
+  /**
+   * Coerce a price field to a number for comparison.
+   * Returns undefined only when the field was not sent at all (partial update).
+   * Non-numeric input is a 400 here instead of an integer-syntax 500 from Postgres.
+   */
+  private static parsePrice(value: unknown, field: string): number | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    const num = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(num)) {
+      throw new AppError(`${field} must be a number`, 400);
+    }
+    return num;
   }
 
   /**
@@ -390,11 +413,35 @@ export class DriverOfferService {
       await this.checkVehicleOwnership(userId, data.vehicle_id);
     }
 
+    // Keep the seats that are already sold. This used to reset seats_free to the
+    // new seats_total, which handed every confirmed booking back to the pool — and
+    // the offer wizard always sends seats_total, so it fired on EVERY edit and let
+    // the same seat be sold twice. OfferPassengerService decrements seats_free when
+    // a passenger is confirmed and restores it on cancel, so the booked count is
+    // the difference between the two columns.
+    let seatsFree = offer.seats_free;
+    if (data.seats_total !== undefined) {
+      const bookedSeats = offer.seats_total - offer.seats_free;
+      const newSeatsTotal = Number(data.seats_total);
+      if (newSeatsTotal < bookedSeats) {
+        throw new AppError(
+          `Cannot reduce seats_total to ${newSeatsTotal}: ${bookedSeats} seat(s) are already booked`,
+          400
+        );
+      }
+      seatsFree = newSeatsTotal - bookedSeats;
+    }
+
     // Update offer
+    // ⚠️ This still spreads `data` (= req.body) into the model, so user_id, status,
+    // currency, rejection_reason, reviewed_by and reviewed_at remain client-writable.
+    // (seats_free and start_at are safe — the explicit keys below the spread win.)
+    // Whitelisting is T-026 — the same mass-assignment fix already applied to
+    // PassengerOfferService.
     await offer.update({
       ...data,
       start_at: data.start_at ? new Date(data.start_at) : offer.start_at,
-      seats_free: data.seats_total !== undefined ? data.seats_total : offer.seats_free
+      seats_free: seatsFree
     });
 
     // Update stops if provided (allows editing stops for all offer statuses)
