@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-08-02 (2) — driver-connection review, six owner decisions, deployed to test3
+- **Task:** Owner asked for the same end-to-end review as the create-offer one, applied to the
+  passenger-create + driver-connection path — "don't miss anything".
+- **The finding that matters most:** the driver-connection leg **has no UI in either app**.
+  `joinPassengerOffer` / `getMyJoinRequests` / `cancelJoinRequest` (driver) and
+  `getOfferDrivers` / `confirmDriver` / `rejectDriver` (user) exist as API clients with **zero
+  call sites**. `MyPassengerOffersScreen` prints "3 drivers interested" with nothing to tap. So
+  the backend was reviewed and fixed for screens that do not exist yet. New cards below.
+- **Eight defects found and fixed** before the owner decisions:
+  1. `confirmDriver` let a passenger confirm a **second** driver — every other row stays
+     'pending', and only that row was checked. Two confirmed cars for one ride.
+  2. `offered_price_per_seat` had no type check: `undefined <= 0` and `'abc' <= 0` are both
+     false, so garbage became `NaN` and died in Postgres as a 500.
+  3. `GET /public/passenger-offers/:id` is **unauthenticated** and returned the full `drivers`
+     include — every rival driver's name, plate, car and bid price, to anyone.
+  4. Non-numeric `:id` → Postgres integer error → 500 instead of 404 (three entry points).
+  5. `?status=<typo>` on join-requests → Postgres enum error → 500.
+  6. `?date=<garbage>` → Invalid Date → Sequelize RangeError → 500.
+  7. `successResponse(…, 201)` argument-order bug again in `joinOffer` (+ `getOfferDrivers`
+     never forwarded `req`, so its errors were always Uzbek).
+  8. Nine `await response.json()` error paths with no `.catch` across both offer API clients —
+     same JSON-parse trap as `geo.ts`.
+- **Six owner decisions (2026-08-02) — binding, do NOT re-ask:**
+  1. **Price-less orders stay visible when a driver filters by budget.** `max_price` is now
+     `price <= budget OR price IS NULL`. Most new orders have no price, so the old `<=` made the
+     driver's list look empty.
+  2. **Confirming a driver no longer finishes the trip.** New status **`driver_found`** between
+     "picked" and "travelled"; the losing drivers are auto-rejected
+     (`rejection_reason: 'another_driver_chosen'`) and notified; `completed` is now reachable
+     only from `driver_found`; `cancelOffer` accepts `driver_found`; `archiveOffer` refuses it
+     (archiving would strand the confirmed driver silently).
+  3. **Each person's language is stored** (`users.language`) and every push is written in the
+     **recipient's** language. All 11 call sites across 4 services changed — the two loops
+     (cancel offer → many drivers, cancel trip → many passengers) now resolve per person.
+     `getLanguageFromHeaders` deliberately stays for HTTP error messages, which the caller reads.
+  4. **Seat-count trap: documented, not changed.** `seats_offered` defaults to 1 while a T-018
+     salon booking needs 3–4; a comment at the check warns whoever builds the join screen.
+  5. **`total_offered_price = price × seats_needed` is the intended rule** — the passenger does
+     not pay for the driver's spare seats. Comment says so, and says not to "fix" it.
+  6. **A driver who cancels can never re-offer — intentional**, anti-spam. Comment records it,
+     plus the fact that the unique `(offer_id, driver_id)` index enforces it anyway.
+- **Migration `20260802000001-driver-found-status-and-user-language.cjs`** — enum value +
+  `users.language`. **Applied on test3 by the owner, `migrated (0.014s)`.** The deploy script
+  resets the namespace, but `db:migrate` ran only this one migration, which proves `SequelizeMeta`
+  survived → the volume kept its data.
+- **Deployed:** full `deploy.sh` run, all three pods Running. This is the first deploy carrying
+  the T-018 API + today's fixes.
+- **New `docs/CHECKLIST.md`** — plain-language manual test list for the whole system, marked
+  🔴 changed-today / ⚪ normal / 🚫 screen-doesn't-exist. Also the plan for T-010's future
+  automatic tests (server rule tests first — every bug found today was a server rule).
+- **Problems / still open:** `driver-app-standalone/api/geo.ts` is **still missing**, so the
+  driver's search screen cannot bundle. Everything driver-facing is untestable until it lands.
+- **tsc:** API **289 → 285**, admin **0**, user app **12**, driver app **40**. No new errors.
+- **Commit:** owner committed and pushed as `1117481`, then deployed.
+
+---
+
 ## 2026-08-02 — T-018 step 9: first real run — two crashes + the rate-limiter proxy bug
 - **Task:** Owner pasted a test3 API log and a Metro log. Not a planned step — three defects
   read straight out of the logs.

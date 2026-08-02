@@ -11,12 +11,24 @@
   (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
   steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
   Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE
-  2026-07-29. Step 9 UNDERWAY: API deployed to test3 and the new form has created a real offer;
-  3 defects found in the owner's logs and fixed 2026-08-02 (trust-proxy rate limiting, user-app
-  crash on a null price, driver-app missing `formatNumberWithSpaces` export) — uncommitted.
-  🛑 Blocked on porting `api/geo.ts` into the driver app before the driver side can be verified.
-  Step 10 is the owner's: two phones, small + large.**
-  → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN.md` step 9
+  2026-07-29. Step 9 UNDERWAY: committed as `1117481` and DEPLOYED to test3 2026-08-02 (migration
+  `20260802000001` applied, `migrated (0.014s)`, all pods Running). 11 defects fixed 2026-08-02
+  across two review rounds + 6 owner decisions implemented — see `docs/JOURNAL.md` 2026-08-02 (2).
+  🛑 Still blocked on the geo import (now **T-025 step 1**) before the driver side can be verified.
+  Step 10 is the owner's: walk `docs/CHECKLIST.md` on two phones.**
+  ⚠️ **Its plan now lives in `docs/PLAN-T018.md`** (moved intact 2026-08-03 so T-025 could use
+  `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
+  → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
+
+- [ ] T-025 (P1) **Driver offer create/edit: unblock the geo import + two create-offer hotfixes.**
+  Absorbs **T-022** (the missing `api/geo.ts`) as step 1 — and it is *not* a port: the driver app's
+  own `api/driver.ts` already exports all four symbols, so it is a 3-line re-export shim. Plus the
+  two create-offer defects that bite in normal use: editing any offer with a front-seat price 400s
+  on a **string** comparison (`"12000.00" < "5000.00"` is true), and every edit resets `seats_free`
+  to `seats_total`, re-selling seats that are already booked. Found 2026-08-03 while auditing the
+  driver create-offer flow end-to-end. → `docs/PLAN.md`
+
+> **T-022 is absorbed into T-025 step 1** — do not start it separately.
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
@@ -47,6 +59,32 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-026 (P1) **Driver-offer backend + app hardening** — the rest of the 2026-08-03 audit that
+  T-025 deliberately left alone. Backend: `DriverOfferService.updateOffer` still spreads `req.body`
+  into the model (`user_id`/`status`/`seats_free`/`reviewed_by` are client-writable — the same
+  mass-assignment hole already fixed in `PassengerOfferService`); `validateOfferData` checks no
+  types and no presence, so a missing `vehicle_id`, a non-numeric `seats_total`/`price_per_seat` or
+  a garbage `start_at` all become **500s**; non-numeric `:id` → 500 instead of 404 on 6 endpoints;
+  stops are inserted outside a transaction with no cap and can collide on the unique
+  `(offer_id, order_no)` index; `front_price ≥ price` is not checked against the stored row on
+  PATCH; `archiveOffer` has no status check and strands confirmed passengers silently.
+  Driver app: 8 unguarded `response.json()` calls in `api/driverOffers.ts` (+ all of `api/driver.ts`)
+  — the offer limiter returns a **plain-text** body, so the 21st create in 15 min throws
+  `JSON Parse error`; `parseLocationText` fans out country×province city fetches when opening an
+  offer for edit; hard-coded Uzbek strings in `OfferWizardScreen`. Found 2026-08-03.
+- [ ] T-023 (P1) **Driver app: "I'll take this order" screen.** The driver can browse passenger
+  orders but has **no way to offer on one** — `joinPassengerOffer` exists in
+  `driver-app-standalone/api/passengerOffers.ts` with zero call sites, and the only navigation
+  target (`PassengerOfferDetails`) is unregistered (T-021). The API side is finished and
+  reviewed. ⚠️ The screen **must send a real `seats_offered`**: it defaults to 1 while a T-018
+  salon booking needs 3–4, and the server refuses anything less than `seats_needed`.
+  Needs T-022 first. Found 2026-08-02.
+- [ ] T-024 (P1) **User app: "drivers who offered" screen.** `MyPassengerOffersScreen` shows
+  "N drivers interested (M pending)" with **nothing to tap** — the passenger is told drivers
+  arrived and cannot answer them. `getOfferDrivers` / `confirmDriver` / `rejectDriver` exist in
+  `user-app-standalone/api/passengerOffers.ts` with zero call sites. Accepting sets the offer to
+  `driver_found` and auto-rejects + notifies the losing drivers (server side already done).
+  Found 2026-08-02.
 - [ ] T-019 (P1) **[OWNER OR-008]** User registration → Figma layout (`K_Reg001.png`); move the
   referral block (Tel/ID/PROMO) to a second screen. App-only; backend fields already exist.
   → `docs/OWNER_REQUESTS.md` OR-008

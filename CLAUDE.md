@@ -38,6 +38,7 @@ The chat is temporary; these files are the permanent memory of the project.
 | `docs/TODO.md` | Task board: Now / Next / Later / Done |
 | `docs/PLAN.md` | Step-by-step plan of the CURRENT task (checkboxes) |
 | `docs/JOURNAL.md` | Daily diary: what happened, decisions, problems |
+| `docs/CHECKLIST.md` | Manual test list in plain language — run after every deploy |
 
 ## 3. Commands
 
