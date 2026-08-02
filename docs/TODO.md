@@ -20,33 +20,56 @@
   `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
   → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
 
-- [ ] T-025 (P1) **Driver offer create/edit: unblock the geo import + two create-offer hotfixes.**
-  Absorbs **T-022** (the missing `api/geo.ts`) as step 1 — and it is *not* a port: the driver app's
-  own `api/driver.ts` already exports all four symbols, so it is a 3-line re-export shim. Plus the
-  two create-offer defects that bite in normal use: editing any offer with a front-seat price 400s
-  on a **string** comparison (`"12000.00" < "5000.00"` is true), and every edit resets `seats_free`
-  to `seats_total`, re-selling seats that are already booked. Found 2026-08-02 (3) while auditing the
-  driver create-offer flow end-to-end.
-  **Steps 1–7 ALL DONE 2026-08-02 (3).** Steps 1–3 committed by the owner as `0371cbd`; **steps
-  5–7 are uncommitted** (6 files). Steps 5–7 came from a second audit (passenger↔driver-offer leg)
-  and are all user-visible: the passenger was **charged a front-seat premium that was never
-  displayed** (same string-compare root cause, user app this time); a cancelled offer gave a
-  **blank screen with no way back** (`successResponse`'s 404 landed in the *message* slot → HTTP
-  200 + `offer:null`); and every price rendered as `60 000.00`.
-  `tsc` API **285 → 282** (the 3 removed errors *are* the 3 arg-order bugs — they were hiding in
-  the baseline), user **12 → 12**, driver **40 → 36**, admin **0**; 27/27 + 20/20 runtime checks;
-  two bugs reproduced against pre-fix code.
-  **🛑 Only step 8 (owner: deploy API + rebuild BOTH apps, 7 smoke tests) and step 9 (commit)
-  remain.** Nothing has run on a device or a DB. → `docs/PLAN.md`
-
-> **T-022 is absorbed into T-025 step 1** — code-complete and committed in `0371cbd`, but the
-> driver search screen has **not been opened on a device yet**, so it is not "done" until smoke
-> test 8(a) passes. Do not start it as a separate card.
+- [ ] T-026A (P1) **Offer concurrency: the confirmPassenger overbooking race + the single front seat.**
+  The two genuine overbooking paths carved out of T-026 part A (audit 2, 2026-08-02 (3)) — the only
+  findings there that lose money rather than throw a 500.
+  1. **Lost-update race.** `confirmPassenger` (`OfferPassengerService.ts:263-276`) reads
+     `offer.seats_free`, checks it, then writes `seats_free - n` with nothing in between. Two
+     concurrent confirms both pass the check and **4 seats sell on a 2-seat offer**. `cancelJoin`
+     (:429-431) restores seats the same unsafe way, so both must move together or the race relocates.
+  2. **Nothing enforces one front seat.** Neither `joinOffer` nor `confirmPassenger` checks whether
+     another passenger already holds it — N passengers each book the front seat and all get
+     confirmed. Two people are sold the same physical seat.
+  3. Rides along, same lines: no transaction spans the join update and the offer update in either
+     function, and `confirmPassenger` never re-checks that the offer is still `published` and not
+     yet started — so a driver can confirm passengers onto a **cancelled** offer.
+  **Owner decisions 2026-08-02:** app-level enforcement only (row lock in a transaction, no
+  migration, no schema change); T-025 parked to keep *Now* at two.
+  **Steps 1–7 DONE 2026-08-02** — all four defects fixed in `OfferPassengerService.ts` via one
+  mechanism (`sequelize.transaction()` + `lock: tx.LOCK.UPDATE` on the offer row), plus the new
+  `offers.frontSeatTaken` key in three locales. ⚠️ The lock had to be taken on the offer row
+  **alone**: Postgres refuses `FOR UPDATE` on the nullable side of an outer join, which is what
+  Sequelize emits when `lock` meets `include` — the obvious version would have 500'd in production.
+  `tsc` API **282 → 282**, the two in-file errors **proven pre-existing** via `git stash`; 21/21
+  i18n runtime checks. API-only — **neither app needs a rebuild for this card**.
+  **🛑 Only step 8 (owner: deploy + 5 tests, incl. the concurrency repro script) and step 9
+  (commit) remain.** Nothing has run against a DB. → `docs/PLAN.md`
 
 ## ⏸️ Parked — implemented, awaiting owner device test
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
 > only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
 > `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
+- [ ] T-025 (P1) **Driver offer create/edit: unblock the geo import + two create-offer hotfixes.**
+  Parked 2026-08-02 to make room for T-026A — **not finished**, but nothing left is Claude's.
+  Absorbs **T-022** (the missing `api/geo.ts`) as step 1 — and it was *not* a port: the driver app's
+  own `api/driver.ts` already exports all four symbols, so a 3-line re-export shim did it. Plus the
+  create-offer defects that bite in normal use: editing any offer with a front-seat price 400s
+  on a **string** comparison (`"12000.00" < "5000.00"` is true), every edit reset `seats_free`
+  to `seats_total` (re-selling booked seats), the passenger was **charged a front-seat premium that
+  was never displayed**, a cancelled offer gave a **blank screen with no way back**
+  (`successResponse`'s 404 landed in the *message* slot → HTTP 200 + `offer:null`), and every price
+  rendered as `60 000.00`.
+  **Steps 1–7 + 9 ALL DONE 2026-08-02**, committed as `0371cbd` (steps 1–3) and `178a452` (steps 5–7).
+  `tsc` API **285 → 282** (the 3 removed errors *are* 3 of the bugs — they were hiding in the
+  baseline), user **12 → 12**, driver **40 → 36**, admin **0**; 27/27 + 20/20 runtime checks;
+  two bugs reproduced against pre-fix code.
+  **🛑 Only step 8 remains — owner: deploy the API + rebuild BOTH apps, then 7 smoke tests.**
+  Nothing has run on a device or a DB. ⚠️ Its plan is **`docs/PLAN-T025.md`** (moved intact
+  2026-08-02, same as T-018's). → `docs/PLAN-T025.md` step 8, `docs/CHECKLIST.md`
+
+> **T-022 is absorbed into T-025 step 1** — code-complete and committed in `0371cbd`, but the
+> driver search screen has **not been opened on a device yet**, so it is not "done" until smoke
+> test 8(a) passes. Do not start it as a separate card.
 - [ ] T-017 (P1) Driver app: infinite profile-check loop after OTP login — `AuthContext` identity
   churn + a wrong `profile_complete` watcher made `RootNavigator` re-check forever until the API
   rate-limited the app. **Fix implemented (4 files) and committed (`a1ecedd`); tsc at baseline.
@@ -79,13 +102,9 @@
   **A. Passenger↔driver-offer connection leg** (audit 2, findings 4–17). ⚠️ Unlike the OfferDriver
   leg, this one **is fully wired in both apps** (`OfferDetailsScreen` → join; `OffersListScreen` →
   `OfferPassengers` → confirm/reject) — so these fire in real use, not hypothetically.
-  *Overbooking:* `confirmPassenger` (`OfferPassengerService.ts:263-276`) reads `seats_free`, checks,
-  then writes `seats_free - n` — two concurrent confirms both pass and 4 seats sell on a 2-seat
-  offer (needs a transaction + row lock or `decrement()`); no transaction spans the join update and
-  the offer update in either `confirmPassenger` or `cancelJoin` (:422-432); **nothing enforces that
-  there is only one front seat** — N passengers can each book it and all be confirmed;
-  `confirmPassenger` never checks the offer is still published and not yet started, so a driver can confirm
-  passengers onto a **cancelled** offer and decrement its seats.
+  ⚠️ *Overbooking:* **carved out into T-026A** (2026-08-02) — the race, the missing transactions,
+  the single-front-seat rule and the confirm-onto-a-cancelled-offer hole are all that card's, not
+  this one's. Do not re-plan them here.
   *500s:* `seats_requested` is type-unchecked **and** checked in the wrong order — the availability
   test (:121) runs before the range test (:126), so `"abc"` passes both and dies as `NaN` in
   Postgres (journal defect #2, never applied here); `2.5` passes and Postgres rounds it to 3 seats;

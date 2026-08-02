@@ -85,7 +85,9 @@
       "Bash(git mv *)",
       "Bash(tee \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/2a646d1f-b46d-4428-a493-1a8c93c67162/scratchpad/tsc-driver-before.txt\")",
       "Bash(grep -E \",\\\\s*[0-9]{3}\\\\s*\\\\\\)\")",
-      "Bash(grep -v \"^\\\\s*//\")"
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(node --check confirm-race.mjs)",
+      "Bash(node -e \"import\\('./confirm-race.mjs'\\).catch\\(e=>console.log\\('parse-only check:', e.message\\)\\)\")"
     ]
   }
 }

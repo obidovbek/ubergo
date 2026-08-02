@@ -178,6 +178,7 @@ export default {
     noPermissionReject: 'You do not have permission to reject this request',
     noPermissionCancel: 'You do not have permission to cancel this request',
     alreadyProcessed: 'This request has already been processed',
+    frontSeatTaken: 'The front seat is already taken',
     cannotCancel: 'This request cannot be cancelled',
     offerNotFoundOrNoPermission: 'Offer not found or you do not have permission',
     vehicleNotFound: 'Vehicle not found or does not belong to you',

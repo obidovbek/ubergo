@@ -5,6 +5,7 @@
 
 import { Op } from 'sequelize';
 import {
+  sequelize,
   OfferPassenger,
   DriverOffer,
   User,
@@ -259,21 +260,95 @@ export class OfferPassengerService {
       throw new AppError(t('offers.alreadyProcessed', language), 400);
     }
 
-    // Check if enough seats available
-    if (passengerJoin.seats_requested > offer.seats_free) {
-      throw new AppError(t('offers.onlySeatsAvailable', language, { count: offer.seats_free }), 400);
-    }
+    // Every decision about whether this seat can be sold is re-made inside a
+    // transaction that holds a row lock on the offer, so two confirms racing on
+    // the same offer serialise instead of both reading the same seats_free and
+    // both decrementing it. The checks above still run first: they are the cheap
+    // path and give the same errors without touching a lock.
+    //
+    // The lock is taken on the offer row ALONE — Postgres refuses FOR UPDATE on
+    // the nullable side of an outer join, which is what Sequelize generates if
+    // `lock` is combined with `include`.
+    await sequelize.transaction(async (tx) => {
+      const lockedOffer = await DriverOffer.findByPk(offer.id, {
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
 
-    // Update passenger join status
-    await passengerJoin.update({
-      status: 'confirmed',
-      confirmed_at: new Date()
+      if (!lockedOffer) {
+        throw new AppError(t('offers.notFound', language), 404);
+      }
+
+      // Re-read the join under the lock too: the pending check is a
+      // read-modify-write as well, and two confirms of the SAME request would
+      // otherwise both pass it and decrement the offer twice.
+      const lockedJoin = await OfferPassenger.findByPk(passengerJoinId, {
+        transaction: tx
+      });
+
+      if (!lockedJoin) {
+        throw new AppError(t('offers.joinRequestNotFound', language), 404);
+      }
+
+      if (lockedJoin.status !== 'pending') {
+        throw new AppError(t('offers.alreadyProcessed', language), 400);
+      }
+
+      // The offer must still be sellable. Without this a driver can confirm
+      // passengers onto an offer he already cancelled, and decrement its seats.
+      if (lockedOffer.status !== 'published') {
+        throw new AppError(t('offers.notAvailable', language), 400);
+      }
+
+      if (new Date(lockedOffer.start_at) < new Date()) {
+        throw new AppError(t('offers.alreadyStarted', language), 400);
+      }
+
+      // Check if enough seats available
+      if (lockedJoin.seats_requested > lockedOffer.seats_free) {
+        throw new AppError(
+          t('offers.onlySeatsAvailable', language, { count: lockedOffer.seats_free }),
+          400
+        );
+      }
+
+      // There is only one front seat in the car, so at most one confirmed
+      // booking may hold it. Pending requests do not reserve it — whoever the
+      // driver confirms first gets it.
+      if (lockedJoin.is_front_seat) {
+        const frontSeatTaken = await OfferPassenger.count({
+          where: {
+            offer_id: lockedOffer.id,
+            is_front_seat: true,
+            status: 'confirmed'
+          },
+          transaction: tx
+        });
+
+        if (frontSeatTaken > 0) {
+          throw new AppError(t('offers.frontSeatTaken', language), 400);
+        }
+      }
+
+      // Update passenger join status
+      await lockedJoin.update(
+        {
+          status: 'confirmed',
+          confirmed_at: new Date()
+        },
+        { transaction: tx }
+      );
+
+      // Update offer seats_free
+      await lockedOffer.update(
+        { seats_free: lockedOffer.seats_free - lockedJoin.seats_requested },
+        { transaction: tx }
+      );
     });
 
-    // Update offer seats_free
-    await offer.update({
-      seats_free: offer.seats_free - passengerJoin.seats_requested
-    });
+    // The controller serialises this instance (with its eager-loaded offer), so
+    // bring it back in step with what was just committed.
+    await passengerJoin.reload();
 
     // The passenger reads this, so it is written in *her* language.
     const passengerLanguage = await getUserLanguage(passengerJoin.passenger_id);
@@ -416,20 +491,61 @@ export class OfferPassengerService {
     }
 
     const offer = (passengerJoin as any).offer as DriverOffer;
-    const wasConfirmed = passengerJoin.status === 'confirmed';
 
-    // Update passenger join status
-    await passengerJoin.update({
-      status: 'cancelled',
-      cancelled_at: new Date()
+    // Whether the seats actually come back is decided under the lock, not by the
+    // unlocked read above — a driver confirm may land in between. The push below
+    // reports this value, so it has to be the committed truth.
+    let wasConfirmed = false;
+
+    // Restoring seats is a read-modify-write like confirmPassenger's, so it
+    // takes the same lock on the same row. Without this a cancel racing a
+    // confirm loses one of the two updates and leaves seats_free wrong.
+    await sequelize.transaction(async (tx) => {
+      const lockedOffer = await DriverOffer.findByPk(offer.id, {
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
+
+      if (!lockedOffer) {
+        throw new AppError(t('offers.notFound', language), 404);
+      }
+
+      const lockedJoin = await OfferPassenger.findByPk(passengerJoinId, {
+        transaction: tx
+      });
+
+      if (!lockedJoin) {
+        throw new AppError(t('offers.joinRequestNotFound', language), 404);
+      }
+
+      // Re-assert under the lock: the driver may have confirmed or rejected
+      // this request between the read above and this transaction.
+      if (!['pending', 'confirmed'].includes(lockedJoin.status)) {
+        throw new AppError(t('offers.cannotCancel', language), 400);
+      }
+
+      wasConfirmed = lockedJoin.status === 'confirmed';
+
+      // Update passenger join status
+      await lockedJoin.update(
+        {
+          status: 'cancelled',
+          cancelled_at: new Date()
+        },
+        { transaction: tx }
+      );
+
+      // If was confirmed, restore seats
+      if (wasConfirmed) {
+        await lockedOffer.update(
+          { seats_free: lockedOffer.seats_free + lockedJoin.seats_requested },
+          { transaction: tx }
+        );
+      }
     });
 
-    // If was confirmed, restore seats
-    if (wasConfirmed) {
-      await offer.update({
-        seats_free: offer.seats_free + passengerJoin.seats_requested
-      });
-    }
+    // Keep the instance the controller serialises in step with the commit.
+    await passengerJoin.reload();
 
     // The driver reads this, so it is written in *his* language.
     const driverLanguage = await getUserLanguage(offer.user_id);

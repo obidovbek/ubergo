@@ -179,6 +179,7 @@ export default {
     noPermissionReject: 'Sizda bu so\'rovni rad etish uchun ruxsat yo\'q',
     noPermissionCancel: 'Sizda bu so\'rovni bekor qilish uchun ruxsat yo\'q',
     alreadyProcessed: 'Bu so\'rov allaqachon qayta ishlangan',
+    frontSeatTaken: 'Oldingi o\'rin allaqachon band qilingan',
     cannotCancel: 'Bu so\'rovni bekor qilish mumkin emas',
     offerNotFoundOrNoPermission: 'E\'lon topilmadi yoki sizda ruxsat yo\'q',
     vehicleNotFound: 'Transport vositasi topilmadi yoki sizga tegishli emas',

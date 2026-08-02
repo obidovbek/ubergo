@@ -178,6 +178,7 @@ export default {
     noPermissionReject: 'У вас нет разрешения на отклонение этого запроса',
     noPermissionCancel: 'У вас нет разрешения на отмену этого запроса',
     alreadyProcessed: 'Этот запрос уже обработан',
+    frontSeatTaken: 'Переднее место уже занято',
     cannotCancel: 'Этот запрос нельзя отменить',
     offerNotFoundOrNoPermission: 'Объявление не найдено или у вас нет разрешения',
     vehicleNotFound: 'Транспортное средство не найдено или вам не принадлежит',
