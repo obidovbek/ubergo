@@ -26,6 +26,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { resolveImageUrl } from '../utils/imageUrl';
+import {
+  type DateBound,
+  isDateWithinBound,
+  selectableDays,
+  selectableMonthValues,
+  selectableYears,
+} from '../utils/dateLimits';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { validateForm, validateField, isValidDate, type ValidationRule } from '../utils/validation';
 import { updateLicense, getDriverProfile, uploadImage, fetchCountries, type CountryOption } from '../api/driver';
@@ -196,12 +204,14 @@ export const DriverLicenseScreen: React.FC = () => {
           license_back_url: licenseDataFromApi.license_back_url || prev.license_back_url,
         }));
 
-        // Load photos
+        // Load photos. The API stores a host-less /uploads/... path; only the
+        // DISPLAY state is made absolute — licenseData keeps the relative value,
+        // which is what the server expects back on save.
         if (licenseDataFromApi.license_front_url) {
-          setPhotoFrontUri(licenseDataFromApi.license_front_url);
+          setPhotoFrontUri(resolveImageUrl(licenseDataFromApi.license_front_url));
         }
         if (licenseDataFromApi.license_back_url) {
-          setPhotoBackUri(licenseDataFromApi.license_back_url);
+          setPhotoBackUri(resolveImageUrl(licenseDataFromApi.license_back_url));
         }
 
         // Load emergency contacts if exists
@@ -261,7 +271,7 @@ export const DriverLicenseScreen: React.FC = () => {
             currentDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
             issueDate.setHours(0, 0, 0, 0);
             if (issueDate > currentDate) {
-              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+              error = t('formValidation.dateCannotBeFuture');
             }
           }
         }
@@ -278,7 +288,7 @@ export const DriverLicenseScreen: React.FC = () => {
             currentDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
             categoryDate.setHours(0, 0, 0, 0);
             if (categoryDate > currentDate) {
-              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+              error = t('formValidation.dateCannotBeFuture');
             }
           }
         }
@@ -340,17 +350,17 @@ export const DriverLicenseScreen: React.FC = () => {
   const handleDateConfirm = () => {
     if (!datePickerField) return;
 
-    // Validate issue_date and category dates cannot be in the future
-    if (datePickerField === 'issue_date' || datePickerField.startsWith('category_')) {
-      const currentDate = new Date();
-      currentDate.setHours(0, 0, 0, 0);
-      const selectedDate = new Date(tempDate);
-      selectedDate.setHours(0, 0, 0, 0);
-
-      if (selectedDate > currentDate) {
-        showToast.error(t('common.error'), 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas');
-        return;
-      }
+    // The wheels are independent, so a year picked after a day can still land
+    // outside the bound — check on confirm as well as constraining the lists.
+    const bound = dateBoundFor(datePickerField);
+    if (!isDateWithinBound(tempDate, bound)) {
+      showToast.error(
+        t('common.error'),
+        bound === 'notFuture'
+          ? t('formValidation.dateCannotBeFuture')
+          : t('formValidation.dateCannotBePast')
+      );
+      return;
     }
 
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
@@ -375,28 +385,13 @@ export const DriverLicenseScreen: React.FC = () => {
     setShowDatePicker(true);
   };
 
-  const generateDays = () => {
-    const days = [];
-    const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
+  // A licence issue date and each category's date are past-facing. This screen
+  // hand-rolled the rule first; the logic now lives in utils/dateLimits so the
+  // passport and taxi-licence screens share it instead of copying it.
+  const dateBoundFor = (field: string | null): DateBound =>
+    field === 'issue_date' || field?.startsWith('category_') ? 'notFuture' : 'any';
 
-    // For issue_date and category dates, if current year and month are selected, restrict days to current day and earlier
-    let maxAllowedDay = maxDay;
-    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth();
-      const currentDay = currentDate.getDate();
-
-      if (tempDate.getFullYear() === currentYear && tempDate.getMonth() === currentMonth) {
-        maxAllowedDay = currentDay;
-      }
-    }
-
-    for (let i = 1; i <= maxAllowedDay; i++) {
-      days.push(i);
-    }
-    return days;
-  };
+  const generateDays = () => selectableDays(tempDate, dateBoundFor(datePickerField));
 
   const generateMonths = () => {
     const allMonths = [
@@ -414,41 +409,11 @@ export const DriverLicenseScreen: React.FC = () => {
       { value: 11, label: t('common.monthDecember') },
     ];
 
-    // For issue_date and category dates, if current year is selected, restrict months to current month and earlier
-    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth();
-
-      if (tempDate.getFullYear() === currentYear) {
-        return allMonths.filter(month => month.value <= currentMonth);
-      }
-    }
-
-    return allMonths;
+    const allowed = selectableMonthValues(tempDate, dateBoundFor(datePickerField));
+    return allMonths.filter((month) => allowed.includes(month.value));
   };
 
-  const generateYears = () => {
-    const years = [];
-    const currentYear = new Date().getFullYear();
-
-    if (datePickerField === 'issue_date' || (datePickerField && datePickerField.startsWith('category_'))) {
-      // For issue date and category dates, only show past and current year (not future)
-      const startYear = currentYear - 10;
-      const endYear = currentYear; // Only up to current year
-      for (let year = startYear; year <= endYear; year++) {
-        years.push(year);
-      }
-    } else {
-      // For other dates, show from 1990 to future (up to 10 years ahead)
-      const startYear = 1990;
-      const endYear = currentYear + 10;
-      for (let year = startYear; year <= endYear; year++) {
-        years.push(year);
-      }
-    }
-    return years;
-  };
+  const generateYears = () => selectableYears(dateBoundFor(datePickerField));
 
   const handleImagePicker = async (photoType: 'front' | 'back') => {
     if (!token) {
@@ -532,7 +497,7 @@ export const DriverLicenseScreen: React.FC = () => {
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = asset.mimeType || 'image/jpeg';
           base64 = `data:${mimeType};base64,${asset.base64}`;
         } else {
           // Fallback: read from URI (for web platforms)
@@ -560,9 +525,9 @@ export const DriverLicenseScreen: React.FC = () => {
 
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
-        if (asset.type) {
+        if (asset.mimeType) {
           // Prefer mime type as it's more reliable
-          const mimeParts = asset.type.split('/');
+          const mimeParts = asset.mimeType.split('/');
           if (mimeParts.length > 1) {
             const mimeExt = mimeParts[1].toLowerCase();
             if (mimeExt === 'jpeg' || mimeExt === 'jpg') {
@@ -658,7 +623,7 @@ export const DriverLicenseScreen: React.FC = () => {
         currentDate.setHours(0, 0, 0, 0);
         issueDate.setHours(0, 0, 0, 0);
         if (issueDate > currentDate) {
-          errorsMap.issue_date = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+          errorsMap.issue_date = t('formValidation.dateCannotBeFuture');
         }
       }
     }
@@ -676,7 +641,7 @@ export const DriverLicenseScreen: React.FC = () => {
           currentDate.setHours(0, 0, 0, 0);
           categoryDate.setHours(0, 0, 0, 0);
           if (categoryDate > currentDate) {
-            errorsMap[fieldKey] = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+            errorsMap[fieldKey] = t('formValidation.dateCannotBeFuture');
           }
         }
       }

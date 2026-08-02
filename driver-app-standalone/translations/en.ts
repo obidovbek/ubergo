@@ -378,6 +378,8 @@ export default {
     mustBePositive: 'Must be a positive value',
     fixErrors: 'Please correct the highlighted errors',
     dateInvalid: 'Invalid date format',
+    dateCannotBeFuture: 'The date cannot be later than today',
+    dateCannotBePast: 'The date cannot be earlier than today',
   },
 
   // Driver License Screen
@@ -630,7 +632,7 @@ export default {
     priceLabel: 'Price Per Seat',
     currencyLabel: 'Currency',
     noteLabel: 'Note (Optional)',
-    notePlaceholder: 'e.g., No smoking, 1 small bag',
+    notePlaceholder: 'e.g., My trunk is full, we will not stop on the way, we need to reach the airport in time',
     vehicleLabel: 'Vehicle',
     selectVehicle: 'Select Vehicle',
     noVehicle: 'No Vehicle Found',

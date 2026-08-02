@@ -19,8 +19,55 @@
 | OR-007 | 🆕 new | user app + API (+driver app views) | Rebuild the intercity order ("zakaz") screen to the Figma design | T-018 |
 | OR-008 | 🆕 new | user app | Registration screen → Figma layout; referral/promo block moves to the NEXT screen | T-019 |
 | OR-009 | 🆕 new | driver app + API | Vehicle usage: add "faqat shafyorman" option; "O'zimniki" disables "Ijara" | T-020 |
+| OR-012 | 🔨 in progress | user app (+ API/admin for payment & waiting fee) | Create-ride-request screen: seat gender/position, keyboard covers the lower fields, waiting fee must be admin-set, payment allow both, "for my friend" is not a payment type, no location icon | T-031 |
 | OR-011 | 📋 planned | driver app (+ audit of the photo path) | Licence date limits (issue ≤ today, valid-until ≥ today), photos audit, wire the geo levels the admin panel already holds, offer-note placeholder | T-030 |
 | OR-010 | 📋 planned | user app + API (+driver app for the push tap) | Batch of 7 from the software owner: referral block one-of-three + grey placeholder, birth-date keyboard jump, unread-message badge, push tap must open the message, hamburger menu icon, settlement/mahalla cascade | T-027 |
+
+---
+
+## OR-012 — Seven fixes on the passenger's "create ride request" screen
+
+**Reported:** 2026-08-02 · **App:** user app (items 4-6 also API/admin) · **Board:** T-031
+
+**Original (Uzbek, verbatim):**
+> UserApp
+> user o'rindiqlar joyini siljitish imkoni yoki orindiqni tanlaganda ayol yoki erkakani tnlashi
+> mumkin bo'lsin.
+> pitak chiqib turamannni pastiga qoshimha malumot kiritaman desa klavyatura chiqqanda pastga
+> tushib ketyapdi.
+>  qo'shimcha malumotni ham tepaga chiqarib bo'lmayapdi.
+> o'zgarmas narx kutish vaqtini kiritishda pastga tuishib ketyapdi  lekin bu kiritilmaydi sistma
+> tomonidan kiritiladi. kutish narxi sistema yani admin tomonidan kiritiladi yo'lovchi
+> kiritolmaydi. kutish vaqtini sistema hisob oladigan ham olmaydigan ham qilish kerak. hozircha
+> hisobga olmaydi shunchaki yo'lovchi punktualniy bo'lishi uchun.
+> To'lov turida ikklasini ham tanlash imkoni bo'lish kerak.
+> do'stimga degan ptichkani to'lov turiga aloqasi yo'q.
+> lokatisiya kiritish belgisi yo'q.
+
+**Translation (7 items):**
+> 1. Let the user shift seat positions, or choose male/female when picking a seat.
+> 2. Under "I'll come out to the road", typing additional info drops below the keyboard.
+> 3. The additional-info field cannot be scrolled up either.
+> 4. Fixed price / waiting time also drop down — **but the passenger must not enter the waiting
+>    fee at all; the system (admin) sets it.** Waiting time should be switchable between counted
+>    and not counted; for now it is **not** counted, it only exists to keep passengers punctual.
+> 5. Payment type must allow selecting **both**.
+> 6. The "for my friend" tick has nothing to do with payment type.
+> 7. There is no location-input icon.
+
+**Grounded in code 2026-08-02:**
+- Items 2-4 (the scrolling half): **`CreatePassengerOfferScreen` had no `KeyboardAvoidingView` at
+  all** — a bare `ScrollView` at `:349`. One omission, three complaints. **FIXED.**
+- Item 7: `LocationCard`'s landmark row had no icon — only a 12px square accent marker. **FIXED.**
+- Item 1: seat **gender already exists** (`GenderPickSheet.tsx`, built for T-018). So this is either
+  seat *position* shifting (new UI) or the existing picker not behaving. **Needs the owner.**
+- Item 4 (the rule): `waitingFeePerMin` is a passenger **text input** in `SpecialOrderPanel:25`.
+  Making it admin-set needs somewhere for the admin to set it — no such setting exists.
+- Items 5-6: `payment_type` is a **single enum column** (`PassengerOffer.ts:81`) whose values
+  include `friend_pays`. Selecting *both* cash and card, and separating "for my friend" from
+  payment type, cannot be done without changing that shape — a migration.
+
+**Owner decisions 2026-08-02:** OR-011 item 3 deferred ("decide later"); this batch takes priority.
 
 ---
 

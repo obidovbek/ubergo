@@ -379,6 +379,8 @@ export default {
     mustBePositive: "Musbat qiymat bo'lishi kerak",
     fixErrors: "Iltimos, shakldagi xatoliklarni to'g'rilang",
     dateInvalid: "Sana noto'g'ri formatda",
+    dateCannotBeFuture: "Sana bugungi sanadan katta bo'lishi mumkin emas",
+    dateCannotBePast: "Sana bugungi sanadan kichik bo'lishi mumkin emas",
   },
 
   // Driver License Screen
@@ -663,7 +665,7 @@ export default {
     priceLabel: 'Har bir o\'rin uchun narx',
     currencyLabel: 'Valyuta',
     noteLabel: 'Izoh (ixtiyoriy)',
-    notePlaceholder: 'Masalan: Chekmayman, 1 ta kichik sumka',
+    notePlaceholder: 'Masalan: Bagajim to\'la, yo\'lda to\'xtamaymiz, aeroportga ulgirishimiz kerak',
     vehicleLabel: 'Transport vositasi',
     selectVehicle: 'Transport vositasini tanlang',
     noVehicle: 'Transport vositasi topilmadi',

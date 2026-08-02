@@ -25,6 +25,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { resolveImageUrl } from '../utils/imageUrl';
+import {
+  type DateBound,
+  isDateWithinBound,
+  selectableDays,
+  selectableMonthValues,
+  selectableYears,
+} from '../utils/dateLimits';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import { updateTaxiLicense, getDriverProfile, getDriverProfileStatus, uploadImage } from '../api/driver';
@@ -199,8 +207,34 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
   };
 
+  // "Issued" and "valid from" are past-facing; "valid until" must not be behind us.
+  const dateBoundFor = (field: string | null): DateBound => {
+    switch (field) {
+      case 'license_issue_date':
+      case 'license_sheet_valid_from':
+        return 'notFuture';
+      case 'license_sheet_valid_until':
+        return 'notPast';
+      default:
+        return 'any';
+    }
+  };
+
   const handleDateConfirm = () => {
     if (!datePickerField) return;
+
+    // The wheels are independent, so a year picked after a day can still land
+    // outside the bound — check on confirm as well as constraining the lists.
+    const bound = dateBoundFor(datePickerField);
+    if (!isDateWithinBound(tempDate, bound)) {
+      showToast.error(
+        t('common.error'),
+        bound === 'notFuture'
+          ? t('formValidation.dateCannotBeFuture')
+          : t('formValidation.dateCannotBePast')
+      );
+      return;
+    }
 
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
@@ -224,17 +258,10 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     setShowDatePicker(true);
   };
 
-  const generateDays = () => {
-    const days = [];
-    const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
-    for (let i = 1; i <= maxDay; i++) {
-      days.push(i);
-    }
-    return days;
-  };
+  const generateDays = () => selectableDays(tempDate, dateBoundFor(datePickerField));
 
   const generateMonths = () => {
-    return [
+    const allMonths = [
       { value: 0, label: t('common.monthJanuary') },
       { value: 1, label: t('common.monthFebruary') },
       { value: 2, label: t('common.monthMarch') },
@@ -248,17 +275,12 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       { value: 10, label: t('common.monthNovember') },
       { value: 11, label: t('common.monthDecember') },
     ];
+
+    const allowed = selectableMonthValues(tempDate, dateBoundFor(datePickerField));
+    return allMonths.filter((month) => allowed.includes(month.value));
   };
 
-  const generateYears = () => {
-    const years = [];
-    const currentYear = new Date().getFullYear();
-    // For dates, go forward to 2050
-    for (let year = currentYear - 10; year <= 2050; year++) {
-      years.push(year);
-    }
-    return years;
-  };
+  const generateYears = () => selectableYears(dateBoundFor(datePickerField));
 
   useEffect(() => {
     if (!token) {
@@ -360,21 +382,23 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         insurance_document_url: taxiLicense.insurance_document_url || '',
       }));
 
-      // Set photo URIs for preview
+      // Set photo URIs for preview. The API stores host-less /uploads/... paths,
+      // which <Image> cannot load — only the DISPLAY state is made absolute;
+      // taxiLicense keeps the relative values for saving.
       if (taxiLicense.license_document_url) {
-        setLicenseDocumentUri(taxiLicense.license_document_url);
+        setLicenseDocumentUri(resolveImageUrl(taxiLicense.license_document_url));
       }
       if (taxiLicense.license_sheet_document_url) {
-        setLicenseSheetDocumentUri(taxiLicense.license_sheet_document_url);
+        setLicenseSheetDocumentUri(resolveImageUrl(taxiLicense.license_sheet_document_url));
       }
       if (taxiLicense.self_employment_document_url) {
-        setSelfEmploymentDocumentUri(taxiLicense.self_employment_document_url);
+        setSelfEmploymentDocumentUri(resolveImageUrl(taxiLicense.self_employment_document_url));
       }
       if (taxiLicense.power_of_attorney_document_url) {
-        setPowerOfAttorneyDocumentUri(taxiLicense.power_of_attorney_document_url);
+        setPowerOfAttorneyDocumentUri(resolveImageUrl(taxiLicense.power_of_attorney_document_url));
       }
       if (taxiLicense.insurance_document_url) {
-        setInsuranceDocumentUri(taxiLicense.insurance_document_url);
+        setInsuranceDocumentUri(resolveImageUrl(taxiLicense.insurance_document_url));
       }
     } catch (error) {
       console.error('Failed to load taxi license data:', error);
@@ -557,6 +581,18 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               return parseDate(val) !== null;
             },
           },
+          {
+            // Typed dates bypass the picker's limits entirely, so the same rule
+            // has to exist here or constraining the wheels is only cosmetic.
+            type: 'custom',
+            errorKey: 'formValidation.dateCannotBeFuture',
+            customValidator: (val) => {
+              if (!val || val.trim() === '') return true; // Optional
+              const parsed = parseDate(val);
+              if (!parsed) return true; // format is the rule above's job
+              return isDateWithinBound(parsed, 'notFuture');
+            },
+          },
         ],
       });
     }
@@ -584,6 +620,17 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               if (!val || val.trim() === '') return true; // Optional
               if (!validFromDate || !validUntilDate) return true; // Skip if dates are invalid
               return validUntilDate >= validFromDate;
+            },
+          },
+          {
+            // Same reason as valid_from: the typed path needs its own rule.
+            // A licence that expired yesterday is not a licence.
+            type: 'custom',
+            errorKey: 'formValidation.dateCannotBePast',
+            customValidator: (val) => {
+              if (!val || val.trim() === '') return true; // Optional
+              if (!validUntilDate) return true; // format is another rule's job
+              return isDateWithinBound(validUntilDate, 'notPast');
             },
           },
         ],
@@ -692,7 +739,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = asset.mimeType || 'image/jpeg';
           base64 = `data:${mimeType};base64,${asset.base64}`;
         } else {
           // Fallback: read from URI (for web platforms)
@@ -720,9 +767,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
-        if (asset.type) {
+        if (asset.mimeType) {
           // Prefer mime type as it's more reliable
-          const mimeParts = asset.type.split('/');
+          const mimeParts = asset.mimeType.split('/');
           if (mimeParts.length > 1) {
             const mimeExt = mimeParts[1].toLowerCase();
             if (mimeExt === 'jpeg' || mimeExt === 'jpg') {

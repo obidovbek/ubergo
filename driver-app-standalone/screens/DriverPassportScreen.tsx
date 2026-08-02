@@ -25,6 +25,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { resolveImageUrl } from '../utils/imageUrl';
+import {
+  type DateBound,
+  isDateWithinBound,
+  selectableDays,
+  selectableMonthValues,
+  selectableYears,
+} from '../utils/dateLimits';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { validateField, isValidDate } from '../utils/validation';
 import { updatePassport, getDriverProfile, fetchGeoCountries, fetchGeoProvinces, fetchGeoCityDistricts, uploadImage, type GeoOption } from '../api/driver';
@@ -335,7 +343,7 @@ export const DriverPassportScreen: React.FC = () => {
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = asset.mimeType || 'image/jpeg';
           base64 = `data:${mimeType};base64,${asset.base64}`;
         } else {
           // Fallback: read from URI (for web platforms)
@@ -363,9 +371,9 @@ export const DriverPassportScreen: React.FC = () => {
 
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
-        if (asset.type) {
+        if (asset.mimeType) {
           // Prefer mime type as it's more reliable
-          const mimeParts = asset.type.split('/');
+          const mimeParts = asset.mimeType.split('/');
           if (mimeParts.length > 1) {
             const mimeExt = mimeParts[1].toLowerCase();
             if (mimeExt === 'jpeg' || mimeExt === 'jpg') {
@@ -494,11 +502,37 @@ export const DriverPassportScreen: React.FC = () => {
   const handleDateConfirm = () => {
     if (!datePickerField) return;
 
+    // The wheels are independent, so a year picked after a day can still land
+    // outside the bound — check on confirm as well as constraining the lists.
+    const bound = dateBoundFor(datePickerField);
+    if (!isDateWithinBound(tempDate, bound)) {
+      showToast.error(
+        t('common.error'),
+        bound === 'notFuture'
+          ? t('formValidation.dateCannotBeFuture')
+          : t('formValidation.dateCannotBePast')
+      );
+      return;
+    }
+
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
     const formattedDate = formatDate(tempDate);
     updateField(datePickerField, formattedDate);
     setShowDatePicker(false);
     setDatePickerField(null);
+  };
+
+  // A birth date and an issue date are in the past; a passport's expiry is not.
+  const dateBoundFor = (field: string | null): DateBound => {
+    switch (field) {
+      case 'birth_date':
+      case 'issue_date':
+        return 'notFuture';
+      case 'expiry_date':
+        return 'notPast';
+      default:
+        return 'any';
+    }
   };
 
   const handleDateCancel = () => {
@@ -516,49 +550,40 @@ export const DriverPassportScreen: React.FC = () => {
     setShowDatePicker(true);
   };
 
-  const generateDays = () => {
-    const days = [];
-    const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
-    for (let i = 1; i <= maxDay; i++) {
-      days.push(i);
-    }
-    return days;
-  };
+  const generateDays = () => selectableDays(tempDate, dateBoundFor(datePickerField));
 
   const generateMonths = () => {
-    return [
-      { value: 0, label: 'Yanvar' },
-      { value: 1, label: 'Fevral' },
-      { value: 2, label: 'Mart' },
-      { value: 3, label: 'Aprel' },
-      { value: 4, label: 'May' },
-      { value: 5, label: 'Iyun' },
-      { value: 6, label: 'Iyul' },
-      { value: 7, label: 'Avgust' },
-      { value: 8, label: 'Sentabr' },
-      { value: 9, label: 'Oktabr' },
-      { value: 10, label: 'Noyabr' },
-      { value: 11, label: 'Dekabr' },
+    const allMonths = [
+      { value: 0, label: t('common.monthJanuary') },
+      { value: 1, label: t('common.monthFebruary') },
+      { value: 2, label: t('common.monthMarch') },
+      { value: 3, label: t('common.monthApril') },
+      { value: 4, label: t('common.monthMay') },
+      { value: 5, label: t('common.monthJune') },
+      { value: 6, label: t('common.monthJuly') },
+      { value: 7, label: t('common.monthAugust') },
+      { value: 8, label: t('common.monthSeptember') },
+      { value: 9, label: t('common.monthOctober') },
+      { value: 10, label: t('common.monthNovember') },
+      { value: 11, label: t('common.monthDecember') },
     ];
+
+    const allowed = selectableMonthValues(tempDate, dateBoundFor(datePickerField));
+    return allMonths.filter((month) => allowed.includes(month.value));
   };
 
   const generateYears = () => {
-    const years = [];
-    const currentYear = new Date().getFullYear();
-    // For birth_date, go back to 1900, for others go forward to 2050
-    const startYear = datePickerField === 'birth_date' ? 1900 : currentYear - 10;
-    const endYear = datePickerField === 'birth_date' ? currentYear : 2050;
-
+    // Birth date keeps its own reach (back to 1900, newest first) — no shared
+    // helper covers a 125-year span, and it is already bounded to the past.
     if (datePickerField === 'birth_date') {
-      for (let year = endYear; year >= startYear; year--) {
+      const years = [];
+      for (let year = new Date().getFullYear(); year >= 1900; year--) {
         years.push(year);
       }
-    } else {
-      for (let year = startYear; year <= endYear; year++) {
-        years.push(year);
-      }
+      return years;
     }
-    return years;
+
+    return selectableYears(dateBoundFor(datePickerField));
   };
 
   const loadPersonalInfo = async () => {
@@ -618,12 +643,14 @@ export const DriverPassportScreen: React.FC = () => {
           passport_back_url: passportData.passport_back_url || prev.passport_back_url,
         }));
 
-        // Initialize photo URIs if they exist
+        // Initialize photo URIs if they exist. The API stores a host-less
+        // /uploads/... path, which <Image> cannot load — only the DISPLAY state
+        // is made absolute; passportData keeps the relative value for saving.
         if (passportData.passport_front_url) {
-          setPhotoFrontUri(passportData.passport_front_url);
+          setPhotoFrontUri(resolveImageUrl(passportData.passport_front_url));
         }
         if (passportData.passport_back_url) {
-          setPhotoBackUri(passportData.passport_back_url);
+          setPhotoBackUri(resolveImageUrl(passportData.passport_back_url));
         }
 
         // Initialize selected geo options if data exists
@@ -747,7 +774,7 @@ export const DriverPassportScreen: React.FC = () => {
           if (issueDate) {
             issueDate.setHours(0, 0, 0, 0);
             if (issueDate > currentDate) {
-              error = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+              error = t('formValidation.dateCannotBeFuture');
             } else {
               // Also validate expiry_date if it exists (expiry should be after issue)
               if (formData.expiry_date) {
@@ -851,7 +878,7 @@ export const DriverPassportScreen: React.FC = () => {
       if (issueDate) {
         issueDate.setHours(0, 0, 0, 0);
         if (issueDate > currentDate) {
-          validationErrors.issue_date = 'Berilgan sana bugungi sanadan katta bo\'lishi mumkin emas';
+          validationErrors.issue_date = t('formValidation.dateCannotBeFuture');
         }
       }
     }

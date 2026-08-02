@@ -339,14 +339,24 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         </TouchableOpacity>
       )}
 
-      <TextInput
-        style={styles.landmarkInput}
-        value={value.landmark}
-        onChangeText={(text) => onChange({ ...value, landmark: text })}
-        placeholder={t('passengerOffers.landmarkPlaceholder')}
-        placeholderTextColor="#9CA3AF"
-        maxLength={255}
-      />
+      {/* The landmark row had no icon at all, so nothing marked it as the place
+          you type a location into (OR-012 item 7). */}
+      <View style={styles.landmarkRow}>
+        <Ionicons
+          name="location-outline"
+          size={18}
+          color={accent === 'end' ? '#22C55E' : '#6B7280'}
+          style={styles.landmarkIcon}
+        />
+        <TextInput
+          style={styles.landmarkInput}
+          value={value.landmark}
+          onChangeText={(text) => onChange({ ...value, landmark: text })}
+          placeholder={t('passengerOffers.landmarkPlaceholder')}
+          placeholderTextColor="#9CA3AF"
+          maxLength={255}
+        />
+      </View>
 
       {!!summary && <Text style={styles.summary}>{summary}</Text>}
 
@@ -423,14 +433,24 @@ const styles = StyleSheet.create({
   selectPlaceholder: {
     color: '#9CA3AF',
   },
-  landmarkInput: {
+  // The border moved from the input to the row, so the pin sits INSIDE the
+  // field rather than floating next to it.
+  landmarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     minHeight: 44,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
+  },
+  landmarkIcon: {
+    marginRight: 8,
+  },
+  landmarkInput: {
+    flex: 1,
+    paddingVertical: 8,
     fontSize: 15,
     color: '#111827',
   },

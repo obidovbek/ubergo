@@ -25,6 +25,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { resolveImageUrl } from '../utils/imageUrl';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import {
@@ -349,30 +350,32 @@ export const DriverVehicleScreen: React.FC = () => {
           photo_interior_url: vehicle.photo_interior_url || '',
         }));
 
-        // Set photo URIs for preview
+        // Set photo URIs for preview. The API stores host-less /uploads/... paths,
+        // which <Image> cannot load — only the DISPLAY state is made absolute;
+        // formData keeps the relative values, which is what the server expects back.
         if (vehicle.tech_passport_front_url) {
-          setTechPassportFrontUri(vehicle.tech_passport_front_url);
+          setTechPassportFrontUri(resolveImageUrl(vehicle.tech_passport_front_url));
         }
         if (vehicle.tech_passport_back_url) {
-          setTechPassportBackUri(vehicle.tech_passport_back_url);
+          setTechPassportBackUri(resolveImageUrl(vehicle.tech_passport_back_url));
         }
         if (vehicle.photo_front_url) {
-          setPhotoFrontUri(vehicle.photo_front_url);
+          setPhotoFrontUri(resolveImageUrl(vehicle.photo_front_url));
         }
         if (vehicle.photo_back_url) {
-          setPhotoBackUri(vehicle.photo_back_url);
+          setPhotoBackUri(resolveImageUrl(vehicle.photo_back_url));
         }
         if (vehicle.photo_right_url) {
-          setPhotoRightUri(vehicle.photo_right_url);
+          setPhotoRightUri(resolveImageUrl(vehicle.photo_right_url));
         }
         if (vehicle.photo_left_url) {
-          setPhotoLeftUri(vehicle.photo_left_url);
+          setPhotoLeftUri(resolveImageUrl(vehicle.photo_left_url));
         }
         if (vehicle.photo_angle_45_url) {
-          setPhotoAngle45Uri(vehicle.photo_angle_45_url);
+          setPhotoAngle45Uri(resolveImageUrl(vehicle.photo_angle_45_url));
         }
         if (vehicle.photo_interior_url) {
-          setPhotoInteriorUri(vehicle.photo_interior_url);
+          setPhotoInteriorUri(resolveImageUrl(vehicle.photo_interior_url));
         }
 
         // Set selected options if IDs exist - use passed data or wait for it
@@ -987,7 +990,7 @@ export const DriverVehicleScreen: React.FC = () => {
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = asset.mimeType || 'image/jpeg';
           base64 = `data:${mimeType};base64,${asset.base64}`;
         } else {
           // Fallback: read from URI (for web platforms)
@@ -1015,9 +1018,9 @@ export const DriverVehicleScreen: React.FC = () => {
 
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
-        if (asset.type) {
+        if (asset.mimeType) {
           // Prefer mime type as it's more reliable
-          const mimeParts = asset.type.split('/');
+          const mimeParts = asset.mimeType.split('/');
           if (mimeParts.length > 1) {
             const mimeExt = mimeParts[1].toLowerCase();
             if (mimeExt === 'jpeg' || mimeExt === 'jpg') {

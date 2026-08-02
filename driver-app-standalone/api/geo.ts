@@ -12,4 +12,11 @@ export {
   fetchGeoCountries,
   fetchGeoProvinces,
   fetchGeoCityDistricts,
+  // The deeper levels were implemented in ./driver but never re-exported here,
+  // so no driver screen could reach the data the admin panel already holds
+  // (OR-011 item 3). All three hang off the CITY DISTRICT — administrative area,
+  // settlement and mahalla are siblings, not a chain.
+  fetchGeoAdministrativeAreas,
+  fetchGeoSettlements,
+  fetchGeoNeighborhoods,
 } from './driver';

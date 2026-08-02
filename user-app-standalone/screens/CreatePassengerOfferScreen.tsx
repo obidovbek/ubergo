@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -346,7 +347,23 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      {/* This screen had NO KeyboardAvoidingView, so the keyboard simply covered
+          whatever was near the bottom — the road-pickup note, the additional
+          info and the special-order fields could not be reached or read while
+          typing (OR-012 items 2-4). `keyboardShouldPersistTaps` lets a tap on a
+          checkbox register on the first press instead of only dismissing the
+          keyboard. */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 48 : 0}
+      >
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Route + times — inline, exactly as drawn on K_buyurtma001Yangi.png */}
         <View style={styles.routeCard}>
           <LocationCard
@@ -623,6 +640,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -664,8 +682,16 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  keyboardAvoiding: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
+  },
+  // Room under the last card so the keyboard never sits on top of the field
+  // being typed into, even at the very bottom of the form.
+  scrollContent: {
+    paddingBottom: 24,
   },
   routeCard: {
     backgroundColor: '#FFFFFF',

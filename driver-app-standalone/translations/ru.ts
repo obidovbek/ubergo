@@ -378,6 +378,8 @@ export default {
     mustBePositive: 'Должно быть положительным значением',
     fixErrors: 'Пожалуйста, исправьте выделенные ошибки',
     dateInvalid: 'Неверный формат даты',
+    dateCannotBeFuture: 'Дата не может быть позже сегодняшней',
+    dateCannotBePast: 'Дата не может быть раньше сегодняшней',
   },
 
   // Driver License Screen
@@ -630,7 +632,7 @@ export default {
     priceLabel: 'Цена за место',
     currencyLabel: 'Валюта',
     noteLabel: 'Примечание (необязательно)',
-    notePlaceholder: 'Например: Не курю, 1 маленькая сумка',
+    notePlaceholder: 'Например: Багажник полный, в пути не останавливаемся, нужно успеть в аэропорт',
     vehicleLabel: 'Транспорт',
     selectVehicle: 'Выбрать транспорт',
     noVehicle: 'Транспорт не найден',

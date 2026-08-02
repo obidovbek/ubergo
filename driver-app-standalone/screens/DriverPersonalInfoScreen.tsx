@@ -25,6 +25,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { resolveImageUrl } from '../utils/imageUrl';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import {
   updatePersonalInfo,
@@ -509,14 +510,17 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         setFormData(updatedForm);
         setFieldErrors({});
 
+        // The API stores host-less /uploads/... paths, which <Image> cannot load —
+        // only the DISPLAY state is made absolute; formData keeps the relative
+        // value, which is what the server expects back on save.
         if (profile.photo_face_url) {
-          setPhotoFaceUri(profile.photo_face_url);
+          setPhotoFaceUri(resolveImageUrl(profile.photo_face_url));
         } else {
           setPhotoFaceUri(null);
         }
 
         if (profile.photo_body_url) {
-          setPhotoBodyUri(profile.photo_body_url);
+          setPhotoBodyUri(resolveImageUrl(profile.photo_body_url));
         } else {
           setPhotoBodyUri(null);
         }
@@ -889,7 +893,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         if (asset.base64) {
           // expo-image-picker provides base64 directly (without data URL prefix)
           // The API expects the full data URL format, so we add the prefix
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = asset.mimeType || 'image/jpeg';
           base64 = `data:${mimeType};base64,${asset.base64}`;
         } else {
           // Fallback: read from URI (for web or older versions)
@@ -917,9 +921,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
         // Extract file extension from mime type or URI
         let fileExtension = 'jpg'; // Default to jpg
-        if (asset.type) {
+        if (asset.mimeType) {
           // Prefer mime type as it's more reliable
-          const mimeParts = asset.type.split('/');
+          const mimeParts = asset.mimeType.split('/');
           if (mimeParts.length > 1) {
             const mimeExt = mimeParts[1].toLowerCase();
             if (mimeExt === 'jpeg' || mimeExt === 'jpg') {
