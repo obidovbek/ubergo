@@ -22,6 +22,7 @@ import * as AuthAPI from '../api/auth';
 import type { OtpSendResponse } from '../api/auth';
 import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
 import { clearPendingOtp } from '../utils/pendingOtp';
+import { TOKEN_KEYS, onAuthLost } from '../utils/tokenStore';
 
 interface LoginCredentials {
   email: string;
@@ -55,8 +56,11 @@ interface AuthContextType extends AuthState {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+// T-038: the token keys come from `tokenStore` so the two cannot drift — it is
+// the module that reads and rewrites them during a refresh.
 const STORAGE_KEYS = {
-  TOKEN: '@auth_token',
+  TOKEN: TOKEN_KEYS.ACCESS,
+  REFRESH: TOKEN_KEYS.REFRESH,
   USER: '@auth_user',
 };
 
@@ -73,6 +77,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  /**
+   * T-038: every sign-in path stores the SAME three things. Before this the
+   * refresh token was destructured at four call sites and dropped at all four,
+   * so centralising it is what stops that happening a fifth time.
+   */
+  const persistSession = useCallback(
+    async (user: unknown, access: string, refresh?: string | null) => {
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
+        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+        refresh
+          ? AsyncStorage.setItem(STORAGE_KEYS.REFRESH, refresh)
+          : AsyncStorage.removeItem(STORAGE_KEYS.REFRESH),
+      ]);
+    },
+    []
+  );
+
+  /** Everything a signed-out user must not leave behind. */
+  const clearSession = useCallback(async () => {
+    await Promise.all([
+      AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
+      AsyncStorage.removeItem(STORAGE_KEYS.REFRESH),
+      AsyncStorage.removeItem(STORAGE_KEYS.USER),
+      clearPendingOtp(),
+    ]);
+  }, []);
+
+  /**
+   * T-038: a refresh the server REJECTED means the session is genuinely over —
+   * that, and only that, logs the user out here. A network failure does not.
+   *
+   * ⚠️ Deliberately does NOT push the refreshed token back into state. Doing so
+   * would change `state.token` every ~15 minutes and re-run everything keyed on
+   * it — the exact churn behind T-017's infinite profile-check loop. The
+   * in-memory token is only a "signed in" marker; `getHeaders` resolves the
+   * current token from storage on every request.
+   */
+  useEffect(() => {
+    return onAuthLost(() => {
+      console.warn('AuthContext: Refresh token rejected — ending the session');
+      clearSession()
+        .catch((error) => console.error('AuthContext: Failed to clear session:', error))
+        .finally(() => dispatch({ type: AUTH_ACTIONS.LOGOUT }));
+    });
+  }, [clearSession]);
+
   // Defined first because the AppState effect below depends on it.
   const logout = useCallback(async () => {
     try {
@@ -83,10 +134,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token) {
         console.log('AuthContext: Calling logout API endpoint...');
         try {
-          await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.logout}`, {
-            method: 'POST',
-            headers: getHeaders(token),
-          });
+          // T-038: this used to be a hand-rolled fetch with `headers:
+          // getHeaders(token)` — NOT awaited, so `headers` was a Promise and the
+          // request went out with no Authorization at all. It also never sent the
+          // refresh token, so the server could revoke nothing. Survivable while
+          // the refresh token was thrown away; not now that it is stored and
+          // lives 7 days. `AuthAPI.logout` already sends both, correctly.
+          const storedRefresh = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH);
+          await AuthAPI.logout(token, storedRefresh || '');
           console.log('AuthContext: Logout API call successful');
         } catch (apiError) {
           console.warn('AuthContext: Logout API call failed, but continuing with local logout:', apiError);
@@ -94,12 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('AuthContext: Clearing local storage...');
-      // Clear storage
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER),
-        clearPendingOtp(),
-      ]);
+      await clearSession();
 
       console.log('AuthContext: Dispatching logout action...');
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
@@ -108,10 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('AuthContext: Logout error:', error);
       // Still clear local state even if API call fails
       try {
-        await Promise.all([
-          AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-          AsyncStorage.removeItem(STORAGE_KEYS.USER),
-        ]);
+        await clearSession();
         dispatch({ type: AUTH_ACTIONS.LOGOUT });
         console.log('AuthContext: Local logout completed despite error');
       } catch (clearError) {
@@ -265,11 +312,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Account was deleted / token rejected — clear the cache and drop to the
             // login screen instead of trusting the stored user (OR-002).
             console.warn(`AuthContext: Account invalid on init (status ${status}), logging out`);
-            await Promise.all([
-              AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
-              AsyncStorage.removeItem(STORAGE_KEYS.USER),
-              clearPendingOtp(),
-            ]);
+            // T-038: by the time we get here `getHeaders` has already tried to
+            // refresh and failed, so a 401 now really does mean the session is
+            // over — it is no longer just "the access token aged out".
+            await clearSession();
             return; // stay unauthenticated → AuthNavigator (login/OTP); `finally` clears loading
           }
 
@@ -314,11 +360,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await response.json();
       const { user, token } = data;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: these legacy email/password paths get no refresh token from the
+      // server, so the session still ends at the access token's expiry. They are
+      // unused by the shipped app (OTP and social sign-in are the live paths).
+      await persistSession(user, token);
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN,
@@ -352,11 +397,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const responseData = await response.json();
       const { user, token } = responseData;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: these legacy email/password paths get no refresh token from the
+      // server, so the session still ends at the access token's expiry. They are
+      // unused by the shipped app (OTP and social sign-in are the live paths).
+      await persistSession(user, token);
 
       dispatch({
         type: AUTH_ACTIONS.REGISTER,
@@ -405,11 +449,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthAPI.verifyOtp(phone, code, opts);
       const { user, access, refresh } = response.data;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: `refresh` used to be destructured here and dropped on the floor.
+      await persistSession(user, access, refresh);
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN,
@@ -434,11 +475,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthAPI.googleSignIn(idToken);
       const { user, access, refresh } = response.data;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: `refresh` used to be destructured here and dropped on the floor.
+      await persistSession(user, access, refresh);
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN,
@@ -458,11 +496,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthAPI.appleSignIn(idToken);
       const { user, access, refresh } = response.data;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: `refresh` used to be destructured here and dropped on the floor.
+      await persistSession(user, access, refresh);
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN,
@@ -482,11 +517,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthAPI.facebookSignIn(accessToken);
       const { user, access, refresh } = response.data;
 
-      // Store credentials
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access),
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-      ]);
+      // T-038: `refresh` used to be destructured here and dropped on the floor.
+      await persistSession(user, access, refresh);
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN,

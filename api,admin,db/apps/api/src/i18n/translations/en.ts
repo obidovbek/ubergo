@@ -132,6 +132,12 @@ export default {
     accountDisabled: 'Account is disabled',
     tokenExpired: 'Session expired',
     tokenInvalid: 'Invalid token',
+    // T-038 — the auth middleware used to throw these in hard-coded English, so
+    // every 401 reached the apps untranslated no matter the Accept-Language.
+    noToken: 'No authorization token provided',
+    notAuthenticated: 'You are not signed in',
+    insufficientPermissions: 'You do not have permission to do this',
+    adminTokenInvalid: 'Invalid admin token',
   },
 
   // OTP messages

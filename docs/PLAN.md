@@ -4,210 +4,195 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ✅ **T-036 CLOSED 2026-08-08** (owner approved the modal look on a device; the full walk continues
-> in the background). Plan archived intact → `docs/PLAN-T036.md`.
-> ⏸️ **T-031** → `docs/PLAN-T031.md`. Steps 1-3 done; step 4 blocked on the owner's salon-option
-> answer; steps 5-9 (payment migration + admin waiting fee) are free.
-> ⏸️ **T-033** → `docs/PLAN-T033.md`, step 7 = owner device test (**deploy the API FIRST**).
-> ⏸️ **T-030** → `docs/PLAN-T030.md`, step 7 blocked on an owner answer.
-> ⏸️ **T-027** → `docs/PLAN-T027.md`, step 11 (**migration first**, then API, then both apps).
-> ⏸️ **T-018** → `docs/PLAN-T018.md` · **T-026A** → step 8 · **T-025** → step 8.
+> ⏸️ **T-037** → `docs/PLAN-T037.md`. Steps 1, 3-6 done; **step 7 = owner device test**, step 8 the
+> commit. Its code is in the working tree, **uncommitted**.
+> ✅ **T-036 CLOSED 2026-08-08** → `docs/PLAN-T036.md`.
+> ⏸️ **T-031** → `docs/PLAN-T031.md`, step 4 blocked on the owner's salon-option answer.
+> ⏸️ **T-033** → `docs/PLAN-T033.md` · **T-030** → `docs/PLAN-T030.md` · **T-027** →
+> `docs/PLAN-T027.md` · **T-018** → `docs/PLAN-T018.md` · **T-026A** step 8 · **T-025** step 8.
 > ⏸️ **Also parked:** T-011 · T-012 · T-014 · T-015 · T-016 · T-017.
 
 ## Task
-- **ID / name:** T-037 — Driver app: reach, open and take a passenger order
+- **ID / name:** T-038 — Sessions must survive: use the refresh token, and translate the 401s
 - **Goal (definition of "done"):**
-  1. A driver can **get to** the passenger-order search from the main menu.
-  2. Tapping a card opens a **real detail screen** showing the whole order (route, time, seats,
-     flags, note, passenger).
-  3. From there the driver can **send an offer** (`joinPassengerOffer`) with his vehicle, a real
-     `seats_offered`, and his price — and see the request afterwards.
-  4. A driver **without a vehicle** gets a clear message, not a 403.
-  5. No new `tsc` errors in the driver app (baseline **36**); every new string is in **uz/ru/en**.
-- **Why now:** the owner reported it on 2026-08-08 — "user creates offer but in the driver app there
-  is no way to search or join". The passenger side of this loop is already live, so today a passenger
-  posts an order and **no driver can ever answer it**. This is the missing half of the product.
-- **Source:** owner, 2026-08-08. Replaces **T-023**, absorbs **T-021**.
+  1. Both apps **persist the refresh token** at login.
+  2. An expired access token is refreshed **transparently** — the user sees no error and stays
+     logged in for the refresh token's full life (7 days), not 15 minutes.
+  3. Only a **failed refresh** logs the user out. A deleted account (OR-002) still logs out at once.
+  4. The server's auth errors are **translated** (uz/ru/en) instead of hard-coded English.
+  5. `tsc` at baselines (API **282** · admin **0** · user **12** · driver **36**); i18n evaluated.
+- **Why now:** the owner hit it on a device — 15 minutes after login every screen 401s, and the next
+  app start silently signs the user out. It undermines device-testing every other card.
+- **Source:** owner, device screenshot 2026-08-08 ("Xato / Invalid or expired token" on Mening
+  bronlarim) + "before last logged out maybe for this issue".
 
-## What is already there (verified in code 2026-08-08 — do NOT re-derive)
-✅ **Backend: complete, reviewed, no work needed.**
-`routes/public-passenger-offer.routes.ts` → browse + detail. `routes/offer-driver.routes.ts` →
-`POST /driver/passenger-offers/:offerId/join`, `GET /driver/join-requests`,
-`POST /driver/join-requests/:id/cancel`. `OfferDriverService.joinOffer` validates vehicle ownership,
-`status === 'published'`, not-started, self-join, duplicates, `seats_offered` and price.
+## Owner decisions taken 2026-08-08 (do NOT re-ask)
+1. **Fix it properly** — store the refresh token and refresh-and-retry. **Not** by raising
+   `JWT_EXPIRES_IN`, which would only hide it behind a longer-lived credential.
+2. **The untranslated 401s are part of this card**, not split out. (Claude's call, per the owner.)
 
-✅ **API client: complete.** `driver-app-standalone/api/passengerOffers.ts` exports all five calls.
-❌ **Four of them have ZERO call sites:** `joinPassengerOffer`, `getPassengerOfferById`,
-`getMyJoinRequests`, `cancelJoinRequest`.
+## What is actually broken (verified in code 2026-08-08 — do NOT re-derive)
+- `AuthContext` destructures `const { user, access, refresh } = response.data` at **4 sites per app**
+  and **never uses `refresh`**. `STORAGE_KEYS` = `{ TOKEN, USER }` — no refresh key exists.
+- `refreshAccessToken()` exists in **both** `api/auth.ts` — **zero call sites**.
+- `JWT_EXPIRES_IN` defaults to **15m**; the refresh token to **7d**.
+- `middleware/auth.ts` throws hard-coded English at `:20 :28 :36 :54 :58`; `adminAuth.ts:39` too.
 
-✅ **Search screen: built** (`screens/SearchPassengerOffersScreen.tsx`, geo cascade + filters +
-`PassengerOfferExtras`, already on `AppModal`/`GeoPickerModal` from T-036). All 9 of its `t()` keys
-resolve.
-❌ **It is imported by nothing.** `MainNavigator` registers 13 routes; `SearchPassengerOffers` is not
-one of them, and no screen navigates to it.
-❌ `PassengerOfferDetails` (`SearchPassengerOffersScreen:494`) is unregistered **and does not exist**.
-❌ `navigation/types.ts` `MainStackParamList` lists **3** routes for a 13-route navigator — every
-screen navigates through `(navigation as any)`. (Same defect as T-028 in the user app.)
-
-## Decisions taken while planning (say so if you want them changed)
-1. **Entry point = a new menu row**, right under "Mening e'lonlarim" in `MenuScreen`. The five
-   existing rows (`viloyatlar`/`ichi`/`tuman`/`empty`/`xalqaro`) are **trip categories**, not
-   actions, and none maps to a filter that exists — hijacking one would be a guess. New key
-   `menu.passengerOrders` in uz/ru/en.
-2. **`vehicle_id` is not a picker.** The driver has exactly one vehicle (`profile.vehicle`) — the
-   same thing `OfferWizardScreen.loadVehicles` reads. Show it read-only; if it is missing, block the
-   join with a message pointing at the vehicle screen.
-3. **Extend `MainStackParamList` for the two new routes only.** Typing all 13 is T-028's shape of
-   work and is not this card's.
+✅ **The server side already works.** `POST /auth/refresh` (`auth.routes.v2.ts:28`) →
+`AuthController.v2.refreshToken` → `rotateTokens`, which returns **a new access AND a new refresh**.
+⚠️ **`rotateTokens` REVOKES the old refresh token** (`utils/jwt.ts:136-139`). Two concurrent
+refreshes therefore burn the token and the second one fails → a spurious logout. **A single
+in-flight refresh promise is mandatory, not an optimisation.**
 
 ## Approach
-Four thin layers, each independently runnable: **reach it** → **open it** → **take it** → **see it**.
-Nothing is rewritten; the search screen is already built and the API is already done. The work is a
-navigator entry, one new detail screen, one join sheet, and one list of the driver's own requests.
+`getHeaders(token)` in each app's `config/api.ts` is a **near-perfect choke point** — every
+authenticated call already `await`s it, with exactly **one** bypass in the whole codebase
+(`user-app-standalone/api/users.ts:120`, the avatar upload, which builds its own header).
 
-⚠️ **Do not "improve" the search screen while wiring it up.** Anything found goes on the board
-(that is how T-035 was found during T-033).
+So make `getHeaders` refresh-aware instead of introducing a new fetch wrapper across dozens of call
+sites: decode the access token's `exp`, and if it is expired or nearly so, refresh **once** (guarded
+by a shared in-flight promise), persist both new tokens, and return the header with the fresh one.
+
+⚠️ **Watch the import cycle:** `api/auth.ts` imports `getHeaders` from `config/api.ts`, so
+`config/api.ts` must **not** import `api/auth.ts`. The refresh call goes in its own small module
+that depends on neither.
+
+⚠️ **The two apps stay separate copies** — same as `AppModal`/`errorHandler`. Write it once, copy it,
+and keep the two byte-identical.
 
 ## Steps
-- [x] 1. **DONE 2026-08-08 (code). Search screen is reachable.** `SearchPassengerOffers` registered
-  in `MainNavigator` (route 14); new **`passengerOrders`** row in `MenuScreen` right under "Mening
-  e'lonlarim", in blue (`#2563EB`) so the two action rows are not mistaken for each other; the route
-  added to `MainStackParamList` **and** to `MenuScreen`'s own local copy of that type, so the call
-  is properly typed rather than `(navigation as any)`.
-  ⚠️ **Found while wiring it: `menu.myOffers` existed in `uz` ONLY** — a Russian or English driver
-  has been seeing the raw key `menu.myOffers` on the home screen. Fixed here (it is the row directly
-  above the new one) rather than boarded. Same class as **T-035**.
-  `tsc` driver app **36 = baseline**. **57/57** i18n checks — every key the new menu row *and* the
-  whole search screen resolve, **evaluated** in uz/ru/en (babel-transpiled + required, not grepped).
-  🛑 **Still needs the device run** — the screen has never rendered.
-- [ ] 2. **Report what step 1 exposes** before building on it. A 1000-line screen that has never
-  rendered will have defects; each one is a decision (fix here vs. board) and the owner should see
-  the list, not a silent sweep.
-- [x] 3. **DONE 2026-08-08. `PassengerOfferDetailsScreen`** — new screen on `getPassengerOfferById`,
-  registered as route 15. Route + landmarks, departure, passenger, `seats_needed`,
-  `max_price_per_seat` (or "not specified" — the new form collects no price), `note`.
-  ⚠️ **All the T-018 extras are rendered by the existing `PassengerOfferExtras`**, the same
-  component the search cards use — windows, gendered seats, salon scope, class, payment, flags,
-  pickup note and special-order prices were **already** laid out there, so re-implementing them on
-  this screen would have been a second copy to keep in sync.
-  The `as any` on the tap in `SearchPassengerOffersScreen` is gone — `useNavigation` is typed with
-  `MainStackParamList` now. Its hard-coded English `'Login Required'` toast became a key.
-- [x] 4. **DONE 2026-08-08. The join sheet** — `AppModal` on the detail screen: read-only vehicle,
-  seats stepper, price per seat, optional message → `joinPassengerOffer`.
-  🔴 **BLOCKER FOUND AND FIXED: the join could never have worked.** `joinPassengerOffer`,
-  `getMyJoinRequests` and `cancelJoinRequest` took **no token** and called `getHeaders()` bare, which
-  sends **no `Authorization` header** — all three routes are `authenticate`d, so every call would
-  have returned **401**. Every other API module in the app passes `token`; this one never did, and
-  with zero call sites nothing ever caught it. All three now take `token` first, matching
-  `offerPassengers.ts`. *(The two `public/*` calls are genuinely unauthenticated and were left alone.)*
-  ⚠️ **`seats_offered` defaults to the offer's `seats_needed`, and the stepper cannot go below it** —
-  `OfferDriverService:129` refuses less, and a T-018 salon order needs 3–4. The API client's own
-  default of 1 would have rejected the driver on every salon order.
-  ⚠️ The total shown is price × **`seats_needed`**, not × `seats_offered` — the server's rule, which
-  the owner confirmed on 2026-08-02 as intended.
-  A driver with **no vehicle** gets a red explanatory box and a disabled Send, instead of the 403
-  `checkVehicleOwnership` would return. Backdrop dismissal is off (a stray tap would discard a typed
-  price). The server's 400s are already translated, so they surface verbatim via `getErrorMessage`.
-- [x] 5. **DONE 2026-08-08. `MyJoinRequestsScreen`** — `getMyJoinRequests` + `cancelJoinRequest`,
-  registered as route 16 and reached from a second new menu row ("Yuborilgan takliflarim"). Status
-  filter (server-side, via the `status` param), route, departure, passenger, seats, price, total,
-  the driver's message and the passenger's rejection reason.
-  🔴 **Second real defect found: `offer.passenger` does not exist on this endpoint.**
-  `getDriverJoinRequests` returns the **raw Sequelize model**, so the nested offer carries `user` —
-  the mapped `passenger` shape is built only by `PassengerOfferService` for the `public/*` routes.
-  The app's type claimed `passenger` was always there, so `offer.passenger.name` would have been a
-  **crash on every row**. Type corrected (`JoinRequestOffer`) and a `passengerNameOf()` helper reads
-  whichever shape arrives.
-  ⚠️ **Cancel is offered on `pending` rows only** — the server refuses to cancel a `confirmed`
-  request (400), and after `cancelled` *or* `rejected` a re-join is impossible (owner, 2026-08-02).
-  The confirm dialog says that in all three languages rather than implying it is undoable.
-  ⚠️ `useFocusEffect` alone drives loading — it covers mount, filter change and returning to the
-  screen; a `useEffect` beside it just double-fetched on mount.
-- [x] 6. **DONE 2026-08-08. Static verification.** `tsc` driver app **36 = baseline**, with **zero**
-  errors in any of the 9 touched files (nothing to prove pre-existing via `git stash` — none of them
-  contributes an error). **291/291** i18n checks in uz/ru/en over **97 keys discovered from the
-  source**, then **evaluated** against babel-transpiled locale modules.
-  ⚠️ **The check earned its keep again: `common.all` existed in `uz` only**, so the new filter bar
-  would have rendered the raw key in Russian and English. Added, with `viewAll` for parity. That is
-  the **third** uz-only key found on this card (see step 1's `menu.myOffers`) — all the same class
-  as **T-035**.
-  No hard-coded user-visible strings in either new screen (grep over JSX text and placeholders).
-- [ ] 7. **Owner: rebuild the driver app and run the loop end to end** — passenger posts an order in
-  the user app → driver finds it, opens it, sends an offer → passenger sees the driver
-  (⚠️ **that screen is T-024 and does not exist yet**, so confirm via the DB or the admin panel).
+- [x] 1. **DONE 2026-08-08. API: auth errors translated.** All 5 strings in `middleware/auth.ts` and
+  all 4 in `adminAuth.ts` now go through `t()` with the language read from `Accept-Language`
+  (`getLanguageFromHeaders`) — the only signal available, since this middleware runs *before* any
+  handler and there is no user record to read a preference from yet.
+  ⚠️ **Reused the existing `auth.*` keys rather than inventing duplicates**: `tokenExpired`
+  ("Sessiya muddati tugagan") and `accountNotFound` already existed and fit exactly. Only 4 keys are
+  new — `noToken`, `notAuthenticated`, `insufficientPermissions`, `adminTokenInvalid` — ×3 locales.
+  🔴 **Found while doing it: `adminAuth`'s catch rewrote EVERY failure as "Invalid or expired
+  token"**, including the two specific errors thrown a few lines above it, so those messages had
+  never reached the admin panel at all. Translating them alone would have changed nothing. An
+  `UnauthorizedError` now passes through unchanged, matching what `auth.ts` already did.
+  `tsc` API **282 = baseline**; the 3 errors reported inside the touched files were **proven
+  pre-existing against `HEAD`** (`req.user = decoded` and two extension-less route imports — none of
+  them mine, and no `git stash` needed with T-037's work in the tree).
+  **18/18** messages resolve through the **real translator**, called the way the middleware calls it,
+  for the three `Accept-Language` values the apps actually send — plus an assertion that **no
+  hard-coded English literal is left** in either middleware. Script: `scratchpad/api-i18n-check.js`.
+- [x] 2. **DONE 2026-08-08. User app persists the refresh token.** New `utils/tokenStore.ts` owns the
+  key names and `AuthContext` imports them, so the two can never drift. Two helpers —
+  `persistSession()` and `clearSession()` — replaced the **8** hand-rolled storage blocks; the four
+  sign-in paths were byte-identical, which is exactly how the refresh token got dropped four times.
+- [x] 3. **DONE 2026-08-08. `getHeaders` refreshes transparently.** `ensureFreshAccessToken` in
+  `config/api.ts`, behind the mandatory single in-flight promise. `tokenStore.ts` stays
+  **storage + JWT decoding only, no network**, which is what keeps the `api/auth.ts` ↔ `config/api.ts`
+  cycle from forming. The `api/users.ts:120` avatar bypass now calls it explicitly.
+  ⚠️ **No base64/JWT library exists in the app and adding a dependency needs the owner** (rule 4), so
+  `exp` is decoded by hand — with a regex fallback for payloads whose non-ASCII claims break
+  `JSON.parse` on latin-1 bytes. Both paths are covered by the runtime check.
+  ⚠️ **An unreadable or missing `exp` means "do not refresh", never "expired"** — guessing "expired"
+  would rotate a token on every single request and burn the refresh chain.
+  🔴 **The trap this hit, and the reason it is worth reading:** screens hold the token they were
+  handed at sign-in, so after one refresh **every caller's copy is stale forever**. Without a re-read
+  of storage before refreshing, each request would have seen an "expired" token and rotated again.
+  `ensureFreshAccessToken` now checks what is actually on disk first.
+- [x] 4. **DONE 2026-08-08. A failed refresh is a real logout — a flaky network is not.**
+  `onAuthLost` fires **only** when the server *rejected* the refresh token; `AuthContext` clears the
+  session and dispatches `LOGOUT`. A network failure returns the old token and says nothing, so an
+  outage can no longer end a session. OR-002 still logs a deleted account out immediately.
+  ⚠️ **Deliberately no "tokens changed" event.** Pushing each refreshed token into `AuthContext`
+  state would change `state.token` every ~15 min and re-run everything keyed on it — the identity
+  churn behind **T-017**. The in-memory token is just a "signed in" marker now.
+  🔴 **Found while wiring it: `logout` never revoked anything.** It called
+  `headers: getHeaders(state.token)` **un-awaited**, so `headers` was a `Promise` and the request
+  went out with **no Authorization at all**, and it never sent the refresh token either. Harmless
+  while the refresh token was being thrown away; unacceptable now that it is stored and lives 7 days.
+  It now calls `AuthAPI.logout(token, refresh)`, which already did both correctly and had no caller.
+- [x] 5. **DONE 2026-08-08. Driver app carries the same three changes.** `utils/tokenStore.ts` copied
+  and verified **byte-identical** (`diff -q`); the refresh block in `config/api.ts` is **character-for-
+  character identical** to the user app's (3507 chars, compared programmatically, not by eye).
+  Its `AuthContext` needed the same 8 storage sites rerouted through `persistSession`/`clearSession`,
+  and the same never-awaited `getHeaders(token)` in `logout` replaced with `AuthAPI.logout`.
+  ⚠️ The driver's helpers are `useCallback`s — every method in that file is memoized with no state
+  deps on purpose (it reads through `stateRef`), and breaking that convention is what T-017 was.
+- [x] 6. **DONE 2026-08-08. Verification.**
+  `tsc`: API **282 = baseline** · admin **0 = baseline** · user **11** · driver **35**.
+  ⚠️ **Both apps are one BELOW baseline (12 and 36) — deliberately.** The removed error *is* the
+  logout bug: `headers: getHeaders(token)` was never awaited, and that un-awaited call was itself one
+  of the baseline errors in each app. Every remaining error in a touched file was **proven
+  pre-existing against `HEAD`** (`git show HEAD:<file>`), not `git stash` — T-037's work is
+  uncommitted in the same tree.
+  **18/18** API auth messages resolve through the **real translator** for the three
+  `Accept-Language` values the apps send, plus an assertion that no hard-coded English literal
+  remains. **291/291** driver i18n checks still pass (T-037's, unaffected).
+  **28/28 + 28/28 runtime checks** — the suite loads the **real** `tokenStore.ts` and `config/api.ts`
+  through babel with only React Native's edges stubbed, so nothing is re-implemented and a bug in the
+  shipped code fails the script. It covers: `exp` decoding incl. the **non-ASCII regex fallback**;
+  unknown/missing `exp` never counting as expired; **10 concurrent callers → exactly ONE refresh**;
+  the rotated refresh token being persisted; a **stale caller token not re-rotating**; a rejected
+  refresh clearing both tokens and firing `authLost` **once**; a **network failure doing neither**;
+  and a pre-T-038 install (no refresh token) attempting no request and keeping its session.
+  Scripts: `scratchpad/refresh-check.js`, `scratchpad/api-i18n-check.js`.
+- [ ] 7. **Owner: deploy the API FIRST, then rebuild both apps.** Then: log in, wait >15 min (or set
+  `JWT_EXPIRES_IN=1m` on test3 to make it quick), use a screen, confirm **no error and no logout**;
+  kill and reopen the app; confirm a deleted account still logs out.
 - [ ] 8. Commit (only after the owner's approval).
 
 ## Files to touch
-- `driver-app-standalone/navigation/MainNavigator.tsx` — 2 new routes
-- `driver-app-standalone/navigation/types.ts` — `MainStackParamList`
-- `driver-app-standalone/screens/MenuScreen.tsx` — entry point(s)
-- **NEW** `driver-app-standalone/screens/PassengerOfferDetailsScreen.tsx`
-- **NEW** `driver-app-standalone/screens/MyJoinRequestsScreen.tsx` (step 5)
-- `driver-app-standalone/api/passengerOffers.ts` — the missing `token` on all three authenticated
-  calls, plus the `JoinRequestOffer` type and `passengerNameOf()` (not foreseen when planning)
-- `driver-app-standalone/screens/SearchPassengerOffersScreen.tsx` — drop the `as any` on the tap
-- `driver-app-standalone/translations/{uz,ru,en}.ts` — all three, always
-- ❌ **No API changes. No migration.**
+- `api,admin,db/apps/api/src/middleware/auth.ts` · `adminAuth.ts` · `src/i18n/**` (new `auth.*` keys)
+- `{user,driver}-app-standalone/config/api.ts` — refresh-aware `getHeaders`
+- **NEW** `{user,driver}-app-standalone/utils/tokenStore.ts`
+- `{user,driver}-app-standalone/contexts/AuthContext.tsx` — persist + clear the refresh token
+- `user-app-standalone/api/users.ts` — the one bypass
+- ❌ **No migration. No change to `JWT_EXPIRES_IN`** (owner decision 1).
 
 ## Risks / open questions (READ before coding)
-- ⚠️ **The search screen has never rendered.** 1000+ lines written blind. Step 1 exists to find out
-  what breaks *before* three more screens are built on top of it.
-- ⚠️ **`seats_offered` is the trap on this card.** Defaulting to 1 makes every salon order (T-018)
-  refuse the driver with a confusing message. The service carries a comment written for this card.
-- ⚠️ **A driver with no vehicle** hits `checkVehicleOwnership` → **403 "vehicle not found"**, which
-  reads like a bug. Catch it in the app before sending.
-- ⚠️ **Cancel and reject are one-way.** A driver who withdraws can never re-offer on that order
-  (unique `(offer_id, driver_id)` index + explicit service checks). Owner's decision 2026-08-02 —
-  do not soften it, just make the UI honest about it.
-- ⚠️ **The loop cannot be fully demoed yet** — the passenger's "drivers who offered" screen is
-  **T-024** and does not exist. Step 7 stops at the DB/admin panel.
-- ⚠️ **T-026 part A lists real 500s on the neighbouring passenger↔driver routes.** Different leg,
-  but if a garbage param 500s while testing, that is T-026, not a new bug.
-- ⚠️ `OfferWizardScreen` and `MenuScreen` are touched by T-002/T-026 — expect conflicts if those move.
+- ⚠️ **`rotateTokens` revokes the old refresh token.** Concurrent refreshes = a spurious logout. The
+  in-flight promise is the fix and must be tested, not assumed.
+- ⚠️ **Import cycle** `config/api.ts` ↔ `api/auth.ts`. Metro will not always error — it can hand back
+  `undefined` at runtime instead. Keep the refresh call in its own module.
+- ⚠️ **Do not break OR-002** (T-012). A deleted account must still log out immediately; only the
+  *expired token* case gets the new second chance.
+- ⚠️ **The server's revoked-token list is an in-memory `Set`** (`utils/jwt.ts`), so an API restart
+  forgets every revocation. Out of scope here — **board it** rather than fix it in this card.
+- ⚠️ **Every user will be logged out once** when this ships: existing installs hold no refresh token,
+  so their next expiry still ends the session. Unavoidable, and worth telling testers.
+- ⚠️ **T-037's code is uncommitted in the same working tree.** Do not mix the two in one commit.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
-- `.claude/settings.json` keeps picking up permission-prompt changes — **keep it out of commits**
-  (it was wrongly committed in both `6b691ab` and `34988cc`).
+- `.claude/settings.json` keeps picking up permission-prompt changes — **keep it out of commits.**
 
 ## Session notes (one line per work session)
-- **2026-08-08** — card created from the owner's report. Grounded in code: the search screen is
-  registered in **no** navigator, 4 of 5 API functions have zero call sites, and the backend is
-  already complete. T-023's premise was wrong and the card was replaced; T-021 absorbed as step 3.
-  **Steps 1, 3, 4, 5, 6 all done the same session** — screen registered, two menu entry points,
-  detail screen, join sheet, sent-offers list, static verification. Step 2 (device run) deferred by
-  the owner, so everything after it was built on an unrendered screen.
-  **Three defects surfaced, all in code nobody had ever executed:** the three authenticated calls in
-  `api/passengerOffers.ts` sent **no `Authorization` header** (guaranteed 401); `offer.passenger`
-  does not exist on the join-requests endpoint (guaranteed crash); and three keys —
-  `menu.myOffers`, `common.all`, `common.viewAll` — existed in **uz only**.
+- **2026-08-08** — card created from the owner's device screenshot. Root cause traced end to end
+  before any code: the refresh token is destructured and thrown away in both apps, and
+  `refreshAccessToken` has never had a call site. Owner chose the real fix over raising the TTL.
+  **Steps 1-6 all done the same session.** Both apps finished one `tsc` error *below* baseline,
+  because the never-awaited `getHeaders` in `logout` was itself a baseline error. The runtime suite
+  (28 checks, run against both apps' real modules) is the part worth keeping — the mutex and the
+  stale-token re-read are not reviewable by reading.
 
 ## Resume point (for the next chat)
-**All of Claude's steps are DONE (1, 3, 4, 5, 6). Only step 7 (owner device test) and step 8
-(commit) remain.** Step 2 was **deferred by the owner, not skipped** — steps 3-6 were therefore
-built on top of a search screen that has still never rendered.
+**Steps 1-6 DONE. Only step 7 (owner: deploy + device test) and step 8 (commit) remain.**
 
-**The whole loop now exists in the driver app:**
-home menu → **"Yo'lovchi buyurtmalari"** → `SearchPassengerOffers` → tap a card →
-`PassengerOfferDetails` → **"Bu buyurtmani olaman"** → join sheet → `joinPassengerOffer`;
-and home menu → **"Yuborilgan takliflarim"** → `MyJoinRequests` → cancel a pending one.
+**What now happens:** every sign-in stores the refresh token; `getHeaders` — which every
+authenticated call already awaits — swaps a spent access token for a fresh pair behind one in-flight
+promise; only a refresh the **server rejected** ends the session; and the API's 401s are translated.
 
-**Two defects found in code nobody had ever executed — both would have broken the flow outright:**
-1. **A 401 baked into every authenticated call.** `joinPassengerOffer`, `getMyJoinRequests` and
-   `cancelJoinRequest` called `getHeaders()` with **no token**, so they sent no `Authorization`
-   header. Every other API module in the app passes one. Fixed.
-2. **`offer.passenger` does not exist on `GET /driver/join-requests`.** That endpoint returns the
-   raw model (`offer.user`); only the `public/*` routes build the mapped `passenger` shape. The app's
-   type claimed otherwise, so the requests list would have crashed on every row. Fixed via
-   `JoinRequestOffer` + `passengerNameOf()`.
+**Three defects surfaced that were not in the original diagnosis:**
+1. **A stale caller token would have re-rotated on every request.** Screens keep the token they were
+   handed at sign-in, so after one refresh every caller's copy is stale forever. `ensureFreshAccessToken`
+   re-reads storage before deciding to refresh. Without this the mutex alone would not have saved it.
+2. **`logout` never revoked anything, in EITHER app.** `headers: getHeaders(token)` was not awaited,
+   so `headers` was a `Promise` and the request carried no `Authorization`; the refresh token was
+   never sent either. It now calls `AuthAPI.logout(token, refresh)` — which already did both
+   correctly and had **zero callers**.
+3. **`adminAuth`'s catch rewrote every failure as "Invalid or expired token"**, so its specific
+   messages had never reached the admin panel at all.
 
-**Verification:** `tsc` driver app **36 = baseline**, **zero** errors in any of the 9 touched files.
-**291/291** i18n checks over **97 keys discovered from the source** and evaluated in uz/ru/en
-(script: `scratchpad/i18n-check.js`). No hard-coded strings in the new screens.
-⚠️ **Three uz-only keys surfaced along the way** — `menu.myOffers`, `common.all`, `common.viewAll` —
-all fixed here, all the same class as **T-035**, which is still open.
+⚠️ **Tell the testers: everyone gets logged out ONE more time.** Existing installs hold no refresh
+token, so their current session still ends at its next expiry. After that, sessions last 7 days.
 
-🛑 **Nothing has run on a device or against the live API.** Step 7 is the real test, and the loop
-cannot be fully demoed: the passenger's "drivers who offered" screen is **T-024** and does not
-exist, so confirm the driver's offer arrived via the DB or the admin panel.
+🛑 **Nothing has run on a device or against the live API.** ⚠️ **Deploy the API FIRST** — the apps
+are harmless against the old API, but the translated 401s only appear once it ships.
+💡 To test in minutes rather than 15, set `JWT_EXPIRES_IN=1m` on test3 first, then put it back.
 
 **Baselines to compare `tsc` against:** API **282**, admin **0**, user app **12**, driver app **36**.

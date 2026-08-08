@@ -3,7 +3,13 @@
  * Handles all user-related API requests
  */
 
-import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import {
+  API_BASE_URL,
+  API_ENDPOINTS,
+  getHeaders,
+  API_TIMEOUT,
+  ensureFreshAccessToken,
+} from '../config/api';
 
 export interface User {
   id: string;
@@ -112,12 +118,18 @@ export const uploadUserAvatar = async (
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
+    // T-038: the ONE call in the app that built its own Authorization header
+    // instead of using `getHeaders`, so it was the one call the token refresh
+    // would have missed. `Content-Type` still has to be set by hand here —
+    // multipart, not JSON.
+    const freshToken = await ensureFreshAccessToken(token);
+
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.user.avatar}`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${freshToken}`,
           'Content-Type': 'multipart/form-data',
         },
         body: formData,

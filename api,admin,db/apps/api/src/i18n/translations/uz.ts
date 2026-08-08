@@ -133,6 +133,12 @@ export default {
     accountDisabled: 'Akkaunt faol emas',
     tokenExpired: 'Sessiya muddati tugagan',
     tokenInvalid: 'Token noto\'g\'ri',
+    // T-038 — the auth middleware used to throw these in hard-coded English, so
+    // every 401 reached the apps untranslated no matter the Accept-Language.
+    noToken: 'Avtorizatsiya tokeni yuborilmadi',
+    notAuthenticated: 'Siz tizimga kirmagansiz',
+    insufficientPermissions: 'Sizda bunga ruxsat yo\'q',
+    adminTokenInvalid: 'Admin tokeni noto\'g\'ri',
   },
 
   // OTP messages

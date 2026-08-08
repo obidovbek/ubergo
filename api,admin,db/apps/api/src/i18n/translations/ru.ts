@@ -132,6 +132,12 @@ export default {
     accountDisabled: 'Аккаунт отключен',
     tokenExpired: 'Сессия истекла',
     tokenInvalid: 'Неверный токен',
+    // T-038 — the auth middleware used to throw these in hard-coded English, so
+    // every 401 reached the apps untranslated no matter the Accept-Language.
+    noToken: 'Токен авторизации не передан',
+    notAuthenticated: 'Вы не вошли в систему',
+    insufficientPermissions: 'У вас нет прав на это действие',
+    adminTokenInvalid: 'Неверный админ-токен',
   },
 
   // OTP messages

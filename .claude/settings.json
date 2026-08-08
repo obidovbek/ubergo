@@ -129,7 +129,15 @@
       "Bash(node -e \"console.log\\(require.resolve\\('@babel/core'\\)\\)\")",
       "Bash(node -e \"console.log\\(require.resolve\\('@babel/preset-typescript'\\)\\)\")",
       "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/i18n-check.js\")",
-      "Bash(grep -nE \"placeholder=\\\\\"[^\\\\\"]+\\\\\"|>[A-Za-zА-Яа-яЎўҚқҒғҲҳ ]{3,}<\" screens/PassengerOfferDetailsScreen.tsx screens/MyJoinRequestsScreen.tsx)"
+      "Bash(grep -nE \"placeholder=\\\\\"[^\\\\\"]+\\\\\"|>[A-Za-zА-Яа-яЎўҚқҒғҲҳ ]{3,}<\" screens/PassengerOfferDetailsScreen.tsx screens/MyJoinRequestsScreen.tsx)",
+      "Bash(node -e \"console.log\\(require.resolve\\('typescript'\\)\\)\")",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/api-i18n-check.js\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.dependencies\\).join\\(' '\\)\\)\")",
+      "Bash(grep -n \"AsyncStorage.setItem\\(STORAGE_KEYS.TOKEN\\\\|AsyncStorage.removeItem\\(STORAGE_KEYS.TOKEN\\\\|const { user, access, refresh }\" contexts/AuthContext.tsx)",
+      "Bash(python3 -)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/refresh-check.js\")",
+      "Bash(grep -n \"STORAGE_KEYS\\\\.\\\\|const { user, access, refresh }\\\\|const STORAGE_KEYS\\\\|^import\\\\|clearPendingOtp\\\\|clearRegistrationDraft\" driver-app-standalone/contexts/AuthContext.tsx)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/refresh-check.js\" \"D:/projects/UbexGo/driver-app-standalone\")"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

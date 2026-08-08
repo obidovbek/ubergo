@@ -6,6 +6,16 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, DEFAULT_LANGUAGE } from '../config/languages';
+// Storage + JWT decoding only, no network — so importing it here cannot create a
+// cycle with `api/auth.ts`, which imports this file (T-038).
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  isTokenExpiringSoon,
+  notifyAuthLost,
+  setTokens,
+} from '../utils/tokenStore';
 
 // Base API URL - Update this based on your environment 
 // Production: https://test3.fstu.uz/api 
@@ -97,6 +107,101 @@ export const API_ENDPOINTS = {
 // API Timeout
 export const API_TIMEOUT = 30000; // 30 seconds
 
+/**
+ * The one in-flight refresh (T-038).
+ *
+ * ⚠️ This is NOT an optimisation. `rotateTokens` on the server revokes the old
+ * refresh token the instant it is used, so two concurrent refreshes would burn
+ * the token and the second would fail — logging the user out for no reason.
+ * Every caller must wait on the same promise.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Swaps the stored refresh token for a fresh pair. Returns the new access
+ * token, or `null` if we could not get one.
+ *
+ * The two failure modes are deliberately different:
+ * - the server rejected the refresh token (expired / revoked / absent) → the
+ *   session really is over: clear both tokens and tell `AuthContext` to log out;
+ * - the request never completed (offline, timeout, 5xx) → say nothing. The
+ *   session may well still be valid, and destroying it over a flaky connection
+ *   is exactly the behaviour this card exists to remove.
+ */
+const performTokenRefresh = async (): Promise<string | null> => {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) {
+    // Nothing to refresh with — an install that logged in before T-038 shipped.
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    // Built by hand rather than via `getHeaders` — that is the function calling
+    // us, and reusing it here would recurse.
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.refresh}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      await clearTokens();
+      notifyAuthLost();
+      return null;
+    }
+
+    const body = await response.json().catch(() => null);
+    const access: string | undefined = body?.data?.access;
+    const refresh: string | undefined = body?.data?.refresh;
+
+    if (!access) {
+      await clearTokens();
+      notifyAuthLost();
+      return null;
+    }
+
+    // The endpoint ROTATES: it returns a new refresh token too, and the one we
+    // just sent is already revoked. Persisting both is not optional.
+    await setTokens(access, refresh);
+    return access;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.warn('Token refresh failed (network); keeping the session:', error);
+    return null;
+  }
+};
+
+/**
+ * Returns a usable access token, refreshing first if the current one is spent.
+ * Falls back to the token it was given, so a failed refresh degrades to the old
+ * behaviour (a 401) rather than to a request with no credentials at all.
+ */
+export const ensureFreshAccessToken = async (token: string): Promise<string> => {
+  if (!isTokenExpiringSoon(token)) return token;
+
+  // ⚠️ Screens hold the token they were given at sign-in, so after a refresh the
+  // caller's copy is stale for the rest of the session. Without this re-read,
+  // every subsequent request would see an "expired" token and rotate again —
+  // burning a refresh token per request. Check what is actually on disk first.
+  const stored = await getAccessToken();
+  if (stored && !isTokenExpiringSoon(stored)) return stored;
+
+  if (!refreshInFlight) {
+    refreshInFlight = performTokenRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+
+  const refreshed = await refreshInFlight;
+  return refreshed || stored || token;
+};
+
 // Request Headers
 export const getHeaders = async (token?: string | null): Promise<Record<string, string>> => {
   const headers: Record<string, string> = {
@@ -138,6 +243,10 @@ export const getHeaders = async (token?: string | null): Promise<Record<string, 
   }
 
   if (authToken) {
+    // T-038: the choke point. Every authenticated call in the app already
+    // awaits this function, so refreshing here covers all of them at once —
+    // no per-call-site retry wrapper needed.
+    authToken = await ensureFreshAccessToken(authToken);
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 

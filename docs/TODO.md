@@ -7,6 +7,52 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-038 (P1) 🔴 **Every user of BOTH apps is silently logged out ~15 minutes after login — the
+  refresh token is thrown away.** Reported by the owner 2026-08-08 from a device: the user app's
+  "Mening bronlarim" showed a toast **"Xato / Invalid or expired token"**, and "before last logged
+  out maybe for this issue". **Fully traced in code the same day; the owner's guess was right.**
+  1. **The refresh token is received and discarded.** `AuthContext` destructures
+  `const { user, access, refresh } = response.data` at **4 places in each app** and never references
+  `refresh` again. `STORAGE_KEYS` holds only `TOKEN` and `USER` — **there is no refresh-token key in
+  either app.**
+  2. **`refreshAccessToken()` has ZERO call sites.** It exists in both `api/auth.ts` and the server
+  route is live (`POST /auth/refresh`, `auth.routes.v2.ts:28`). Nothing has ever called it.
+  3. **The access token lives 15 minutes** (`config/index.ts:31`, `JWT_EXPIRES_IN || '15m'`); the
+  refresh token would have lasted **7 days**.
+  ⇒ 15 minutes after login every authenticated request 401s with `Invalid or expired token`
+  (`middleware/auth.ts:28`) — that is the screenshot.
+  ⇒ On the **next app start**, `AuthContext` init calls `/auth/me`, gets the same 401, and takes the
+  **OR-002 branch** (`AuthContext.tsx:113-125`) which clears `TOKEN` + `USER` → **logged out**. The
+  OR-002 logic is not wrong; it simply cannot tell "account deleted" from "access token expired",
+  because nothing ever refreshes. This is the "before last logged out".
+  4. **The language issue is real and separate.** `middleware/auth.ts` throws **hard-coded English**
+  — `'Invalid or expired token'` (:28), `'No token provided'` (:20), `'Account no longer exists'`
+  (:36), `'Not authenticated'` (:54), `'Insufficient permissions'` (:58) — and never calls `t()`.
+  Same in `adminAuth.ts:39`. So **every 401 is English regardless of `Accept-Language`**, in both
+  apps and the admin panel. (T-033 fixed the app-side plumbing; this is the server side of it.)
+  **Owner decisions 2026-08-08:** fix it **properly** — store the refresh token and refresh-and-retry
+  — **not** by raising `JWT_EXPIRES_IN`; and the untranslated 401s are **included in this card**.
+  ⚠️ Both apps carry the **same** code, so every app-side change is made twice, per this project's
+  duplicate-by-convention rule. → `docs/PLAN.md`
+
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
+  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
+> **fails**.
 - [ ] T-037 (P1) **Driver app: passenger orders are unreachable — no route, no detail screen, no
   join.** Raised by the owner 2026-08-08 ("user creates offer but in the driver app there is no way
   to search or join"). **Confirmed in code the same day, and it is worse than T-023 described.**
@@ -27,25 +73,23 @@
   addressed to exactly this card.
   ⚠️ The driver has **one** vehicle (`profile.vehicle`, as `OfferWizardScreen.loadVehicles` reads
   it) — so `vehicle_id` is not a picker, but a driver with **no vehicle yet must be told**, not 403'd.
-  **Absorbs T-021 and replaces T-023** (both struck out below). → `docs/PLAN.md`
+  **Absorbs T-021 and replaces T-023** (both struck out below).
+  **Steps 1, 3, 4, 5, 6 ALL DONE 2026-08-08** — search screen registered + two menu rows
+  (`passengerOrders`, `myJoinRequests`), `PassengerOfferDetailsScreen` (reusing the existing
+  `PassengerOfferExtras` rather than re-laying-out the T-018 fields), the join sheet, and
+  `MyJoinRequestsScreen` with cancel. `tsc` driver **36 = baseline**, zero errors in the 9 touched
+  files; **291/291** i18n checks over **97 keys discovered from source** and evaluated in uz/ru/en.
+  🔴 **Three defects found in code nobody had ever executed:** (1) `joinPassengerOffer`,
+  `getMyJoinRequests`, `cancelJoinRequest` called `getHeaders()` with **no token** → guaranteed 401;
+  (2) `offer.passenger` **does not exist** on `GET /driver/join-requests` (raw model → `offer.user`;
+  only `public/*` builds the mapped shape) → guaranteed crash on every row; (3) `menu.myOffers`,
+  `common.all`, `common.viewAll` existed in **uz only** (same class as T-035).
+  🛑 **Only step 7 (owner: rebuild the driver app, walk the loop) and step 8 (commit) remain.
+  Nothing has run on a device.** ⚠️ The loop cannot be fully demoed — the passenger's "drivers who
+  offered" screen is **T-024** and does not exist, so confirm the offer landed via the DB or admin.
+  ⚠️ Its plan is **`docs/PLAN-T037.md`** (moved intact 2026-08-08 so T-038 could use `docs/PLAN.md`).
 
-- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
-  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
-  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
-  landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
-  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
-  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
-  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
-  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
+> T-014/T-015 committed in `5b315a6`, T-016 in
 > `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
 - [ ] T-033 (P1) **Resend OTP shows a generic error; server messages never reach either app.**
   Found by the owner on a **device**, 2026-08-08 — the first real device session. Fully traced in
