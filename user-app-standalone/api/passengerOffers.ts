@@ -6,23 +6,69 @@
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
 
 // Types
+// The T-018 field types (`PassengerOfferPaymentType`, `PassengerOfferSeatCounts`,
+// …) are declared further down beside `CreatePassengerOfferData` and are used
+// here too — TypeScript hoists them, so there is one copy, not two.
+/**
+ * ⚠️ T-040: this interface was **17 fields behind the server** — everything T-018
+ * added (the windows, the gendered seat breakdown, salon scope, vehicle class,
+ * the flags, the special order, both landmarks) was missing, even though the API
+ * returns all of it and the DRIVER app's copy already declared it. The passenger
+ * app literally could not see most of the order it had just created, which is
+ * what made "edit an order" impossible to write.
+ *
+ * The field list below mirrors `PassengerOfferAttributes` in
+ * `api/src/database/models/PassengerOffer.ts` — the owner view returns the raw
+ * model, so anything in that file comes back here. Keep the two in step.
+ */
 export interface PassengerOffer {
   id: number;
   user_id: number;
   from_text: string;
-  from_lat?: number;
-  from_lng?: number;
+  from_lat?: number | null;
+  from_lng?: number | null;
+  /** Geo ids — needed to rebuild the location pickers when editing (T-040). */
+  from_country_id?: number | null;
+  from_province_id?: number | null;
+  from_city_id?: number | null;
+  from_settlement_id?: number | null;
+  from_landmark?: string | null;
   to_text: string;
-  to_lat?: number;
-  to_lng?: number;
+  to_lat?: number | null;
+  to_lng?: number | null;
+  to_country_id?: number | null;
+  to_province_id?: number | null;
+  to_city_id?: number | null;
+  to_settlement_id?: number | null;
+  to_landmark?: string | null;
   start_at: string;
+  /** End of the departure window, when the passenger gave one. */
+  depart_until?: string | null;
+  arrive_from?: string | null;
+  arrive_until?: string | null;
+  is_urgent?: boolean;
   seats_needed: number;
   // Nullable since T-018 — the new order form collects no price at all.
   max_price_per_seat: number | null;
   currency: string;
+  payment_type?: PassengerOfferPaymentType | null;
+  /** Owner view only — the API strips it for everyone else. */
+  payer_phone?: string | null;
+  seat_counts?: PassengerOfferSeatCounts | null;
+  seat_position_any?: boolean;
+  salon_scope?: PassengerOfferSalonScope | null;
+  vehicle_class?: PassengerOfferVehicleClass | null;
+  /** Stored by the API but not yet surfaced by this app's form. */
+  vehicle_types?: ('minivan' | 'damas' | 'microbus')[] | null;
   front_seat: boolean;
   pets: boolean;
   large_baggage: boolean;
+  woman_in_car?: boolean;
+  roof_rack_needed?: boolean;
+  trailer?: boolean;
+  road_pickup?: boolean;
+  road_pickup_note?: string | null;
+  special_order?: PassengerOfferSpecialOrder | null;
   note?: string;
   /** 'driver_found' = a driver was confirmed; the ride has not happened yet. */
   status: 'published' | 'driver_found' | 'archived' | 'cancelled' | 'completed';

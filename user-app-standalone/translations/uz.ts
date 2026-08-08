@@ -423,6 +423,16 @@ export default {
     createOffer: "Safar so'rov yaratish",
     myOffers: "Mening safar so'rovlarim",
     createRideRequest: "Safar so'rov yaratish",
+    // T-040 — edit mode reuses this whole screen.
+    editRideRequest: "So'rovni tahrirlash",
+    saveChanges: "O'zgarishlarni saqlash",
+    updateSuccessMessage: "So'rovingiz yangilandi",
+    errorUpdate: "So'rovni yangilab bo'lmadi",
+    errorUpdateMessage: "So'rovni yangilashda xatolik yuz berdi",
+    edit: 'Tahrirlash',
+    editWithDriversTitle: "Haydovchilar taklif yuborgan",
+    editWithDriversMessage:
+      "Bu so'rovga allaqachon haydovchilar taklif yuborgan. O'zgartirishlardan keyin ularning takliflari saqlanadi, lekin yangi shartlar ularga to'g'ri kelmasligi mumkin.",
     myRideRequests: "Mening safar so'rovlarim",
     route: "Marshrut",
     from: "Qayerdan",

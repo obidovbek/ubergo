@@ -886,6 +886,17 @@ export class PassengerOfferService {
   ) {
     const offer = await this.getOfferById(offerId, userId);
 
+    // T-040: nothing stopped a cancelled or completed order from being patched.
+    // It never mattered while no client could edit at all; now that the
+    // passenger has an Edit button, hiding it in the app is not enough — the
+    // endpoint has to refuse it too.
+    const language = req
+      ? getLanguageFromHeaders(req.headers['accept-language'])
+      : 'uz';
+    if (offer.status !== 'published' && offer.status !== 'driver_found') {
+      throw new AppError(t('offers.cannotEditInStatus', language), 400);
+    }
+
     // Whitelist + validate against the stored row (partial patch)
     const fields = this.buildOfferFields(data, offer);
 

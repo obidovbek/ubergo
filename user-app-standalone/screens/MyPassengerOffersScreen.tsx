@@ -174,6 +174,35 @@ export const MyPassengerOffersScreen: React.FC = () => {
     loadOffers(true);
   };
 
+  /**
+   * T-040. Editing is allowed for the same statuses the server allows
+   * (`published` / `driver_found`) — an order that has merely *expired* is still
+   * `published`, so it stays editable, which is the whole point: the passenger
+   * can push the departure time forward instead of starting again.
+   *
+   * ⚠️ Owner decision 2026-08-08: when drivers have already offered, **warn and
+   * keep** their offers. Do not block the edit and do not auto-reject anyone.
+   */
+  const handleEditOffer = (offer: PassengerOffer) => {
+    const pending = offer.drivers?.filter((d) => d.status === 'pending').length || 0;
+    const open = () =>
+      (navigation as any).navigate('CreatePassengerOffer', { offerId: offer.id });
+
+    if (pending > 0) {
+      showConfirmDialog({
+        title: t('passengerOffers.editWithDriversTitle'),
+        message: t('passengerOffers.editWithDriversMessage'),
+        confirmText: t('passengerOffers.edit'),
+        cancelText: t('common.cancel'),
+        onConfirm: open,
+        onCancel: () => {},
+      });
+      return;
+    }
+
+    open();
+  };
+
   const handleCancelOffer = async (offerId: number) => {
     showConfirmDialog({
       title: t('passengerOffers.cancelRequest'),
@@ -429,6 +458,17 @@ export const MyPassengerOffersScreen: React.FC = () => {
             only one that notifies the confirmed driver. */}
         {(item.status === 'published' || item.status === 'driver_found') && (
           <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleEditOffer(item);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="create-outline" size={18} color="#2563EB" />
+              <Text style={styles.editButtonText}>{t('passengerOffers.edit')}</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={(e) => {
@@ -861,6 +901,21 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 10,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563EB',
   },
   cancelButton: {
     flex: 1,

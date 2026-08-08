@@ -199,6 +199,8 @@ export default {
     noPermissionViewDrivers: 'You do not have permission to view drivers for this offer',
     cannotCancelConfirmed: 'Cannot cancel a confirmed request',
     cannotJoinAfterRejected: 'You cannot join this offer because your previous request was rejected',
+    cannotEditInStatus:
+      'This order can no longer be edited — it is cancelled or completed',
     cannotJoinAfterCancelled: 'You cannot join this offer because you cancelled your previous request',
   },
 

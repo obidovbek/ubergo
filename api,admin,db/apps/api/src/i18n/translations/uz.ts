@@ -200,6 +200,8 @@ export default {
     noPermissionViewDrivers: 'Sizda bu e\'lon uchun haydovchilarni ko\'rish uchun ruxsat yo\'q',
     cannotCancelConfirmed: 'Tasdiqlangan so\'rovni bekor qilish mumkin emas',
     cannotJoinAfterRejected: 'Siz bu e\'longa qo\'shila olmaysiz, chunki sizning oldingi so\'rovingiz rad etilgan',
+    cannotEditInStatus:
+      "Bu so'rovni endi o'zgartirib bo'lmaydi — u bekor qilingan yoki yakunlangan",
     cannotJoinAfterCancelled: 'Siz bu e\'longa qo\'shila olmaysiz, chunki siz o\'z so\'rovingizni bekor qilgansiz',
   },
 

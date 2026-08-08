@@ -387,6 +387,16 @@ export default {
     createOffer: 'Create Ride Request',
     myOffers: 'My Ride Requests',
     createRideRequest: 'Create Ride Request',
+    // T-040 — edit mode reuses this whole screen.
+    editRideRequest: 'Edit request',
+    saveChanges: 'Save changes',
+    updateSuccessMessage: 'Your request has been updated',
+    errorUpdate: 'Could not update the request',
+    errorUpdateMessage: 'Something went wrong while updating the request',
+    edit: 'Edit',
+    editWithDriversTitle: 'Drivers have already offered',
+    editWithDriversMessage:
+      'Drivers have already made offers on this request. Their offers are kept after your changes, but the new terms may no longer suit them.',
     myRideRequests: 'My Ride Requests',
     route: 'Route',
     from: 'From',

@@ -19,12 +19,15 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import {
   createPassengerOffer,
+  updatePassengerOffer,
+  getPassengerOfferById,
   type CreatePassengerOfferData,
+  type PassengerOffer,
   type PassengerOfferPaymentType,
   type PassengerOfferSalonScope,
   type PassengerOfferVehicleClass,
@@ -57,11 +60,13 @@ import {
 
 type MainStackParamList = {
   Menu: undefined;
-  CreatePassengerOffer: undefined;
+  /** T-040: an id turns this screen into an editor for that order. */
+  CreatePassengerOffer: { offerId?: number } | undefined;
   MyPassengerOffers: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
+type CreateRouteProp = RouteProp<MainStackParamList, "CreatePassengerOffer">;
 
 /**
  * The API rejects non-urgent offers starting less than 30 minutes from now.
@@ -72,7 +77,19 @@ const MIN_ADVANCE_MS = 31 * 60 * 1000;
 
 export const CreatePassengerOfferScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<CreateRouteProp>();
   const { t } = useTranslation();
+
+  // T-040: one screen, two modes. `offerId` present = editing that order.
+  const offerId = route.params?.offerId;
+  const isEdit = offerId !== undefined;
+  const [isPreparing, setIsPreparing] = useState(isEdit);
+  /**
+   * The order as it was loaded. Used to answer "did the passenger actually
+   * re-pick this location?" — see `handleSubmit`, where the answer decides
+   * whether `from_text`/`to_text` are sent at all.
+   */
+  const [loadedOffer, setLoadedOffer] = useState<PassengerOffer | null>(null);
 
   // Country is fixed to Uzbekistan and never shown (OR-004 precedent)
   const [countryId, setCountryId] = useState<number | null>(null);
@@ -172,6 +189,150 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     };
   }, []);
 
+  /**
+   * T-040 — rebuild a `LocationValue` from the ids the API stores.
+   *
+   * ⚠️ Each level is fetched from its PARENT's id and matched by id, so this is
+   * three requests per side, not a scan. (The driver app's `parseLocationText`
+   * fans out country×province fetches to do the same job — logged in T-026 as a
+   * thing not to copy.)
+   *
+   * ⚠️ **The mahalla cannot come back.** It has no id column (T-029) — it exists
+   * only inside the stored `from_text`. It is left null here, and `handleSubmit`
+   * compensates by not resending the text unless the passenger re-picks the
+   * location, which keeps the stored string (mahalla included) intact.
+   */
+  const hydrateLocation = async (
+    countryIdValue: number | null,
+    provinceId?: number | null,
+    cityId?: number | null,
+    settlementId?: number | null,
+    landmark?: string | null,
+  ): Promise<LocationValue> => {
+    const value: LocationValue = { ...emptyLocation, landmark: landmark ?? "" };
+    if (!countryIdValue || !provinceId) return value;
+
+    const provinces = await GeoAPI.fetchGeoProvinces(countryIdValue);
+    value.province = provinces.find((p) => p.id === provinceId) ?? null;
+    if (!value.province || !cityId) return value;
+
+    const cities = await GeoAPI.fetchGeoCityDistricts(provinceId);
+    value.cityDistrict = cities.find((c) => c.id === cityId) ?? null;
+    if (!value.cityDistrict || !settlementId) return value;
+
+    const settlements = await GeoAPI.fetchGeoSettlements(cityId);
+    value.settlement = settlements.find((s) => s.id === settlementId) ?? null;
+    return value;
+  };
+
+  /**
+   * T-040 — load the order being edited and hydrate all 25 pieces of state.
+   *
+   * Waits for `countryId` because the geo cascade starts from it. Runs once per
+   * order: `loadedOffer` guards against a re-run overwriting the passenger's
+   * in-progress edits.
+   */
+  useEffect(() => {
+    if (!isEdit || !countryId || loadedOffer) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const offer = await getPassengerOfferById(offerId!);
+        if (cancelled) return;
+
+        const [from, to] = await Promise.all([
+          hydrateLocation(
+            countryId,
+            offer.from_province_id,
+            offer.from_city_id,
+            offer.from_settlement_id,
+            offer.from_landmark,
+          ),
+          hydrateLocation(
+            countryId,
+            offer.to_province_id,
+            offer.to_city_id,
+            offer.to_settlement_id,
+            offer.to_landmark,
+          ),
+        ]);
+        if (cancelled) return;
+
+        setFromLocation(from);
+        setToLocation(to);
+
+        const startAt = new Date(offer.start_at);
+        setIsUrgent(!!offer.is_urgent);
+        setDepartDate(startAt);
+        setDepartFrom(startAt);
+        setDepartUntil(offer.depart_until ? new Date(offer.depart_until) : null);
+        setArriveDate(offer.arrive_until ? new Date(offer.arrive_until) : null);
+        setArriveUntil(offer.arrive_until ? new Date(offer.arrive_until) : null);
+
+        setPaymentType(offer.payment_type ?? null);
+        if (offer.payer_phone) setPayerPhone(offer.payer_phone);
+        setVehicleClass(offer.vehicle_class ?? null);
+
+        const counts = offer.seat_counts;
+        setFrontCounts({
+          male: counts?.front_male ?? 0,
+          female: counts?.front_female ?? 0,
+        });
+        setBackCounts({
+          male: counts?.back_male ?? 0,
+          female: counts?.back_female ?? 0,
+        });
+        setSeatPositionAny(!!offer.seat_position_any);
+        setSalonScope(offer.salon_scope ?? null);
+
+        setWomanInCar(!!offer.woman_in_car);
+        setLargeBaggage(!!offer.large_baggage);
+        setRoofRackNeeded(!!offer.roof_rack_needed);
+        setTrailer(!!offer.trailer);
+        setPets(!!offer.pets);
+        setRoadPickup(!!offer.road_pickup);
+        setRoadPickupNote(offer.road_pickup_note ?? "");
+        setNote(offer.note ?? "");
+
+        const special = offer.special_order;
+        if (special) {
+          setSpecialExpanded(true);
+          setSpecialOrder({
+            priceFront: special.price_front != null ? String(special.price_front) : "",
+            priceBack: special.price_back != null ? String(special.price_back) : "",
+            priceBackSalon:
+              special.price_back_salon != null ? String(special.price_back_salon) : "",
+            priceWholeSalon:
+              special.price_whole_salon != null ? String(special.price_whole_salon) : "",
+            reviewDriverOffers: !!special.review_driver_offers,
+            fixedPrice: !!special.fixed_price,
+            waitingFeePerMin:
+              special.waiting_fee_per_min != null
+                ? String(special.waiting_fee_per_min)
+                : "",
+          });
+        }
+
+        setLoadedOffer(offer);
+      } catch (error: any) {
+        if (cancelled) return;
+        console.error("Failed to load the offer for editing:", error);
+        Alert.alert(
+          t("common.error"),
+          error?.message || t("passengerOffers.errorLoad"),
+          [{ text: t("common.ok"), onPress: () => navigation.goBack() }],
+        );
+      } finally {
+        if (!cancelled) setIsPreparing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, offerId, countryId, loadedOffer]);
+
   /** Departure moment: "now" when urgent, otherwise the day + window start. */
   const getStartAtDate = (): Date => {
     if (isUrgent) return new Date();
@@ -269,6 +430,28 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       const fromPoint = fromLocation.settlement ?? fromLocation.cityDistrict;
       const toPoint = toLocation.settlement ?? toLocation.cityDistrict;
 
+      /**
+       * T-040 — did the passenger actually re-pick this location?
+       *
+       * ⚠️ This is the mahalla guard. `buildLocationText` composes the text from
+       * province + district + settlement + **mahalla**, but the mahalla has no id
+       * column (T-029), so `hydrateLocation` cannot restore it. Rebuilding the
+       * text from what the form holds would therefore delete it silently. When
+       * the ids still match what was loaded, the text is left out of the PATCH
+       * entirely and the stored string survives untouched.
+       */
+      const sameGeo = (
+        loaded: PassengerOffer,
+        side: "from" | "to",
+        value: LocationValue,
+      ): boolean =>
+        (loaded[`${side}_province_id`] ?? null) === (value.province?.id ?? null) &&
+        (loaded[`${side}_city_id`] ?? null) === (value.cityDistrict?.id ?? null) &&
+        (loaded[`${side}_settlement_id`] ?? null) === (value.settlement?.id ?? null);
+
+      const keepFromText = !!loadedOffer && sameGeo(loadedOffer, "from", fromLocation);
+      const keepToText = !!loadedOffer && sameGeo(loadedOffer, "to", toLocation);
+
       const offerData: CreatePassengerOfferData = {
         from_text: buildLocationText(fromLocation),
         from_lat: fromPoint?.latitude || undefined,
@@ -337,11 +520,27 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           : undefined,
       };
 
-      await createPassengerOffer(offerData);
+      if (isEdit) {
+        // Keep the stored text when the location was not re-picked — see the
+        // mahalla note above.
+        // `UpdatePassengerOfferData` is the partial form of the create payload,
+        // so the two text fields can simply be left out — no `delete` on a type
+        // that declares them required.
+        const { from_text, to_text, ...rest } = offerData;
+        await updatePassengerOffer(offerId!, {
+          ...rest,
+          ...(keepFromText ? {} : { from_text }),
+          ...(keepToText ? {} : { to_text }),
+        });
+      } else {
+        await createPassengerOffer(offerData);
+      }
 
       Alert.alert(
         t("passengerOffers.success"),
-        t("passengerOffers.successMessage"),
+        isEdit
+          ? t("passengerOffers.updateSuccessMessage")
+          : t("passengerOffers.successMessage"),
         [
           {
             text: t("common.ok"),
@@ -350,10 +549,18 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         ],
       );
     } catch (error: any) {
-      console.error("Error creating passenger offer:", error);
+      console.error(
+        isEdit ? "Error updating passenger offer:" : "Error creating passenger offer:",
+        error,
+      );
       Alert.alert(
-        t("passengerOffers.errorCreate"),
-        error.message || t("passengerOffers.errorCreateMessage"),
+        isEdit ? t("passengerOffers.errorUpdate") : t("passengerOffers.errorCreate"),
+        // The server's 400s are already translated (including "this order can no
+        // longer be edited" and the ≥30-minutes rule), so show them verbatim.
+        error.message ||
+          (isEdit
+            ? t("passengerOffers.errorUpdateMessage")
+            : t("passengerOffers.errorCreateMessage")),
       );
     } finally {
       setIsLoading(false);
@@ -374,11 +581,23 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {t("passengerOffers.createRideRequest")}
+          {isEdit
+            ? t("passengerOffers.editRideRequest")
+            : t("passengerOffers.createRideRequest")}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
 
+      {/* T-040: while the order is being fetched and the geo cascade resolved,
+          the form would otherwise show its create-mode defaults — a passenger
+          would see "now + 1 hour" and empty locations for a second and could
+          start typing into a form about to be overwritten. */}
+      {isPreparing ? (
+        <View style={styles.preparingContainer}>
+          <ActivityIndicator size="large" color="#10B981" />
+        </View>
+      ) : (
+      <>
       {/* This screen had NO KeyboardAvoidingView, so the keyboard simply covered
           whatever was near the bottom — the road-pickup note, the additional
           info and the special-order fields could not be reached or read while
@@ -683,7 +902,9 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                 <>
                   <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
                   <Text style={styles.submitButtonText}>
-                    {t("passengerOffers.submitOrder")}
+                    {isEdit
+                      ? t("passengerOffers.saveChanges")
+                      : t("passengerOffers.submitOrder")}
                   </Text>
                 </>
               )}
@@ -703,11 +924,18 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </KeyboardAvoidingView>
+      </>
+      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  preparingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",

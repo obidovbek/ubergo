@@ -387,6 +387,16 @@ export default {
     createOffer: 'Создать запрос на поездку',
     myOffers: 'Мои запросы на поездку',
     createRideRequest: 'Создать запрос на поездку',
+    // T-040 — edit mode reuses this whole screen.
+    editRideRequest: 'Редактировать запрос',
+    saveChanges: 'Сохранить изменения',
+    updateSuccessMessage: 'Ваш запрос обновлён',
+    errorUpdate: 'Не удалось обновить запрос',
+    errorUpdateMessage: 'Произошла ошибка при обновлении запроса',
+    edit: 'Изменить',
+    editWithDriversTitle: 'Есть предложения водителей',
+    editWithDriversMessage:
+      'На этот запрос уже откликнулись водители. Их предложения сохранятся после изменений, но новые условия могут им не подойти.',
     myRideRequests: 'Мои запросы на поездку',
     route: 'Маршрут',
     from: 'Откуда',
