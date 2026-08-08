@@ -21,6 +21,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as PassengerOffersAPI from '../api/passengerOffers';
@@ -35,11 +36,12 @@ import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
 import { GeoPickerModal } from '../components/GeoPickerModal';
+import type { MainStackParamList } from '../navigation/types';
 
 const LAST_SEARCH_KEY = '@ubexgo_driver:last_passenger_search';
 
 export default function SearchPassengerOffersScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { token } = useAuth();
   const { t, currentLanguage } = useTranslation();
   
@@ -488,10 +490,12 @@ export default function SearchPassengerOffersScreen() {
 
   const handleViewOffer = (offer: PassengerOffersAPI.PassengerOffer) => {
     if (!token) {
-      showToast.error('Login Required', 'Please login to view offer details');
+      showToast.error(t('common.error'), t('searchPassengerOffers.loginRequired'));
       return;
     }
-    (navigation as any).navigate('PassengerOfferDetails', { offerId: offer.id });
+    // T-037: the route exists now, so this no longer needs the `as any` that was
+    // hiding a navigation to a screen that had never been registered.
+    navigation.navigate('PassengerOfferDetails', { offerId: offer.id });
   };
 
   const formatDate = (dateString: string) => {

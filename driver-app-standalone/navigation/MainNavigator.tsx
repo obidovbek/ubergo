@@ -19,6 +19,9 @@ import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
 import { OffersListScreen } from '../screens/OffersListScreen';
 import { OfferWizardScreen } from '../screens/OfferWizardScreen';
 import OfferPassengersScreen from '../screens/OfferPassengersScreen';
+import SearchPassengerOffersScreen from '../screens/SearchPassengerOffersScreen';
+import PassengerOfferDetailsScreen from '../screens/PassengerOfferDetailsScreen';
+import MyJoinRequestsScreen from '../screens/MyJoinRequestsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -95,6 +98,29 @@ export const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="OfferPassengers"
         component={OfferPassengersScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      {/* T-037 step 1 — the screen existed but was registered nowhere, so a
+          driver could never reach the passenger orders at all. */}
+      <Stack.Screen
+        name="SearchPassengerOffers"
+        component={SearchPassengerOffersScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="PassengerOfferDetails"
+        component={PassengerOfferDetailsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="MyJoinRequests"
+        component={MyJoinRequestsScreen}
         options={{
           headerShown: false,
         }}

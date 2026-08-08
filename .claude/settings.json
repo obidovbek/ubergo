@@ -123,7 +123,13 @@
       "PowerShell(cd \"d:\\\\projects\\\\UbexGo\"; git stash push -- \"driver-app-standalone/translations/\" | Out-Null; cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; \\($o -split \"`n\"\\) | Where-Object { $_ -match \"translations/index\" }; cd \"d:\\\\projects\\\\UbexGo\"; git stash pop | Out-Null; \"restored\")",
       "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $u = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\admin\"; $o = npx tsc --noEmit 2>&1 | Out-String; $a = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; \"USER: $u \\(baseline 12\\)\"; \"ADMIN: $a \\(baseline 0\\)\")",
       "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\8e10c456-fd76-448c-a154-f169b3804ff4\\\\scratchpad\\\\check-i18n-t036.cjs\")",
-      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $u = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $d = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; \"USER: $u \\(baseline 12\\)\"; \"DRIVER: $d \\(baseline 36\\)\")"
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $u = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $d = \\(\\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }\\).Count; \"USER: $u \\(baseline 12\\)\"; \"DRIVER: $d \\(baseline 36\\)\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\"; git --no-pager status --short 2>&1 | Out-String; \"=== count ===\"; \\(git --no-pager diff --name-only | Measure-Object -Line\\).Lines)",
+      "Bash(cd \"d:/projects/UbexGo\" && cp docs/PLAN.md docs/PLAN-T036.md && ls docs/PLAN*.md)",
+      "Bash(node -e \"console.log\\(require.resolve\\('@babel/core'\\)\\)\")",
+      "Bash(node -e \"console.log\\(require.resolve\\('@babel/preset-typescript'\\)\\)\")",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/i18n-check.js\")",
+      "Bash(grep -nE \"placeholder=\\\\\"[^\\\\\"]+\\\\\"|>[A-Za-zА-Яа-яЎўҚқҒғҲҳ ]{3,}<\" screens/PassengerOfferDetailsScreen.tsx screens/MyJoinRequestsScreen.tsx)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

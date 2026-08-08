@@ -7,31 +7,27 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-036 (P1) **Modals must match the Figma design — both apps, all 33 of them.**
-  Reported by the owner during the 2026-08-08 device test: the create-offer modal does not match the
-  design, "and all modals should match the design".
-  Counted in code the same day: **33 `<Modal>` instances across 22 files** (user **13**/10,
-  driver **20**/12) — ⚠️ *more than the 24 first quoted while scoping.* **No shared modal component
-  exists**: every site re-declares its own `rgba(0,0,0,0.5)` backdrop, its own radius (16 / 18 /
-  `theme.borderRadius.md`), and they split across two animation conventions. Today's modals are
-  generic white Material sheets with grey hairlines and **emoji glyphs** (`🔍` `✕` `✓`); the Figma
-  overlay language is a **cream card, 2px black border, red heading, green filled actions**.
-  The 33 collapse into **three patterns** — list picker (17), date/time wheel (8), dialog/detail (8)
-  — which is what makes the card tractable: one shell + three variants, then migrate.
-  **Owner decisions 2026-08-08:** scope = **both apps, every modal**; and **derive** the shell from
-  the Shablon/Tanlov overlays, since **no Figma exists for the pickers themselves**.
-  **Steps 1-9 ALL DONE 2026-08-08 — all 33 modals in both apps migrated.** One `AppModal` shell +
-  `ModalList` (with optional multi-select) + `DateWheelModal`, **byte-identical across both apps**;
-  adapters `CountryPickerModal` (user) and `GeoPickerModal` (driver). Duplication collapsed on the
-  way: 3 identical country pickers → 1, 2 identical date wheels + their generators → 1, 7 driver geo
-  pickers → 1. `tsc` all four **exactly at baseline** (282 · 0 · 12 · 36), in-file errors proven
-  pre-existing via `git stash`; **129/129** i18n checks — which **caught 15 keys that never
-  existed**, three of them hidden behind `|| 'hard-coded Uzbek'` fallbacks.
-  ⚠️ **Driver date/time pickers were deliberately NOT moved to `DateWheelModal`** — it runs
-  1900→today for birth dates, while the driver's generators enforce **future-only**; swapping would
-  have dropped the past-date guard silently. They got the chrome only.
-  🛑 **Only step 10 (owner: rebuild BOTH apps, walk all 33) and step 11 (commit) remain. Nothing
-  has run on a device.** → `docs/PLAN.md`
+- [ ] T-037 (P1) **Driver app: passenger orders are unreachable — no route, no detail screen, no
+  join.** Raised by the owner 2026-08-08 ("user creates offer but in the driver app there is no way
+  to search or join"). **Confirmed in code the same day, and it is worse than T-023 described.**
+  T-023 claimed "the driver can browse passenger orders but has no way to offer on one" — ❌ **wrong**.
+  `SearchPassengerOffersScreen.tsx` (1000+ lines, fully built, already migrated to `AppModal` in
+  T-036) is **referenced by nothing**: `MainNavigator` registers **13 routes and none of them is it**,
+  and no screen navigates to it. The driver cannot reach the search screen at all.
+  Downstream, the tap target `PassengerOfferDetails` (`SearchPassengerOffersScreen:494`, cast to
+  `any` so it compiles) is **also unregistered and the screen does not exist** (that was T-021), and
+  **4 of the 5 API client functions have zero call sites** — `joinPassengerOffer`,
+  `getPassengerOfferById`, `getMyJoinRequests`, `cancelJoinRequest`. Only `searchPassengerOffers` is
+  called, from the unreachable screen.
+  ✅ **The backend is finished and reviewed** — `offer-driver.routes.ts` + `public-passenger-offer.
+  routes.ts` cover browse / detail / join / my-requests / cancel; `OfferDriverService.joinOffer`
+  validates vehicle ownership, status, self-join, duplicates, seats and price. **No API work.**
+  ⚠️ **`seats_offered` must be real, not the default 1** — `OfferDriverService:129` refuses anything
+  below `seats_needed`, and since T-018 a salon booking needs **3–4**. The service carries a comment
+  addressed to exactly this card.
+  ⚠️ The driver has **one** vehicle (`profile.vehicle`, as `OfferWizardScreen.loadVehicles` reads
+  it) — so `vehicle_id` is not a picker, but a driver with **no vehicle yet must be told**, not 403'd.
+  **Absorbs T-021 and replaces T-023** (both struck out below). → `docs/PLAN.md`
 
 - [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
   Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
@@ -70,9 +66,10 @@
   disabled with a live countdown held as a **wall-clock deadline** (a counter would come back stale
   after backgrounding). `tsc` all four **exactly at baseline** (282 · 0 · 12 · 36), in-file errors
   proven pre-existing via `git stash`; **42/42** i18n + **17/17** runtime checks.
-  🛑 **Only step 7 (owner: deploy API **first**, then rebuild both apps, then 5 smoke tests) and
-  step 8 (commit) remain. Nothing has run on a device or a live API — its code is still
-  UNCOMMITTED in the working tree.**
+  **Committed as `6b691ab` 2026-08-08** (also swept in `.claude/settings.json`).
+  🛑 **Only step 7 remains — owner: deploy the API **FIRST**, then rebuild both apps, then 5 smoke
+  tests. Nothing has run on a device or a live API.** ⚠️ Order matters: the apps read `cooldownSec`
+  and `retryAfterSec` from the API, so an app-first rollout keeps showing the old generic toast.
   ✅ **Owner decided 2026-08-08: leave `otpSendLimiter` at 5 sends/phone/hour.** It is legible now
   instead of a parse crash, and that is enough — do not revisit.
   Also found here: **T-035** (duplicate `errors:` blocks in the app translation files).
@@ -245,13 +242,10 @@
   — the offer limiter returns a **plain-text** body, so the 21st create in 15 min throws
   `JSON Parse error`; `parseLocationText` fans out country×province city fetches when opening an
   offer for edit; hard-coded Uzbek strings in `OfferWizardScreen`. Found 2026-08-02 (3).
-- [ ] T-023 (P1) **Driver app: "I'll take this order" screen.** The driver can browse passenger
-  orders but has **no way to offer on one** — `joinPassengerOffer` exists in
-  `driver-app-standalone/api/passengerOffers.ts` with zero call sites, and the only navigation
-  target (`PassengerOfferDetails`) is unregistered (T-021). The API side is finished and
-  reviewed. ⚠️ The screen **must send a real `seats_offered`**: it defaults to 1 while a T-018
-  salon booking needs 3–4, and the server refuses anything less than `seats_needed`.
-  Needs T-022 first. Found 2026-08-02.
+- [x] ~~T-023 (P1) Driver app: "I'll take this order" screen.~~ **REPLACED by T-037 on 2026-08-08.**
+  ⚠️ Its premise was **wrong**: it said "the driver can browse passenger orders but has no way to
+  offer on one". The browse screen is registered in **no** navigator, so the driver cannot browse
+  either. Do not work this card — see T-037 in *Now*.
 - [ ] T-024 (P1) **User app: "drivers who offered" screen.** `MyPassengerOffersScreen` shows
   "N drivers interested (M pending)" with **nothing to tap** — the passenger is told drivers
   arrived and cannot answer them. `getOfferDrivers` / `confirmDriver` / `rejectDriver` exist in
@@ -300,10 +294,8 @@
   checking — `navigate('Typo')` compiles fine. Bring the type in line with `MainNavigator` and drop
   the casts. Found 2026-08-02 during T-027 step 3; the convention was matched rather than fixed so
   the card stayed tight.
-- [ ] T-021 (P2) Driver app: the passenger-offer **detail screen does not exist**. Tapping a card
-  calls `navigate('PassengerOfferDetails')` (`SearchPassengerOffersScreen.tsx:498`, cast to `any`
-  so it compiles) but no such route is registered anywhere — the tap goes nowhere. Pre-existing,
-  found while doing T-018 step 7. Needs a real detail screen (offer + join flow, see T-001).
+- [x] ~~T-021 (P2) Driver app: the passenger-offer detail screen does not exist.~~
+  **ABSORBED into T-037 on 2026-08-08** — it is step 3 there. Do not start it separately.
 - [ ] T-004 (P2) Consolidate the ~48 scattered `.md` fix-notes into `docs/` + delete
   the stale `api,admin,db/tmp/` duplicates (Phase 2 of the doc cleanup)
 - [ ] T-005 (P2) Booking / seat-reservation system hardening (payment hooks)
@@ -314,6 +306,22 @@
 - [ ] T-010 (P3) Add a real test suite (none exists today)
 
 ## ✅ Done (newest on top)
+- [x] T-036 **All 33 modals in both apps onto one `AppModal` shell** — 2026-08-08.
+  **Owner spot-checked on a device and approved the look** ("that's ok"); ⚠️ **the walk of every
+  modal is NOT finished** and continues alongside other work — if one fails, re-open this card.
+  One `AppModal` + `ModalList` (+ optional multi-select) + `DateWheelModal`, **byte-identical across
+  both apps**; adapters `CountryPickerModal` (user), `GeoPickerModal` (driver). Duplication collapsed
+  rather than migrated: 3 country pickers → 1, 2 date wheels **and their generators** → 1, 7 driver
+  geo pickers → 1. **The whole look lives in the `modal` token object in each app's `themes/index.ts`
+  — restyling is 2 files, not 33.**
+  ⚠️ **Driver date/time pickers deliberately kept their own bodies** — `DateWheelModal` runs
+  1900→today (birth dates) while the driver's generators enforce **future-only**; swapping would have
+  dropped the past-date guard silently. Chrome only.
+  `tsc` all four exactly at baseline (282 · 0 · 12 · 36); **129/129** i18n checks, which caught **15
+  keys that had never existed**, three hidden behind `|| 'hard-coded Uzbek'` fallbacks.
+  Committed `34988cc` — ⚠️ that commit also swept in unrelated in-progress work
+  (`PassengerOfferService.ts`, `CreatePassengerOfferScreen.tsx`, `TimeWindowCard.tsx`,
+  `CHECKLIST.md`, `PLAN-T018.md`) plus `.claude/settings.json`. Plan: `docs/PLAN-T036.md`.
 - [x] T-013 (OR-003) Zero-tap OTP SMS auto-read via SMS Retriever (user app + API) —
   **device-verified 2026-07-26.** Real app hash = `asNtyBnPVzB` (not the earlier `JtArsQcEBm9`);
   `ESKIZ_OTP_APP_HASH=asNtyBnPVzB` set in test3. ⚠️ hash changes with a real release keystore.

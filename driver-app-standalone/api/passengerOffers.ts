@@ -72,6 +72,36 @@ export interface PassengerOffer {
   };
 }
 
+/**
+ * The offer as it arrives on a join request.
+ *
+ * ⚠️ `GET /driver/join-requests` returns the **raw Sequelize model**, so the
+ * nested offer carries `user` — it does NOT carry the mapped `passenger` shape
+ * that the `public/*` browse and detail endpoints build in
+ * `PassengerOfferService`. Reading `offer.passenger.name` here is a crash.
+ */
+export interface JoinRequestOffer extends Omit<PassengerOffer, 'passenger'> {
+  passenger?: PassengerOffer['passenger'];
+  user?: {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
+  };
+}
+
+/** Best available name for the passenger, whichever shape the offer came in. */
+export const passengerNameOf = (offer?: JoinRequestOffer): string => {
+  if (!offer) return '';
+  if (offer.passenger?.name) return offer.passenger.name;
+  const user = offer.user;
+  if (!user) return '';
+  return (
+    user.display_name ||
+    `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  );
+};
+
 export interface OfferDriver {
   id: string;
   offer_id: number;
@@ -89,7 +119,7 @@ export interface OfferDriver {
   cancelled_at?: string;
   created_at: string;
   updated_at: string;
-  offer?: PassengerOffer;
+  offer?: JoinRequestOffer;
 }
 
 export interface SearchPassengerOffersParams {
@@ -195,8 +225,15 @@ export const getPassengerOfferById = async (
 
 /**
  * Driver joins a passenger offer
+ *
+ * ⚠️ T-037: this took no `token` and called `getHeaders()` bare, which sends NO
+ * Authorization header — the route is `authenticate`d, so every call would have
+ * been a 401. It had zero call sites, so nothing ever caught it. Same for
+ * `getMyJoinRequests` and `cancelJoinRequest` below. The two `public/*` calls
+ * above are genuinely unauthenticated and stay as they are.
  */
 export const joinPassengerOffer = async (
+  token: string,
   offerId: number,
   joinData: JoinPassengerOfferData
 ): Promise<OfferDriver> => {
@@ -208,7 +245,7 @@ export const joinPassengerOffer = async (
       `${API_BASE_URL}/driver/passenger-offers/${offerId}/join`,
       {
         method: 'POST',
-        headers: await getHeaders(),
+        headers: await getHeaders(token),
         body: JSON.stringify(joinData),
         signal: controller.signal,
       }
@@ -236,6 +273,7 @@ export const joinPassengerOffer = async (
  * Get driver's join requests
  */
 export const getMyJoinRequests = async (
+  token: string,
   status?: string
 ): Promise<OfferDriver[]> => {
   const controller = new AbortController();
@@ -249,7 +287,7 @@ export const getMyJoinRequests = async (
 
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: await getHeaders(),
+      headers: await getHeaders(token),
       signal: controller.signal,
     });
 
@@ -275,6 +313,7 @@ export const getMyJoinRequests = async (
  * Cancel driver's join request
  */
 export const cancelJoinRequest = async (
+  token: string,
   joinRequestId: string
 ): Promise<OfferDriver> => {
   const controller = new AbortController();
@@ -285,7 +324,7 @@ export const cancelJoinRequest = async (
       `${API_BASE_URL}/driver/join-requests/${joinRequestId}/cancel`,
       {
         method: 'POST',
-        headers: await getHeaders(),
+        headers: await getHeaders(token),
         signal: controller.signal,
       }
     );

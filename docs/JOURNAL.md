@@ -5,6 +5,67 @@
 
 ---
 
+## 2026-08-08 — first real device test; one bug exposed a dead error pipe, then all 33 modals got one shell
+- **Task:** the owner started **device testing**. Two cards came out of it: **T-033** (OTP resend
+  error) and **T-036** (modals must match the Figma). Both implemented end to end.
+- **T-033 — the reported bug was the smallest part.** Resend inside 60s showed a generic
+  "OTP yuborishda xatolik". The 60s per-phone cooldown is *correct* and was the cause — but it threw
+  a bare English `Error`, so the controller's catch-all returned **HTTP 500** for a routine refusal.
+  ⚠️ **The real find:** `handleBackendError` is written for **axios** (`error.response.status`) and
+  **neither app imports axios** — both use `fetch`, which never sets `.response`. The entire status
+  switch was dead code, so **12 screens had never shown a server message**. Fixed with an `ApiError`
+  carrying `status`/`data`/**and** `response`, because attaching an axios-shaped `.response` turned
+  out to be *already* this codebase's convention (`passengerOffers.ts` ×5, `driver.ts`, both
+  `auth.ts` do it by hand) — so nothing existing had to change.
+  Also: all five express limiters answered **plain text**, which `response.json()` turned into
+  `JSON Parse error`; and the resend link had no cooldown UI at all.
+- **T-036 — 33 modals, 22 files, three patterns.** No shared modal component existed: every site
+  re-declared its own backdrop, radius and palette, across two animation conventions, with emoji
+  glyphs (`🔍` `✕` `✓`). Now one `AppModal` + `ModalList` (+ optional multi-select) +
+  `DateWheelModal`, **byte-identical across both apps**, plus adapters. The look lives in **one token
+  object per app**, so restyling is 2 files, not 33.
+- **Duplication collapsed rather than migrated:** 3 identical country pickers → 1; 2 identical date
+  wheels **and their generators** → 1; 7 driver geo pickers → 1.
+- **The judgement call worth remembering:** I did **not** move the driver's date pickers onto
+  `DateWheelModal`. It runs 1900→today for birth dates; the driver's generators enforce
+  **future-only** dates and hours. Swapping would have dropped the past-date guard **silently** —
+  no compile error, no visible symptom until a driver posted a trip in the past. They got the
+  chrome only, bodies untouched.
+- **Two of my own numbers were wrong and had to be corrected mid-task:**
+  1. "24 modals" → actually **33**. I had counted driver *files* (11) instead of instances (20).
+  2. The search-filter panel was inventoried as a *list picker*; it is a multi-section panel, so it
+     took `AppModal` directly instead of `ModalList`.
+- **The i18n check earned its keep — 15 real misses on the first run.**
+  `phoneRegistration.selectCountry`, `driverLicense.selectCountryCode` and
+  `offerWizard.select{Country,Province,City}` were referenced but had **never existed**; three were
+  hidden behind `|| 'hard-coded Uzbek'` fallbacks, so ru/en would have rendered raw key names.
+  The driver app was also missing a whole `searchPassengerOffers` block.
+- **Decisions:** (1) `otpSendLimiter` **stays at 5/hour** — legible now, that's enough, do not
+  revisit; (2) T-036 scope = **both apps, every modal**; (3) the shell is **derived** from the
+  Shablon/Tanlov overlays, since no Figma exists for the pickers themselves.
+- **Problems / carry-forward:**
+  - 🛑 **Nothing has run on a device or a live API.** Both cards await the owner's phone.
+  - ⚠️ **`34988cc` mixes unrelated work into the T-036 commit** — `PassengerOfferService.ts` (478
+    lines), `CreatePassengerOfferScreen.tsx` (757), `TimeWindowCard.tsx`, `CHECKLIST.md`,
+    `PLAN-T018.md`. Looks like in-progress T-031/T-018 work swept in. Not reverted; flagged.
+  - ⚠️ **`.claude/settings.json` was committed in BOTH commits** despite the standing note to keep
+    it out.
+  - ⚠️ An **unrelated stash** exists: `stash@{0} WIP on (no branch): 3eead5e db connection problem`.
+    Predates this session; left untouched.
+  - New card **T-035** (duplicate `errors:` blocks — driver `uz` has one, ru/en have two, so five
+    keys resolve in Uzbek only). **T-034** still open (OTP codes + Eskiz token in plaintext logs;
+    brute-force counter that never fires).
+- **Verification (honest): `tsc` exactly at baseline throughout** — API **282** · admin **0** ·
+  user **12** · driver **36**, every in-file error **proven pre-existing via `git stash`**.
+  **42/42 + 17/17** checks on T-033 (i18n, and the real error path run against the exact envelope
+  the API emits); **129/129** i18n on T-036. Zero bare `<Modal>` outside `AppModal.tsx` in either app.
+- **Next:** the owner rebuilds both apps and walks the modals — riskiest first: multi-select
+  stop/city pickers, driver date/time limits, USER_NOT_REGISTERED, and the rating/detail sheets
+  whose action buttons stayed in the body.
+- **Commits:** owner committed twice — `6b691ab` (T-033) and `34988cc` (T-036).
+
+---
+
 ## 2026-08-02 (4) — four cards in one day; two audits proved the owner right, and three of my own conclusions wrong
 - **Task:** started the day on T-025 bookkeeping, then **T-026A** (offer concurrency), then three
   owner batches arrived back-to-back — **OR-010 → T-027**, **OR-011 → T-030**, **OR-012 → T-031**.

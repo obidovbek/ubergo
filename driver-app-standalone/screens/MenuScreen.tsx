@@ -38,6 +38,8 @@ type MainStackParamList = {
   Profile: undefined;
   OffersList: undefined;
   OfferWizard: { offerId?: string } | undefined;
+  SearchPassengerOffers: undefined;
+  MyJoinRequests: undefined;
 };
 
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
@@ -55,6 +57,11 @@ export const MenuScreen: React.FC = () => {
   // Taxi options with translation keys - My Offers first
   const taxiOptions: TaxiOption[] = [
     { id: 'myOffers', titleKey: 'menu.myOffers' }, // My Offers at the top
+    // T-037 — the driver's way into the passenger orders, and into the offers
+    // he has already sent on them. The rows below are trip *categories*, not
+    // actions, so these needed their own rows.
+    { id: 'passengerOrders', titleKey: 'menu.passengerOrders' },
+    { id: 'myJoinRequests', titleKey: 'menu.myJoinRequests' },
     { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
     { id: 'ichi', titleKey: 'menu.ichi' },
     { id: 'tuman', titleKey: 'menu.tuman' },
@@ -73,6 +80,10 @@ export const MenuScreen: React.FC = () => {
     // Navigate to offers screen when "My Offers" is clicked
     if (optionId === 'myOffers') {
       handleViewAllOffers();
+    } else if (optionId === 'passengerOrders') {
+      handleSearchPassengerOffers();
+    } else if (optionId === 'myJoinRequests') {
+      navigation.navigate('MyJoinRequests');
     } else {
       // Handle other menu options
       // TODO: Add navigation for other options
@@ -89,6 +100,10 @@ export const MenuScreen: React.FC = () => {
 
   const handleViewAllOffers = () => {
     (navigation as any).navigate('OffersList');
+  };
+
+  const handleSearchPassengerOffers = () => {
+    navigation.navigate('SearchPassengerOffers');
   };
 
   const loadActiveOffers = useCallback(async () => {
@@ -205,7 +220,9 @@ export const MenuScreen: React.FC = () => {
                 key={option.id}
                 style={[
                   styles.optionButton,
-                  option.id === 'myOffers' && styles.offersOptionButton
+                  option.id === 'myOffers' && styles.offersOptionButton,
+                  (option.id === 'passengerOrders' || option.id === 'myJoinRequests') &&
+                    styles.passengerOrdersOptionButton
                 ]}
                 onPress={() => handleOptionPress(option.id)}
                 activeOpacity={0.7}
@@ -221,7 +238,9 @@ export const MenuScreen: React.FC = () => {
                 )}
                 <Text style={[
                   styles.optionText,
-                  option.id === 'myOffers' && styles.offersOptionText
+                  option.id === 'myOffers' && styles.offersOptionText,
+                  (option.id === 'passengerOrders' || option.id === 'myJoinRequests') &&
+                    styles.passengerOrdersOptionText
                 ]}>
                   {t(option.titleKey)}
                 </Text>
@@ -400,6 +419,17 @@ const styles = StyleSheet.create({
   },
   offersOptionText: {
     color: '#10B981',
+  },
+  // T-037 — a second action row, deliberately a different colour from
+  // "my offers" so the two are not mistaken for one another.
+  passengerOrdersOptionButton: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+    borderWidth: 2,
+    position: 'relative',
+  },
+  passengerOrdersOptionText: {
+    color: '#2563EB',
   },
   offersIconContainer: {
     marginBottom: 8,

@@ -20,10 +20,16 @@ export type AuthStackParamList = {
 };
 
 // Main Stack Parameter List - Driver App
+// ⚠️ Still incomplete — MainNavigator registers 14 routes and only these are
+// typed, so the other screens navigate through `(navigation as any)`. T-037
+// added the two passenger-order routes it needs; typing the rest is its own card.
 export type MainStackParamList = {
   Home: undefined;
   Activity: undefined;
   Profile: undefined;
+  SearchPassengerOffers: undefined;
+  PassengerOfferDetails: { offerId: number };
+  MyJoinRequests: undefined;
 };
 
 // Navigation Props
