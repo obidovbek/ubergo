@@ -4,6 +4,25 @@
  */
 
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import { ApiError } from '../utils/errorHandler';
+
+/**
+ * Read a response body without assuming it is JSON.
+ *
+ * Rate limiters, proxies and error pages can answer with text or HTML. Calling
+ * `response.json()` blindly turned those into `JSON Parse error`, which hid the real
+ * status and message from the user entirely — a limited request looked like a crash.
+ */
+const parseResponseBody = async (response: Response): Promise<any> => {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Not JSON — keep the text as the message so the caller can still show something.
+    return { message: text.trim().substring(0, 200) };
+  }
+};
 
 export interface AuthResponse {
   success: boolean;
@@ -30,6 +49,8 @@ export interface OtpSendResponse {
     sent: boolean;
     channel: string;
     expiresInSec: number;
+    /** Seconds before a resend is allowed. Optional — older API builds omit it. */
+    cooldownSec?: number;
   };
   message: string;
 }
@@ -84,38 +105,15 @@ export const sendOtp = async (
     console.log('Status Text:', response.statusText);
     console.log('Content-Type:', response.headers.get('content-type'));
 
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    let data: any;
-    
-    if (contentType && contentType.includes('application/json')) {
-      try {
-        data = await response.json();
-        console.log('Response Data:', JSON.stringify(data, null, 2));
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        const text = await response.text();
-        console.error('Response Text:', text);
-        throw new Error(`Server returned invalid JSON: ${response.statusText}`);
-      }
-    } else {
-      // Response is not JSON (might be HTML error page)
-      const text = await response.text();
-      console.error('Non-JSON Response:', text.substring(0, 200));
-      throw new Error(`Server error: ${response.statusText} (${response.status})`);
-    }
+    const data = await parseResponseBody(response);
+    console.log('Response Data:', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error('API Error:', data);
-      // Preserve error data structure for USER_NOT_REGISTERED handling
-      const error: any = new Error(data.message || data.error || `Failed to send OTP (${response.status})`);
-      error.response = { 
-        status: response.status,
-        data 
-      };
-      // Extract error data - check both data.data and data structure
-      error.data = data.data || (data.code ? data : null);
-      throw error;
+      // `ApiError` carries `response.data`, which is where `PhoneRegistrationScreen`
+      // reads the USER_NOT_REGISTERED payload from — and where the 60s cooldown puts
+      // its `retryAfterSec`. The old non-JSON branch threw both of those away.
+      throw new ApiError(response.status, data, `Failed to send OTP (${response.status})`);
     }
 
     return data;
@@ -126,11 +124,6 @@ export const sendOtp = async (
       if (error.name === 'AbortError') {
         console.error('Request timed out after', API_TIMEOUT, 'ms');
         throw new Error('Request timed out. Please check your internet connection.');
-      }
-      if (error.message?.includes('JSON Parse')) {
-        console.error('JSON Parse error - server may have returned HTML');
-        // Re-throw with more context
-        throw error;
       }
       console.error('Send OTP error:', error.message);
     }
@@ -160,10 +153,10 @@ export const verifyOtp = async (phone: string | undefined, code: string, opts?: 
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to verify OTP');
+      throw new ApiError(response.status, data, 'Failed to verify OTP');
     }
 
     return data;
@@ -193,15 +186,12 @@ export const getCurrentUser = async (token: string) => {
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
 
     if (!response.ok) {
       // Surface the HTTP status so callers can tell "account deleted / token
       // rejected" (401/403/404) apart from a network failure (OR-002).
-      const error: any = new Error(data.message || 'Failed to get user info');
-      error.response = { status: response.status, data };
-      error.status = response.status;
-      throw error;
+      throw new ApiError(response.status, data, 'Failed to get user info');
     }
 
     return data;
@@ -232,10 +222,10 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ access
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to refresh token');
+      throw new ApiError(response.status, data, 'Failed to refresh token');
     }
 
     return data.data;
@@ -267,8 +257,8 @@ export const logout = async (token: string, refreshToken: string): Promise<void>
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Logout failed');
+      const data = await parseResponseBody(response);
+      throw new ApiError(response.status, data, 'Logout failed');
     }
   } catch (error) {
     clearTimeout(timeoutId);

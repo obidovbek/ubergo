@@ -54,6 +54,7 @@ export default {
     deleteFailed: 'Failed to delete',
     updateFailed: 'Failed to update',
     createFailed: 'Failed to create',
+    tooManyRequests: 'Too many requests. Please try again later',
   },
 
   splash: {
@@ -127,7 +128,10 @@ export default {
     verifying: 'Verifying...',
     resendQuestion: "Didn't receive the code? ",
     resendLink: 'Resend',
+    resendIn: 'Resend in {seconds}s',
     newCodeSent: 'New code sent via push notification',
+    errorResendPush:
+      'Failed to send the push notification. Make sure the passenger app is open.',
     errorIncomplete: 'Please enter the complete verification code',
     errorIncorrect: 'Incorrect code. Remaining attempts: ',
     errorNoAttempts: 'Error',
@@ -259,6 +263,7 @@ export default {
     validation: 'Invalid data',
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
+    tooManyRequests: 'Too many requests. Please try again later',
   },
 
   // Network Status

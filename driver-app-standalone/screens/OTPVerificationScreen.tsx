@@ -20,10 +20,19 @@ import type { OTPVerificationNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
-import { handleBackendError } from '../utils/errorHandler';
+import { handleBackendError, getRetryAfterSec } from '../utils/errorHandler';
 import { savePendingOtp, clearPendingOtp } from '../utils/pendingOtp';
 
 const theme = createTheme('light');
+
+/**
+ * Fallback resend cooldown, in seconds.
+ *
+ * The server is the authority (it returns `cooldownSec` on a send and `retryAfterSec`
+ * on a 429); this only covers the first render, before either has arrived.
+ * The cooldown is per phone, so it applies to the push channel used here too.
+ */
+const DEFAULT_RESEND_COOLDOWN_SEC = 60;
 
 
 export const OTPVerificationScreen: React.FC = () => {
@@ -40,6 +49,26 @@ export const OTPVerificationScreen: React.FC = () => {
   const [driverId, setDriverId] = useState('');
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [isResending, setIsResending] = useState(false);
+  // A code was just sent to reach this screen, so the cooldown starts now. Held as a
+  // wall-clock deadline rather than a counter: JS timers are throttled while the app is
+  // backgrounded, so a decrementing counter would come back stale (T-033).
+  const [resendAt, setResendAt] = useState<number>(
+    () => Date.now() + DEFAULT_RESEND_COOLDOWN_SEC * 1000
+  );
+  const [secondsLeft, setSecondsLeft] = useState(DEFAULT_RESEND_COOLDOWN_SEC);
+
+  // Recompute from the deadline every second, so returning from the background shows
+  // the true remaining time instead of resuming where the timer was paused.
+  useEffect(() => {
+    const tick = () =>
+      setSecondsLeft(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [resendAt]);
+
+  const canResend = secondsLeft <= 0 && !isResending;
 
   // Get driver ID from user object once authenticated
   useEffect(() => {
@@ -183,11 +212,18 @@ export const OTPVerificationScreen: React.FC = () => {
   };
 
   const handleResendCode = async () => {
+    if (!canResend) return;
+
+    setIsResending(true);
     try {
       console.log('Resending OTP via push notification...');
-      await sendOtp(phoneNumber, 'push', { userId: routeUserId });
+      const response = await sendOtp(phoneNumber, 'push', { userId: routeUserId });
+      setResendAt(
+        Date.now() +
+          (response?.data?.cooldownSec ?? DEFAULT_RESEND_COOLDOWN_SEC) * 1000
+      );
       showToast.success(t('common.success'), t('otpVerification.newCodeSent'));
-      
+
       // Reset attempts when resending code
       setAttempts(0);
       setRemainingAttempts(3);
@@ -195,10 +231,18 @@ export const OTPVerificationScreen: React.FC = () => {
       inputRefs.current[0]?.focus();
     } catch (error) {
       console.error('Failed to resend push notification:', error);
+      // If the server refused because we are still inside its window, sync the
+      // countdown to what it actually said instead of guessing.
+      const retryAfter = getRetryAfterSec(error);
+      if (retryAfter) {
+        setResendAt(Date.now() + retryAfter * 1000);
+      }
       handleBackendError(error, {
         t,
-        defaultMessage: 'Push notification yuborishda xatolik. Foydalanuvchi ilovasi ochiq ekanligini tekshiring.',
+        defaultMessage: t('otpVerification.errorResendPush'),
       });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -288,10 +332,22 @@ export const OTPVerificationScreen: React.FC = () => {
         </TouchableOpacity>
 
         {/* Resend Code */}
-        <TouchableOpacity style={styles.resendContainer} onPress={handleResendCode}>
+        {/* Resend Code — disabled with a visible countdown while the server's
+            cooldown is running, so the tap cannot fail (T-033). */}
+        <TouchableOpacity
+          style={styles.resendContainer}
+          onPress={handleResendCode}
+          disabled={!canResend}
+        >
           <Text style={styles.resendText}>
             {t('otpVerification.resendQuestion')}
-            <Text style={styles.resendLink}>{t('otpVerification.resendLink')}</Text>
+            {canResend ? (
+              <Text style={styles.resendLink}>{t('otpVerification.resendLink')}</Text>
+            ) : (
+              <Text style={styles.resendCountdown}>
+                {t('otpVerification.resendIn').replace('{seconds}', String(secondsLeft))}
+              </Text>
+            )}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -425,6 +481,11 @@ const styles = StyleSheet.create({
   },
   resendLink: {
     color: '#2196F3',
+    fontWeight: '600',
+  },
+  // Deliberately not the link blue — it must not read as tappable while counting down.
+  resendCountdown: {
+    color: theme.palette.text.disabled,
     fontWeight: '600',
   },
   loadingContainer: {

@@ -16,6 +16,7 @@ export default {
     serverError: 'Ошибка сервера',
     badRequest: 'Неверный запрос',
     conflict: 'Уже существует',
+    tooManyRequests: 'Слишком много запросов. Пожалуйста, попробуйте позже',
   },
 
   // Validation messages
@@ -145,6 +146,8 @@ export default {
     invalidChannel: 'Неверный канал. Используйте "sms", "call" или "push"',
     phoneOrUserIdAndCodeRequired: 'Требуется номер телефона или идентификатор пользователя и код',
     invalidOrExpiredCode: 'Неверный или истекший код',
+    tooSoon: 'Код только что отправлен. Подождите {seconds} сек., чтобы запросить новый',
+    tooManyRequests: 'Слишком много запросов кода. Пожалуйста, попробуйте позже',
   },
 
   // Driver profile messages

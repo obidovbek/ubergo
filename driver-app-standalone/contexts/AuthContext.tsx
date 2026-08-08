@@ -19,6 +19,7 @@ import { AUTH_ACTIONS } from './auth-reducer/auth.actions';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import type { User } from '../api/users';
 import * as AuthAPI from '../api/auth';
+import type { OtpSendResponse } from '../api/auth';
 import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services/PushService';
 import { clearPendingOtp } from '../utils/pendingOtp';
 
@@ -44,7 +45,11 @@ interface AuthContextType extends AuthState {
   appleSignIn: (idToken: string) => Promise<void>;
   facebookSignIn: (accessToken: string) => Promise<void>;
   // OTP methods
-  sendOtp: (phone?: string, channel?: 'sms' | 'call' | 'push', opts?: { userId?: string }) => Promise<void>;
+  sendOtp: (
+    phone?: string,
+    channel?: 'sms' | 'call' | 'push',
+    opts?: { userId?: string }
+  ) => Promise<OtpSendResponse>;
   verifyOtp: (phone: string | undefined, code: string, opts?: { userId?: string }) => Promise<void>;
 }
 
@@ -382,7 +387,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Don't set global loading state for OTP sending
       // This prevents interference with navigation
-      await AuthAPI.sendOtp(phone, channel, opts);
+      // Returned so the OTP screen can drive its resend countdown from the server's
+      // own `cooldownSec` rather than hard-coding the interval (T-033).
+      return await AuthAPI.sendOtp(phone, channel, opts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send OTP';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });

@@ -34,6 +34,7 @@ export default {
     deleteFailed: 'Failed to delete',
     updateFailed: 'Failed to update',
     createFailed: 'Failed to create',
+    tooManyRequests: 'Too many requests. Please try again later',
   },
 
   splash: {
@@ -93,6 +94,7 @@ export default {
     verifying: 'Verifying...',
     resendQuestion: "Didn't receive the code? ",
     resendLink: 'Resend',
+    resendIn: 'Resend in {seconds}s',
     newCodeSent: 'New code sent',
     errorIncomplete: 'Please enter the complete verification code (4 digits)',
     errorIncorrect: 'Incorrect code! Remaining attempts: ',
@@ -218,6 +220,7 @@ export default {
     validation: 'Invalid data',
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
+    tooManyRequests: 'Too many requests. Please try again later',
   },
 
   // Network Status

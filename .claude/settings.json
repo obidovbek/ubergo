@@ -89,7 +89,20 @@
       "Bash(node --check confirm-race.mjs)",
       "Bash(node -e \"import\\('./confirm-race.mjs'\\).catch\\(e=>console.log\\('parse-only check:', e.message\\)\\)\")",
       "Bash(node t027-i18n.mjs)",
-      "Bash(node t030-check.mjs)"
+      "Bash(node t030-check.mjs)",
+      "Bash(cd \"d:/projects/UbexGo\" && cp docs/PLAN.md docs/PLAN-T031.md && ls docs/PLAN*.md)",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $out = npx tsc --noEmit 2>&1 | Out-String; $errs = \\($out -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }; \"TOTAL ERRORS: $\\($errs.Count\\)\"; \"--- in files I touched ---\"; $errs | Where-Object { $_ -match \"OtpService|rateLimiter|AuthController.v2|i18n|constants\" })",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\"; git stash push -- \"api,admin,db/apps/api/src/middleware/rateLimiter.ts\" | Out-Null; cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\"\\) | Where-Object { $_ -match \"rateLimiter\" }; cd \"d:\\\\projects\\\\UbexGo\"; git stash pop)",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $e = \\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }; \"USER TOTAL: $\\($e.Count\\)  \\(baseline 12\\)\"; $e | Where-Object { $_ -match \"OTPVerification|AuthContext|api.auth|errorHandler\" })",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\"; git stash push -- \"user-app-standalone/contexts/AuthContext.tsx\" | Out-Null; cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; \\($o -split \"`n\"\\) | Where-Object { $_ -match \"AuthContext\" }; cd \"d:\\\\projects\\\\UbexGo\"; git stash pop | Out-Null; \"restored\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $o = npx tsc --noEmit 2>&1 | Out-String; $e = \\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }; \"DRIVER TOTAL: $\\($e.Count\\)  \\(baseline 36\\)\"; $e | Where-Object { $_ -match \"OTPVerification|errorHandler\" })",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\admin\"; $o = npx tsc --noEmit 2>&1 | Out-String; $e = \\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }; \"ADMIN TOTAL: $\\($e.Count\\)  \\(baseline 0\\)\")",
+      "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\8e10c456-fd76-448c-a154-f169b3804ff4\\\\scratchpad\\\\check-i18n.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\Bekzod\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--projects-UbexGo\\\\8e10c456-fd76-448c-a154-f169b3804ff4\\\\scratchpad\\\\check-flow.cjs\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $o = npx tsc --noEmit 2>&1 | Out-String; $e = \\($o -split \"`n\"\\) | Where-Object { $_ -match \"error TS\" }; \"API TOTAL: $\\($e.Count\\)  \\(baseline 282\\)\"; $e | Where-Object { $_ -match \"OtpService\" })"
+    ],
+    "additionalDirectories": [
+      "d:\\projects\\UbexGo\\docs"
     ]
   }
 }

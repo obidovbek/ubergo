@@ -17,6 +17,7 @@ export default {
     serverError: "Server xatosi",
     badRequest: "Noto'g'ri so'rov",
     conflict: "Ma'lumot allaqachon mavjud",
+    tooManyRequests: "Juda ko'p so'rov yuborildi. Iltimos, keyinroq urinib ko'ring",
   },
 
   // Validation messages
@@ -146,6 +147,8 @@ export default {
     invalidChannel: 'Noto\'g\'ri kanal. "sms", "call" yoki "push" dan foydalaning',
     phoneOrUserIdAndCodeRequired: 'Telefon raqami yoki foydalanuvchi ID va kod kiritilishi kerak',
     invalidOrExpiredCode: 'Noto\'g\'ri yoki muddati tugagan kod',
+    tooSoon: 'Kod hozirgina yuborildi. Yangi kod so\'rash uchun {seconds} soniya kuting',
+    tooManyRequests: 'Juda ko\'p kod so\'rovi yuborildi. Iltimos, keyinroq urinib ko\'ring',
   },
 
   // Driver profile messages

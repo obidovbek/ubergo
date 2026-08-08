@@ -54,6 +54,7 @@ export default {
     deleteFailed: 'Не удалось удалить',
     updateFailed: 'Не удалось обновить',
     createFailed: 'Не удалось создать',
+    tooManyRequests: 'Слишком много запросов. Пожалуйста, попробуйте позже',
   },
 
   splash: {
@@ -127,7 +128,10 @@ export default {
     verifying: 'Проверка...',
     resendQuestion: 'Не получили код? ',
     resendLink: 'Отправить снова',
+    resendIn: 'Отправить снова ({seconds} с)',
     newCodeSent: 'Новый код отправлен через push-уведомление',
+    errorResendPush:
+      'Ошибка отправки push-уведомления. Убедитесь, что приложение пассажира открыто.',
     errorIncomplete: 'Пожалуйста, введите полный код подтверждения',
     errorIncorrect: 'Неверный код. Осталось попыток: ',
     errorNoAttempts: 'Ошибка',
@@ -259,6 +263,7 @@ export default {
     validation: 'Неверные данные',
     unknown: 'Произошла неизвестная ошибка',
     tryAgain: 'Пожалуйста, попробуйте снова',
+    tooManyRequests: 'Слишком много запросов. Пожалуйста, попробуйте позже',
   },
 
   // Network Status

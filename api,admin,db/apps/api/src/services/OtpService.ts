@@ -10,6 +10,11 @@ import { config } from '../config/index.js';
 import { OtpCode, User, PushToken } from '../database/models/index.js';
 import { logAudit, AuditActions } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
+import { AppError } from '../errors/AppError.js';
+import { HttpStatus } from '../constants/index.js';
+import { t } from '../i18n/translator.js';
+import { DEFAULT_LANGUAGE } from '../i18n/config.js';
+import type { Language } from '../i18n/types.js';
 
 interface EskizAuthResponse {
   message: string;
@@ -32,6 +37,16 @@ const SMS_RETRIEVER_MAX_BYTES = 140;
  * Going over splits the SMS: double cost, and SMS Retriever stops working.
  */
 const SMS_UCS2_SINGLE_SEGMENT_CHARS = 70;
+
+/**
+ * One OTP per phone per minute. An SMS-cost control, not a security check — the
+ * brute-force defence is `otpVerifyLimiter` plus the code's own expiry.
+ * The apps show a countdown of this length on their "resend" links.
+ */
+const OTP_RESEND_COOLDOWN_SEC = 60;
+
+/** Runaway guard per phone per hour — see the comment in `checkRateLimit`. */
+const OTP_MAX_PER_HOUR = 1000;
 
 class OtpService {
   private eskizToken: string | null = null;
@@ -234,38 +249,60 @@ class OtpService {
   }
 
   /**
-   * Check rate limits for OTP sending
+   * Check rate limits for OTP sending.
+   *
+   * Throws an `AppError` with **429**, not a bare Error: hitting the cooldown is an
+   * expected outcome of tapping "resend", and the controller's catch-all turns any
+   * plain Error into a 500 — which is what made a routine refusal look like a crash.
+   * The message is translated and `retryAfterSec` is real (measured from the newest
+   * code), so the app can show and drive a countdown instead of a generic toast.
    */
-  private async checkRateLimit(phone: string): Promise<void> {
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  private async checkRateLimit(phone: string, language: Language = DEFAULT_LANGUAGE): Promise<void> {
+    const now = Date.now();
 
-    // Check: max 1 request per minute
-    const recentCodes = await OtpCode.count({
+    // Check: max 1 request per minute. Fetch the newest code rather than counting, so
+    // the response can say how many seconds are actually left.
+    const newestCode = await OtpCode.findOne({
       where: {
         target: phone,
         created_at: {
-          [Op.gte]: oneMinuteAgo,
+          [Op.gte]: new Date(now - OTP_RESEND_COOLDOWN_SEC * 1000),
         },
       },
+      order: [['created_at', 'DESC']],
     });
 
-    if (recentCodes > 0) {
-      throw new Error('Please wait at least 60 seconds before requesting a new code');
+    if (newestCode) {
+      const elapsedMs = now - new Date(newestCode.created_at).getTime();
+      const retryAfterSec = Math.max(
+        1,
+        Math.ceil((OTP_RESEND_COOLDOWN_SEC * 1000 - elapsedMs) / 1000)
+      );
+      throw new AppError(
+        t('otp.tooSoon', language, { seconds: retryAfterSec }),
+        HttpStatus.TOO_MANY_REQUESTS,
+        { retryAfterSec }
+      );
     }
 
-    // Check: max 5 requests per hour
+    // Runaway guard on top of the per-minute cooldown. The real per-hour ceiling is
+    // enforced by `otpSendLimiter` (5/hour/phone); this one only catches a client that
+    // has somehow slipped past both, and is deliberately generous so a pod restart
+    // (which clears the limiter's in-memory store) cannot lock a real user out.
     const hourlyCount = await OtpCode.count({
       where: {
         target: phone,
         created_at: {
-          [Op.gte]: oneHourAgo,
+          [Op.gte]: new Date(now - 60 * 60 * 1000),
         },
       },
     });
 
-    if (hourlyCount >= 1000) {
-      throw new Error('Too many OTP requests. Please try again later');
+    if (hourlyCount >= OTP_MAX_PER_HOUR) {
+      throw new AppError(
+        t('otp.tooManyRequests', language),
+        HttpStatus.TOO_MANY_REQUESTS
+      );
     }
   }
 
@@ -275,15 +312,16 @@ class OtpService {
   async sendOtp(
     phone: string,
     channel: 'sms' | 'call' | 'push' = 'sms',
-    metadata?: Record<string, any>
-  ): Promise<{ sent: boolean; expiresInSec: number }> {
+    metadata?: Record<string, any>,
+    language: Language = DEFAULT_LANGUAGE
+  ): Promise<{ sent: boolean; expiresInSec: number; cooldownSec: number }> {
     // Validate phone number
     if (!this.validatePhone(phone)) {
       throw new Error('Invalid phone number format');
     }
 
     // Check rate limits
-    await this.checkRateLimit(phone);
+    await this.checkRateLimit(phone, language);
 
     // Generate OTP code
     const code = this.generateCode();
@@ -360,6 +398,9 @@ class OtpService {
     return {
       sent,
       expiresInSec: config.otp.expiryMinutes * 60,
+      // The apps drive their "resend" countdown from this, so the cooldown lives in
+      // exactly one place instead of being hard-coded on three clients.
+      cooldownSec: OTP_RESEND_COOLDOWN_SEC,
     };
   }
 

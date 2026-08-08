@@ -16,6 +16,7 @@ export default {
     serverError: 'Server Error',
     badRequest: 'Bad Request',
     conflict: 'Already Exists',
+    tooManyRequests: 'Too many requests. Please try again later',
   },
 
   // Validation messages
@@ -145,6 +146,8 @@ export default {
     invalidChannel: 'Invalid channel. Use "sms", "call" or "push"',
     phoneOrUserIdAndCodeRequired: 'Phone number or user ID and code are required',
     invalidOrExpiredCode: 'Invalid or expired code',
+    tooSoon: 'A code was just sent. Please wait {seconds} seconds before requesting a new one',
+    tooManyRequests: 'Too many code requests. Please try again later',
   },
 
   // Driver profile messages

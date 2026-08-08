@@ -7,18 +7,31 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
-  (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
-  steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
-  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE
-  2026-07-29. Step 9 UNDERWAY: committed as `1117481` and DEPLOYED to test3 2026-08-02 (migration
-  `20260802000001` applied, `migrated (0.014s)`, all pods Running). 11 defects fixed 2026-08-02
-  across two review rounds + 6 owner decisions implemented — see `docs/JOURNAL.md` 2026-08-02 (2).
-  🛑 Still blocked on the geo import (now **T-025 step 1**) before the driver side can be verified.
-  Step 10 is the owner's: walk `docs/CHECKLIST.md` on two phones.**
-  ⚠️ **Its plan now lives in `docs/PLAN-T018.md`** (moved intact 2026-08-02 (3) so T-025 could use
-  `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
-  → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
+- [ ] T-033 (P1) **Resend OTP shows a generic error; server messages never reach either app.**
+  Found by the owner on a **device**, 2026-08-08 — the first real device session. Fully traced in
+  code the same day, **before any fix**. The 60 s per-phone cooldown
+  (`OtpService.checkRateLimit:239`) is *correct* and is the cause — but it throws a bare English
+  `Error`, so the controller's catch-all returns **HTTP 500** for a routine refusal. Worse, the app
+  discards the message regardless: `handleBackendError` (`utils/errorHandler.ts:40`) is written for
+  **axios** (`error.response.status`) and **neither app imports axios** — both use `fetch`, which
+  never sets `.response`. The whole status switch is dead code, so **12 screens** (4 user, 8 driver)
+  have never shown a server message. Plus: the resend link has **no cooldown UI** at all, and the
+  6th send in an hour hits the express limiter's **plain-text** body → `JSON Parse error`.
+  **Owner decision 2026-08-08:** scope = the fix **plus** the error plumbing; the two security
+  findings split out as **T-034**.
+  **Steps 1-6 ALL DONE 2026-08-08.** The cooldown is now a translated **429** carrying
+  `retryAfterSec`; all five express limiters answer **JSON** instead of bare text; `ApiError` carries
+  `status`/`data`/`response` so the 12 existing `error?.response?.status` readers keep working
+  untouched; every `response.json()` in both `api/auth.ts` is guarded; and the resend link is
+  disabled with a live countdown held as a **wall-clock deadline** (a counter would come back stale
+  after backgrounding). `tsc` all four **exactly at baseline** (282 · 0 · 12 · 36), in-file errors
+  proven pre-existing via `git stash`; **42/42** i18n + **17/17** runtime checks.
+  🛑 **Only step 7 (owner: deploy API **first**, then rebuild both apps, then 5 smoke tests) and
+  step 8 (commit) remain. Nothing has run on a device or a live API.**
+  ⚠️ **One open owner decision:** `otpSendLimiter` still allows only **5 sends per phone per hour** —
+  legible now rather than a parse crash, but it will stop a long testing session at the 6th code.
+  Also found here: **T-035** (duplicate `errors:` blocks in the app translation files).
+  → `docs/PLAN.md`
 
 - [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
   Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
@@ -31,7 +44,25 @@
   **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
   **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
   the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. → `docs/OWNER_REQUESTS.md` OR-012, `docs/PLAN.md`
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan moved to **`docs/PLAN-T031.md`** (intact,
+  2026-08-08) so T-033 could use `docs/PLAN.md`. → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
+> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
+- [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
+  (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
+  steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).
+  Schema + API + user app + driver-app views. **Plan APPROVED 2026-07-28. Steps 1–8 DONE
+  2026-07-29. Step 9 UNDERWAY: committed as `1117481` and DEPLOYED to test3 2026-08-02 (migration
+  `20260802000001` applied, `migrated (0.014s)`, all pods Running). 11 defects fixed 2026-08-02
+  across two review rounds + 6 owner decisions implemented — see `docs/JOURNAL.md` 2026-08-02 (2).
+  🛑 Still blocked on the geo import (now **T-025 step 1**) before the driver side can be verified.
+  Step 10 is the owner's: walk `docs/CHECKLIST.md` on two phones.**
+  ⚠️ **Its plan now lives in `docs/PLAN-T018.md`** (moved intact 2026-08-02 (3) so T-025 could use
+  `docs/PLAN.md`). Resume T-018 from there once T-025 lands.
+  → `docs/OWNER_REQUESTS.md` OR-007, `docs/PLAN-T018.md` step 9, `docs/CHECKLIST.md`
 
 - [ ] T-030 (P1) **[OWNER OR-011]** Four driver-app fixes from the software owner.
   Reported 2026-08-02, all grounded in code the same day.
@@ -46,11 +77,6 @@
   ⚠️ Plan is **`docs/PLAN-T030.md`**. → `docs/OWNER_REQUESTS.md` OR-011
   The four items (dates · photos · geo levels · note placeholder) are written up in full, with line
   numbers, in `docs/OWNER_REQUESTS.md` OR-011 — not repeated here.
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
-> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
 - [ ] T-027 (P1) **[OWNER OR-010]** Seven fixes from the software owner (user app; the push-tap one
   also driver app). Reported 2026-08-02, all grounded in code the same day.
   1–2. Referral ("bonus") block: only **one** of phone / ID / promo may be filled, and the field
@@ -142,6 +168,19 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-034 (P1) 🔒 **Two OTP security holes.** Split out of T-033 by owner decision 2026-08-08 so
+  the device-test fix stayed tight. Both verified in code, neither is theoretical.
+  1. **Secrets in the server log.** `OtpService.ts:297` prints `sendOtp code <code>` and `:102`
+  prints the **full Eskiz bearer token** in the auth response. The owner's own `kubectl logs` paste
+  on 2026-08-08 contained a live OTP and a live JWT. Anyone with log access can log in as any user.
+  The whole `sendOtp` block (`:294-300`) is debug spew that should be gated or deleted.
+  2. **The brute-force cap never fires.** `verifyOtp` (`OtpService.ts:371-380`) looks the row up
+  **by `target + code`** — so a **wrong** code matches nothing, returns `false`, and never reaches
+  the `attempts` increment at `:406`. `attempts` therefore only ever counts *correct* codes, and
+  `config.otp.maxAttempts` (5) is dead. The code is **4 digits** (`OTP_CODE_LENGTH` default 4) and
+  the only real defence left is `otpVerifyLimiter` (10 per 5 min, keyed on phone).
+  ⚠️ The fix is a restructure: find the newest live code by `target` **alone**, then compare —
+  which also makes `maxAttempts` and the existing audit reasons meaningful.
 - [ ] T-026 (P1) **Offer backend + app hardening** — everything the two 2026-08-02 (3) audits found
   that T-025 deliberately left alone. **Both audits produced the same defect classes in two
   different services**, so fix them as one sweep, not twice.
@@ -208,6 +247,15 @@
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+- [ ] T-035 (P2) **Duplicate `errors:` block in 5 of 6 app translation files.** Found 2026-08-08
+  during T-033. Both apps declare `errors: { ... }` **twice** in the same object literal, so the
+  **second silently overrides the first** — user `uz`/`ru`/`en` (lines ~21 and ~223) and driver
+  `ru`/`en` (~40 and ~250). ⚠️ **Driver `uz` has only ONE block**, so the effective key set differs
+  *between languages in the same app*: `errors.loadFailed` / `saveFailed` / `deleteFailed` /
+  `updateFailed` / `createFailed` resolve in driver Uzbek and are **missing in driver ru/en**, where
+  `t()` logs a warning and renders the raw key. Fix = merge each pair into one block and keep the
+  union, then re-run the T-033 i18n check script. T-033 worked around it by writing its new key into
+  **every** block.
 - [ ] T-032 (P2) **`npm run lint` cannot run in either RN app.** Both have eslint **9** but **no
   `eslint.config.js` and no `.eslintrc`** — the documented command in `CLAUDE.md` fails instantly,
   so nothing has been linted in the apps for as long as that has been true. The API's *does* run:

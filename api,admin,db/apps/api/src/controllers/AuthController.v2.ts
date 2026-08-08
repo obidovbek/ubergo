@@ -73,7 +73,7 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
       userAgent: req.get('user-agent'),
     };
 
-    const result = await OtpService.sendOtp(phone, channel as any, metadata);
+    const result = await OtpService.sendOtp(phone, channel as any, metadata, language);
 
     // If driver app sends OTP via push, create notification with OTP code
     if (app === 'driver' && channel === 'push') {
@@ -111,6 +111,8 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
         sent: result.sent,
         channel,
         expiresInSec: result.expiresInSec,
+        // Drives the "resend" countdown in both apps.
+        cooldownSec: result.cooldownSec,
       },
       message: `Verification code sent via ${channel}`,
     });

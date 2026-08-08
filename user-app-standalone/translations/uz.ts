@@ -35,6 +35,7 @@ export default {
     deleteFailed: 'O\'chirib bo\'lmadi',
     updateFailed: 'Yangilab bo\'lmadi',
     createFailed: 'Yaratib bo\'lmadi',
+    tooManyRequests: 'Juda ko\'p so\'rov yuborildi. Iltimos, keyinroq urinib ko\'ring',
   },
 
   splash: {
@@ -96,6 +97,7 @@ export default {
     verifying: 'Tekshirilmoqda...',
     resendQuestion: 'Kodni olmadingizmi? ',
     resendLink: 'Qayta yuborish',
+    resendIn: 'Qayta yuborish ({seconds} s)',
     newCodeSent: 'Yangi kod yuborildi',
     errorIncomplete: "Iltimos tasdiqlash kodini to'liq kiriting (4 raqam)",
     errorIncorrect: "Kod noto'g'ri! Qolgan urinishlar: ",
@@ -232,6 +234,7 @@ export default {
     validation: "Ma'lumotlar noto'g'ri",
     unknown: "Noma'lum xatolik yuz berdi",
     tryAgain: "Iltimos qaytadan urinib ko'ring",
+    tooManyRequests: "Juda ko'p so'rov yuborildi. Iltimos, keyinroq urinib ko'ring",
   },
 
   // Network Status

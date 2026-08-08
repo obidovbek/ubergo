@@ -57,6 +57,7 @@ export default {
     deleteFailed: 'O\'chirib bo\'lmadi',
     updateFailed: 'Yangilab bo\'lmadi',
     createFailed: 'Yaratib bo\'lmadi',
+    tooManyRequests: 'Juda ko\'p so\'rov yuborildi. Iltimos, keyinroq urinib ko\'ring',
   },
 
   splash: {
@@ -132,7 +133,10 @@ export default {
     verifying: 'Tekshirilmoqda...',
     resendQuestion: 'Kod kelmadimi? ',
     resendLink: 'Qayta yuborish',
+    resendIn: 'Qayta yuborish ({seconds} s)',
     newCodeSent: 'Yangi kod push notification orqali yuborildi',
+    errorResendPush:
+      'Push xabarnoma yuborishda xatolik. Foydalanuvchi ilovasi ochiq ekanligini tekshiring.',
     errorIncomplete: "Iltimos kodni to'ldiring",
     errorIncorrect: "Noto'g'ri kod. Qolgan urinishlar: ",
     errorNoAttempts: 'Xatolik',

@@ -34,6 +34,7 @@ export default {
     deleteFailed: 'Не удалось удалить',
     updateFailed: 'Не удалось обновить',
     createFailed: 'Не удалось создать',
+    tooManyRequests: 'Слишком много запросов. Пожалуйста, попробуйте позже',
   },
 
   splash: {
@@ -93,6 +94,7 @@ export default {
     verifying: 'Проверка...',
     resendQuestion: 'Не получили код? ',
     resendLink: 'Отправить снова',
+    resendIn: 'Отправить снова ({seconds} с)',
     newCodeSent: 'Новый код отправлен',
     errorIncomplete: 'Пожалуйста, введите полный код подтверждения (4 цифры)',
     errorIncorrect: 'Неверный код! Осталось попыток: ',
@@ -218,6 +220,7 @@ export default {
     validation: 'Неверные данные',
     unknown: 'Произошла неизвестная ошибка',
     tryAgain: 'Пожалуйста, попробуйте снова',
+    tooManyRequests: 'Слишком много запросов. Пожалуйста, попробуйте позже',
   },
 
   // Network Status
