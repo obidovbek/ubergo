@@ -30,6 +30,7 @@ import { handleBackendError } from '../utils/errorHandler';
 import { useCountries } from '../hooks/useCountries';
 import type { CountryOption } from '../types/country';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { CountryPickerModal } from '../components/CountryPickerModal';
 
 const theme = createTheme('light');
 
@@ -277,36 +278,17 @@ export const PhoneRegistrationScreen: React.FC = () => {
           </TouchableOpacity>
 
           {/* Country Picker */}
-          <Modal
-            transparent
-            animationType="fade"
+          <CountryPickerModal
             visible={showCountryPicker}
-            onRequestClose={() => setShowCountryPicker(false)}
-          >
-            <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
-              <View style={styles.pickerOverlay}>
-                <TouchableWithoutFeedback onPress={() => { }}>
-                  <View style={styles.countryPickerModal}>
-                    {countries.map((country) => (
-                      <TouchableOpacity
-                        key={`${country.id ?? country.code}-${country.name}`}
-                        style={styles.countryOption}
-                        onPress={() => {
-                          setSelectedCountry(country);
-                          setShowCountryPicker(false);
-                          setPhoneNumber((prev) => formatPhoneNumber(prev, country));
-                        }}
-                      >
-                        <Text style={styles.countryFlag}>{country.flag ?? '🌐'}</Text>
-                        <Text style={styles.countryName}>{country.name}</Text>
-                        <Text style={styles.countryCode}>{country.code}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </TouchableWithoutFeedback>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
+            countries={countries}
+            selected={activeCountry}
+            onSelect={(country) => {
+              setSelectedCountry(country);
+              setShowCountryPicker(false);
+              setPhoneNumber((prev) => formatPhoneNumber(prev, country));
+            }}
+            onClose={() => setShowCountryPicker(false)}
+          />
 
           {/* Phone Input */}
           <View style={styles.phoneInputContainer}>

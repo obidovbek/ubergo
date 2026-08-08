@@ -7,6 +7,50 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-036 (P1) **Modals must match the Figma design — both apps, all 33 of them.**
+  Reported by the owner during the 2026-08-08 device test: the create-offer modal does not match the
+  design, "and all modals should match the design".
+  Counted in code the same day: **33 `<Modal>` instances across 22 files** (user **13**/10,
+  driver **20**/12) — ⚠️ *more than the 24 first quoted while scoping.* **No shared modal component
+  exists**: every site re-declares its own `rgba(0,0,0,0.5)` backdrop, its own radius (16 / 18 /
+  `theme.borderRadius.md`), and they split across two animation conventions. Today's modals are
+  generic white Material sheets with grey hairlines and **emoji glyphs** (`🔍` `✕` `✓`); the Figma
+  overlay language is a **cream card, 2px black border, red heading, green filled actions**.
+  The 33 collapse into **three patterns** — list picker (17), date/time wheel (8), dialog/detail (8)
+  — which is what makes the card tractable: one shell + three variants, then migrate.
+  **Owner decisions 2026-08-08:** scope = **both apps, every modal**; and **derive** the shell from
+  the Shablon/Tanlov overlays, since **no Figma exists for the pickers themselves**.
+  **Steps 1-9 ALL DONE 2026-08-08 — all 33 modals in both apps migrated.** One `AppModal` shell +
+  `ModalList` (with optional multi-select) + `DateWheelModal`, **byte-identical across both apps**;
+  adapters `CountryPickerModal` (user) and `GeoPickerModal` (driver). Duplication collapsed on the
+  way: 3 identical country pickers → 1, 2 identical date wheels + their generators → 1, 7 driver geo
+  pickers → 1. `tsc` all four **exactly at baseline** (282 · 0 · 12 · 36), in-file errors proven
+  pre-existing via `git stash`; **129/129** i18n checks — which **caught 15 keys that never
+  existed**, three of them hidden behind `|| 'hard-coded Uzbek'` fallbacks.
+  ⚠️ **Driver date/time pickers were deliberately NOT moved to `DateWheelModal`** — it runs
+  1900→today for birth dates, while the driver's generators enforce **future-only**; swapping would
+  have dropped the past-date guard silently. They got the chrome only.
+  🛑 **Only step 10 (owner: rebuild BOTH apps, walk all 33) and step 11 (commit) remain. Nothing
+  has run on a device.** → `docs/PLAN.md`
+
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
+  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
+> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
 - [ ] T-033 (P1) **Resend OTP shows a generic error; server messages never reach either app.**
   Found by the owner on a **device**, 2026-08-08 — the first real device session. Fully traced in
   code the same day, **before any fix**. The 60 s per-phone cooldown
@@ -27,30 +71,12 @@
   after backgrounding). `tsc` all four **exactly at baseline** (282 · 0 · 12 · 36), in-file errors
   proven pre-existing via `git stash`; **42/42** i18n + **17/17** runtime checks.
   🛑 **Only step 7 (owner: deploy API **first**, then rebuild both apps, then 5 smoke tests) and
-  step 8 (commit) remain. Nothing has run on a device or a live API.**
-  ⚠️ **One open owner decision:** `otpSendLimiter` still allows only **5 sends per phone per hour** —
-  legible now rather than a parse crash, but it will stop a long testing session at the 6th code.
+  step 8 (commit) remain. Nothing has run on a device or a live API — its code is still
+  UNCOMMITTED in the working tree.**
+  ✅ **Owner decided 2026-08-08: leave `otpSendLimiter` at 5 sends/phone/hour.** It is legible now
+  instead of a parse crash, and that is enough — do not revisit.
   Also found here: **T-035** (duplicate `errors:` blocks in the app translation files).
-  → `docs/PLAN.md`
-
-- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
-  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
-  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
-  landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
-  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
-  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
-  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. ⚠️ Its plan moved to **`docs/PLAN-T031.md`** (intact,
-  2026-08-08) so T-033 could use `docs/PLAN.md`. → `docs/OWNER_REQUESTS.md` OR-012
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. T-014/T-015 committed in `5b315a6`, T-016 in
-> `2a76e12`, T-017 in `a1ecedd`. Move a card back to *Now* only if a device test **fails**.
+  ⚠️ Its plan is **`docs/PLAN-T033.md`** (moved intact 2026-08-08 so T-036 could use `docs/PLAN.md`).
 - [ ] T-018 (P1) **[OWNER OR-007]** Rebuild the intercity order ("zakaz") screen to the Figma
   (`K_buyurtma001Yangi.png` + popup `004…Tanlov oynasi.png`): route/time popup, gendered seat
   steppers, payment type, vehicle class/type, new flags, special-order panel (data-only).

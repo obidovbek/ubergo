@@ -24,6 +24,8 @@ import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppModal } from '../components/AppModal';
+import { GeoPickerModal } from '../components/GeoPickerModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
@@ -1355,33 +1357,21 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             </View>
 
             {/* Simple Date Picker Modal */}
-            {showDatePicker && (
-              <Modal
-                transparent={true}
-                animationType="slide"
-                visible={showDatePicker}
-                onRequestClose={handleDateCancel}
-              >
-                <View style={styles.modalOverlay}>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={handleDateCancel}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={styles.modalContent}>
-                    <View style={styles.modalHeader}>
-                      <TouchableOpacity onPress={handleDateCancel}>
-                        <Text style={styles.modalCancelText}>Bekor</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.modalTitle}>Sanani tanlang</Text>
-                      <TouchableOpacity onPress={handleDateConfirm}>
-                        <Text style={styles.modalConfirmText}>Tasdiqlash</Text>
-                      </TouchableOpacity>
-                    </View>
+            <AppModal
+              visible={showDatePicker}
+              onClose={handleDateCancel}
+              title={t('common.selectDate')}
+              showCloseIcon={false}
+              dismissOnBackdropPress={false}
+              actions={[
+                { label: t('common.confirm'), onPress: handleDateConfirm },
+                { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
+              ]}
+            >
                     <View style={styles.datePickerContainer}>
                       {/* Day Picker */}
                       <View style={styles.pickerColumn}>
-                        <Text style={styles.pickerLabel}>Kun</Text>
+                        <Text style={styles.pickerLabel}>{t('common.day')}</Text>
                         <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                           {generateDays().map((day) => (
                             <TouchableOpacity
@@ -1408,7 +1398,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
                       {/* Month Picker */}
                       <View style={styles.pickerColumn}>
-                        <Text style={styles.pickerLabel}>Oy</Text>
+                        <Text style={styles.pickerLabel}>{t('common.month')}</Text>
                         <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                           {generateMonths().map((month) => (
                             <TouchableOpacity
@@ -1437,7 +1427,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
                       {/* Year Picker */}
                       <View style={styles.pickerColumn}>
-                        <Text style={styles.pickerLabel}>Yil</Text>
+                        <Text style={styles.pickerLabel}>{t('common.year')}</Text>
                         <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                           {generateYears().map((year) => (
                             <TouchableOpacity
@@ -1464,10 +1454,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
                         </ScrollView>
                       </View>
                     </View>
-                  </View>
-                </View>
-              </Modal>
-            )}
+            </AppModal>
 
             {/* Email */}
             <View style={styles.inputGroup}>
@@ -1843,116 +1830,29 @@ export const DriverPersonalInfoScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Simple Geo Dropdown Modal */}
-      {geoModalType && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!geoModalType}
-          onRequestClose={() => {
-            setGeoModalType(null);
-            setGeoSearchQuery('');
-          }}
-        >
-          <View style={styles.simpleDropdownOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setGeoModalType(null);
-                setGeoSearchQuery('');
-              }}
-            />
-            <View style={styles.simpleDropdownContainer}>
-              {/* Simple Header */}
-              <View style={styles.simpleDropdownHeader}>
-                <Text style={styles.simpleDropdownTitle}>{getGeoModalTitle(geoModalType)}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setGeoModalType(null);
-                    setGeoSearchQuery('');
-                  }}
-                  style={styles.simpleDropdownCloseButton}
-                >
-                  <Text style={styles.simpleDropdownCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Simple Search */}
-              <View style={styles.simpleSearchBox}>
-                <TextInput
-                  style={styles.simpleSearchInput}
-                  placeholder="Qidirish..."
-                  placeholderTextColor="#999"
-                  value={geoSearchQuery}
-                  onChangeText={setGeoSearchQuery}
-                  autoFocus={false}
-                />
-              </View>
-
-              {/* Simple List */}
-              {geoModalLoading ? (
-                <View style={styles.simpleDropdownLoading}>
-                  <ActivityIndicator size="small" color="#4CAF50" />
-                </View>
-              ) : getGeoOptionsForModal(geoModalType).length === 0 ? (
-                <View style={styles.simpleDropdownEmpty}>
-                  <Text style={styles.simpleDropdownEmptyText}>
-                    {geoSearchQuery.trim() ? 'Topilmadi' : 'Ma\'lumot yo\'q'}
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.simpleDropdownList}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
-                >
-                  {getGeoOptionsForModal(geoModalType).map((option) => {
-                    const isSelected = (() => {
-                      switch (geoModalType) {
-                        case 'country':
-                          return formData.address_country_id === option.id;
-                        case 'province':
-                          return formData.address_province_id === option.id;
-                        case 'city_district':
-                          return formData.address_city_district_id === option.id;
-                        case 'administrative_area':
-                          return formData.address_administrative_area_id === option.id;
-                        case 'settlement':
-                          return formData.address_settlement_id === option.id;
-                        case 'neighborhood':
-                          return formData.address_neighborhood_id === option.id;
-                        default:
-                          return false;
-                      }
-                    })();
-
-                    return (
-                      <TouchableOpacity
-                        key={option.id}
-                        style={[
-                          styles.simpleDropdownItem,
-                          isSelected && styles.simpleDropdownItemSelected,
-                        ]}
-                        onPress={() => handleGeoSelection(geoModalType, option)}
-                      >
-                        <Text
-                          style={[
-                            styles.simpleDropdownItemText,
-                            isSelected && styles.simpleDropdownItemTextSelected,
-                          ]}
-                        >
-                          {option.type ? `${option.name} (${option.type})` : option.name}
-                        </Text>
-                        {isSelected && <Text style={styles.simpleDropdownCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
+      <GeoPickerModal
+        visible={!!geoModalType}
+        title={geoModalType ? getGeoModalTitle(geoModalType) : ''}
+        options={geoModalType ? getGeoOptionsForModal(geoModalType) : []}
+        selectedId={
+          geoModalType === 'country'
+            ? formData.address_country_id ?? null
+            : geoModalType === 'province'
+              ? formData.address_province_id ?? null
+              : geoModalType === 'city_district'
+                ? formData.address_city_district_id ?? null
+                : geoModalType === 'administrative_area'
+                  ? formData.address_administrative_area_id ?? null
+                  : geoModalType === 'settlement'
+                    ? formData.address_settlement_id ?? null
+                    : geoModalType === 'neighborhood'
+                      ? formData.address_neighborhood_id ?? null
+                      : null
+        }
+        loading={geoModalLoading}
+        onSelect={(option) => geoModalType && handleGeoSelection(geoModalType, option)}
+        onClose={() => setGeoModalType(null)}
+      />
     </SafeAreaView>
   );
 };

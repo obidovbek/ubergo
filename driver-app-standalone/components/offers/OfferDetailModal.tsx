@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
+import { AppModal } from '../AppModal';
 import type { DriverOffer, OfferStatus } from '../../api/driverOffers';
 
 // Parse location text into parts (city, province, country)
@@ -166,34 +167,13 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={t('driverOffers.viewDetails')}
+      maxHeightRatio={0.9}
     >
-      <View style={styles.modalOverlay}>
-        <Pressable 
-          style={styles.modalBackdrop}
-          onPress={onClose}
-        />
-        <View style={styles.modalContent}>
-          {/* Modal Header - Fixed at top */}
-          <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderContent}>
-              <Text style={styles.modalTitle}>
-                {t('driverOffers.viewDetails') || 'E\'lon tafsilotlari'}
-              </Text>
-              <Text style={styles.modalOfferId}>ID: {offer.id}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={onClose}
-            >
-              <Text style={styles.modalCloseText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
+      <Text style={styles.modalOfferId}>ID: {offer.id}</Text>
           {/* Scrollable Content */}
           <ScrollView 
             showsVerticalScrollIndicator={true}
@@ -463,9 +443,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
               )}
             </View>
           </View>
-        </View>
-      </View>
-    </Modal>
+    </AppModal>
   );
 };
 

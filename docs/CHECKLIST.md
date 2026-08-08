@@ -3,14 +3,14 @@
 > Walk through this on a real phone after every deploy, until we have automatic tests.
 > Written in plain language on purpose: anyone can run it, not just a programmer.
 >
-> **How to read it:** each line says *what you do* and *what you should see*.
+> **How to read it:** each line says _what you do_ and _what you should see_.
 > If what you see is different — that's a bug. Write down which line failed.
 >
-> | Mark | Meaning |
-> |------|---------|
-> | 🔴 | **Changed on 2026-08-02 — test this first.** Most likely to be broken. |
-> | ⚪ | Normal check. Should already work. |
-> | 🚫 | **Cannot be tested — the screen does not exist yet.** Not a bug, missing feature. |
+> | Mark | Meaning                                                                           |
+> | ---- | --------------------------------------------------------------------------------- |
+> | 🔴   | **Changed on 2026-08-02 — test this first.** Most likely to be broken.            |
+> | ⚪   | Normal check. Should already work.                                                |
+> | 🚫   | **Cannot be tested — the screen does not exist yet.** Not a bug, missing feature. |
 >
 > Last updated: 2026-08-02, after the test3 deploy of the T-018 order screen +
 > the driver-connection fixes.
@@ -56,7 +56,7 @@
       it continues where you stopped.
 - [ ] 🔴 Ask for a code **6 times in a row** → you get "too many attempts".
       Then ask from a **different phone** → that phone should still work.
-      *(Before today, one person hitting the limit blocked everybody.)*
+      _(Before today, one person hitting the limit blocked everybody.)_
 - [ ] ⚪ Log in, then have the account deleted in the admin panel, then use the
       app → you are thrown out to the login screen.
 
@@ -66,14 +66,14 @@
 
 - [ ] 🔴 Open "create order". The region list loads within a few seconds.
 - [ ] 🔴 **Turn off mobile data**, then open the screen → you see a red error
-      message under the card. *(Before today it showed an empty list with no
-      explanation, and sometimes crashed.)*
+      message under the card. _(Before today it showed an empty list with no
+      explanation, and sometimes crashed.)_
 - [ ] ⚪ Pick region → the city/district list appears.
 - [ ] ⚪ Pick a city that has small villages → a third list appears.
       Pick a city that has none → no third list. Both are normal.
 - [ ] ⚪ Type a landmark ("mo'ljal") → it shows in the grey summary line below.
 - [ ] ⚪ Same for the "where to" card.
-- [ ] ⚪ Turn on ⚡ "hozioq" → the time pickers disappear.
+- [ ] ⚪ Turn on ⚡ "hoziroq" → the time pickers disappear.
 - [ ] ⚪ Turn it off → date + two times come back.
 - [ ] ⚪ Set a departure time **in the past** → it refuses with
       "must be at least 30 minutes from now".
@@ -99,7 +99,7 @@
 - [ ] 🔴 Fill everything properly and submit → success message, and the order
       appears in "My orders".
 - [ ] 🔴 **Look at the price on that new order in "My orders"** → it should say
-      "Narx kelishiladi". *(This is exactly where the app crashed before today.)*
+      "Narx kelishiladi". _(This is exactly where the app crashed before today.)_
 - [ ] ⚪ Open "Maxsus buyurtma" → the panel opens in place.
 - [ ] ⚪ Type a price → it formats itself with spaces (150 000).
 - [ ] ⚪ Submit the special order with **no price** → it refuses.
@@ -109,7 +109,7 @@
 - [ ] ⚪ Make the phone's font size very large in Android settings → check again.
 - [ ] 🔴 Create **21 orders quickly** → the 21st says "too many requests".
       Then create one from the **other account** → it must work.
-      *(Before today, 20 orders from anyone blocked the whole platform.)*
+      _(Before today, 20 orders from anyone blocked the whole platform.)_
 
 ---
 
@@ -133,7 +133,7 @@
 - [ ] ⚪ Join a trip → the driver's phone gets a notification.
 - [ ] 🔴 **Check the language of that notification**: if the driver's app is set
       to Russian, the notification must arrive in **Russian**, even if you (the
-      passenger) use Uzbek. *(This was backwards until today.)*
+      passenger) use Uzbek. _(This was backwards until today.)_
 - [ ] ⚪ The trip appears in "My bookings".
 - [ ] ⚪ Cancel the booking → the driver gets a notification.
 
@@ -146,8 +146,8 @@ When the missing file is added, check:
 
 - [ ] 🚫 The list of passenger orders opens.
 - [ ] 🔴🚫 **Type a budget in the filter (for example 100 000) → orders that have
-      no price must STILL be in the list.** *(This is the fix that stops the
-      driver's screen looking empty.)*
+      no price must STILL be in the list.** _(This is the fix that stops the
+      driver's screen looking empty.)_
 - [ ] 🚫 An order made with the new form shows: the time window, ⚡ if urgent,
       the seat breakdown (2♂ 1♀), the class, the flags, the landmarks.
 - [ ] 🚫 An order with no price shows "Narx kelishiladi", not a broken number.
@@ -165,14 +165,14 @@ screens are built, this is what must be checked:
 - [ ] 🚫 The passenger sees the list of drivers who offered.
 - [ ] 🚫 The passenger accepts one driver → that driver gets "accepted".
 - [ ] 🔴🚫 **All the other drivers get "another driver was chosen"** and their
-      request stops being "waiting". *(They used to wait forever with no news.)*
+      request stops being "waiting". _(They used to wait forever with no news.)_
 - [ ] 🔴🚫 **The order becomes "driver found", NOT "finished".** The trip has not
       happened yet.
 - [ ] 🔴🚫 Try to accept a **second** driver → it must refuse. One order, one car.
 - [ ] 🚫 The passenger can still cancel after accepting → the accepted driver is
       told.
 - [ ] 🚫 A driver who cancels his own offer cannot offer on that order again.
-      *(This is on purpose — anti-spam.)*
+      _(This is on purpose — anti-spam.)_
 - [ ] 🚫 A driver with 3 free seats cannot take an order that needs the whole
       car (4 seats) — he gets a clear message.
 
@@ -240,7 +240,7 @@ screens are built, this is what must be checked:
 - [ ] ⚪ `kubectl get pods -n test3` → all three pods say `Running`.
 - [ ] 🔴 `kubectl logs -f <api-pod> -n test3` → **no more
       `X-Forwarded-For` / `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` errors.**
-      *(That warning should be gone after this deploy.)*
+      _(That warning should be gone after this deploy.)_
 - [ ] ⚪ Uploaded photos still open after a redeploy.
 - [ ] ⚪ Restart the API pod → the app keeps working, nobody is logged out.
 

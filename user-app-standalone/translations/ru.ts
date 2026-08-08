@@ -14,6 +14,15 @@ export default {
     retry: 'Повторить',
     info: 'Инфо',
     navigationError: 'Ошибка навигации',
+    selectLanguage: 'Выберите язык',
+    // Used by the shared modal components (T-036) — kept under `common` so the copies
+    // in both apps stay identical and independent of any screen's namespace.
+    search: 'Поиск...',
+    noResults: 'Ничего не найдено',
+    selectDate: 'Выберите дату',
+    day: 'День',
+    month: 'Месяц',
+    year: 'Год',
     delete: 'Удалить',
   },
 
@@ -62,6 +71,7 @@ export default {
   },
 
   phoneRegistration: {
+    selectCountry: "Выберите страну",
     title: 'Регистрация',
     subtitle: 'Введите номер телефона\nдля использования приложения',
     phonePlaceholder: '00 000-00-00',

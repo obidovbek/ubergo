@@ -20,6 +20,12 @@ export default {
     day: 'День',
     month: 'Месяц',
     year: 'Год',
+    // Used by the shared modal components (T-036) — kept under `common` so the copies
+    // in both apps stay identical and independent of any screen's namespace.
+    search: 'Поиск...',
+    noResults: 'Ничего не найдено',
+    hour: 'Час',
+    minute: 'Минута',
     camera: 'Камера',
     gallery: 'Галерея',
     permissionRequired: 'Требуется разрешение',
@@ -81,8 +87,16 @@ export default {
     phoneError: 'Не удалось открыть телефон',
   },
 
+  searchPassengerOffers: {
+    from: 'Откуда',
+    to: 'Куда',
+    filter: 'Фильтры',
+    applyFilters: 'Применить фильтры',
+  },
+
   phoneRegistration: {
     brand: 'UbexGo Driver',
+    selectCountry: 'Выберите страну',
     title: 'Регистрация водителя',
     driverType: 'Водитель',
     instruction: 'Введите номер телефона, зарегистрированный в приложении UbexGo',
@@ -389,6 +403,7 @@ export default {
 
   // Driver License Screen
   driverLicense: {
+    selectCountryCode: "Выберите код страны",
     title: 'Междугородние',
     subtitle: 'ВОДИТЕЛЬСКИЕ ПРАВА',
     description: '(Вся информация вводится согласно паспорту)',
@@ -614,6 +629,9 @@ export default {
 
   // Offer Wizard
   offerWizard: {
+    selectCountry: "Выберите страну",
+    selectProvince: "Выберите область",
+    selectCity: "Выберите город/район",
     title: 'Создать новое объявление',
     editTitle: 'Редактировать объявление',
     step1Title: 'Маршрут',
@@ -673,6 +691,7 @@ export default {
     confirmPassenger: 'Подтвердить пассажира',
     rejectPassenger: 'Отклонить пассажира',
     rejectReasonOptional: 'Укажите причину (необязательно):',
+    rejectReasonPlaceholder: 'например, Мест нет',
     message: 'Сообщение',
     rejectionReason: 'Причина отклонения',
     confirmSuccess: 'Пассажир успешно подтвержден',

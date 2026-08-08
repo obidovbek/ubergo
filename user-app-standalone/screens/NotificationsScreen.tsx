@@ -14,7 +14,6 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  Modal,
   ScrollView,
   Platform,
   StatusBar,
@@ -25,6 +24,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { useNotifications, Notification } from '../contexts/NotificationContext';
+import { AppModal } from '../components/AppModal';
 
 const theme = createTheme('light');
 
@@ -239,15 +239,37 @@ export const NotificationsScreen: React.FC = () => {
       )}
 
       {/* Notification Detail Modal */}
-      <Modal
+      <AppModal
         visible={selectedNotification !== null}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSelectedNotification(null)}
+        onClose={() => setSelectedNotification(null)}
+        title={selectedNotification?.title}
+        actions={
+          selectedNotification
+            ? [
+                ...(!selectedNotification.read
+                  ? [
+                      {
+                        label: t('notifications.markAsRead'),
+                        onPress: async () => {
+                          await markAsRead(selectedNotification.id);
+                          setSelectedNotification({ ...selectedNotification, read: true });
+                        },
+                      },
+                    ]
+                  : []),
+                {
+                  label: t('common.delete'),
+                  variant: 'destructive' as const,
+                  onPress: async () => {
+                    setSelectedNotification(null);
+                    await deleteNotification(selectedNotification.id);
+                  },
+                },
+              ]
+            : []
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {selectedNotification && (
+        {selectedNotification && (
               <>
                 <View style={styles.modalHeader}>
                   <View style={[styles.modalIconContainer, { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }]}>
@@ -255,17 +277,10 @@ export const NotificationsScreen: React.FC = () => {
                       {getNotificationIcon(selectedNotification.type)}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.modalCloseButton}
-                    onPress={() => setSelectedNotification(null)}
-                  >
-                    <Text style={styles.modalCloseText}>✕</Text>
-                  </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                  <Text style={styles.modalTitle}>{selectedNotification.title}</Text>
-                  
+
                   <View style={styles.modalSection}>
                     <Text style={styles.modalSectionTitle}>{t('notifications.message')}</Text>
                     <Text style={styles.modalMessage}>{selectedNotification.message}</Text>
@@ -308,34 +323,9 @@ export const NotificationsScreen: React.FC = () => {
                     </View>
                   </View>
                 </ScrollView>
-
-                <View style={styles.modalFooter}>
-                  {!selectedNotification.read && (
-                    <TouchableOpacity
-                      style={styles.modalActionButton}
-                      onPress={async () => {
-                        await markAsRead(selectedNotification.id);
-                        setSelectedNotification({ ...selectedNotification, read: true });
-                      }}
-                    >
-                      <Text style={styles.modalActionText}>{t('notifications.markAsRead')}</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.modalActionButton, styles.modalDeleteButton]}
-                    onPress={async () => {
-                      setSelectedNotification(null);
-                      await deleteNotification(selectedNotification.id);
-                    }}
-                  >
-                    <Text style={[styles.modalActionText, styles.modalDeleteText]}>{t('common.delete')}</Text>
-                  </TouchableOpacity>
-                </View>
               </>
-            )}
-          </View>
-        </View>
-      </Modal>
+        )}
+      </AppModal>
     </SafeAreaView>
   );
 };

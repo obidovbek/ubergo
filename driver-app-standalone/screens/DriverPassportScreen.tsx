@@ -24,6 +24,8 @@ import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppModal } from '../components/AppModal';
+import { GeoPickerModal } from '../components/GeoPickerModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -1381,33 +1383,21 @@ export const DriverPassportScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Date Picker Modal */}
-      {showDatePicker && datePickerField && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={handleDateCancel}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleDateCancel}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={handleDateCancel}>
-                  <Text style={styles.modalCancelText}>Bekor</Text>
-                </TouchableOpacity>
-                <Text style={styles.modalTitle}>Sanani tanlang</Text>
-                <TouchableOpacity onPress={handleDateConfirm}>
-                  <Text style={styles.modalConfirmText}>Tasdiqlash</Text>
-                </TouchableOpacity>
-              </View>
+      <AppModal
+        visible={showDatePicker && !!datePickerField}
+        onClose={handleDateCancel}
+        title={t('common.selectDate')}
+        showCloseIcon={false}
+        dismissOnBackdropPress={false}
+        actions={[
+          { label: t('common.confirm'), onPress: handleDateConfirm },
+          { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
+        ]}
+      >
               <View style={styles.datePickerContainer}>
                 {/* Day Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Kun</Text>
+                  <Text style={styles.pickerLabel}>{t('common.day')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateDays().map((day) => (
                       <TouchableOpacity
@@ -1434,7 +1424,7 @@ export const DriverPassportScreen: React.FC = () => {
 
                 {/* Month Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Oy</Text>
+                  <Text style={styles.pickerLabel}>{t('common.month')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateMonths().map((month) => (
                       <TouchableOpacity
@@ -1463,7 +1453,7 @@ export const DriverPassportScreen: React.FC = () => {
 
                 {/* Year Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Yil</Text>
+                  <Text style={styles.pickerLabel}>{t('common.year')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateYears().map((year) => (
                       <TouchableOpacity
@@ -1490,114 +1480,27 @@ export const DriverPassportScreen: React.FC = () => {
                   </ScrollView>
                 </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      </AppModal>
 
       {/* Geo Dropdown Modal */}
-      {geoModalType && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!geoModalType}
-          onRequestClose={() => {
-            setGeoModalType(null);
-            setGeoSearchQuery('');
-          }}
-        >
-          <View style={styles.simpleDropdownOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setGeoModalType(null);
-                setGeoSearchQuery('');
-              }}
-            />
-            <View style={styles.simpleDropdownContainer}>
-              {/* Header */}
-              <View style={styles.simpleDropdownHeader}>
-                <Text style={styles.simpleDropdownTitle}>{getGeoModalTitle(geoModalType)}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setGeoModalType(null);
-                    setGeoSearchQuery('');
-                  }}
-                  style={styles.simpleDropdownCloseButton}
-                >
-                  <Text style={styles.simpleDropdownCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Search */}
-              <View style={styles.simpleSearchBox}>
-                <TextInput
-                  style={styles.simpleSearchInput}
-                  placeholder="Qidirish..."
-                  placeholderTextColor="#999"
-                  value={geoSearchQuery}
-                  onChangeText={setGeoSearchQuery}
-                  autoFocus={false}
-                />
-              </View>
-
-              {/* List */}
-              {getGeoOptionsForModal(geoModalType).length === 0 ? (
-                <View style={styles.simpleDropdownEmpty}>
-                  <Text style={styles.simpleDropdownEmptyText}>
-                    {geoSearchQuery.trim() ? 'Topilmadi' : 'Ma\'lumot yo\'q'}
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.simpleDropdownList}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
-                >
-                  {getGeoOptionsForModal(geoModalType).map((option) => {
-                    const isSelected = (() => {
-                      switch (geoModalType) {
-                        case 'citizenship':
-                          return selectedCitizenship?.id === option.id;
-                        case 'birth_country':
-                          return selectedBirthCountry?.id === option.id;
-                        case 'birth_province':
-                          return selectedBirthProvince?.id === option.id;
-                        case 'birth_city':
-                          return selectedBirthCity?.id === option.id;
-                        default:
-                          return false;
-                      }
-                    })();
-
-                    return (
-                      <TouchableOpacity
-                        key={option.id}
-                        style={[
-                          styles.simpleDropdownItem,
-                          isSelected && styles.simpleDropdownItemSelected,
-                        ]}
-                        onPress={() => handleGeoSelection(geoModalType, option)}
-                      >
-                        <Text
-                          style={[
-                            styles.simpleDropdownItemText,
-                            isSelected && styles.simpleDropdownItemTextSelected,
-                          ]}
-                        >
-                          {option.type ? `${option.name} (${option.type})` : option.name}
-                        </Text>
-                        {isSelected && <Text style={styles.simpleDropdownCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
+      <GeoPickerModal
+        visible={!!geoModalType}
+        title={geoModalType ? getGeoModalTitle(geoModalType) : ''}
+        options={geoModalType ? getGeoOptionsForModal(geoModalType) : []}
+        selectedId={
+          geoModalType === 'citizenship'
+            ? selectedCitizenship?.id ?? null
+            : geoModalType === 'birth_country'
+              ? selectedBirthCountry?.id ?? null
+              : geoModalType === 'birth_province'
+                ? selectedBirthProvince?.id ?? null
+                : geoModalType === 'birth_city'
+                  ? selectedBirthCity?.id ?? null
+                  : null
+        }
+        onSelect={(option) => geoModalType && handleGeoSelection(geoModalType, option)}
+        onClose={() => setGeoModalType(null)}
+      />
     </SafeAreaView>
   );
 };

@@ -4,13 +4,12 @@
 > **T-018 is still live at step 9** — everything below is current. Resume from the **Resume point**
 > at the bottom once T-025 lands. T-025 step 1 is the geo import that blocks step 9 here.
 
-
-
 > **Rule for Claude:** `/new-task` rewrites this file. After finishing any step,
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
 > ⏸️ **Parked (implemented, awaiting owner device test):**
+>
 > - T-011 (OR-001 OTP resume) · T-012 (OR-002 deleted-user logout) · T-014 (OR-004) ·
 >   T-015 (OR-005) — committed earlier.
 > - T-016 (OR-006 resume half-finished registration) — committed as `2a76e12`; needs the API
@@ -21,6 +20,7 @@
 >   Full write-up: `docs/JOURNAL.md` 2026-07-28 entry.
 
 ## Task
+
 - **ID / name:** T-018 (owner request OR-007) — rebuild the **intercity order ("zakaz") screen**
   in the user app to match the Figma design, end-to-end (schema → API → UI → driver-app views).
 - **Design refs:** `figma_images/K_buyurtma001Yangi.png` (main screen),
@@ -34,6 +34,7 @@
   it as the active task (AskUserQuestion, 2026-07-28).
 
 ## Owner decisions already taken (2026-07-28 — do NOT re-ask)
+
 0. **The migration is applied on test3 at deploy time, not locally** (owner, 2026-07-28). No
    local Docker/DB run — write the API and app code against the schema on paper.
 1. **T-018 first**; T-019 (registration redesign) and T-020 (vehicle usage) wait in Next.
@@ -43,6 +44,7 @@
    charge nothing. Real payment stays with T-006.
 
 ## Current state (checked in code 2026-07-28)
+
 - `CreatePassengerOfferScreen.tsx` (1726 lines): inline country→province→city cascade, single
   date+time, seats count, max price/seat, 3 booleans (front_seat, pets, large_baggage), note.
 - `passenger_offers` model/table only has those fields — **everything else in the Figma is new**.
@@ -52,16 +54,18 @@
 - `users.promo_code`/`referral_id` (needed later by T-019) already exist — unrelated here.
 
 ## Approach
+
 Additive schema (all new columns nullable / defaulted → old clients keep working), then API,
 then the app UI in Figma order, then driver-app display. Discrete columns for anything a driver
 will filter on; JSONB for composite structures (seat breakdown, special order). No new
 dependency. Country stays auto-selected Uzbekistan and hidden from the UI (OR-004 precedent).
 
 ### Data model (the migration — one file, additive only)
+
 `passenger_offers` new columns:
 | Column | Type | Meaning (Figma element) |
 |---|---|---|
-| `is_urgent` | BOOLEAN NOT NULL DEFAULT false | ⚡ hozioq (srochno) |
+| `is_urgent` | BOOLEAN NOT NULL DEFAULT false | ⚡ hoziroq (srochno) |
 | `depart_until` | TIMESTAMPTZ NULL | end of departure window (`start_at` = its start) |
 | `arrive_from`, `arrive_until` | TIMESTAMPTZ NULL | arrival window "yetib borish vaqti" |
 | `from_settlement_id`, `to_settlement_id` | INTEGER NULL → `geo_settlements` | 3rd cascade level |
@@ -92,6 +96,7 @@ VARCHAR + app-level validation instead of Postgres enums — cheap to extend, no
 later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
 
 ### UI structure (user app)
+
 - **`RouteTimeModal`** (new, image 2): From block (province → city/district → settlement
   cascade, settlement optional; landmark text + pin), urgent toggle, departure date + time
   window; To block (same); arrival date + window. Opens from the route summary card. Reuses the
@@ -109,15 +114,16 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   widths, minimum touch target 44px, test with small (720p) and large screens + font scaling.
 
 ### UI behaviour spec (small details — decided, do NOT re-derive)
+
 1. **First action in a fresh session:** open `figma_images/K_buyurtma001Yangi.png` with the Read
    tool — the plan text compresses it; the image is the authority for layout/colour/wording.
    ⚠️ **`004Shaharlar aro K3 Tanlov oynasi.png` is NOT the route/time popup** (checked
-   2026-07-28): it is the *driver-offer selection* window a passenger sees when picking a seat on
+   2026-07-28): it is the _driver-offer selection_ window a passenger sees when picking a seat on
    a driver's offer (Qidiruv/Takliflar tabs, driver + car info, seat/price grid, Orqaga /
    Buyurtma berish). No popup mock for the route/time editor exists in `figma_images/` — decide
    its exact look with the owner before step 4, or fall back to the inline "Qayerdan/Qayerga"
    cards drawn on image 1.
-2. **Urgent (⚡ hozioq):** checked → departure window pickers hidden/disabled, `start_at = now`,
+2. **Urgent (⚡ hoziroq):** checked → departure window pickers hidden/disabled, `start_at = now`,
    `depart_until = null`, `is_urgent = true`. Unchecked → date picker + two time pickers
    (window start/end); `start_at` = date+start, `depart_until` = date+end.
 3. **Arrival window:** fully optional. Its own date + two time pickers → `arrive_from`,
@@ -165,6 +171,7 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
     fields; keep old field names untouched so `MyPassengerOffersScreen` compiles unchanged.
 
 ### Files to touch (names verified against the repo 2026-07-28)
+
 - **API** (`api,admin,db/apps/api/src/…`):
   - NEW `database/migrations/20260728000001-extend-passenger-offers-figma.cjs` (**.cjs** — ESM
     project gotcha)
@@ -190,15 +197,16 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
     `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts`) — port it.
 
 ## Steps
+
 - [x] 1a. **Migration + model files** — `20260728000001-extend-passenger-offers-figma.cjs`
-  (20 additive columns + 2 FK indexes + `max_price_per_seat DROP NOT NULL`) and
-  `PassengerOffer.ts` (attributes, creation-optionals, `init` fields, new exported types).
-  API `tsc`: 290 errors before / 290 after, **identical set**.
+      (20 additive columns + 2 FK indexes + `max_price_per_seat DROP NOT NULL`) and
+      `PassengerOffer.ts` (attributes, creation-optionals, `init` fields, new exported types).
+      API `tsc`: 290 errors before / 290 after, **identical set**.
 - [x] 1b. **Migration applied on test3 — 2026-07-28, `migrated (0.040s)`, no errors.**
-  Verified in `information_schema`: all 12 spot-checked columns present, `max_price_per_seat`
-  now nullable, `is_urgent`/`road_pickup`/`woman_in_car` NOT NULL with defaults.
-  Committed + pushed as `7e49b5e`, then run inside the running API pod (the image is built
-  without the file, so it was `kubectl cp`-ed in first). **Recipe for the next migration:**
+      Verified in `information_schema`: all 12 spot-checked columns present, `max_price_per_seat`
+      now nullable, `is_urgent`/`road_pickup`/`woman_in_car` NOT NULL with defaults.
+      Committed + pushed as `7e49b5e`, then run inside the running API pod (the image is built
+      without the file, so it was `kubectl cp`-ed in first). **Recipe for the next migration:**
   ```
   POD=$(kubectl get pods -n test3 -l app=ubexgo-api-test3 -o jsonpath='{.items[0].metadata.name}')
   kubectl cp "<migration>.cjs" "test3/$POD:/app/src/database/migrations/<migration>.cjs" -c api
@@ -210,15 +218,15 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   inside the pod first. **Never applied to a local DB** (Docker Desktop is off; the Windows
   PostgreSQL 16 on 5432 is an unrelated instance) — test3 is the only DB with these columns.
 - [x] 2. **API — DONE 2026-07-29.** `PassengerOfferService` rewritten around one whitelisting
-  builder `buildOfferFields(data, current?)` (create **and** update share it) + parser helpers
-  (`parseDate/Text/Number/Id/Enum/SeatCounts/VehicleTypes/SpecialOrder`) and a
-  `validateOfferData(fields, current?)` that checks cross-field rules on the **merged** row, so a
-  PATCH cannot leave it inconsistent. Controllers needed **no change** (they already forward
-  `req.body`); admin routes never touch passenger offers.
-  API `tsc`: **290 before → 289 after** — one baseline error removed (the old `create()`
-  `exactOptionalPropertyTypes` complaint), **zero new**. 24 runtime checks green via
-  `<scratchpad>/check-build-fields.mts` (`npx tsx …` from `apps/api`, no DB needed).
-  **Contract the app (steps 3–6) must follow:**
+     builder `buildOfferFields(data, current?)` (create **and** update share it) + parser helpers
+     (`parseDate/Text/Number/Id/Enum/SeatCounts/VehicleTypes/SpecialOrder`) and a
+     `validateOfferData(fields, current?)` that checks cross-field rules on the **merged** row, so a
+     PATCH cannot leave it inconsistent. Controllers needed **no change** (they already forward
+     `req.body`); admin routes never touch passenger offers.
+     API `tsc`: **290 before → 289 after** — one baseline error removed (the old `create()`
+     `exactOptionalPropertyTypes` complaint), **zero new**. 24 runtime checks green via
+     `<scratchpad>/check-build-fields.mts` (`npx tsx …` from `apps/api`, no DB needed).
+     **Contract the app (steps 3–6) must follow:**
   - `seats_needed` is **derived server-side** — send `seat_counts` and/or `salon_scope` and omit
     it. Precedence: `salon_scope` (4 whole / 3 back) → sum of `seat_counts` → sent
     `seats_needed`. A salon scope forces `seat_counts = null`. Result must land in 1–8.
@@ -238,24 +246,24 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   - Security bonus: `updateOffer` no longer spreads `req.body` into the model (it could set
     `user_id`/`status`); everything is whitelisted now.
 - [x] 3. **App: geo settlement level — DONE 2026-07-29.** `fetchGeoSettlements(cityDistrictId)`
-  added to `user-app-standalone/api/geo.ts` (4th level, empty lists are normal).
+     added to `user-app-standalone/api/geo.ts` (4th level, empty lists are normal).
 - [x] 4. **App: route + times — DONE 2026-07-29.** ⚠️ **Owner decision 2026-07-29: NO popup.**
-  The route/time editor is drawn **inline on the main screen**, the way image 1 shows it, so
-  `RouteTimeModal` was never built. Three new components in
-  `user-app-standalone/components/passengerOffer/`:
+     The route/time editor is drawn **inline on the main screen**, the way image 1 shows it, so
+     `RouteTimeModal` was never built. Three new components in
+     `user-app-standalone/components/passengerOffer/`:
   - `GeoSelectModal.tsx` — searchable single-choice list (the old screen had this markup twice).
   - `LocationCard.tsx` — the "Qayerdan:/Qayerga:" card: viloyat → shahar/tuman → mavze/QFY
     cascade + mo'ljal input + the combined summary line. Exports `LocationValue`,
     `emptyLocation`, `buildLocationText`. Loads its own lists; effects are keyed on **plain ids**,
     never on objects (the T-017 loop).
-  - `TimeWindowCard.tsx` — departure (⚡ hozioq toggle + date + from–until window) and arrival
+  - `TimeWindowCard.tsx` — departure (⚡ hoziroq toggle + date + from–until window) and arrival
     (date + a single "gacha" time). Exports `combineDateTime`, `formatTime`, `formatDateNumeric`.
   - `CheckRow.tsx` — the Figma checkbox/radio row ("-label"), built here, reused in step 5.
-  `CreatePassengerOfferScreen.tsx` rewired (1808 → ~1000 lines): the country cascade, both geo
-  modals and the old date/time card are gone; `api/passengerOffers.ts` carries the full new
-  `CreatePassengerOfferData`; 19 new uz/ru/en keys. User app `tsc`: **12 before → 12 after,
-  identical set.**
-  **Figma readings that override the plan text (the PNG is the authority):**
+    `CreatePassengerOfferScreen.tsx` rewired (1808 → ~1000 lines): the country cascade, both geo
+    modals and the old date/time card are gone; `api/passengerOffers.ts` carries the full new
+    `CreatePassengerOfferData`; 19 new uz/ru/en keys. User app `tsc`: **12 before → 12 after,
+    identical set.**
+    **Figma readings that override the plan text (the PNG is the authority):**
   - Arrival is **one** "…gacha yetib borish kerak" time, not a window → only `arrive_until` is
     sent; `arrive_from` stays null (column kept for later).
   - Location text order is now **`viloyat, tuman/shahar, mavze/ mo'ljal`** (was `city, province`).
@@ -266,45 +274,46 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   - The blue **map pin** in both route cards is **not implemented** — geocoding/map picking is
     T-008 (Later). Rendering a dead pin would be worse than leaving it out.
 - [x] 5. **App: main form sections — DONE 2026-07-29.** Sections in the Figma's own order:
-  payment → vehicle class → seats → flags/pitak → qo'shimcha ma'lumot → submit. New
-  `SeatStepper.tsx` (seat boxes + − count + stepper; "+" always asks Erkak/Ayol, "−" only asks
-  when the row holds both) and `GenderPickSheet.tsx`. Front capacity **1**, back **3** (sedan,
-  per the PNG). Salon radios lock the steppers and "farqi yo'q"; every radio is deselectable.
-  `front_seat` is still written for the old list screens (`whole_salon` → true, `back_salon_full`
-  → false, otherwise "a front seat was picked"). +33 uz/ru/en keys. tsc 12 → 12, identical set.
+     payment → vehicle class → seats → flags/pitak → qo'shimcha ma'lumot → submit. New
+     `SeatStepper.tsx` (seat boxes + − count + stepper; "+" always asks Erkak/Ayol, "−" only asks
+     when the row holds both) and `GenderPickSheet.tsx`. Front capacity **1**, back **3** (sedan,
+     per the PNG). Salon radios lock the steppers and "farqi yo'q"; every radio is deselectable.
+     `front_seat` is still written for the old list screens (`whole_salon` → true, `back_salon_full`
+     → false, otherwise "a front seat was picked"). +33 uz/ru/en keys. tsc 12 → 12, identical set.
 - [x] 6. **App: special-order panel — DONE 2026-07-29.** `SpecialOrderPanel.tsx`: collapsed bar
-  → in-place panel with the four price inputs (thin-space formatting), "xaydovchilar taklifini
-  ko'rib chiqaman", "o'zgarmas narx", kutish so'm/min and the static "bepul kutish 10 minut"
-  (`free_waiting_min: 10`). Its own button calls the **same** `handleSubmit(true)`; the green one
-  calls `handleSubmit(false)` and sends no `special_order`. The app blocks a special order with no
-  price, matching the API rule. **Data only — nothing is charged** (owner decision #3).
-  The submit payload now carries every new field and **deliberately omits `seats_needed` and
-  `max_price_per_seat`**. +20 uz/ru/en keys. tsc 12 → 12, identical set.
+     → in-place panel with the four price inputs (thin-space formatting), "xaydovchilar taklifini
+     ko'rib chiqaman", "o'zgarmas narx", kutish so'm/min and the static "bepul kutish 10 minut"
+     (`free_waiting_min: 10`). Its own button calls the **same** `handleSubmit(true)`; the green one
+     calls `handleSubmit(false)` and sends no `special_order`. The app blocks a special order with no
+     price, matching the API rule. **Data only — nothing is charged** (owner decision #3).
+     The submit payload now carries every new field and **deliberately omits `seats_needed` and
+     `max_price_per_seat`**. +20 uz/ru/en keys. tsc 12 → 12, identical set.
 
   **Deliberate deviations from the PNG (all reversible, flag at review):**
   1. Payment: the section label "To'lov turi" comes **first**, then Naqd / Click-Payme /
-     Do'stimga. The Figma prints "Do'stimga" *above* the label, which reads like a bug.
+     Do'stimga. The Figma prints "Do'stimga" _above_ the label, which reads like a bug.
   2. The payer's number is **one free-text field prefilled `+998 `** (phone-pad), not a flag +
      dial-code chip — a real country-code picker needs a country/flag dataset the app has not got.
      Foreign numbers still work: the field accepts any `+…` input.
   3. Both buttons **scroll with the form** (as drawn); the old sticky footer is gone.
   4. A small "Avto sinfi" heading was added — the PNG relies on its "3." numbering instead.
+
 - [x] 7. **Driver app: display — DONE 2026-07-29.** `api/passengerOffers.ts` carries the new
-  fields (`max_price_per_seat` is now `number | null`); new
-  `components/offers/PassengerOfferExtras.tsx` renders them read-only as compact chip rows on the
-  offer card: ⚡ urgency, the departure window, the arrival deadline, the gendered seat breakdown
-  (`2♂ 1♀`) or the salon booking, "joyi farqi yo'q", vehicle class, payment type, the six flags,
-  the pitak note, and the special-order price list with fixed-price / reviews-offers / waiting
-  fee. Landmarks now sit under each route line. Offers from old app builds render nothing extra.
-  New `passengerOfferExtras` namespace, 29 keys × uz/ru/en. Driver app `tsc`: **41 before → 41
-  after**, identical per-file/per-code distribution.
-  ⚠️ **The price badge no longer shows garbage:** offers made by the new form have no
-  `max_price_per_seat`, so the card shows "Narx kelishiladi" instead of formatting `null`.
-  ⚠️ **There is no detail screen.** `handleViewOffer` navigates to `'PassengerOfferDetails'`,
-  which **is not registered anywhere** (hence the `navigation as any` cast) — tapping a card has
-  never gone anywhere. Pre-existing, unrelated to T-018, logged as **T-021**. So the card is the
-  only place a driver sees these fields, which is why it carries all of them.
-  No filter changes (`max_price` still excludes price-less offers) — deliberate, see step 2.
+     fields (`max_price_per_seat` is now `number | null`); new
+     `components/offers/PassengerOfferExtras.tsx` renders them read-only as compact chip rows on the
+     offer card: ⚡ urgency, the departure window, the arrival deadline, the gendered seat breakdown
+     (`2♂ 1♀`) or the salon booking, "joyi farqi yo'q", vehicle class, payment type, the six flags,
+     the pitak note, and the special-order price list with fixed-price / reviews-offers / waiting
+     fee. Landmarks now sit under each route line. Offers from old app builds render nothing extra.
+     New `passengerOfferExtras` namespace, 29 keys × uz/ru/en. Driver app `tsc`: **41 before → 41
+     after**, identical per-file/per-code distribution.
+     ⚠️ **The price badge no longer shows garbage:** offers made by the new form have no
+     `max_price_per_seat`, so the card shows "Narx kelishiladi" instead of formatting `null`.
+     ⚠️ **There is no detail screen.** `handleViewOffer` navigates to `'PassengerOfferDetails'`,
+     which **is not registered anywhere** (hence the `navigation as any` cast) — tapping a card has
+     never gone anywhere. Pre-existing, unrelated to T-018, logged as **T-021**. So the card is the
+     only place a driver sees these fields, which is why it carries all of them.
+     No filter changes (`max_price` still excludes price-less offers) — deliberate, see step 2.
 - [x] 8. **Static verification + cleanup — DONE 2026-07-29.**
   - Dead styles pruned from `CreatePassengerOfferScreen.tsx`: **67 of 90** StyleSheet entries were
     orphaned by the rewrite (the geo cascade, both modals, the date/time card, the price inputs and
@@ -317,10 +326,10 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
     error anywhere across all eight steps.**
   - `npm run lint` is still broken repo-wide (ESLint 9, no flat config) — pre-existing, not touched.
 - [ ] 9. **End-to-end run** — create an offer with every field set via the dev build against
-  the local/test API; check it in My offers + driver app.
-  **Started 2026-08-02** — the API image is deployed on test3 and a price-less offer exists
-  (only the new API + new form can write `max_price_per_seat = NULL`). Three defects found from
-  the owner's logs and fixed, **not yet committed**:
+     the local/test API; check it in My offers + driver app.
+     **Started 2026-08-02** — the API image is deployed on test3 and a price-less offer exists
+     (only the new API + new form can write `max_price_per_seat = NULL`). Three defects found from
+     the owner's logs and fixed, **not yet committed**:
   - API: `app.set('trust proxy', 1)` (`app.ts:35`) — the ingress's `X-Forwarded-For` was
     untrusted, so `express-rate-limit` keyed everyone on the ingress IP (one shared bucket).
     One hop, not `true` — `true` lets anyone spoof the header past the OTP limiter.
@@ -330,16 +339,17 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
     `max_price_per_seat` retyped `number | null` so tsc polices the call sites.
   - Driver app: `formatNumberWithSpaces` was imported but never exported from its `utils/format.ts`
     (user-app-only function) — added. Was hiding in the 41-error baseline as a real crash.
-  🛑 **Blocker before this step can finish:** port `api/geo.ts` into the driver app (see the
-  file list above) — `SearchPassengerOffersScreen` cannot bundle without it.
+    🛑 **Blocker before this step can finish:** port `api/geo.ts` into the driver app (see the
+    file list above) — `SearchPassengerOffersScreen` cannot bundle without it.
 - [ ] 10. **Owner** — device test on at least two different phones (small + large screen).
 
 ## Risks / open questions (READ before coding)
+
 - ⚠️ **Payment row interpretation:** Figma draws Naqd / Click-Payme / Do'stimga as checkboxes;
   modelled here as **single-select** `payment_type` + `payer_phone` for Do'stimga. Confirm with
   the owner at review; the column shape survives either reading (switch to JSONB list only if
   he wants multi).
-- ⚠️ **"Ayol kishi bor avto"** read as a *preference*: passenger wants a car that has a woman
+- ⚠️ **"Ayol kishi bor avto"** read as a _preference_: passenger wants a car that has a woman
   in it. It is a filter flag on the offer, not a guarantee.
 - ⚠️ Migration touches a live table — additive/nullable only, **no** column drops or renames;
   `front_seat` stays even though superseded.
@@ -357,6 +367,7 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   `GRADLE_OPTS` truststore, `git -c http.sslCAInfo=...`).
 
 ## Session notes (one line per work session)
+
 - 2026-08-02 (2): **Driver-connection review + 6 owner decisions + DEPLOYED.** Reviewed the whole
   browse → join → confirm leg; found it has **no UI in either app** (new cards T-023/T-024) and
   fixed 8 backend/app defects (double-confirm, unvalidated price → 500, public leak of rival
@@ -404,6 +415,7 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
   No code yet — implementation starts at step 1 in the next session.
 
 ## Resume point (for the next chat)
+
 **Steps 1–8 are DONE. Step 9 is UNDERWAY — the code is committed (`1117481`), deployed to test3,
 and the migration is applied.** What remains is verification, not building. Baselines to compare
 against: API **285**, admin **0**, user app **12**, driver app **40**.
@@ -420,6 +432,7 @@ ran clean inside the pod; `db:migrate` executed only the new file, which proves 
 survived the namespace reset, so no data was lost.
 
 **What is left:**
+
 1. 🛑 **T-022 — port `api/geo.ts` into the driver app.** `SearchPassengerOffersScreen:27` imports
    it and the file does not exist, so Metro cannot bundle that screen. Copy the user app's
    version (`GeoOption`, `fetchGeoCountries`, `fetchGeoProvinces`, `fetchGeoCityDistricts`;
@@ -437,13 +450,14 @@ survived the namespace reset, so no data was lost.
 leg is finished and reviewed; only the UI is missing.
 
 **The four deliberate deviations from the PNG (step 6) want an explicit yes/no at that review.**
-When the device test passes: `/end-day`, then move T-018 to *Parked* or *Done*.
+When the device test passes: `/end-day`, then move T-018 to _Parked_ or _Done_.
 Read in this order: (1) `figma_images/K_buyurtma001Yangi.png`, (2) this file fully,
 (3) `docs/OWNER_REQUESTS.md` OR-007. Every design decision is already taken — the "Owner
 decisions" and "UI behaviour spec" sections are binding; only truly new ambiguities justify a
 question to the owner.
 
 **Environment facts a fresh chat must know:**
+
 - **test3 already has the new columns**; **no local DB exists** (Docker Desktop off, the Windows
   PostgreSQL 16 on 5432 is unrelated). So steps 2–7 are written without a local run, and every
   real test happens on test3 after a deploy. Deploy order stays: **API first, then the app**.

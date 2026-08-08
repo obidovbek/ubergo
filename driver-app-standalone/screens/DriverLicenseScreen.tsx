@@ -25,6 +25,8 @@ import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppModal } from '../components/AppModal';
+import { ModalList } from '../components/ModalList';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -949,29 +951,17 @@ export const DriverLicenseScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Date Picker Modal */}
-      {showDatePicker && datePickerField && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={handleDateCancel}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleDateCancel}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={handleDateCancel}>
-                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <Text style={styles.modalTitle}>{t('common.selectDate')}</Text>
-                <TouchableOpacity onPress={handleDateConfirm}>
-                  <Text style={styles.modalConfirmText}>{t('common.confirm')}</Text>
-                </TouchableOpacity>
-              </View>
+      <AppModal
+        visible={showDatePicker && !!datePickerField}
+        onClose={handleDateCancel}
+        title={t('common.selectDate')}
+        showCloseIcon={false}
+        dismissOnBackdropPress={false}
+        actions={[
+          { label: t('common.confirm'), onPress: handleDateConfirm },
+          { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
+        ]}
+      >
               <View style={styles.datePickerContainer}>
                 {/* Day Picker */}
                 <View style={styles.pickerColumn}>
@@ -1119,63 +1109,37 @@ export const DriverLicenseScreen: React.FC = () => {
                   </ScrollView>
                 </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      </AppModal>
 
       {/* Country Picker Modal */}
-      {showCountryPicker && countryPickerIndex !== null && (
-        <Modal
-          transparent
-          animationType="fade"
-          visible={showCountryPicker}
-          onRequestClose={() => {
-            setShowCountryPicker(false);
-            setCountryPickerIndex(null);
-          }}
-        >
-          <TouchableWithoutFeedback onPress={() => {
-            setShowCountryPicker(false);
-            setCountryPickerIndex(null);
-          }}>
-            <View style={styles.countryPickerOverlay}>
-              <TouchableWithoutFeedback onPress={() => { }}>
-                <View style={styles.countryPickerModal}>
-                  <View style={styles.countryPickerHeader}>
-                    <Text style={styles.countryPickerTitle}>{t('driverLicense.selectCountryCode') || 'Mamlakat kodini tanlang'}</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setShowCountryPicker(false);
-                        setCountryPickerIndex(null);
-                      }}
-                      style={styles.countryPickerCloseButton}
-                    >
-                      <Text style={styles.countryPickerCloseText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <ScrollView style={styles.countryPickerList}>
-                    {countries.map((country) => (
-                      <TouchableOpacity
-                        key={country.id}
-                        style={[
-                          styles.countryPickerOption,
-                          emergencyContacts[countryPickerIndex]?.phone_country_code === country.code && styles.countryPickerOptionSelected
-                        ]}
-                        onPress={() => handleCountrySelect(country, countryPickerIndex)}
-                      >
-                        <Text style={styles.countryPickerFlag}>{country.flag || '🌍'}</Text>
-                        <Text style={styles.countryPickerName}>{country.name}</Text>
-                        <Text style={styles.countryPickerCode}>{country.code}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      )}
+      <ModalList
+        visible={showCountryPicker && countryPickerIndex !== null}
+        title={t('driverLicense.selectCountryCode')}
+        options={countries.map((country) => ({
+          id: country.id,
+          label: `${country.flag || '🌍'}  ${country.name}`,
+          sublabel: country.code,
+        }))}
+        selectedId={
+          countryPickerIndex !== null
+            ? countries.find(
+                (c) =>
+                  c.code === emergencyContacts[countryPickerIndex]?.phone_country_code
+              )?.id ?? null
+            : null
+        }
+        searchable={countries.length > 8}
+        onSelect={(picked) => {
+          const country = countries.find((c) => c.id === picked.id);
+          if (country && countryPickerIndex !== null) {
+            handleCountrySelect(country, countryPickerIndex);
+          }
+        }}
+        onClose={() => {
+          setShowCountryPicker(false);
+          setCountryPickerIndex(null);
+        }}
+      />
     </SafeAreaView>
   );
 };

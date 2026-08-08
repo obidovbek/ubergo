@@ -14,6 +14,15 @@ export default {
     retry: 'Retry',
     info: 'Info',
     navigationError: 'Navigation Error',
+    selectLanguage: 'Select language',
+    // Used by the shared modal components (T-036) — kept under `common` so the copies
+    // in both apps stay identical and independent of any screen's namespace.
+    search: 'Search...',
+    noResults: 'Nothing found',
+    selectDate: 'Select date',
+    day: 'Day',
+    month: 'Month',
+    year: 'Year',
     delete: 'Delete',
   },
 
@@ -62,6 +71,7 @@ export default {
   },
 
   phoneRegistration: {
+    selectCountry: "Select country",
     title: 'Registration',
     subtitle: 'Enter your phone number\nto use the app',
     phonePlaceholder: '00 000-00-00',

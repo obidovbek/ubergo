@@ -27,6 +27,7 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppModal } from '../components/AppModal';
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
@@ -409,48 +410,47 @@ export default function OfferPassengersScreen() {
         />
       )}
 
-      <Modal
+      <AppModal
         visible={rejectModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setRejectModalVisible(false)}
+        onClose={() => setRejectModalVisible(false)}
+        title={t('offerPassengers.rejectPassenger')}
+        dismissOnBackdropPress={false}
+        actions={[
+          {
+            label: t('offerPassengers.reject'),
+            onPress: confirmReject,
+            variant: 'destructive',
+          },
+          {
+            label: t('common.cancel'),
+            onPress: () => setRejectModalVisible(false),
+            variant: 'cancel',
+          },
+        ]}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('offerPassengers.rejectPassenger') || 'Reject Passenger'}</Text>
-            <Text style={styles.modalSubtitle}>
-              {t('offerPassengers.rejectReasonOptional') || 'Provide a reason (optional):'}
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g., Offer is full"
-              value={rejectionReason}
-              onChangeText={setRejectionReason}
-              multiline
-              numberOfLines={3}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => setRejectModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>{t('common.cancel') || 'Cancel'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalConfirmButton]}
-                onPress={confirmReject}
-              >
-                <Text style={styles.modalConfirmText}>{t('offerPassengers.reject') || 'Reject'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        <View style={styles.rejectBody}>
+          <Text style={styles.modalSubtitle}>
+            {t('offerPassengers.rejectReasonOptional')}
+          </Text>
+          <TextInput
+            style={styles.modalInput}
+            placeholder={t('offerPassengers.rejectReasonPlaceholder')}
+            value={rejectionReason}
+            onChangeText={setRejectionReason}
+            multiline
+            numberOfLines={3}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  rejectBody: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

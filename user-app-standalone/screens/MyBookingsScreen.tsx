@@ -15,7 +15,7 @@ import {
   RefreshControl,
   StatusBar,
   Platform,
-  Modal,
+  ScrollView,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
+import { AppModal } from '../components/AppModal';
 
 export default function MyBookingsScreen() {
   const navigation = useNavigation();
@@ -436,25 +437,15 @@ export default function MyBookingsScreen() {
       )}
 
       {/* Rating Modal */}
-      <Modal
+      <AppModal
         visible={ratingModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setRatingModalVisible(false)}
+        onClose={() => setRatingModalVisible(false)}
+        title={t('myBookings.rateYourDriver')}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('myBookings.rateYourDriver')}</Text>
-              <TouchableOpacity
-                onPress={() => setRatingModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.ratingContent}>
+        <ScrollView
+          style={styles.ratingContent}
+          keyboardShouldPersistTaps="handled"
+        >
               {selectedBooking?.offer && (
                 <View style={styles.ratingBookingInfo}>
                   <Text style={styles.ratingRoute}>
@@ -518,10 +509,8 @@ export default function MyBookingsScreen() {
                   </>
                 )}
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        </ScrollView>
+      </AppModal>
     </SafeAreaView>
   );
 }

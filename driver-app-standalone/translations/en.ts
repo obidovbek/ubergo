@@ -20,6 +20,12 @@ export default {
     day: 'Day',
     month: 'Month',
     year: 'Year',
+    // Used by the shared modal components (T-036) — kept under `common` so the copies
+    // in both apps stay identical and independent of any screen's namespace.
+    search: 'Search...',
+    noResults: 'Nothing found',
+    hour: 'Hour',
+    minute: 'Minute',
     camera: 'Camera',
     gallery: 'Gallery',
     permissionRequired: 'Permission required',
@@ -81,8 +87,16 @@ export default {
     phoneError: 'Unable to open phone dialer',
   },
 
+  searchPassengerOffers: {
+    from: 'From',
+    to: 'To',
+    filter: 'Filters',
+    applyFilters: 'Apply filters',
+  },
+
   phoneRegistration: {
     brand: 'UbexGo Driver',
+    selectCountry: 'Select country',
     title: 'Driver registration',
     driverType: 'Driver',
     instruction: 'Enter your phone number registered in UbexGo app',
@@ -389,6 +403,7 @@ export default {
 
   // Driver License Screen
   driverLicense: {
+    selectCountryCode: "Select country code",
     title: 'Intercity',
     subtitle: 'DRIVING LICENSE',
     description: '(All information is entered according to passport)',
@@ -614,6 +629,9 @@ export default {
 
   // Offer Wizard
   offerWizard: {
+    selectCountry: "Select country",
+    selectProvince: "Select province",
+    selectCity: "Select city/district",
     title: 'Create New Offer',
     editTitle: 'Edit Offer',
     step1Title: 'Route',
@@ -673,6 +691,7 @@ export default {
     confirmPassenger: 'Confirm Passenger',
     rejectPassenger: 'Reject Passenger',
     rejectReasonOptional: 'Provide a reason (optional):',
+    rejectReasonPlaceholder: 'e.g., Offer is full',
     message: 'Message',
     rejectionReason: 'Rejection Reason',
     confirmSuccess: 'Passenger confirmed successfully',

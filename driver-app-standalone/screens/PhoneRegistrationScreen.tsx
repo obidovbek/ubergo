@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { PhoneRegistrationNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { ModalList } from '../components/ModalList';
 import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
 
@@ -260,36 +261,27 @@ export const PhoneRegistrationScreen: React.FC = () => {
           </TouchableOpacity>
 
           {/* Country Picker */}
-          <Modal
-            transparent
-            animationType="fade"
+          <ModalList
             visible={showCountryPicker}
-            onRequestClose={() => setShowCountryPicker(false)}
-          >
-            <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
-              <View style={styles.pickerOverlay}>
-                <TouchableWithoutFeedback onPress={() => {}}>
-                  <View style={styles.countryPickerModal}>
-                    {countries.map((country) => (
-                      <TouchableOpacity
-                        key={`${country.code}-${country.name}`}
-                        style={styles.countryOption}
-                        onPress={() => {
-                          setSelectedCountry(country);
-                          setShowCountryPicker(false);
-                          setPhoneNumber((prev) => formatPhoneNumber(prev, country));
-                        }}
-                      >
-                        <Text style={styles.countryFlag}>{country.flag}</Text>
-                        <Text style={styles.countryName}>{country.name}</Text>
-                        <Text style={styles.countryCode}>{country.code}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </TouchableWithoutFeedback>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
+            title={t('phoneRegistration.selectCountry')}
+            options={countries.map((country) => ({
+              id: `${country.code}-${country.name}`,
+              label: `${country.flag}  ${country.name}`,
+              sublabel: country.code,
+            }))}
+            selectedId={`${selectedCountry.code}-${selectedCountry.name}`}
+            searchable={countries.length > 8}
+            onSelect={(picked) => {
+              const country = countries.find(
+                (c) => `${c.code}-${c.name}` === picked.id
+              );
+              if (!country) return;
+              setSelectedCountry(country);
+              setShowCountryPicker(false);
+              setPhoneNumber((prev) => formatPhoneNumber(prev, country));
+            }}
+            onClose={() => setShowCountryPicker(false)}
+          />
 
           {/* Phone Input */}
           <View style={styles.phoneInputContainer}>

@@ -24,6 +24,7 @@ import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppModal } from '../components/AppModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -1318,29 +1319,17 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Date Picker Modal */}
-      {showDatePicker && datePickerField && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={handleDateCancel}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleDateCancel}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={handleDateCancel}>
-                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <Text style={styles.modalTitle}>{t('common.selectDate')}</Text>
-                <TouchableOpacity onPress={handleDateConfirm}>
-                  <Text style={styles.modalConfirmText}>{t('common.confirm')}</Text>
-                </TouchableOpacity>
-              </View>
+      <AppModal
+        visible={showDatePicker && !!datePickerField}
+        onClose={handleDateCancel}
+        title={t('common.selectDate')}
+        showCloseIcon={false}
+        dismissOnBackdropPress={false}
+        actions={[
+          { label: t('common.confirm'), onPress: handleDateConfirm },
+          { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
+        ]}
+      >
               <View style={styles.datePickerContainer}>
                 {/* Day Picker */}
                 <View style={styles.pickerColumn}>
@@ -1427,10 +1416,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                   </ScrollView>
                 </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      </AppModal>
     </SafeAreaView>
   );
 };

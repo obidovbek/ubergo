@@ -32,6 +32,8 @@ import * as DriverOffersAPI from '../api/driverOffers';
 import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
 import type { DriverProfile, GeoOption } from '../api/driver';
+import { AppModal } from '../components/AppModal';
+import { GeoPickerModal } from '../components/GeoPickerModal';
 
 const theme = createTheme('light');
 
@@ -2086,29 +2088,17 @@ export const OfferWizardScreen: React.FC = () => {
       </View>
 
       {/* Date Picker Modal */}
-      {showDatePicker && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={handleDateCancel}
-        >
-          <View style={styles.datePickerModalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleDateCancel}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={[styles.datePickerModalContent, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
-              <View style={styles.datePickerModalHeader}>
-                <TouchableOpacity onPress={handleDateCancel}>
-                  <Text style={styles.datePickerModalCancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <Text style={styles.datePickerModalTitle}>{t('offerWizard.dateLabel')}</Text>
-                <TouchableOpacity onPress={handleDateConfirm}>
-                  <Text style={styles.datePickerModalConfirmText}>{t('common.confirm')}</Text>
-                </TouchableOpacity>
-              </View>
+      <AppModal
+        visible={showDatePicker}
+        onClose={handleDateCancel}
+        title={t('offerWizard.dateLabel')}
+        showCloseIcon={false}
+        dismissOnBackdropPress={false}
+        actions={[
+          { label: t('common.confirm'), onPress: handleDateConfirm },
+          { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
+        ]}
+      >
               <View style={styles.datePickerContainer}>
                 {/* Day Picker */}
                 <View style={styles.pickerColumn}>
@@ -2235,39 +2225,24 @@ export const OfferWizardScreen: React.FC = () => {
                   </ScrollView>
                 </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      </AppModal>
 
       {/* Time Picker Modal */}
-      {showTimePicker && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showTimePicker}
-          onRequestClose={handleTimeCancel}
-        >
-          <View style={styles.datePickerModalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleTimeCancel}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={[styles.datePickerModalContent, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
-              <View style={styles.datePickerModalHeader}>
-                <TouchableOpacity onPress={handleTimeCancel}>
-                  <Text style={styles.datePickerModalCancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <Text style={styles.datePickerModalTitle}>{t('offerWizard.timeLabel')}</Text>
-                <TouchableOpacity onPress={handleTimeConfirm}>
-                  <Text style={styles.datePickerModalConfirmText}>{t('common.confirm')}</Text>
-                </TouchableOpacity>
-              </View>
+      <AppModal
+        visible={showTimePicker}
+        onClose={handleTimeCancel}
+        title={t('offerWizard.timeLabel')}
+        showCloseIcon={false}
+        dismissOnBackdropPress={false}
+        actions={[
+          { label: t('common.confirm'), onPress: handleTimeConfirm },
+          { label: t('common.cancel'), onPress: handleTimeCancel, variant: 'cancel' },
+        ]}
+      >
               <View style={styles.datePickerContainer}>
                 {/* Hour Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Soat</Text>
+                  <Text style={styles.pickerLabel}>{t('common.hour')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateHours().map((hour) => (
                       <TouchableOpacity
@@ -2317,7 +2292,7 @@ export const OfferWizardScreen: React.FC = () => {
 
                 {/* Minute Picker */}
                 <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Daqiqa</Text>
+                  <Text style={styles.pickerLabel}>{t('common.minute')}</Text>
                   <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                     {generateMinutes().map((minute) => (
                       <TouchableOpacity
@@ -2343,10 +2318,7 @@ export const OfferWizardScreen: React.FC = () => {
                   </ScrollView>
                 </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      </AppModal>
     </View>
   );
 
@@ -2658,506 +2630,140 @@ export const OfferWizardScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* From Location Geo Modal */}
-      {fromGeoModal && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!fromGeoModal}
-          onRequestClose={() => {
+      <GeoPickerModal
+        visible={!!fromGeoModal}
+        title={
+          fromGeoModal?.type === 'country'
+            ? t('offerWizard.selectCountry')
+            : fromGeoModal?.type === 'province'
+              ? t('offerWizard.selectProvince')
+              : fromGeoModal?.multiSelect
+                ? `${t('offerWizard.selectMultiple')} (${selectedFromCities.length})`
+                : t('offerWizard.selectCity')
+        }
+        options={getFromGeoOptions()}
+        selectedId={
+          fromGeoModal?.type === 'country'
+            ? fromCountry?.id ?? null
+            : fromGeoModal?.type === 'province'
+              ? fromProvince?.id ?? null
+              : fromCity?.id ?? null
+        }
+        loading={geoLoading}
+        onSelect={(option) =>
+          fromGeoModal && handleFromGeoSelection(fromGeoModal.type, option)
+        }
+        onClose={() => {
+          if (fromGeoModal?.multiSelect) {
+            cancelFromMultiSelect();
+          } else {
             setFromGeoModal(null);
-            setFromGeoSearch('');
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                if (fromGeoModal?.multiSelect) {
-                  cancelFromMultiSelect();
-                } else {
-                  setFromGeoModal(null);
-                  setFromGeoSearch('');
-                }
-              }}
-            />
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              style={styles.modalContentWrapper}
-            >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {fromGeoModal.type === 'country' && 'Mamlakatni tanlang'}
-                  {fromGeoModal.type === 'province' && 'Viloyatni tanlang'}
-                  {fromGeoModal.type === 'city' && (
-                    fromGeoModal.multiSelect 
-                      ? `${t('offerWizard.selectMultiple') || 'Bir nechta shahar tanlang'} (${selectedFromCities.length})`
-                      : 'Shahar/Tumanni tanlang'
-                  )}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (fromGeoModal.multiSelect) {
-                      cancelFromMultiSelect();
-                    } else {
-                      setFromGeoModal(null);
-                      setFromGeoSearch('');
-                    }
-                  }}
-                  style={styles.modalCloseButton}
-                >
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalSearchBox}>
-                <View style={styles.modalSearchContainer}>
-                  <Text style={styles.modalSearchIcon}>🔍</Text>
-                  <TextInput
-                    style={styles.modalSearchInput}
-                    placeholder="Qidirish..."
-                    placeholderTextColor="#9CA3AF"
-                    value={fromGeoSearch}
-                    onChangeText={setFromGeoSearch}
-                  />
-                  {fromGeoSearch.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => setFromGeoSearch('')}
-                      style={styles.modalSearchClear}
-                    >
-                      <Text style={styles.modalSearchClearText}>×</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {geoLoading ? (
-                <View style={styles.modalLoading}>
-                  <ActivityIndicator size="small" color={theme.palette.primary.main} />
-                </View>
-              ) : getFromGeoOptions().length === 0 ? (
-                <View style={styles.modalEmpty}>
-                  <Text style={styles.modalEmptyText}>
-                    {fromGeoSearch.trim() ? 'Topilmadi' : "Ma'lumot yo'q"}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <FlatList
-                    data={getFromGeoOptions()}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => {
-                      let isSelected = false;
-                      
-                      if (fromGeoModal.multiSelect && fromGeoModal.type === 'city') {
-                        isSelected = selectedFromCities.some(c => c.id === item.id);
-                      } else {
-                        isSelected =
-                          (fromGeoModal.type === 'country' && fromCountry?.id === item.id) ||
-                          (fromGeoModal.type === 'province' && fromProvince?.id === item.id) ||
-                          (fromGeoModal.type === 'city' && fromCity?.id === item.id);
-                      }
-
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.modalItem,
-                            isSelected && styles.modalItemSelected,
-                          ]}
-                          onPress={() => handleFromGeoSelection(fromGeoModal.type, item)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {isSelected && <Text style={styles.modalCheck}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    }}
-                    style={styles.modalList}
-                  />
-                  {fromGeoModal.multiSelect && fromGeoModal.type === 'city' && (
-                    <View style={styles.modalFooter}>
-                      <View style={styles.modalFooterInfo}>
-                        <Text style={styles.modalFooterText}>
-                          {selectedFromCities.length > 0 
-                            ? `${selectedFromCities.length} ${t('offerWizard.stop') || 'to\'xtash'} tanlandi`
-                            : t('offerWizard.selectCities') || 'Shaharlarni tanlang'}
-                        </Text>
-                      </View>
-                      <View style={styles.modalFooterButtons}>
-                        <TouchableOpacity
-                          style={[styles.modalButton, styles.modalButtonSecondary]}
-                          onPress={cancelFromMultiSelect}
-                        >
-                          <Text style={styles.modalButtonSecondaryText}>
-                            {t('common.cancel')}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.modalButton,
-                            styles.modalButtonPrimary,
-                            selectedFromCities.length === 0 && styles.modalButtonDisabled,
-                          ]}
-                          onPress={confirmMultipleFromCities}
-                          disabled={selectedFromCities.length === 0}
-                        >
-                          <Text style={styles.modalButtonPrimaryText}>
-                            {t('common.confirm')} ({selectedFromCities.length})
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
+          }
+        }}
+        multiSelect={
+          fromGeoModal?.multiSelect && fromGeoModal.type === 'city'
+            ? {
+                selected: selectedFromCities,
+                onToggle: (option) => handleFromGeoSelection('city', option),
+                onConfirm: confirmMultipleFromCities,
+                confirmLabel: `${t('common.confirm')} (${selectedFromCities.length})`,
+                footerText:
+                  selectedFromCities.length > 0
+                    ? `${selectedFromCities.length} ${t('offerWizard.stop')}`
+                    : t('offerWizard.selectCities'),
+              }
+            : undefined
+        }
+      />
 
       {/* To Location Geo Modal */}
-      {toGeoModal && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!toGeoModal}
-          onRequestClose={() => {
+      <GeoPickerModal
+        visible={!!toGeoModal}
+        title={
+          toGeoModal?.type === 'country'
+            ? t('offerWizard.selectCountry')
+            : toGeoModal?.type === 'province'
+              ? t('offerWizard.selectProvince')
+              : toGeoModal?.multiSelect
+                ? `${t('offerWizard.selectMultiple')} (${selectedToCities.length})`
+                : t('offerWizard.selectCity')
+        }
+        options={getToGeoOptions()}
+        selectedId={
+          toGeoModal?.type === 'country'
+            ? toCountry?.id ?? null
+            : toGeoModal?.type === 'province'
+              ? toProvince?.id ?? null
+              : toCity?.id ?? null
+        }
+        loading={geoLoading}
+        onSelect={(option) =>
+          toGeoModal && handleToGeoSelection(toGeoModal.type, option)
+        }
+        onClose={() => {
+          if (toGeoModal?.multiSelect) {
+            cancelToMultiSelect();
+          } else {
             setToGeoModal(null);
-            setToGeoSearch('');
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                if (toGeoModal?.multiSelect) {
-                  cancelToMultiSelect();
-                } else {
-                  setToGeoModal(null);
-                  setToGeoSearch('');
-                }
-              }}
-            />
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              style={styles.modalContentWrapper}
-            >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {toGeoModal.type === 'country' && 'Mamlakatni tanlang'}
-                  {toGeoModal.type === 'province' && 'Viloyatni tanlang'}
-                  {toGeoModal.type === 'city' && (
-                    toGeoModal.multiSelect 
-                      ? `${t('offerWizard.selectMultiple') || 'Bir nechta shahar tanlang'} (${selectedToCities.length})`
-                      : 'Shahar/Tumanni tanlang'
-                  )}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (toGeoModal.multiSelect) {
-                      cancelToMultiSelect();
-                    } else {
-                      setToGeoModal(null);
-                      setToGeoSearch('');
-                    }
-                  }}
-                  style={styles.modalCloseButton}
-                >
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalSearchBox}>
-                <View style={styles.modalSearchContainer}>
-                  <Text style={styles.modalSearchIcon}>🔍</Text>
-                  <TextInput
-                    style={styles.modalSearchInput}
-                    placeholder="Qidirish..."
-                    placeholderTextColor="#9CA3AF"
-                    value={toGeoSearch}
-                    onChangeText={setToGeoSearch}
-                  />
-                  {toGeoSearch.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => setToGeoSearch('')}
-                      style={styles.modalSearchClear}
-                    >
-                      <Text style={styles.modalSearchClearText}>×</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {geoLoading ? (
-                <View style={styles.modalLoading}>
-                  <ActivityIndicator size="small" color={theme.palette.primary.main} />
-                </View>
-              ) : getToGeoOptions().length === 0 ? (
-                <View style={styles.modalEmpty}>
-                  <Text style={styles.modalEmptyText}>
-                    {toGeoSearch.trim() ? 'Topilmadi' : "Ma'lumot yo'q"}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <FlatList
-                    data={getToGeoOptions()}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => {
-                      let isSelected = false;
-                      
-                      if (toGeoModal.multiSelect && toGeoModal.type === 'city') {
-                        isSelected = selectedToCities.some(c => c.id === item.id);
-                      } else {
-                        isSelected =
-                          (toGeoModal.type === 'country' && toCountry?.id === item.id) ||
-                          (toGeoModal.type === 'province' && toProvince?.id === item.id) ||
-                          (toGeoModal.type === 'city' && toCity?.id === item.id);
-                      }
-
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.modalItem,
-                            isSelected && styles.modalItemSelected,
-                          ]}
-                          onPress={() => handleToGeoSelection(toGeoModal.type, item)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {isSelected && <Text style={styles.modalCheck}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    }}
-                    style={styles.modalList}
-                  />
-                  {toGeoModal.multiSelect && toGeoModal.type === 'city' && (
-                    <View style={styles.modalFooter}>
-                      <View style={styles.modalFooterInfo}>
-                        <Text style={styles.modalFooterText}>
-                          {selectedToCities.length > 0 
-                            ? `${selectedToCities.length} ${t('offerWizard.stop') || 'to\'xtash'} tanlandi`
-                            : t('offerWizard.selectCities') || 'Shaharlarni tanlang'}
-                        </Text>
-                      </View>
-                      <View style={styles.modalFooterButtons}>
-                        <TouchableOpacity
-                          style={[styles.modalButton, styles.modalButtonSecondary]}
-                          onPress={cancelToMultiSelect}
-                        >
-                          <Text style={styles.modalButtonSecondaryText}>
-                            {t('common.cancel')}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.modalButton,
-                            styles.modalButtonPrimary,
-                            selectedToCities.length === 0 && styles.modalButtonDisabled,
-                          ]}
-                          onPress={confirmMultipleToCities}
-                          disabled={selectedToCities.length === 0}
-                        >
-                          <Text style={styles.modalButtonPrimaryText}>
-                            {t('common.confirm')} ({selectedToCities.length})
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
+          }
+        }}
+        multiSelect={
+          toGeoModal?.multiSelect && toGeoModal.type === 'city'
+            ? {
+                selected: selectedToCities,
+                onToggle: (option) => handleToGeoSelection('city', option),
+                onConfirm: confirmMultipleToCities,
+                confirmLabel: `${t('common.confirm')} (${selectedToCities.length})`,
+                footerText:
+                  selectedToCities.length > 0
+                    ? `${selectedToCities.length} ${t('offerWizard.stop')}`
+                    : t('offerWizard.selectCities'),
+              }
+            : undefined
+        }
+      />
 
       {/* Stop Location Geo Modal */}
-      {stopGeoModal && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!stopGeoModal}
-          onRequestClose={() => {
+      <GeoPickerModal
+        visible={!!stopGeoModal}
+        title={
+          stopGeoModal?.type === 'country'
+            ? t('offerWizard.selectCountry')
+            : stopGeoModal?.type === 'province'
+              ? t('offerWizard.selectProvince')
+              : stopGeoModal?.multiSelect
+                ? `${t('offerWizard.selectMultiple')} (${selectedCities.length})`
+                : t('offerWizard.selectCity')
+        }
+        options={stopGeoModal ? getStopGeoOptions(stopGeoModal.stopId) : []}
+        loading={geoLoading}
+        onSelect={(option) =>
+          stopGeoModal &&
+          handleStopGeoSelection(stopGeoModal.stopId, stopGeoModal.type, option)
+        }
+        onClose={() => {
+          if (stopGeoModal?.multiSelect) {
+            cancelMultiSelect();
+          } else {
             setStopGeoModal(null);
-            setStopGeoSearch('');
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                if (stopGeoModal.multiSelect) {
-                  cancelMultiSelect();
-                } else {
-                  setStopGeoModal(null);
-                  setStopGeoSearch('');
-                }
-              }}
-            />
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              style={styles.modalContentWrapper}
-            >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {stopGeoModal.type === 'country' && 'Mamlakatni tanlang'}
-                  {stopGeoModal.type === 'province' && 'Viloyatni tanlang'}
-                  {stopGeoModal.type === 'city' && (
-                    stopGeoModal.multiSelect 
-                      ? `${t('offerWizard.selectMultiple') || 'Bir nechta shahar tanlang'} (${selectedCities.length})`
-                      : 'Shahar/Tumanni tanlang'
-                  )}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (stopGeoModal.multiSelect) {
-                      cancelMultiSelect();
-                    } else {
-                      setStopGeoModal(null);
-                      setStopGeoSearch('');
-                    }
-                  }}
-                  style={styles.modalCloseButton}
-                >
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalSearchBox}>
-                <View style={styles.modalSearchContainer}>
-                  <Text style={styles.modalSearchIcon}>🔍</Text>
-                  <TextInput
-                    style={styles.modalSearchInput}
-                    placeholder="Qidirish..."
-                    placeholderTextColor="#9CA3AF"
-                    value={stopGeoSearch}
-                    onChangeText={setStopGeoSearch}
-                  />
-                  {stopGeoSearch.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => setStopGeoSearch('')}
-                      style={styles.modalSearchClear}
-                    >
-                      <Text style={styles.modalSearchClearText}>×</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {geoLoading ? (
-                <View style={styles.modalLoading}>
-                  <ActivityIndicator size="small" color={theme.palette.primary.main} />
-                </View>
-              ) : getStopGeoOptions(stopGeoModal.stopId).length === 0 ? (
-                <View style={styles.modalEmpty}>
-                  <Text style={styles.modalEmptyText}>
-                    {stopGeoSearch.trim() ? 'Topilmadi' : "Ma'lumot yo'q"}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <FlatList
-                    data={getStopGeoOptions(stopGeoModal.stopId)}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => {
-                      const stop = stops.find(s => s.id === stopGeoModal.stopId);
-                      let isSelected = false;
-                      
-                      if (stopGeoModal.multiSelect && stopGeoModal.type === 'city') {
-                        isSelected = selectedCities.some(c => c.id === item.id);
-                      } else {
-                        isSelected =
-                          (stopGeoModal.type === 'country' && stop?.country?.id === item.id) ||
-                          (stopGeoModal.type === 'province' && stop?.province?.id === item.id) ||
-                          (stopGeoModal.type === 'city' && stop?.city?.id === item.id);
-                      }
-
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.modalItem,
-                            isSelected && styles.modalItemSelected,
-                          ]}
-                          onPress={() => handleStopGeoSelection(stopGeoModal.stopId, stopGeoModal.type, item)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {isSelected && <Text style={styles.modalCheck}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    }}
-                    style={styles.modalList}
-                  />
-                  {stopGeoModal.multiSelect && stopGeoModal.type === 'city' && (
-                    <View style={styles.modalFooter}>
-                      <View style={styles.modalFooterInfo}>
-                        <Text style={styles.modalFooterText}>
-                          {selectedCities.length > 0 
-                            ? `${selectedCities.length} ${t('offerWizard.stop') || 'to\'xtash'} tanlandi`
-                            : t('offerWizard.selectCities') || 'Shaharlarni tanlang'}
-                        </Text>
-                      </View>
-                      <View style={styles.modalFooterButtons}>
-                        <TouchableOpacity
-                          style={[styles.modalButton, styles.modalButtonSecondary]}
-                          onPress={cancelMultiSelect}
-                        >
-                          <Text style={styles.modalButtonSecondaryText}>
-                            {t('common.cancel')}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.modalButton,
-                            styles.modalButtonPrimary,
-                            selectedCities.length === 0 && styles.modalButtonDisabled,
-                          ]}
-                          onPress={confirmMultipleCities}
-                          disabled={selectedCities.length === 0}
-                        >
-                          <Text style={styles.modalButtonPrimaryText}>
-                            {t('common.confirm')} ({selectedCities.length})
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
+          }
+        }}
+        multiSelect={
+          stopGeoModal?.multiSelect && stopGeoModal.type === 'city'
+            ? {
+                selected: selectedCities,
+                onToggle: (option) =>
+                  handleStopGeoSelection(stopGeoModal.stopId, 'city', option),
+                onConfirm: confirmMultipleCities,
+                confirmLabel: `${t('common.confirm')} (${selectedCities.length})`,
+                footerText:
+                  selectedCities.length > 0
+                    ? `${selectedCities.length} ${t('offerWizard.stop')}`
+                    : t('offerWizard.selectCities'),
+              }
+            : undefined
+        }
+      />
     </SafeAreaView>
   );
 };

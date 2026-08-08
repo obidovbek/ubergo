@@ -1,18 +1,18 @@
 /**
  * Confirm Dialog Component
  * Custom confirmation dialog matching app design
+ *
+ * T-036: the chrome moved to the shared `AppModal`. The public props are unchanged —
+ * `confirmButtonStyle: 'destructive'` now maps to the shell's red-fill action variant.
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  TouchableOpacity,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
+import { AppModal, type AppModalAction } from './AppModal';
+import { createTheme } from '../themes';
+
+const theme = createTheme('light');
+const m = theme.modal;
 
 export interface ConfirmDialogOptions {
   title: string;
@@ -35,8 +35,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   options,
   onClose,
 }) => {
-  const insets = useSafeAreaInsets();
-
   if (!options) return null;
 
   const handleConfirm = () => {
@@ -49,197 +47,54 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     onClose();
   };
 
-  const confirmButtonStyle = options.confirmButtonStyle || 'primary';
-  const isDestructive = confirmButtonStyle === 'destructive';
+  const actions: AppModalAction[] = [
+    {
+      label: options.confirmText || 'Confirm',
+      onPress: handleConfirm,
+      variant:
+        options.confirmButtonStyle === 'destructive' ? 'destructive' : 'primary',
+    },
+  ];
+
+  // Cancel is optional — some callers use this as a plain acknowledgement.
+  if (options.cancelText) {
+    actions.push({
+      label: options.cancelText,
+      onPress: handleCancel,
+      variant: 'cancel',
+    });
+  }
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={options.title}
+      actions={actions}
+      // A confirmation is a decision — a stray backdrop tap should not stand in for it.
+      dismissOnBackdropPress={false}
     >
-      <View style={styles.modalOverlay}>
-        <Pressable 
-          style={styles.modalBackdrop}
-          onPress={onClose}
-        />
-        <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{options.title}</Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalCloseText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Message */}
-          {options.message && (
-            <View style={styles.modalBody}>
-              <Text style={styles.modalMessage}>{options.message}</Text>
-            </View>
-          )}
-
-          {/* Actions */}
-          <View style={styles.modalActions}>
-            {options.cancelText && (
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={handleCancel}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.cancelButtonText}>
-                  {options.cancelText}
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.modalButton,
-                styles.confirmButton,
-                isDestructive && styles.confirmButtonDestructive,
-                !options.cancelText && styles.confirmButtonFullWidth,
-              ]}
-              onPress={handleConfirm}
-              activeOpacity={0.8}
-            >
-              <Text style={[
-                styles.confirmButtonText,
-                isDestructive && styles.confirmButtonTextDestructive,
-              ]}>
-                {options.confirmText || 'Confirm'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+      {!!options.message && (
+        <View style={styles.body}>
+          <Text style={styles.message}>{options.message}</Text>
         </View>
-      </View>
-    </Modal>
+      )}
+    </AppModal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
-    flex: 1,
-  },
-  modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  modalCloseText: {
-    fontSize: 20,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  modalBody: {
-    padding: 20,
-    paddingVertical: 24,
-  },
-  modalMessage: {
+  message: {
     fontSize: 16,
-    color: '#6B7280',
     lineHeight: 24,
-    fontWeight: '500',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    padding: 20,
-    paddingTop: 16,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  cancelButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    letterSpacing: 0.3,
-  },
-  confirmButton: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  confirmButtonDestructive: {
-    backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  confirmButtonTextDestructive: {
-    color: '#FFFFFF',
-  },
-  confirmButtonFullWidth: {
-    flex: 1,
+    color: m.rowText,
+    textAlign: 'center',
   },
 });
 
+export default ConfirmDialog;

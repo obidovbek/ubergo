@@ -33,6 +33,8 @@ import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
+import { AppModal } from '../components/AppModal';
+import { GeoPickerModal } from '../components/GeoPickerModal';
 
 const LAST_SEARCH_KEY = '@ubexgo_driver:last_passenger_search';
 
@@ -65,7 +67,6 @@ export default function SearchPassengerOffersScreen() {
   const [geoModalVisible, setGeoModalVisible] = useState(false);
   const [geoModalType, setGeoModalType] = useState<'from' | 'to'>('from');
   const [geoModalLevel, setGeoModalLevel] = useState<'country' | 'province' | 'city'>('country');
-  const [geoSearch, setGeoSearch] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
   
   // Filter states
@@ -338,7 +339,6 @@ export default function SearchPassengerOffersScreen() {
   const openGeoModal = async (type: 'from' | 'to', level: 'country' | 'province' | 'city') => {
     setGeoModalType(type);
     setGeoModalLevel(level);
-    setGeoSearch('');
     
     if (type === 'from') {
       if (level === 'province' && !selectedFromCountry) {
@@ -411,7 +411,6 @@ export default function SearchPassengerOffersScreen() {
     }
     
     setGeoModalVisible(false);
-    setGeoSearch('');
     
     setTimeout(() => {
       saveLastSearch();
@@ -470,11 +469,7 @@ export default function SearchPassengerOffersScreen() {
       }
     }
 
-    if (geoSearch.trim()) {
-      const query = geoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
+    // Search filtering now lives in `ModalList`, which owns the search box (T-036).
     return options;
   };
 
@@ -835,24 +830,17 @@ export default function SearchPassengerOffersScreen() {
       )}
 
       {/* Filter Modal */}
-      <Modal
+      <AppModal
         visible={filterModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFilterModalVisible(false)}
+        onClose={() => setFilterModalVisible(false)}
+        title={t('searchPassengerOffers.filter')}
+        actions={[
+          {
+            label: t('searchPassengerOffers.applyFilters'),
+            onPress: () => setFilterModalVisible(false),
+          },
+        ]}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <TouchableOpacity
-                onPress={() => setFilterModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
             <ScrollView style={styles.filterScrollView}>
               {/* Sort By */}
               <View style={styles.filterSection}>
@@ -932,109 +920,30 @@ export default function SearchPassengerOffersScreen() {
                 <Ionicons name="refresh" size={20} color="#EF4444" />
                 <Text style={styles.clearFiltersText}>Clear All Filters</Text>
               </TouchableOpacity>
-            </ScrollView>
-
-            <View style={styles.filterFooter}>
-              <TouchableOpacity
-                style={styles.applyFiltersButton}
-                onPress={() => setFilterModalVisible(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.applyFiltersText}>Apply Filters</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        </ScrollView>
+      </AppModal>
 
       {/* Geo Selection Modal */}
-      <Modal
+      <GeoPickerModal
         visible={geoModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setGeoModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {geoModalType === 'from' ? 'From: ' : 'To: '}
-                {geoModalLevel === 'country' && 'Select Country'}
-                {geoModalLevel === 'province' && 'Select Province'}
-                {geoModalLevel === 'city' && 'Select City'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setGeoModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalSearchBox}>
-              <View style={styles.modalSearchContainer}>
-                <Ionicons name="search" size={18} color="#6B7280" style={styles.modalSearchIcon} />
-                <TextInput
-                  style={styles.modalSearchInput}
-                  placeholder="Search..."
-                  placeholderTextColor="#9CA3AF"
-                  value={geoSearch}
-                  onChangeText={setGeoSearch}
-                />
-                {geoSearch.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setGeoSearch('')}
-                    style={styles.modalSearchClear}
-                  >
-                    <Text style={styles.modalSearchClearText}>×</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {geoLoading ? (
-              <View style={styles.modalLoading}>
-                <ActivityIndicator size="small" color="#10B981" />
-              </View>
-            ) : getGeoOptions().length === 0 ? (
-              <View style={styles.modalEmpty}>
-                <Text style={styles.modalEmptyText}>
-                  {geoSearch.trim() ? 'No results found' : 'Loading...'}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={getGeoOptions()}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => {
-                  const isSelected = isGeoSelected(item);
-
-                  return (
-                    <TouchableOpacity
-                      style={[styles.modalItem, isSelected && styles.modalItemSelected]}
-                      onPress={() => handleGeoSelection(item)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          isSelected && styles.modalItemTextSelected,
-                        ]}
-                      >
-                        {item.name}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                      )}
-                    </TouchableOpacity>
-                  );
-                }}
-                style={styles.modalList}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
+        title={[
+          geoModalType === 'from'
+            ? t('searchPassengerOffers.from')
+            : t('searchPassengerOffers.to'),
+          geoModalLevel === 'country'
+            ? t('offerWizard.selectCountry')
+            : geoModalLevel === 'province'
+              ? t('offerWizard.selectProvince')
+              : t('offerWizard.selectCity'),
+        ].join(': ')}
+        options={getGeoOptions()}
+        // The screen tracks selection with a predicate, not an id — resolve it here
+        // rather than reshaping six pieces of state.
+        selectedId={getGeoOptions().find(isGeoSelected)?.id ?? null}
+        loading={geoLoading}
+        onSelect={handleGeoSelection}
+        onClose={() => setGeoModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

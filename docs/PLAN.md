@@ -4,190 +4,208 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ⏸️ **T-031** → `docs/PLAN-T031.md` (moved intact 2026-08-08). Steps 1-3 done; step 4 blocked on
-> the owner's salon-option answer; steps 5-9 (payment migration + admin waiting fee) are free.
+> ⏸️ **T-033** → `docs/PLAN-T033.md` (moved intact 2026-08-08). Steps 1-6 done; **step 7 is the
+> owner's device test**, step 8 the commit. Its code is in the working tree, uncommitted.
+> ⏸️ **T-031** → `docs/PLAN-T031.md`. Steps 1-3 done; step 4 blocked on the owner's salon-option
+> answer; steps 5-9 (payment migration + admin waiting fee) are free.
 > ⏸️ **T-030** → `docs/PLAN-T030.md`, step 7 blocked on an owner answer.
 > ⏸️ **T-027** → `docs/PLAN-T027.md`, step 11 (**migration first**, then API, then both apps).
 > ⏸️ **T-018** → `docs/PLAN-T018.md` · **T-026A** → step 8 · **T-025** → step 8.
 > ⏸️ **Also parked:** T-011 · T-012 · T-014 · T-015 · T-016 · T-017.
 
 ## Task
-- **ID / name:** T-033 — "Resend OTP" shows a generic error; server messages never reach either app
+- **ID / name:** T-036 — Modals must match the Figma design, in both apps
 - **Goal (definition of "done"):**
-  1. Tapping "resend" inside the 60-second window shows **why** ("wait N seconds"), in the user's
-     language, and the server answers **429**, not 500.
-  2. The resend link is **disabled with a live countdown**, so the error is unreachable in normal use.
-  3. `handleBackendError` understands the `fetch` error shape, so **every** screen in both apps
-     starts showing the server's real message instead of its own generic default.
-  4. Hitting the hourly express limiter shows a message instead of a `JSON Parse error`.
-  5. No new `tsc` errors in any of the four projects; the owner re-tests the resend flow on a device.
-- **Why now:** found during the owner's device test 2026-08-08 (the first real device session).
-  It blocks OTP login testing, which gates every other parked card.
-- **Source:** owner device report + `kubectl logs -n test3` paste, 2026-08-08.
-
-## Diagnosis (verified in code 2026-08-08 — do NOT re-derive)
-The owner's report: *"press resend once/several times → «OTP yuborishda xatolik bo'ldi». Going back
-to the phone screen and re-entering gives the same error. A different phone number works."*
-
-Four links, three of them defects:
-
-1. ✅ **The rule is correct and is the cause.** `OtpService.checkRateLimit` (`OtpService.ts:239-255`)
-   allows **1 OTP per phone per 60 s**, counted in `otp_codes` by `target`. Keyed on the *phone*,
-   which is exactly why re-entering the number does not help and another number does.
-   The owner's log proves it: the 4 repeat requests print `sendOtp {...}` (controller `:27`) and then
-   **nothing** — they die in `checkRateLimit`, before `console.log('sendOtp metadata')`
-   (`OtpService.ts:294`).
-2. ❌ **A cooldown is reported as a crash.** `checkRateLimit` throws a bare `Error` with a hard-coded
-   English string. The controller's catch-all (`AuthController.v2.ts:117-122`) turns any non-`AppError`
-   into `AppError(msg, 500)`. So a routine, expected refusal returns **HTTP 500**.
-3. ❌ **The app discards the message anyway — everywhere.** `api/auth.ts:72` throws a plain
-   `Error(data.message)` with **no `.response`**. But `utils/errorHandler.ts:40`
-   (`handleBackendError`) is written for **axios** (`error.response.status`), and **neither app
-   imports axios at all** — both use `fetch`. The whole status `switch` (`:53-91`) is dead code;
-   `errorMessage` never moves off `defaultMessage`. That is the generic toast the owner sees.
-   ⚠️ **Blast radius: 12 screens** — user app 4 (`PhoneRegistration`, `OTPVerification`,
-   `UserDetails`, `EditProfile`), driver app 8. No server message has ever reached a user.
-4. ❌ **No cooldown in the UI.** The resend link (`OTPVerificationScreen.tsx:326` user,
-   `:291` driver) is always tappable — no countdown, no disabled state. The UI invites the request
-   the server then refuses.
-
-### Also found in the same path
-- ❌ **The 6th send in an hour produces `JSON Parse error`.** `otpSendLimiter` (5/hour/phone,
-  `rateLimiter.ts:24-36`) is express-rate-limit **v7**, whose default `message: '<string>'` is sent
-  as a **plain-text** body. `api/auth.ts:67` calls `response.json()` unguarded. Same class as the
-  T-026 finding about the offer limiter.
-- ❌ **The hourly DB check is dead.** `OtpService.ts:258-269` — the comment says "max 5 requests per
-  hour", the code says `hourlyCount >= 1000`. It has never fired.
-- ⚠️ Cosmetic: `api/auth.ts:50` logs `JSON.stringify(getHeaders())` **without `await`** → always `{}`.
-- 🔒 **Out of scope, carded as T-034:** the OTP code and the Eskiz bearer token are printed to the
-  server log in plaintext (`OtpService.ts:297`, `:102`) — the owner's own paste contains
-  `sendOtp code 3561` and a full Eskiz JWT.
-- 🔒 **Out of scope, carded as T-034:** `verifyOtp` looks the row up **by `target + code`**
-  (`OtpService.ts:371-380`), so a **wrong** code matches nothing, returns `false`, and never
-  increments `attempts`. The `maxAttempts` cap only ever counts *correct* codes — brute-force
-  protection on a 4-digit code is effectively absent.
+  1. One shared modal shell per app, styled from the Figma overlay language.
+  2. **All 33 modals** in both apps use it — no screen keeps its own backdrop, radius or palette.
+  3. The create-offer pickers (the ones the owner hit on the device) look like the design.
+  4. No behaviour changes: every modal opens, selects, cancels and closes exactly as it does today.
+  5. No new `tsc` errors; both apps rebuilt and walked on a device.
+- **Why now:** the owner reported it during the 2026-08-08 device test — the create-offer modals do
+  not match the design, "and all modals should match the design".
+- **Source:** owner, device test 2026-08-08. Design: `figma_images/` (see Design tokens below).
 
 ## Owner decisions taken 2026-08-08 (do NOT re-ask)
-1. Scope = **the fix plus the error plumbing** (429 + translation, JSON limiter body, fetch-aware
-   `handleBackendError`, resend countdown in both apps). The two security findings go to their own
-   card (**T-034**) rather than stretching this one.
-2. This card starts **now**; T-031's plan moved intact to `docs/PLAN-T031.md`.
+1. **Scope = both apps, every modal.** Not just the create-offer flow.
+2. **Derive the shell from the Shablon/Tanlov overlay style.** There is **no Figma for the picker
+   popups themselves** — only screen designs and the offer-detail overlays. Deriving is approved.
+
+## Inventory (counted in code 2026-08-08 — 33 instances, 22 files)
+⚠️ **Corrected from the "24" quoted when scoping**: the driver app has **20** modal instances across
+12 files, not 11. The work is ~40% larger than first stated, which is why it is decomposed by
+**pattern** below rather than file by file.
+
+**User app — 13 in 10 files**
+`components/ConfirmDialog.tsx:56` · `components/LanguageSelector.tsx:32` ·
+`components/passengerOffer/GenderPickSheet.tsx:33` · `components/passengerOffer/GeoSelectModal.tsx:61` ·
+`screens/EditProfileScreen.tsx:821,1046` · `screens/MyBookingsScreen.tsx:439` ·
+`screens/NotificationsScreen.tsx:242` · `screens/PhoneRegistrationScreen.tsx:280` ·
+`screens/SearchOffersScreen.tsx:874,1019` · `screens/UserDetailsScreen.tsx:798,1025`
+
+**Driver app — 20 in 12 files**
+`components/ConfirmDialog.tsx:56` · `components/offers/OfferDetailModal.tsx:169` ·
+`screens/DriverLicenseScreen.tsx:953,1129` · `screens/DriverPassportScreen.tsx:1385,1500` ·
+`screens/DriverPersonalInfoScreen.tsx:1359,1847` · `screens/DriverTaxiLicenseScreen.tsx:1322` ·
+`screens/DriverVehicleScreen.tsx:2581,2687` · `screens/OfferPassengersScreen.tsx:412` ·
+`screens/OfferWizardScreen.tsx:2090,2245,2662,2829,2996` · `screens/PhoneRegistrationScreen.tsx:263` ·
+`screens/SearchPassengerOffersScreen.tsx:838,951`
+
+**They collapse into three patterns — this is the whole reason the card is tractable:**
+| Pattern | Count | What it is |
+|---|---|---|
+| **List picker** | 17 | geo cascade (7), country (3), vehicle, language, gender, filters (2), … |
+| **Date / time picker** | 8 | hand-rolled day/month/year (and time) wheels |
+| **Dialog / detail overlay** | 8 | confirm (2), offer detail, reject, rating, notification detail, … |
+
+## Design tokens (derived from `figma_images/`, approved 2026-08-08)
+Sources: `004Shaharlar aro K3 Tanlov oynasi.png`, `K_RegShablon-3.png`, `K_RegShablon.png`,
+`K_buyurtma001Yangi.png`.
+- **Backdrop** — `rgba(0,0,0,0.5)` (already the de-facto value everywhere; keep it).
+- **Body** — cream `#FDF6E3`, **2px solid black** border, radius **20**.
+- **Heading** — bold, **red** (`#E53935`), centred.
+- **Rows / inputs** — white or very light green pill, 2px black border, radius 12.
+- **Selected row** — green fill (`#8FE3A6` / `#4CAF50` text), matching the seat/price chips.
+- **Actions, bottom, full width, stacked** — `Orqaga` = red outline on pink fill (`#FFEBEE`);
+  primary = green fill (`#4CAF50`) white text.
+- ⚠️ **Replace the emoji glyphs** (`🔍` `✕` `✓` `×`) with real icons — the app already depends on
+  `@expo/vector-icons`, used elsewhere in both apps.
 
 ## Approach
-Fix the message at the source (a typed 429 carrying `retryAfterSec`), fix the pipe that was
-swallowing it (`handleBackendError`), then make the error unreachable in the first place (the
-countdown). The middle fix is the valuable one — it is one file per app and it unblocks 12 screens.
+Build **one `AppModal` shell + three body variants** (`ModalList`, `ModalDateWheel`,
+`ModalDialog`) per app, then migrate the 33 call sites onto them. The shell owns the backdrop,
+the card, the header, the actions and the animation; a call site supplies only its content.
 
-⚠️ **Keep the axios branch in `handleBackendError`.** Nothing uses axios today, but deleting the
-branch turns a dormant path into a breaking change for any future axios call. Add the fetch shape
-beside it; do not swap it.
+⚠️ **This is a re-skin, not a rewrite.** Selection logic, state, validation and callbacks stay
+exactly as they are. If a migration tempts a behaviour change, stop and log it instead.
+
+⚠️ **The two apps stay separate copies.** `ConfirmDialog.tsx`, `errorHandler.ts` etc. are already
+duplicated across the two standalone apps — that is this project's convention. Do **not** invent a
+shared package for this card.
 
 ## Steps
-- [x] 1. **DONE 2026-08-08. API — typed cooldown error.** Add `TOO_MANY_REQUESTS = 429` to `HttpStatus`. Add
-  `otp.tooSoon` (with a `{seconds}` placeholder) and `otp.tooManyRequests` to the **three** i18n
-  files (`uz`/`ru`/`en`). Have `checkRateLimit` compute the real remaining seconds from the newest
-  `otp_codes.created_at` and throw `AppError(message, 429, { retryAfterSec })` from
-  `errors/AppError.js` — that class already carries `data`, and `errorHandler.ts:90` already
-  forwards it. Plumb `language` into `OtpService.sendOtp` (the controller already resolves it at
-  `:25`). Fix the dead `>= 1000` hourly check to a named constant that matches its comment.
-  **Done:** `HttpStatus.TOO_MANY_REQUESTS = 429`; `otp.tooSoon` + `otp.tooManyRequests` in all three
-  locales; `checkRateLimit` now fetches the newest code (instead of counting) so it can report the
-  **real** remaining seconds, and throws `AppError(msg, 429, { retryAfterSec })`. `sendOtp` also
-  returns `cooldownSec`, so the interval lives on the server rather than being hard-coded on three
-  clients. ⚠️ **The `>= 1000` value was KEPT and the lying comment fixed instead** — the real 5/hour
-  ceiling is the express limiter's, and tightening the DB check to 5 mid-device-test would have
-  locked the owner out. Named `OTP_MAX_PER_HOUR`, documented as a runaway guard.
-- [x] 2. **DONE 2026-08-08. API — the express limiters answer JSON.**
-  **All five limiters** in the file used the plain-string `message`, so one shared
-  `jsonLimitHandler(translationKey, fallback)` replaced them all — it emits the same
-  `{ success, message, data }` envelope as `errorHandler`, translated via `Accept-Language`, and
-  carries `retryAfterSec` derived from `req.rateLimit.resetTime`. This also fixes the plain-text
-  offer-limiter body that **T-026** logged separately.
-- [x] 3. **DONE 2026-08-08. Both apps — fetch-aware `handleBackendError`.**
-  ⚠️ **The diagnosis sharpened here:** attaching an axios-shaped `.response` is *already* this
-  codebase's convention — `passengerOffers.ts` (×5), `driver.ts` and parts of both `auth.ts`
-  hand-build it, and **12 screens read `error?.response?.status || error?.status`**. So the new
-  `ApiError` carries `status`, `data` **and** `response`, and every existing reader (including the
-  driver's USER_NOT_REGISTERED lookup) keeps working untouched. `handleBackendError` now resolves
-  `status = error?.response?.status ?? error?.status` and reads the body from either shape; added an
-  explicit **429** case. Both apps changed in step.
-- [x] 4. **DONE 2026-08-08. Both apps — guarded the JSON parse.** A shared `parseResponseBody` reads
-  the body as text and only then tries `JSON.parse`, falling back to `{ message: <text> }`. Applied to
-  **every** call in both `api/auth.ts` (8 user, 6 driver), not just the OTP ones — same defect, same
-  file. Removed the driver's now-dead `contentType`/`JSON Parse` branches, which threw the status and
-  message away. `getHeaders()` is now awaited before the debug log.
-- [x] 5. **DONE 2026-08-08. Both apps — resend countdown.** The link is disabled and shows
-  `Qayta yuborish (43 s)` while the cooldown runs. ⚠️ Held as a **wall-clock deadline**, not a
-  decrementing counter, and recomputed on every tick — JS timers are throttled in the background, so
-  a counter would come back stale. Seeded from the server's `cooldownSec`, re-armed from
-  `retryAfterSec` on a 429. `AuthContext.sendOtp` now returns the response in both apps so the value
-  can reach the screen. The driver's hard-coded Uzbek push error became
-  `otpVerification.errorResendPush`.
-- [x] 6. **DONE 2026-08-08. Static verification — all four projects exactly at baseline.**
-  `tsc`: API **282/282** · admin **0/0** · user **12/12** · driver **36/36**. The in-file errors are
-  **proven pre-existing via `git stash`** (the `rateLimiter.ts` `createRateLimiter` one and the three
-  `AuthContext.tsx` overloads reappear unchanged, just at shifted line numbers).
-  **42/42 i18n checks** — every new key *evaluated*, not grepped, in all three locales of all three
-  projects, placeholders included. **17/17 runtime checks** on the real error path: `ApiError`,
-  `getRetryAfterSec` and `parseResponseBody` lifted verbatim from source and run against the exact
-  envelope the API emits, plus JSON/text/empty bodies, the network-error branch, the
-  USER_NOT_REGISTERED payload, and both the server and client countdown maths at their boundaries.
-- [ ] 7. **Owner: deploy the API, rebuild both apps, smoke test.** (a) resend inside 60 s → the link
-  is disabled with a countdown, not an error; (b) force it via a fresh install → the toast names the
-  wait in Uzbek; (c) 6 sends in an hour → a readable message, no `JSON Parse error`; (d) a wrong OTP
-  code → the server's message, not a generic one; (e) a different phone still works immediately.
-- [ ] 8. **Commit** with a clear message, owner-approved.
+- [x] 1. **DONE 2026-08-08. Shell + tokens, user app.** `modal` token object added to
+  `themes/index.ts` **mode-independently**, beside `borderRadius`/`shadows` — the Figma is a single
+  light treatment with no dark variant to honour. New `components/AppModal.tsx` (backdrop, card,
+  centred red heading, real `Ionicons` close, stacked action row, `KeyboardAvoidingView` because
+  pickers contain text inputs) and `components/ModalList.tsx`.
+  ⚠️ **The whole look lives in that one token object** — a veto on cream-on-black costs one file
+  edit, not 33 re-migrations. That is why the migration did not need to wait for a device check.
+- [x] 2. **DONE 2026-08-08. Create-offer pickers migrated.** `GeoSelectModal` is now a thin adapter
+  over `ModalList` and `GenderPickSheet` a two-button body on `AppModal`. ⚠️ **Both public prop
+  shapes are unchanged**, so `LocationCard` and `SeatStepper` did not move at all.
+  ⚠️ `GeoSelectModal` hands back the **original** `GeoOption`, not the mapped row — callers read
+  `latitude`/`longitude`/`type` off it and the mapping drops them.
+- [x] 3. **DONE 2026-08-08. Remaining user-app list pickers.** Language, country ×3, search geo,
+  filters — **8 of the 13 user-app modals now use the shell.**
+  ⚠️ **The three country pickers were byte-identical copies**, so they collapsed into one new
+  `components/CountryPickerModal.tsx` rather than being migrated three times.
+  ⚠️ **The filter modal was mis-classified in the Inventory** — it is a multi-section panel (sort,
+  rating, price range), not a list, so it took `AppModal` directly and kept its body. Revised
+  pattern counts: **list picker 16, dialog/panel 9**, date/time 8.
+  Removed on the way: the hard-coded English `'From: '`/`'To: '`/`"Search..."` in `SearchOffersScreen`
+  and `"Select Language"` in `LanguageSelector` (new key `common.selectLanguage` ×3 locales), plus
+  the now-dead `geoSearch` state — `ModalList` owns search, so the screen's filter never fired.
+- [x] 4. **DONE 2026-08-08. Date wheels.** ⚠️ **Both screens carried an identical copy of the wheel
+  markup AND identical `generateDays`/`generateMonths`/`generateYears` helpers**, so they collapsed
+  into one `components/DateWheelModal.tsx` instead of being re-skinned twice; the duplicated
+  generators are gone from both screens.
+  ⚠️ **Controlled component** — the screens keep owning `tempDate` and their confirm/cancel
+  handlers, so the change is presentation-only. Backdrop dismissal is **off** here: a stray tap
+  would silently discard the date being picked.
+- [x] 5. **DONE 2026-08-08. The remaining user-app overlays** — `ConfirmDialog`, the rating sheet,
+  the notification detail. `AppModal` gained a third action variant, **`destructive`** (red fill),
+  because `ConfirmDialog` already had `confirmButtonStyle: 'destructive'` and the shell only offered
+  green/red-outline. Its public props are unchanged.
+  The rating sheet keeps its submit button **inside the body** rather than becoming a shell action —
+  it has a spinner and an icon that the plain action row cannot express.
+  **✅ The user app is fully migrated: all 13 modals, zero bare `<Modal>` outside `AppModal.tsx`.**
+- [x] 6. **DONE 2026-08-08. Shell ported to the driver app; all 9 list pickers migrated.**
+  `modal` tokens added to the driver theme; `AppModal`, `ModalList`, `DateWheelModal` copied and
+  verified **byte-identical** to the user app's (`diff -q`). New `components/GeoPickerModal.tsx`
+  wraps `ModalList` for the driver's **7** country/province/city pickers.
+  ⚠️ **`ModalList` gained optional multi-select** (`ModalListMultiSelect`) — the driver's stop/city
+  pickers let a driver tick several towns and confirm, which the user app never needed. Rows toggle
+  and the search text is **kept** in that mode; clearing it mid-selection would throw away the filter.
+  ⚠️ **Shared components were re-pointed at `common.*` keys** (`search`, `noResults`, `selectDate`,
+  `day`/`month`/`year`) so the two copies stay identical and depend on no screen's namespace. The
+  driver app already keyed these under `common`; the user app got them added.
+  **`OfferWizardScreen` — all 5 modals migrated** (from/to/stop geo + date + time). Hard-coded
+  Uzbek `'Mamlakatni tanlang'`, `'Soat'`, `'Daqiqa'` etc. replaced with keys.
+  **Remaining: 15 modals in 11 files** — see Resume point.
+- [x] 7. **DONE 2026-08-08. Driver app date/time — all 6 re-skinned, bodies kept.**
+  ⚠️ **Deliberately NOT swapped for `DateWheelModal`.** Its wheel runs 1900→today (birth dates);
+  `OfferWizardScreen`'s generators enforce **future-only** dates and hours. Swapping would have
+  silently dropped the past-date guard, so every driver date/time picker got `AppModal` chrome with
+  its **body and generators untouched**. `DateWheelModal` is therefore ported but unused in the
+  driver app — kept so the two component sets stay identical.
+- [x] 8. **DONE 2026-08-08. Driver app dialogs/detail** — `ConfirmDialog` (the user app's migrated
+  version dropped in unchanged: identical props, incl. `destructive`), `OfferDetailModal`, the
+  reject modal, and the filter panel. `OfferDetailModal` and the rating-style bodies keep their own
+  action buttons, which carry icons and spinners the plain action row cannot express.
+- [x] 9. **DONE 2026-08-08. Static verification — all four projects exactly at baseline.**
+  `tsc`: API **282/282** · admin **0/0** · user **12/12** · driver **36/36**. The two
+  `translations/index.ts` errors about a missing `publicOffers` were **proven pre-existing via
+  `git stash`** (it exists only in the driver's `uz`).
+  **129/129 i18n checks** — every key the shared components resolve, *evaluated* in all three
+  locales of both apps. ⚠️ **The check caught 15 real misses**: `phoneRegistration.selectCountry`
+  (user app), `driverLicense.selectCountryCode` and `offerWizard.select{Country,Province,City}`
+  (driver) were all referenced but had **never existed** — three of them had been hidden behind
+  `|| 'hard-coded Uzbek'` fallbacks. All added in uz/ru/en.
+  **Zero bare `<Modal>` outside `AppModal.tsx` in either app** (verified by grep).
+- [ ] 10. **Owner: rebuild BOTH apps and walk every modal.** Open each of the 33, select something,
+  cancel, and confirm nothing changed but the look.
+- [ ] 11. **Commit** with a clear message, owner-approved.
 
-## Files to touch (verified against the repo 2026-08-08)
-- `api,admin,db/apps/api/src/services/OtpService.ts` — steps 1
-- `api,admin,db/apps/api/src/controllers/AuthController.v2.ts` — step 1 (pass `language`)
-- `api,admin,db/apps/api/src/constants/index.ts` — step 1 (`HttpStatus.TOO_MANY_REQUESTS`)
-- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts` — step 1
-- `api,admin,db/apps/api/src/middleware/rateLimiter.ts` — step 2
-- `{user,driver}-app-standalone/utils/errorHandler.ts` — step 3 (**both**)
-- `{user,driver}-app-standalone/api/auth.ts` — steps 3, 4 (**both**)
-- `{user,driver}-app-standalone/screens/OTPVerificationScreen.tsx` — step 5 (**both**)
-- `{user,driver}-app-standalone/translations/{uz,ru,en}.ts` — step 5 (**both**)
+## Files to touch
+- **NEW** `{user,driver}-app-standalone/components/AppModal.tsx` (+ the three variants)
+- `{user,driver}-app-standalone/themes/**` — the modal tokens
+- The 22 files listed in the Inventory
+- Translation files in both apps if any new strings appear (e.g. a shared "Orqaga"/"Tanlash")
 
 ## Risks / open questions (READ before coding)
-- ⚠️ **No migration, no schema change.** If one appears, stop and ask.
-- ⚠️ **Step 3 changes error text on 12 screens at once.** That is the point, but it means a screen
-  that used to show a friendly Uzbek default may now show a blunter server string. Server messages
-  are already translated (`Accept-Language` **is** sent — `config/api.ts:116`), so this should be an
-  improvement; watch for endpoints that return raw English.
-- ⚠️ **Do not lower the 60 s cooldown to make testing easier.** It is an SMS-cost control. If device
-  testing needs faster retries, that is an env value, and the owner decides.
-- ⚠️ **The 5-per-hour express limiter will bite during a testing session** (5 sends per phone per
-  hour). Once step 2 makes it legible, the owner may want the number raised for test3 — ask, do not
-  assume.
-- ⚠️ **`retryAfterSec` is advisory.** The countdown must still be driven by the app's own clock; a
-  user who backgrounds the app must not come back to a stale timer.
+- ⚠️ **33 call sites is where regressions hide.** Migrate in the step order above and keep each step
+  runnable; do not do a single sweeping find-and-replace.
+- ⚠️ **`OfferWizardScreen.tsx` alone holds 5 modals** and is the largest file in the driver app.
+  It is also mid-flight in T-002/T-026. Expect conflicts if those cards move.
+- ⚠️ **No Figma exists for the pickers.** The tokens above are *derived*. If the owner later supplies
+  real designs, the shell is one file to change — that is the point of doing it this way.
+- ⚠️ **Cream + black border is a big visual jump** from today's white sheets. Step 2 exists so the
+  owner can veto the look on a device after 2 modals, not after 33.
+- ⚠️ **Do not "fix" behaviour while re-skinning.** Anything found goes to the board (that is how
+  T-035 was found during T-033).
+- ⚠️ **T-033's code is uncommitted in the same working tree.** Do not mix the two in one commit.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
 - `.claude/settings.json` keeps picking up permission-prompt changes — keep it out of commits.
 
 ## Session notes (one line per work session)
-- **2026-08-08** — card created from the owner's first device-test report, then **steps 1-6 all
-  done**. Root cause found and fully traced before any code: the 60 s cooldown is correct, but it
-  returned **500** with an English string, and `handleBackendError` is **axios-shaped in two
-  fetch-only apps**, so the message was discarded on all 12 screens that use it. Two security
-  findings split out as T-034; a duplicate-`errors`-block i18n defect found and logged as T-035.
-  All four projects at `tsc` baseline; 42/42 i18n + 17/17 runtime checks. **Nothing on a device yet.**
+- **2026-08-08** — card created from the owner's device-test report. Inventory counted in code:
+  **33 modals in 22 files** (corrected up from the 24 quoted while scoping), collapsing into just
+  **three patterns**. Design tokens derived from the Shablon/Tanlov overlays; owner approved deriving
+  because no Figma exists for the pickers themselves.
 
 ## Resume point (for the next chat)
-**Steps 1-6 are DONE. Nothing has run against a device or a live API — only `tsc` and the two
-check scripts.** Working tree has uncommitted changes across 20 files.
+**Steps 1-9 DONE. ALL 33 modals in BOTH apps are migrated.** `tsc` exactly at baseline on all four
+projects (API **282** · admin **0** · user **12** · driver **36**); **129/129** i18n checks.
+Verify with `grep -rn "<Modal" --include=*.tsx components screens` in either app → the only hit is
+`components/AppModal.tsx`.
 
-🛑 **Step 7 is the owner's: deploy the API, rebuild BOTH apps, then the 5 smoke tests.**
-⚠️ **Deploy order matters: API FIRST, then the apps.** The apps read `cooldownSec` from the send
-response and `retryAfterSec` from a 429 — against an un-deployed API both are simply absent, and the
-countdown falls back to its 60 s default, so an app-first rollout degrades gracefully but shows the
-old generic toast until the API lands.
+**Shared components.** `AppModal` · `ModalList` (+ optional multi-select) · `DateWheelModal` are
+**byte-identical across both apps** (`diff -q`) — edit them together or the drift starts here.
+App-specific adapters: user `CountryPickerModal` + `passengerOffer/GeoSelectModal`, driver
+`GeoPickerModal`.
+⚠️ **The whole look lives in the `modal` token object in each app's `themes/index.ts`.** Restyling
+is two files, not 33.
 
-**One decision is still open for the owner** (see Risks): `otpSendLimiter` allows **5 sends per phone
-per hour**. It is now legible instead of a parse crash, but it will still stop a long testing session
-at the 6th code. Raising it is a one-line change — do not change it without the owner saying so.
+🛑 **Only step 10 (owner: rebuild BOTH apps, walk every modal) and step 11 (commit) remain.
+Nothing has run on a device.** The riskiest spots to check first, because they carry logic the
+plain shell cannot express:
+- **Multi-select stop/city pickers** in `OfferWizardScreen` — tick several towns, confirm, cancel.
+- **Driver date/time pickers** — past dates and past hours must still be unselectable.
+- **USER_NOT_REGISTERED** on the driver's phone screen — it reads `error.response.data.data`.
+- **The rating sheet** (user) and **`OfferDetailModal`** (driver) — their action buttons stayed in
+  the body, so their spinners/icons should look and behave exactly as before.
 
-**Then step 8: commit.** ⚠️ `.claude/settings.json` is modified in the working tree — keep it out.
+⚠️ **T-033's code is uncommitted in the same working tree — do not mix the two in one commit.**
 
 **Baselines to compare `tsc` against:** API **282**, admin **0**, user app **12**, driver app **36**.

@@ -21,6 +21,12 @@ export default {
     day: 'Kun',
     month: 'Oy',
     year: 'Yil',
+    // Used by the shared modal components (T-036) — kept under `common` so the copies
+    // in both apps stay identical and independent of any screen's namespace.
+    search: 'Qidirish...',
+    noResults: 'Hech narsa topilmadi',
+    hour: 'Soat',
+    minute: 'Daqiqa',
     camera: 'Kamera',
     gallery: 'Galereya',
     permissionRequired: 'Ruxsat kerak',
@@ -84,9 +90,17 @@ export default {
     phoneError: 'Telefon dasturini ochib bo\'lmadi',
   },
 
+  searchPassengerOffers: {
+    from: 'Qayerdan',
+    to: 'Qayerga',
+    filter: 'Filtrlar',
+    applyFilters: "Filtrlarni qo'llash",
+  },
+
   // Phone Registration Screen
   phoneRegistration: {
     brand: 'UbexGo Driver',
+    selectCountry: 'Mamlakatni tanlang',
     title: 'Haydovchi ro\'yxatdan o\'tish',
     driverType: 'Haydovchi',
     instruction: 'UbexGo dasturida ro\'yxatdan o\'tgan telefon raqamingizni kiriting',
@@ -389,6 +403,7 @@ export default {
 
   // Driver License Screen
   driverLicense: {
+    selectCountryCode: "Mamlakat kodini tanlang",
     title: 'Shaharlar aro',
     subtitle: 'HAYDOVCHILIK GUVOHNOMASI',
     description: "(Barcha ma'lumotlar passport bo'yicha kiritiladi)",
@@ -625,6 +640,7 @@ export default {
     confirmPassenger: 'Yo\'lovchini tasdiqlash',
     rejectPassenger: 'Yo\'lovchini rad etish',
     rejectReasonOptional: 'Sababni kiriting (ixtiyoriy):',
+    rejectReasonPlaceholder: 'masalan, Joylar band',
     message: 'Xabar',
     rejectionReason: 'Rad etish sababi',
     confirmSuccess: 'Yo\'lovchi muvaffaqiyatli tasdiqlandi',
@@ -646,6 +662,9 @@ export default {
 
   // Offer Wizard
   offerWizard: {
+    selectCountry: "Mamlakatni tanlang",
+    selectProvince: "Viloyatni tanlang",
+    selectCity: "Shahar/Tumanni tanlang",
     title: 'Yangi e\'lon yaratish',
     editTitle: 'E\'lonni tahrirlash',
     step1Title: 'Yo\'nalish',

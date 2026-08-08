@@ -30,6 +30,8 @@ import { showToast } from '../utils/toast';
 import { handleBackendError } from '../utils/errorHandler';
 import { useCountries } from '../hooks/useCountries';
 import type { CountryOption } from '../types/country';
+import { CountryPickerModal } from '../components/CountryPickerModal';
+import { DateWheelModal } from '../components/DateWheelModal';
 import * as AuthAPI from '../api/auth';
 
 const theme = createTheme('light');
@@ -420,40 +422,8 @@ export const EditProfileScreen: React.FC = () => {
     setShowDatePicker(true);
   };
 
-  const generateYears = () => {
-    const years = [];
-    const currentYear = new Date().getFullYear();
-    for (let year = currentYear; year >= 1900; year--) {
-      years.push(year);
-    }
-    return years;
-  };
-
-  const generateMonths = () => {
-    return [
-      { value: 1, label: t('months.january') },
-      { value: 2, label: t('months.february') },
-      { value: 3, label: t('months.march') },
-      { value: 4, label: t('months.april') },
-      { value: 5, label: t('months.may') },
-      { value: 6, label: t('months.june') },
-      { value: 7, label: t('months.july') },
-      { value: 8, label: t('months.august') },
-      { value: 9, label: t('months.september') },
-      { value: 10, label: t('months.october') },
-      { value: 11, label: t('months.november') },
-      { value: 12, label: t('months.december') },
-    ];
-  };
-
-  const generateDays = (year: number, month: number) => {
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const days = [];
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(day);
-    }
-    return days;
-  };
+  // The day/month/year generators moved into `DateWheelModal`, which owns the wheel
+  // (T-036) — they were duplicated verbatim in UserDetailsScreen.
 
   const addPhoneNumber = () => {
     if (!activeCountry) {
@@ -817,120 +787,14 @@ export const EditProfileScreen: React.FC = () => {
               </Text>
               {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate}</Text>}
               
-              {showDatePicker && (
-                <Modal
-                  transparent={true}
-                  animationType="slide"
-                  visible={showDatePicker}
-                  onRequestClose={handleDateCancel}
-                >
-                  <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                      <View style={styles.modalHeader}>
-                        <TouchableOpacity
-                          onPress={handleDateCancel}
-                          style={styles.modalButton}
-                        >
-                          <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.modalTitle}></Text>
-                        <TouchableOpacity
-                          onPress={handleDateConfirm}
-                          style={styles.modalButton}
-                        >
-                          <Text style={styles.modalButtonText}>{t('common.confirm')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.datePickerContainer}>
-                        {/* Day Picker */}
-                        <View style={styles.pickerColumn}>
-                          <Text style={styles.pickerLabel}>{t('userDetails.day')}</Text>
-                          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                            {generateDays(tempDate.getFullYear(), tempDate.getMonth() + 1).map((day) => (
-                              <TouchableOpacity
-                                key={day}
-                                style={[
-                                  styles.pickerItem,
-                                  tempDate.getDate() === day && styles.pickerItemSelected
-                                ]}
-                                onPress={() => {
-                                  const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
-                                  setTempDate(newDate);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.pickerItemText,
-                                  tempDate.getDate() === day && styles.pickerItemTextSelected
-                                ]}>
-                                  {day}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-
-                        {/* Month Picker */}
-                        <View style={styles.pickerColumn}>
-                          <Text style={styles.pickerLabel}>{t('userDetails.month')}</Text>
-                          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                            {generateMonths().map((month) => (
-                              <TouchableOpacity
-                                key={month.value}
-                                style={[
-                                  styles.pickerItem,
-                                  tempDate.getMonth() + 1 === month.value && styles.pickerItemSelected
-                                ]}
-                                onPress={() => {
-                                  const maxDay = new Date(tempDate.getFullYear(), month.value, 0).getDate();
-                                  const day = Math.min(tempDate.getDate(), maxDay);
-                                  const newDate = new Date(tempDate.getFullYear(), month.value - 1, day);
-                                  setTempDate(newDate);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.pickerItemText,
-                                  tempDate.getMonth() + 1 === month.value && styles.pickerItemTextSelected
-                                ]}>
-                                  {month.label}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-
-                        {/* Year Picker */}
-                        <View style={styles.pickerColumn}>
-                          <Text style={styles.pickerLabel}>{t('userDetails.year')}</Text>
-                          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                            {generateYears().map((year) => (
-                              <TouchableOpacity
-                                key={year}
-                                style={[
-                                  styles.pickerItem,
-                                  tempDate.getFullYear() === year && styles.pickerItemSelected
-                                ]}
-                                onPress={() => {
-                                  const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
-                                  const day = Math.min(tempDate.getDate(), maxDay);
-                                  const newDate = new Date(year, tempDate.getMonth(), day);
-                                  setTempDate(newDate);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.pickerItemText,
-                                  tempDate.getFullYear() === year && styles.pickerItemTextSelected
-                                ]}>
-                                  {year}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </Modal>
-              )}
+              <DateWheelModal
+                visible={showDatePicker}
+                value={tempDate}
+                onChange={setTempDate}
+                onConfirm={handleDateConfirm}
+                onCancel={handleDateCancel}
+                title={t('userDetails.selectDate')}
+              />
             </View>
 
             {/* Email */}
@@ -1043,36 +907,17 @@ export const EditProfileScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <Modal
-        transparent
-        animationType="fade"
+      <CountryPickerModal
         visible={showCountryPicker}
-        onRequestClose={() => setShowCountryPicker(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowCountryPicker(false)}>
-          <View style={styles.pickerOverlay}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={styles.countryPickerModal}>
-                {countries.map((country) => (
-                  <TouchableOpacity
-                    key={`${country.id ?? country.code}-${country.name}`}
-                    style={styles.countryOption}
-                    onPress={() => {
-                      setSelectedCountry(country);
-                      setShowCountryPicker(false);
-                      setCurrentPhoneInput((prev) => formatPhoneNumber(prev, country));
-                    }}
-                  >
-                    <Text style={styles.countryFlag}>{country.flag ?? '🌐'}</Text>
-                    <Text style={styles.countryName}>{country.name}</Text>
-                    <Text style={styles.countryCode}>{country.code}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        countries={countries}
+        selected={activeCountry}
+        onSelect={(country) => {
+          setSelectedCountry(country);
+          setShowCountryPicker(false);
+          setCurrentPhoneInput((prev) => formatPhoneNumber(prev, country));
+        }}
+        onClose={() => setShowCountryPicker(false)}
+      />
     </SafeAreaView>
   );
 };

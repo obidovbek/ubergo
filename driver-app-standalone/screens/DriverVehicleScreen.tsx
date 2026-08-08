@@ -24,6 +24,8 @@ import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { ModalList } from '../components/ModalList';
+import { GeoPickerModal } from '../components/GeoPickerModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
@@ -2577,218 +2579,59 @@ export const DriverVehicleScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Vehicle Dropdown Modal */}
-      {vehicleModalType && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!vehicleModalType}
-          onRequestClose={() => {
-            setVehicleModalType(null);
-            setVehicleSearchQuery('');
-          }}
-        >
-          <View style={styles.simpleDropdownOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setVehicleModalType(null);
-                setVehicleSearchQuery('');
-              }}
-            />
-            <View style={styles.simpleDropdownContainer}>
-              {/* Header */}
-              <View style={styles.simpleDropdownHeader}>
-                <Text style={styles.simpleDropdownTitle}>{getVehicleModalTitle(vehicleModalType)}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setVehicleModalType(null);
-                    setVehicleSearchQuery('');
-                  }}
-                  style={styles.simpleDropdownCloseButton}
-                >
-                  <Text style={styles.simpleDropdownCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Search */}
-              <View style={styles.simpleSearchBox}>
-                <TextInput
-                  style={styles.simpleSearchInput}
-                  placeholder="Qidirish..."
-                  placeholderTextColor="#999"
-                  value={vehicleSearchQuery}
-                  onChangeText={setVehicleSearchQuery}
-                  autoFocus={false}
-                />
-              </View>
-
-              {/* List */}
-              {getVehicleOptionsForModal(vehicleModalType).length === 0 ? (
-                <View style={styles.simpleDropdownEmpty}>
-                  <Text style={styles.simpleDropdownEmptyText}>
-                    {vehicleSearchQuery.trim() ? 'Topilmadi' : 'Ma\'lumot yo\'q'}
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.simpleDropdownList}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
-                >
-                  {getVehicleOptionsForModal(vehicleModalType).map((option) => {
-                    const isSelected = (() => {
-                      switch (vehicleModalType) {
-                        case 'type':
-                          return selectedType?.id === option.id;
-                        case 'make':
-                          return selectedMake?.id === option.id;
-                        case 'model':
-                          return selectedModel?.id === option.id;
-                        case 'body_type':
-                          return selectedBodyType?.id === option.id;
-                        case 'color':
-                          return selectedColor?.id === option.id;
-                        default:
-                          return false;
-                      }
-                    })();
-
-                    return (
-                      <TouchableOpacity
-                        key={option.id}
-                        style={[
-                          styles.simpleDropdownItem,
-                          isSelected && styles.simpleDropdownItemSelected,
-                        ]}
-                        onPress={() => handleVehicleSelection(vehicleModalType, option)}
-                      >
-                        <Text
-                          style={[
-                            styles.simpleDropdownItemText,
-                            isSelected && styles.simpleDropdownItemTextSelected,
-                          ]}
-                        >
-                          {getVehicleDisplayName(option)}
-                        </Text>
-                        {isSelected && <Text style={styles.simpleDropdownCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
+      <ModalList
+        visible={!!vehicleModalType}
+        title={vehicleModalType ? getVehicleModalTitle(vehicleModalType) : ''}
+        options={(vehicleModalType
+          ? getVehicleOptionsForModal(vehicleModalType)
+          : []
+        ).map((option) => ({ id: option.id, label: getVehicleDisplayName(option) }))}
+        selectedId={
+          vehicleModalType === 'type'
+            ? selectedType?.id ?? null
+            : vehicleModalType === 'make'
+              ? selectedMake?.id ?? null
+              : vehicleModalType === 'model'
+                ? selectedModel?.id ?? null
+                : vehicleModalType === 'body_type'
+                  ? selectedBodyType?.id ?? null
+                  : vehicleModalType === 'color'
+                    ? selectedColor?.id ?? null
+                    : null
+        }
+        onSelect={(picked) => {
+          if (!vehicleModalType) return;
+          const original = getVehicleOptionsForModal(vehicleModalType).find(
+            (o) => o.id === picked.id
+          );
+          if (original) handleVehicleSelection(vehicleModalType, original);
+        }}
+        onClose={() => setVehicleModalType(null)}
+      />
 
       {/* Geo Dropdown Modal */}
-      {geoModalType && (
-        <Modal
-          transparent={true}
-          animationType="fade"
-          visible={!!geoModalType}
-          onRequestClose={() => {
-            setGeoModalType(null);
-            setGeoSearchQuery('');
-          }}
-        >
-          <View style={styles.simpleDropdownOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                setGeoModalType(null);
-                setGeoSearchQuery('');
-              }}
-            />
-            <View style={styles.simpleDropdownContainer}>
-              {/* Header */}
-              <View style={styles.simpleDropdownHeader}>
-                <Text style={styles.simpleDropdownTitle}>{getGeoModalTitle(geoModalType)}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setGeoModalType(null);
-                    setGeoSearchQuery('');
-                  }}
-                  style={styles.simpleDropdownCloseButton}
-                >
-                  <Text style={styles.simpleDropdownCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Search */}
-              <View style={styles.simpleSearchBox}>
-                <TextInput
-                  style={styles.simpleSearchInput}
-                  placeholder="Qidirish..."
-                  placeholderTextColor="#999"
-                  value={geoSearchQuery}
-                  onChangeText={setGeoSearchQuery}
-                  autoFocus={false}
-                />
-              </View>
-
-              {/* List */}
-              {getGeoOptionsForModal(geoModalType).length === 0 ? (
-                <View style={styles.simpleDropdownEmpty}>
-                  <Text style={styles.simpleDropdownEmptyText}>
-                    {geoSearchQuery.trim() ? 'Topilmadi' : 'Ma\'lumot yo\'q'}
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.simpleDropdownList}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
-                >
-                  {getGeoOptionsForModal(geoModalType).map((option) => {
-                    const isSelected = (() => {
-                      switch (geoModalType) {
-                        case 'country':
-                          return formData.owner_address_country_id === option.id;
-                        case 'province':
-                          return formData.owner_address_province_id === option.id;
-                        case 'city_district':
-                          return formData.owner_address_city_district_id === option.id;
-                        case 'administrative_area':
-                          return formData.owner_address_administrative_area_id === option.id;
-                        case 'settlement':
-                          return formData.owner_address_settlement_id === option.id;
-                        case 'neighborhood':
-                          return formData.owner_address_neighborhood_id === option.id;
-                        default:
-                          return false;
-                      }
-                    })();
-
-                    return (
-                      <TouchableOpacity
-                        key={option.id}
-                        style={[
-                          styles.simpleDropdownItem,
-                          isSelected && styles.simpleDropdownItemSelected,
-                        ]}
-                        onPress={() => handleGeoSelection(geoModalType, option)}
-                      >
-                        <Text
-                          style={[
-                            styles.simpleDropdownItemText,
-                            isSelected && styles.simpleDropdownItemTextSelected,
-                          ]}
-                        >
-                          {option.type ? `${option.name} (${option.type})` : option.name}
-                        </Text>
-                        {isSelected && <Text style={styles.simpleDropdownCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
+      <GeoPickerModal
+        visible={!!geoModalType}
+        title={geoModalType ? getGeoModalTitle(geoModalType) : ''}
+        options={geoModalType ? getGeoOptionsForModal(geoModalType) : []}
+        selectedId={
+          geoModalType === 'country'
+            ? selectedCountry?.id ?? null
+            : geoModalType === 'province'
+              ? selectedProvince?.id ?? null
+              : geoModalType === 'city_district'
+                ? selectedCityDistrict?.id ?? null
+                : geoModalType === 'administrative_area'
+                  ? selectedAdministrativeArea?.id ?? null
+                  : geoModalType === 'settlement'
+                    ? selectedSettlement?.id ?? null
+                    : geoModalType === 'neighborhood'
+                      ? selectedNeighborhood?.id ?? null
+                      : null
+        }
+        onSelect={(option) => geoModalType && handleGeoSelection(geoModalType, option)}
+        onClose={() => setGeoModalType(null)}
+      />
     </SafeAreaView>
   );
 };

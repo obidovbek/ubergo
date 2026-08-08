@@ -98,6 +98,39 @@ export const shadows = {
   },
 };
 
+/**
+ * Modal design tokens (T-036).
+ *
+ * Derived from the Figma overlay language — `004Shaharlar aro K3 Tanlov oynasi.png`,
+ * `K_RegShablon-3.png`, `K_buyurtma001Yangi.png`: a cream card with a heavy black
+ * border, a red centred heading, pill rows, and stacked green/red actions.
+ *
+ * Mode-independent on purpose, like `borderRadius` and `shadows` above: the design is a
+ * single light treatment and there is no dark variant of it to honour.
+ */
+export const modal = {
+  backdrop: 'rgba(0, 0, 0, 0.5)',
+  body: '#FDF6E3',
+  border: '#000000',
+  borderWidth: 2,
+  radius: 20,
+  heading: '#E53935',
+  // Rows / inputs
+  row: '#FFFFFF',
+  rowText: '#111111',
+  rowRadius: 12,
+  rowSelected: '#8FE3A6',
+  rowSelectedText: '#1B5E20',
+  // Actions
+  primary: '#4CAF50',
+  primaryText: '#FFFFFF',
+  cancelFill: '#FFEBEE',
+  cancelBorder: '#E53935',
+  cancelText: '#E53935',
+  // Muted text (placeholders, empty states)
+  muted: '#6B6B6B',
+};
+
 // Theme object
 export interface Theme {
   palette: typeof lightPalette;
@@ -105,6 +138,7 @@ export interface Theme {
   typography: typeof typography;
   borderRadius: typeof borderRadius;
   shadows: typeof shadows;
+  modal: typeof modal;
 }
 
 export const createTheme = (mode: 'light' | 'dark'): Theme => ({
@@ -113,6 +147,7 @@ export const createTheme = (mode: 'light' | 'dark'): Theme => ({
   typography,
   borderRadius,
   shadows,
+  modal,
 });
 
 export { lightPalette, darkPalette };
