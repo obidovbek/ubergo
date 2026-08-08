@@ -506,6 +506,9 @@ export default {
     // My Passenger Offers
     title: 'Мои запросы на поездку',
     active: 'Активные',
+    // T-039: shown instead of "active" once the order has dropped out of the
+    // driver browse, so the passenger is not told it is live when it is not.
+    expired: 'Срок истёк',
     driverFound: 'Водитель найден',
     completed: 'Завершенные',
     cancelled: 'Отмененные',

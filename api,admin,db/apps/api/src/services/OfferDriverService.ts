@@ -25,6 +25,7 @@ import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
 import { getUserLanguage } from '../utils/userLanguage.js';
+import { PASSENGER_OFFER_BROWSE_GRACE_MS } from '../constants/index.js';
 
 interface JoinPassengerOfferData {
   offer_id: number;
@@ -89,7 +90,13 @@ export class OfferDriverService {
       throw new AppError(t('offers.notAvailable', language), 400);
     }
 
-    if (new Date(offer.start_at) < new Date()) {
+    // T-039: the SAME grace window the browse uses. These two must move
+    // together — with a bare `< new Date()` here, a driver could tap an order
+    // the list had just offered him and be told the trip had already started.
+    if (
+      new Date(offer.start_at).getTime() <
+      Date.now() - PASSENGER_OFFER_BROWSE_GRACE_MS
+    ) {
       throw new AppError(t('offers.alreadyStarted', language), 400);
     }
 

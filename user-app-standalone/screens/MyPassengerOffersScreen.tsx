@@ -217,8 +217,34 @@ export const MyPassengerOffersScreen: React.FC = () => {
     });
   };
 
+  /**
+   * T-039: a `published` order drops out of the driver browse once it is more
+   * than PASSENGER_OFFER_BROWSE_GRACE_MS past its departure — but the row here
+   * still said "Faol", so the owner watched an order nobody could see and was
+   * told it was active. The status column is deliberately NOT changed: the order
+   * really is still published and still cancellable, and giving it a stored
+   * `expired` state would need a migration plus something to write it. Only the
+   * label is derived.
+   *
+   * ⚠️ These three hours mirror `PASSENGER_OFFER_BROWSE_GRACE_MS` in the API
+   * (`src/constants/index.ts`), which is the source of truth. If the server's
+   * window changes, change it here in the same commit — two numbers drifting
+   * apart is the exact bug this card exists to fix.
+   */
+  const BROWSE_GRACE_MS = 3 * 60 * 60 * 1000;
+
+  const isExpired = (offer: PassengerOffer): boolean =>
+    offer.status === 'published' &&
+    new Date(offer.start_at).getTime() < Date.now() - BROWSE_GRACE_MS;
+
+  /** The status to *display* — the real one, unless it has quietly expired. */
+  const displayStatus = (offer: PassengerOffer): string =>
+    isExpired(offer) ? 'expired' : offer.status;
+
   const getStatusColor = (status: string): string => {
     switch (status) {
+      case 'expired':
+        return '#6B7280';
       case 'published':
         return '#10B981';
       case 'driver_found':
@@ -236,6 +262,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
 
   const getStatusBgColor = (status: string): string => {
     switch (status) {
+      case 'expired':
+        return '#F3F4F6';
       case 'published':
         return '#D1FAE5';
       case 'driver_found':
@@ -253,6 +281,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'expired':
+        return 'time-outline';
       case 'published':
         return 'checkmark-circle';
       case 'driver_found':
@@ -270,6 +300,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
 
   const getStatusLabel = (status: string): string => {
     switch (status) {
+      case 'expired':
+        return t('passengerOffers.expired');
       case 'published':
         return t('passengerOffers.active');
       case 'driver_found':
@@ -300,14 +332,14 @@ export const MyPassengerOffersScreen: React.FC = () => {
         activeOpacity={0.95}
       >
         {/* Status Badge */}
-        <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.status) }]}>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(displayStatus(item)) }]}>
           <Ionicons 
-            name={getStatusIcon(item.status) as any} 
+            name={getStatusIcon(displayStatus(item)) as any} 
             size={16} 
-            color={getStatusColor(item.status)} 
+            color={getStatusColor(displayStatus(item))} 
           />
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {getStatusLabel(item.status)}
+          <Text style={[styles.statusText, { color: getStatusColor(displayStatus(item)) }]}>
+            {getStatusLabel(displayStatus(item))}
           </Text>
         </View>
 

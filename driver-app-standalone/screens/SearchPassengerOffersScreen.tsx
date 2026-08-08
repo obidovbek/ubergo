@@ -513,7 +513,7 @@ export default function SearchPassengerOffersScreen() {
         <View style={styles.routeRow}>
           <View style={styles.routeDot} />
           <View style={styles.routeContent}>
-            <Text style={styles.routeLabel}>FROM</Text>
+            <Text style={styles.routeLabel}>{t('searchPassengerOffers.fromLabel')}</Text>
             <Text style={styles.routeText} numberOfLines={2}>
               {item.from_text}
             </Text>
@@ -533,7 +533,7 @@ export default function SearchPassengerOffersScreen() {
         <View style={styles.routeRow}>
           <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
           <View style={styles.routeContent}>
-            <Text style={styles.routeLabel}>TO</Text>
+            <Text style={styles.routeLabel}>{t('searchPassengerOffers.toLabel')}</Text>
             <Text style={styles.routeText} numberOfLines={2}>
               {item.to_text}
             </Text>
@@ -586,11 +586,11 @@ export default function SearchPassengerOffersScreen() {
           </View>
         ) : (
           <View style={styles.budgetBadge}>
-            <Text style={styles.budgetLabel}>Max Budget</Text>
+            <Text style={styles.budgetLabel}>{t('searchPassengerOffers.maxBudget')}</Text>
             <Text style={styles.budgetValue}>
               {formatNumberWithSpaces(item.max_price_per_seat)} {item.currency}
             </Text>
-            <Text style={styles.budgetPerSeat}>per seat</Text>
+            <Text style={styles.budgetPerSeat}>{t('searchPassengerOffers.perSeat')}</Text>
           </View>
         )}
         
@@ -599,7 +599,7 @@ export default function SearchPassengerOffersScreen() {
           onPress={() => handleViewOffer(item)}
           activeOpacity={0.7}
         >
-          <Text style={styles.viewButtonText}>View Details</Text>
+          <Text style={styles.viewButtonText}>{t('searchPassengerOffers.viewDetails')}</Text>
           <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -628,7 +628,7 @@ export default function SearchPassengerOffersScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Passenger Requests</Text>
+        <Text style={styles.headerTitle}>{t('searchPassengerOffers.title')}</Text>
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setFilterModalVisible(true)}
@@ -654,7 +654,7 @@ export default function SearchPassengerOffersScreen() {
             <View style={styles.locationColumn}>
               <View style={styles.locationHeader}>
                 <View style={styles.locationDot} />
-                <Text style={styles.sectionLabel}>FROM</Text>
+                <Text style={styles.sectionLabel}>{t('searchPassengerOffers.fromLabel')}</Text>
               </View>
               
               {/* From Country Selection - Compact */}
@@ -706,7 +706,7 @@ export default function SearchPassengerOffersScreen() {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="close-circle" size={16} color="#EF4444" />
-                  <Text style={styles.clearButtonTextCompact}>Clear</Text>
+                  <Text style={styles.clearButtonTextCompact}>{t('searchPassengerOffers.clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -731,7 +731,7 @@ export default function SearchPassengerOffersScreen() {
             <View style={styles.locationColumn}>
               <View style={styles.locationHeader}>
                 <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
-                <Text style={styles.sectionLabel}>TO</Text>
+                <Text style={styles.sectionLabel}>{t('searchPassengerOffers.toLabel')}</Text>
               </View>
               
               {/* To Country Selection - Compact */}
@@ -783,7 +783,7 @@ export default function SearchPassengerOffersScreen() {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="close-circle" size={16} color="#EF4444" />
-                  <Text style={styles.clearButtonTextCompact}>Clear</Text>
+                  <Text style={styles.clearButtonTextCompact}>{t('searchPassengerOffers.clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -794,7 +794,7 @@ export default function SearchPassengerOffersScreen() {
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>Loading passenger requests...</Text>
+          <Text style={styles.loadingText}>{t('searchPassengerOffers.loading')}</Text>
         </View>
       ) : (
         <FlatList
@@ -812,9 +812,9 @@ export default function SearchPassengerOffersScreen() {
                   <View style={styles.emptyIconContainer}>
                     <Ionicons name="location-outline" size={48} color="#D1D5DB" />
                   </View>
-                  <Text style={styles.emptyText}>Select Locations</Text>
+                  <Text style={styles.emptyText}>{t('searchPassengerOffers.emptySelectTitle')}</Text>
                   <Text style={styles.emptySubtext}>
-                    Choose departure and destination to find passenger requests
+                    {t('searchPassengerOffers.emptySelectSubtitle')}
                   </Text>
                 </>
               ) : (
@@ -822,9 +822,9 @@ export default function SearchPassengerOffersScreen() {
                   <View style={styles.emptyIconContainer}>
                     <Ionicons name="people-outline" size={48} color="#D1D5DB" />
                   </View>
-                  <Text style={styles.emptyText}>No Passenger Requests</Text>
+                  <Text style={styles.emptyText}>{t('searchPassengerOffers.emptyNoneTitle')}</Text>
                   <Text style={styles.emptySubtext}>
-                    No passengers are looking for rides on this route right now
+                    {t('searchPassengerOffers.emptyNoneSubtitle')}
                   </Text>
                 </>
               )}
@@ -848,13 +848,13 @@ export default function SearchPassengerOffersScreen() {
             <ScrollView style={styles.filterScrollView}>
               {/* Sort By */}
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Sort By</Text>
+                <Text style={styles.filterSectionTitle}>{t('searchPassengerOffers.sortBy')}</Text>
                 <View style={styles.sortOptions}>
                   {[
-                    { value: 'date_asc', label: 'Date (Earliest First)', icon: 'calendar-outline' },
-                    { value: 'price_desc', label: 'Budget (Highest First)', icon: 'arrow-up' },
-                    { value: 'price_asc', label: 'Budget (Lowest First)', icon: 'arrow-down' },
-                    { value: 'seats_desc', label: 'Seats (Most First)', icon: 'people' },
+                    { value: 'date_asc', label: t('searchPassengerOffers.sortDateAsc'), icon: 'calendar-outline' },
+                    { value: 'price_desc', label: t('searchPassengerOffers.sortPriceDesc'), icon: 'arrow-up' },
+                    { value: 'price_asc', label: t('searchPassengerOffers.sortPriceAsc'), icon: 'arrow-down' },
+                    { value: 'seats_desc', label: t('searchPassengerOffers.sortSeatsDesc'), icon: 'people' },
                   ].map((option) => (
                     <TouchableOpacity
                       key={option.value}
@@ -886,13 +886,13 @@ export default function SearchPassengerOffersScreen() {
 
               {/* Filters */}
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Filters</Text>
+                <Text style={styles.filterSectionTitle}>{t('searchPassengerOffers.filtersTitle')}</Text>
                 
                 <View style={styles.filterInputGroup}>
-                  <Text style={styles.filterInputLabel}>Maximum Budget (per seat)</Text>
+                  <Text style={styles.filterInputLabel}>{t('searchPassengerOffers.maxBudgetLabel')}</Text>
                   <TextInput
                     style={styles.filterInput}
-                    placeholder="Any amount"
+                    placeholder={t('searchPassengerOffers.maxBudgetPlaceholder')}
                     keyboardType="numeric"
                     value={maxPrice?.toString() || ''}
                     onChangeText={(text) => setMaxPrice(text ? parseInt(text) : undefined)}
@@ -900,10 +900,10 @@ export default function SearchPassengerOffersScreen() {
                 </View>
 
                 <View style={styles.filterInputGroup}>
-                  <Text style={styles.filterInputLabel}>Minimum Seats Needed</Text>
+                  <Text style={styles.filterInputLabel}>{t('searchPassengerOffers.minSeatsLabel')}</Text>
                   <TextInput
                     style={styles.filterInput}
-                    placeholder="Any number"
+                    placeholder={t('searchPassengerOffers.minSeatsPlaceholder')}
                     keyboardType="numeric"
                     value={minSeats?.toString() || ''}
                     onChangeText={(text) => setMinSeats(text ? parseInt(text) : undefined)}
@@ -922,7 +922,7 @@ export default function SearchPassengerOffersScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="refresh" size={20} color="#EF4444" />
-                <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+                <Text style={styles.clearFiltersText}>{t('searchPassengerOffers.clearAllFilters')}</Text>
               </TouchableOpacity>
         </ScrollView>
       </AppModal>

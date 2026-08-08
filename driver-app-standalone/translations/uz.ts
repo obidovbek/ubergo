@@ -96,6 +96,32 @@ export default {
     filter: 'Filtrlar',
     applyFilters: "Filtrlarni qo'llash",
     loginRequired: "Buyurtmani ko'rish uchun tizimga kiring",
+    // T-038/T-037 step 2: this screen was almost entirely hard-coded English —
+    // it had never been reachable, so nobody had seen it.
+    title: "Yo'lovchi buyurtmalari",
+    fromLabel: 'QAYERDAN',
+    toLabel: 'QAYERGA',
+    clear: 'Tozalash',
+    maxBudget: "Eng ko'p narx",
+    perSeat: "bir o'rin uchun",
+    viewDetails: 'Batafsil',
+    loading: 'Buyurtmalar yuklanmoqda...',
+    emptySelectTitle: 'Manzillarni tanlang',
+    emptySelectSubtitle:
+      "Buyurtmalarni ko'rish uchun jo'nash va borish manzilini tanlang",
+    emptyNoneTitle: "Buyurtmalar yo'q",
+    emptyNoneSubtitle: "Bu yo'nalishda hozircha yo'lovchi buyurtmalari yo'q",
+    sortBy: 'Saralash',
+    sortDateAsc: 'Sana (avvalgisi birinchi)',
+    sortPriceDesc: 'Narx (kattasi birinchi)',
+    sortPriceAsc: 'Narx (kichigi birinchi)',
+    sortSeatsDesc: "O'rinlar (ko'pi birinchi)",
+    filtersTitle: 'Filtrlar',
+    maxBudgetLabel: "Eng yuqori narx (bir o'rin uchun)",
+    maxBudgetPlaceholder: 'Har qanday',
+    minSeatsLabel: "Eng kam o'rinlar soni",
+    minSeatsPlaceholder: 'Har qanday',
+    clearAllFilters: 'Barcha filtrlarni tozalash',
   },
 
   // Passenger order details (driver side) — T-037

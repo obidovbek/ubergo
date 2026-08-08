@@ -63,6 +63,25 @@ export enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
+/**
+ * How long a passenger order stays browsable AFTER its stated departure time
+ * (T-039, owner decision 2026-08-08).
+ *
+ * Before this the browse filtered `start_at >= now`, so an order vanished from
+ * every driver's list the moment the clock passed its departure — while the
+ * passenger's own screen still showed it as "Faol". A passenger who wanted to
+ * leave at 13:23 is usually still waiting at 13:40.
+ *
+ * ⚠️ Three hours is a product judgement, not a law — change it here and both the
+ * browse and the join guard follow. **Both must use it**: if the browse shows an
+ * order the join refuses, the driver gets "this trip already started" on a card
+ * he was just offered, which is the same lie one level down.
+ *
+ * ⚠️ The user app derives its "expired" label from this number too. If the two
+ * drift apart, the passenger is misled again — which is the whole point of T-039.
+ */
+export const PASSENGER_OFFER_BROWSE_GRACE_MS = 3 * 60 * 60 * 1000;
+
 // Error Messages (Uzbek)
 export const ErrorMessages = {
   UNAUTHORIZED: 'Ruxsatsiz kirish',

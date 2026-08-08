@@ -506,6 +506,9 @@ export default {
     // My Passenger Offers
     title: 'My Ride Requests',
     active: 'Active',
+    // T-039: shown instead of "active" once the order has dropped out of the
+    // driver browse, so the passenger is not told it is live when it is not.
+    expired: 'Expired',
     driverFound: 'Driver found',
     completed: 'Completed',
     cancelled: 'Cancelled',

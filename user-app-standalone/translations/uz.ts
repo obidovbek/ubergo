@@ -546,6 +546,9 @@ export default {
     // My Passenger Offers
     title: "Mening safar so'rovlarim",
     active: "Faol",
+    // T-039: shown instead of "Faol" once the order has dropped out of the
+    // driver browse, so the passenger is not told it is live when it is not.
+    expired: "Muddati o'tgan",
     driverFound: "Haydovchi topildi",
     completed: "Tugallangan",
     cancelled: "Bekor qilingan",

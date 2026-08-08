@@ -7,6 +7,85 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-040 (P1) **A passenger cannot edit an order at all — the endpoint exists, nothing calls it.**
+  Reported by the owner 2026-08-08. **Grounded in code the same day; same shape as T-037.**
+  ✅ **The backend is complete and safe.** `PATCH /passenger-offers/:id` is routed
+  (`passenger-offer.routes.ts:43`) → `PassengerOfferService.updateOffer:881`, which whitelists the
+  writable fields through `buildOfferFields` (no mass-assignment: `user_id`/`status` are excluded by
+  the type) and validates the patch **against the stored row**. Ownership is enforced —
+  `getOfferById(offerId, userId)` throws **403** for anyone else's order. **No API work needed.**
+  ❌ **The app never uses it.** `updatePassengerOffer` in `user-app-standalone/api/passengerOffers.ts:281`
+  has **zero call sites**; `CreatePassengerOfferScreen` has **no `useRoute`, no `route.params`, no
+  `offerId`** — it can only create; and `MyPassengerOffersScreen` offers only *"So'rovni bekor
+  qilish"*. So the only way to change anything is cancel and re-create.
+  ⚠️ **This is what made T-039 bite so hard:** an order whose departure time has passed cannot be
+  nudged forward, so the passenger's only option is to throw it away and start again.
+  ⚠️ **`updateOffer` has NO status guard** — a `cancelled` or `completed` order can still be patched.
+  Harmless while nothing calls it; must be closed as part of this card.
+  ⚠️ **Conflicts with T-031**, which is mid-flight in `CreatePassengerOfferScreen` (757 lines).
+  **Owner decisions 2026-08-08:** **full edit**, by reusing `CreatePassengerOfferScreen` with an
+  `offerId`; and when drivers have already offered, **warn but keep their offers**.
+  ⚠️ **Ordering:** this collides with **T-031** in the same 757-line file. T-031 step 4 is blocked on
+  an owner answer, so T-040 goes first and T-031's remaining steps build on the edit-mode version.
+  → `docs/PLAN.md`
+
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
+  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
+> **fails**.
+- [ ] T-039 (P1) 🔴 **A passenger order the passenger still sees as "Faol" is invisible to every
+  driver once its departure time passes — and an "urgent" one is invisible from birth.**
+  Found 2026-08-08 from the owner's device.
+
+  **CONFIRMED CAUSE (owner screenshots, 2026-08-08).** The order existed and was `published`
+  ("Faol" in *Mening safar so'rovlarim*), departing **8 Aug 13:23**, while the phone clock read
+  **15:58**. `getPublicOffers` filters `start_at >= new Date()`, so it had dropped out of the driver
+  browse 2.5 h earlier — **while the passenger's own screen still called it active.** The two sides
+  disagree about what "active" means; that is the defect.
+  ⚠️ **My first hypothesis (urgent) was wrong and is recorded here so it is not re-run:** the
+  minute-precise 13:23 looked like a creation timestamp, but `departDate`/`departFrom` both **default
+  to `now + 1 hour`** (`CreatePassengerOfferScreen.tsx:87-92`), so a default-accepted order created
+  at ~12:23 lands on exactly 13:23. It was an ordinary non-urgent order that simply expired.
+
+  **The urgent bug is real but SEPARATE — still unfixed, still worth fixing:**
+  `CreatePassengerOfferScreen.getStartAtDate()` returns **`new Date()`** — the exact creation moment —
+  when `isUrgent` is ticked. `PassengerOfferService.getPublicOffers` then filters
+  `start_at >= new Date()` **at query time**, which is always later. So the offer is excluded from
+  the browse list from the instant it is saved. Non-urgent offers are safe: create-time validation
+  forces them **≥ 30 min** in the future (`MIN_ADVANCE_MINUTES`), and urgent ones deliberately skip
+  that check — the same exemption that makes them unfindable.
+  ⚠️ Also excluded: any offer whose departure time has simply **passed** — correct in general, but
+  it means an offer for "today at 14:00" vanishes at 14:01 even while the passenger still waits.
+  **Verified against the live API 2026-08-08:** `GET /public/passenger-offers?limit=20` with **no
+  filters** returns `{"items":[],"total":0}` — so the driver app, `SearchPassengerOffersScreen` and
+  its search parameters are **not at fault**. T-037 is exonerated.
+  **Owner decisions 2026-08-08:** 3-hour grace window after departure; **urgent uses the same
+  window** (no special case); and the passenger's list must show expired orders as expired.
+  **Steps 1-3 ALL DONE 2026-08-08.** New shared `PASSENGER_OFFER_BROWSE_GRACE_MS` (3 h): an order
+  stays browsable for 3 hours past its departure, and the passenger's list shows **"Muddati o'tgan"**
+  instead of "Faol" once it drops out. Urgent orders need no special case — the window covers them.
+  🔴 **Changing the browse alone would have swapped one lie for another:** `OfferDriverService.
+  joinOffer:93` carried the same `start_at < now` guard, so a driver would have been offered a card
+  and then refused it with "this trip already started". Both now share the constant.
+  ⚠️ **No migration, no scheduled job** — the label is derived; the row stays `published` and
+  cancellable. **32/32** checks, aimed at drift (the same 3 h now lives in 3 places).
+  🛑 **Only step 4 (owner: deploy the API, rebuild the user app, retest) and step 5 (commit) remain.**
+  ⚠️ Plan is **`docs/PLAN-T039.md`**.
+
 - [ ] T-038 (P1) 🔴 **Every user of BOTH apps is silently logged out ~15 minutes after login — the
   refresh token is thrown away.** Reported by the owner 2026-08-08 from a device: the user app's
   "Mening bronlarim" showed a toast **"Xato / Invalid or expired token"**, and "before last logged
@@ -33,26 +112,24 @@
   **Owner decisions 2026-08-08:** fix it **properly** — store the refresh token and refresh-and-retry
   — **not** by raising `JWT_EXPIRES_IN`; and the untranslated 401s are **included in this card**.
   ⚠️ Both apps carry the **same** code, so every app-side change is made twice, per this project's
-  duplicate-by-convention rule. → `docs/PLAN.md`
+  duplicate-by-convention rule.
+  **Steps 1-6 ALL DONE 2026-08-08.** Both apps persist the refresh token; `getHeaders` — which every
+  authenticated call already awaits — swaps a spent access token for a fresh pair behind **one
+  in-flight promise** (mandatory: `rotateTokens` revokes the old refresh token on use); only a refresh
+  the **server rejected** ends the session, a network failure never does; and the API's 401s are
+  translated. `tsc` API **282** · admin **0** · user **11** · driver **35** — both apps **one below
+  baseline**, because the never-awaited `getHeaders` in `logout` *was* a baseline error.
+  **28/28 + 28/28 runtime checks** against the apps' real modules; **18/18** API auth messages.
+  🔴 **Three defects found beyond the original diagnosis:** a stale caller token would have
+  re-rotated on **every** request (screens keep the token they were handed at sign-in, so
+  `ensureFreshAccessToken` re-reads storage first); `logout` never revoked anything in **either** app
+  (un-awaited `getHeaders` → no `Authorization`, and the refresh token was never sent); and
+  `adminAuth`'s catch rewrote every failure as "Invalid or expired token".
+  ⚠️ **Everyone gets logged out ONE more time** — existing installs hold no refresh token, so their
+  current session still ends at its next expiry. Warn the testers.
+  🛑 **Only step 7 (owner: deploy the API **FIRST**, then rebuild both apps) and step 8 (commit)
+  remain. Nothing has run on a device.** ⚠️ Plan is **`docs/PLAN-T038.md`**.
 
-- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
-  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
-  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
-  landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
-  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
-  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
-  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
-  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
-> **fails**.
 - [ ] T-037 (P1) **Driver app: passenger orders are unreachable — no route, no detail screen, no
   join.** Raised by the owner 2026-08-08 ("user creates offer but in the driver app there is no way
   to search or join"). **Confirmed in code the same day, and it is worse than T-023 described.**

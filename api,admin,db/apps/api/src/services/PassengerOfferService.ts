@@ -35,6 +35,7 @@ import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
 import { getUserLanguage } from '../utils/userLanguage.js';
+import { PASSENGER_OFFER_BROWSE_GRACE_MS } from '../constants/index.js';
 
 interface CreatePassengerOfferData {
   from_text: string;
@@ -1116,7 +1117,15 @@ export class PassengerOfferService {
   }) {
     const whereConditions: any[] = [
       { status: 'published' },
-      { start_at: { [Op.gte]: new Date() } }, // Only future offers
+      // T-039: not `>= now`. An order used to leave this list the instant its
+      // departure time passed, while the passenger's own screen still called it
+      // "Faol" — the owner hit exactly that on 2026-08-08. The grace window keeps
+      // a passenger who is still waiting findable.
+      {
+        start_at: {
+          [Op.gte]: new Date(Date.now() - PASSENGER_OFFER_BROWSE_GRACE_MS),
+        },
+      },
     ];
 
     // Filter by from/to text
