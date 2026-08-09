@@ -132,6 +132,9 @@ export default {
     accountDisabled: 'Аккаунт отключен',
     tokenExpired: 'Сессия истекла',
     tokenInvalid: 'Неверный токен',
+    // T-041 — `POST /auth/refresh` answered in hard-coded English until now.
+    refreshTokenRequired: 'Токен обновления не передан',
+    tokenRefreshed: 'Сессия обновлена',
     // T-038 — the auth middleware used to throw these in hard-coded English, so
     // every 401 reached the apps untranslated no matter the Accept-Language.
     noToken: 'Токен авторизации не передан',

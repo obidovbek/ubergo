@@ -442,11 +442,16 @@ export async function facebookAuth(req: Request, res: Response): Promise<void> {
  * POST /auth/refresh
  */
 export async function refreshToken(req: Request, res: Response): Promise<void> {
+  // T-041: every message here used to be hard-coded English — a live probe with
+  // `Accept-Language: uz-UZ` came back "Invalid refresh token". T-038 translated
+  // `middleware/auth.ts`, but this route never passes through it, so it was missed.
+  const language = getLanguageFromHeaders(req.headers['accept-language']);
+
   try {
     const { refresh } = req.body;
 
     if (!refresh) {
-      throw new AppError('Refresh token is required', 400);
+      throw new AppError(t('auth.refreshTokenRequired', language), 400);
     }
 
     // Rotate tokens
@@ -464,13 +469,18 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
         access: newTokens.access,
         refresh: newTokens.refresh,
       },
-      message: 'Token refreshed successfully',
+      message: t('auth.tokenRefreshed', language),
     });
   } catch (error: any) {
     if (error instanceof AppError) {
       throw error;
     }
-    throw new AppError(error.message || 'Failed to refresh token', 401);
+    // `utils/jwt.ts` is a pure utility with no request context, so it throws
+    // plain English `Error`s; turning them into keys is this layer's job.
+    // `verifyRefreshToken` is their only producer — if its wording ever drifts
+    // we fall back to `tokenInvalid`, which is a safe answer, not a crash.
+    const key = /expired/i.test(error?.message || '') ? 'auth.tokenExpired' : 'auth.tokenInvalid';
+    throw new AppError(t(key, language), 401);
   }
 }
 

@@ -142,7 +142,17 @@
       "Bash(curl -s -m 30 \"https://test3.fstu.uz/api/public/passenger-offers?limit=20\" -H \"Accept: application/json\")",
       "Bash(grep -nE \">[A-Z][A-Za-z ,.\\(\\)/-]{2,}<|placeholder=\\\\\"\" screens/SearchPassengerOffersScreen.tsx)",
       "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/t039-check.js\")",
-      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/t040-check.js\")"
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/c68f3b1f-c9c3-412a-b9d2-2de94a8c46d2/scratchpad/t040-check.js\")",
+      "Bash(curl -s -o /dev/null -w \"no-body   -> %{http_code}\\\\n\" -X POST https://test3.fstu.uz/api/auth/refresh -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{}')",
+      "Bash(curl -s -w \"\\\\n bad-token -> %{http_code}\\\\n\" -X POST https://test3.fstu.uz/api/auth/refresh -H \"Content-Type: application/json\" -H \"Accept: application/json\" -H \"Accept-Language: uz-UZ\" -d '{\"refresh\":\"not.a.jwt\"}')",
+      "Bash(cd \"d:/projects/UbexGo\" && cp docs/PLAN.md docs/PLAN-T040.md && diff -q docs/PLAN.md docs/PLAN-T040.md && echo \"PLAN-T040.md now holds the newest T-040 plan\")",
+      "Bash(node -e \"console.log\\('express-rate-limit', require\\('./node_modules/express-rate-limit/package.json'\\).version\\)\")",
+      "Bash(xargs -I{} echo \"API      : {} errors \\(baseline 282\\)\")",
+      "Bash(xargs -I{} echo \"user app : {} errors \\(baseline 12, currently 11\\)\")",
+      "Bash(xargs -I{} echo \"driver app: {} errors \\(baseline 36, currently 35\\)\")",
+      "Bash(xargs -I{} echo \"admin    : {} errors \\(baseline 0\\)\")",
+      "Bash(node t041-check.js)",
+      "Bash(node t041-limiter-check.js)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

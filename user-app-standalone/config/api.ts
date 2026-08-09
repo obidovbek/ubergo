@@ -121,17 +121,29 @@ let refreshInFlight: Promise<string | null> | null = null;
  * Swaps the stored refresh token for a fresh pair. Returns the new access
  * token, or `null` if we could not get one.
  *
- * The two failure modes are deliberately different:
- * - the server rejected the refresh token (expired / revoked / absent) → the
- *   session really is over: clear both tokens and tell `AuthContext` to log out;
- * - the request never completed (offline, timeout, 5xx) → say nothing. The
- *   session may well still be valid, and destroying it over a flaky connection
- *   is exactly the behaviour this card exists to remove.
+ * ⚠️ T-041: "could not get one" is NOT the same as "the session is over", and
+ * conflating the two is what kept logging users out after T-038 shipped. Only a
+ * refresh the server actively REJECTED — 401 or 403 — ends the session. Every
+ * other outcome (429, 5xx, a timeout, a body we cannot read) leaves both tokens
+ * on disk and says nothing, exactly like the offline path.
+ *
+ * The 429 is not hypothetical. `/auth/refresh` shares a 20-request/15-minute
+ * per-IP budget with `/auth/logout` and `GET /auth/me` — and `/auth/me` fires on
+ * every app launch, with both apps on one phone counting against the same IP.
+ * Proven against the live API 2026-08-09: the 21st call returns 429. Treating
+ * that as fatal threw away a perfectly good refresh token and forced a
+ * re-login, which cost more auth requests, which made the next 429 likelier.
  */
 const performTokenRefresh = async (): Promise<string | null> => {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) {
     // Nothing to refresh with — an install that logged in before T-038 shipped.
+    // T-041: deliberately NOT a session end. Rebuilding the app does not clear
+    // AsyncStorage, so these installs simply have to sign in once; wiping
+    // storage from here would just be the same over-reaction in another place.
+    console.warn(
+      'Token refresh skipped: no refresh token on disk (pre-T-038 session — sign out and in once)'
+    );
     return null;
   }
 
@@ -151,8 +163,23 @@ const performTokenRefresh = async (): Promise<string | null> => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      await clearTokens();
-      notifyAuthLost();
+      // T-041: the ONLY two fatal statuses. 401 — the refresh token is expired,
+      // revoked or forged; 403 — the server refuses it outright. Either way the
+      // session is genuinely finished and there is nothing to preserve.
+      if (response.status === 401 || response.status === 403) {
+        console.warn(
+          `Session ended: /auth/refresh rejected the refresh token (HTTP ${response.status})`
+        );
+        await clearTokens();
+        notifyAuthLost();
+        return null;
+      }
+
+      // Anything else is the server having a bad moment, not a verdict on this
+      // session — 429 from the shared auth limiter, a 5xx, a gateway error.
+      // Keep both tokens: the caller falls back to the stale access token, so
+      // this one request 401s and the next attempt can still succeed.
+      console.warn(`Token refresh failed (HTTP ${response.status}); keeping the session`);
       return null;
     }
 
@@ -161,8 +188,12 @@ const performTokenRefresh = async (): Promise<string | null> => {
     const refresh: string | undefined = body?.data?.refresh;
 
     if (!access) {
-      await clearTokens();
-      notifyAuthLost();
+      // T-041: a 200 we cannot read is a defect on the server, not a rejection
+      // of this session — it used to log the user out. If the server really did
+      // rotate and we lost the new pair, the stored refresh token is now
+      // revoked and the NEXT attempt gets a 401, which ends the session through
+      // the branch above. That is the right way to reach that conclusion.
+      console.warn('Token refresh returned 200 with no access token; keeping the session');
       return null;
     }
 

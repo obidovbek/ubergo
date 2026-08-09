@@ -132,6 +132,9 @@ export default {
     accountDisabled: 'Account is disabled',
     tokenExpired: 'Session expired',
     tokenInvalid: 'Invalid token',
+    // T-041 — `POST /auth/refresh` answered in hard-coded English until now.
+    refreshTokenRequired: 'Refresh token is required',
+    tokenRefreshed: 'Session refreshed',
     // T-038 — the auth middleware used to throw these in hard-coded English, so
     // every 401 reached the apps untranslated no matter the Accept-Language.
     noToken: 'No authorization token provided',

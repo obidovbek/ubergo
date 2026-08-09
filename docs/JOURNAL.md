@@ -5,6 +5,81 @@
 
 ---
 
+## 2026-08-08 (2) — device testing turned into five cards; the pattern was "the backend was already done"
+
+- **Task:** the owner device-tested and reported four things. Four cards came out of it —
+  **T-037** (driver can't reach passenger orders), **T-038** (everyone logged out after 15 min),
+  **T-039** (an order the passenger sees as "Faol" is invisible to drivers), **T-040** (a passenger
+  can't edit an order) — plus **T-041**, opened at the very end and still unresolved.
+- **The recurring shape of the day:** in T-037, T-039 and T-040 the **backend was already complete
+  and correct**, and the app simply never called it. `SearchPassengerOffersScreen` was 1000 lines,
+  fully built, and **registered in no navigator**. `joinPassengerOffer`, `getMyJoinRequests`,
+  `cancelJoinRequest`, `updatePassengerOffer` all had **zero call sites**. The work was wiring, not
+  building — but the defects hiding in never-executed code were real.
+- **T-037 — three defects in code nobody had ever run:** the three authenticated calls in
+  `api/passengerOffers.ts` called `getHeaders()` with **no token**, so they sent no `Authorization`
+  header and would have 401'd every time; `offer.passenger` **does not exist** on
+  `GET /driver/join-requests` (that endpoint returns the raw model with `offer.user`; only `public/*`
+  builds the mapped shape), so the list would have crashed on every row; and three keys existed in
+  **uz only**.
+- **T-038 — the worst find of the day.** The refresh token was destructured out of every login
+  response in **both** apps and **thrown away** — no storage key existed — and `refreshAccessToken()`
+  had zero call sites. With a 15-minute access token, **every session died after 15 minutes** and the
+  next app start logged the user out through the OR-002 "account deleted" branch. Fixed at the
+  `getHeaders` choke point (one function per app, not a per-call-site wrapper), behind a **single
+  in-flight promise** — mandatory, because `rotateTokens` revokes the old refresh token on use.
+- **The trap inside that fix:** screens keep the token they were handed at sign-in, so after one
+  refresh every caller's copy is stale **forever**. Without re-reading storage before refreshing,
+  every request would have rotated a token. The mutex alone would not have saved it.
+- **T-039 — my first hypothesis was wrong, and the correction mattered.** I proposed that "urgent"
+  orders were the cause (they stamp `start_at = now` and are filtered by `start_at >= now`). The
+  owner's screenshots disproved it: `departDate`/`departFrom` both default to **now + 1 hour**, so a
+  default-accepted order created at 12:23 lands on 13:23 — an ordinary order that had simply expired.
+  The urgent bug is real but was **not** what they hit.
+- **Sweeping for the same shape paid off twice.** T-039's grace window would have swapped one lie for
+  another: `OfferDriverService.joinOffer` carried the identical `start_at < now` guard, so a driver
+  would have been shown a card and then refused it with "this trip already started". T-038's
+  `adminAuth` catch rewrote every failure as "Invalid or expired token", so translating its specific
+  messages alone would have changed nothing.
+- **Two `logout` implementations never revoked anything** (both apps): `headers: getHeaders(token)`
+  was **not awaited**, so `headers` was a `Promise` and the request went out with no `Authorization`;
+  the refresh token was never sent either. Harmless while the refresh token was discarded — not now.
+  Fixing it took **both apps one `tsc` error BELOW baseline**, because that un-awaited call was
+  itself a baseline error.
+- **Decisions (owner):** fix the session properly rather than raising `JWT_EXPIRES_IN`
+  (🚫 **do not touch it, even for testing**); a **3-hour** grace window with urgent orders under the
+  same rule and no special case; expired orders shown as expired to the passenger; **full** order
+  editing by reusing the create screen; and warn-but-keep when drivers have already offered.
+- **Problems / carry-forward:**
+  - 🛑 **T-041 is open and was interrupted mid-investigation.** The owner deployed T-038, rebuilt
+    both apps, and is **still logged out**. Confirmed working: the deploy is live (the 401 now reads
+    the translated "Sessiya muddati tugagan"), the server returns `refresh`, and the app persists it.
+    **Hypothesis A:** the expected one-time transition — a pre-T-038 session has no refresh token on
+    disk, and **rebuilding does not clear AsyncStorage**, so the owner must log out and back in once.
+    **Hypothesis B — a real defect either way:** `performTokenRefresh` treats **any** non-`ok` as
+    "session over", but `/auth/refresh` sits behind `authLimiter` (**20 / 15 min**), so a **429 —
+    or any 5xx — destroys the session**. Only 401/403 should. The runtime suite missed it because it
+    only ever simulated a 401.
+  - ⚠️ **T-040 collides with T-031** in the same 757-line file; T-031's remaining steps must build on
+    the edit-mode version.
+  - ⚠️ **Nothing from T-037/T-040 has run on a device**, and T-039/T-040 both need the API deployed.
+  - ⚠️ `npm run lint` still fails instantly in **both** apps (eslint 9, no flat config) — **T-032**.
+- **Verification (honest):** `tsc` API **282 = baseline** · admin **0 = baseline** · user **11** ·
+  driver **35** — the two apps sit **one below** baseline on purpose (the logout fix). Every error
+  inside a touched file was proven pre-existing, against `HEAD` while the tree was dirty and via
+  `git stash` once it was clean. Runtime suites: **28+28** (refresh mutex, boundary and failure
+  modes, run against both apps' real modules), **32** (T-039 drift and boundaries), **125** (T-040
+  field completeness across all 40 sendable fields), **18** (API auth messages), **360** driver i18n.
+  ⚠️ **The T-040 check flagged 4 and 3 were the check being wrong** — verified before dismissing.
+- **Next:** **T-041 first** — ask the owner whether they re-logged-in, and fix the 429/5xx defect
+  regardless. Then the device tests for T-037/T-039/T-040.
+- **Commits:** the owner committed throughout — `1fb673b`, `9447bdf`, **`c940940`** (T-037/38/39)
+  and **`6b84aaf`** (T-040). Only the docs are left for this entry.
+  ⚠️ **`.claude/settings.json` was swept into `6b84aaf` again** despite the standing note to keep it
+  out. That is the fourth commit it has ridden along in.
+
+---
+
 ## 2026-08-08 — first real device test; one bug exposed a dead error pipe, then all 33 modals got one shell
 - **Task:** the owner started **device testing**. Two cards came out of it: **T-033** (OTP resend
   error) and **T-036** (modals must match the Figma). Both implemented end to end.

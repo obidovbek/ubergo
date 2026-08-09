@@ -4,159 +4,206 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
+> ⏸️ **T-040** → `docs/PLAN-T040.md`. Steps 1-6 + 8 done; step 7 = owner device test.
 > ⏸️ **T-039** → `docs/PLAN-T039.md`. Steps 1-3 done; step 4 = owner (**deploy the API**), step 5 commit.
 > ⏸️ **T-038** → `docs/PLAN-T038.md`. Steps 1-6 done; step 7 = owner (**deploy API FIRST**), step 8 commit.
 > ⏸️ **T-037** → `docs/PLAN-T037.md`. Steps 1, 3-6 done; step 2/7 = owner device test, step 8 commit.
 > ✅ **T-036 CLOSED** → `docs/PLAN-T036.md`.
-> ⏸️ **T-031** → `docs/PLAN-T031.md` — ⚠️ **same file as this card**, see Ordering below.
-> ⏸️ **T-033/T-030/T-027/T-018/T-026A/T-025** → their own `docs/PLAN-T0*.md`.
+> ⏸️ **T-031/T-033/T-030/T-027/T-018/T-026A/T-025** → their own `docs/PLAN-T0*.md`.
 > ⏸️ **Also parked:** T-011 · T-012 · T-014 · T-015 · T-016 · T-017.
 
 ## Task
-- **ID / name:** T-040 — Let a passenger edit an order instead of cancelling and re-creating it
+- **ID / name:** T-041 — T-038 shipped and the owner is **still** logged out
 - **Goal (definition of "done"):**
-  1. An **Edit** action on the order card opens the existing form **pre-filled** with the order.
-  2. Saving **PATCHes** the order; creating still POSTs. One screen, two modes.
-  3. Editing an order that already has **pending driver offers warns** the passenger and **keeps**
-     those offers.
-  4. A **cancelled / completed** order cannot be edited — enforced on the server, not just hidden.
-  5. Nothing the passenger did not touch is lost — in particular the **mahalla**, which has no column.
-  6. `tsc` at baselines; every new string in uz/ru/en; the pre-fill verified field by field.
-- **Why now:** the owner asked for it directly, and T-039 showed why it matters — an order whose
-  departure time has passed cannot be nudged forward, so the only remedy is to throw it away.
-- **Source:** owner, 2026-08-08.
+  1. A refresh the server **rejected** (401/403) is the **only** thing that ends a session.
+     A **429**, any **5xx**, a timeout or a malformed body must leave the session intact.
+  2. `/auth/me` — called on **every app launch** — stops eating the refresh budget.
+  3. The refresh endpoint's own failures are **translated**, like every other auth message.
+  4. When a session does end, the **reason** is visible in the log, so the next report is
+     diagnosable in one line instead of another day of tracing.
+  5. Both apps changed identically; `tsc` at baselines.
+- **Why now:** the owner deployed T-038, rebuilt both apps, and is still being logged out.
+- **Source:** owner, 2026-08-08, re-confirmed 2026-08-09 with two screenshots.
 
-## Owner decisions taken 2026-08-08 (do NOT re-ask)
-1. **Full edit**, by reusing `CreatePassengerOfferScreen` with an `offerId` — not a time-only sheet.
-2. **Warn, keep the offers** when drivers have already offered. Do not block, do not auto-reject.
+## Evidence from the owner's device (2026-08-09)
+Two screenshots, both at 4:50, both **inside** the app (not bounced to the login screen):
+- *Mening safar so'rovlarim* → dialog **"Ruxsat berilmagan / Sizning sessiyangiz tugagan yoki
+  noto'g'ri. Iltimos, qayta kirish qiling."** — the app's own `errors.unauthorized`
+  (`translations/uz.ts:252` + `:578`), i.e. a **401 handled by the screen**.
+- *Mening bronlarim* → toast **"Xato / Sessiya muddati tugagan"** — the **server's** translated
+  `auth.tokenExpired` (`i18n/translations/uz.ts:134`).
 
-## What exists and what does not (verified 2026-08-08 — do NOT re-derive)
-✅ **The backend is complete and safe. No API work beyond one guard.**
-`PATCH /passenger-offers/:id` (`passenger-offer.routes.ts:43`) → `updateOffer:881`, which whitelists
-writable fields via `buildOfferFields` (`user_id`/`status` are excluded by the type, so no
-mass-assignment) and validates the patch **against the stored row**. `getOfferById(offerId, userId)`
-throws **403** for someone else's order.
-❌ **`updateOffer` has no status guard** — a `cancelled` or `completed` order can be patched today.
+⇒ The app sent an **expired access token** and `ensureFreshAccessToken` did **not** replace it.
+Both counters read 0 because both list calls 401'd.
 
-❌ **The app cannot edit.** `updatePassengerOffer` (`api/passengerOffers.ts:281`) has **zero call
-sites**. `CreatePassengerOfferScreen` has **no `useRoute`, no `route.params`** — create only.
-`MyPassengerOffersScreen` offers only cancel.
+## What was checked and RULED OUT 2026-08-09 (do NOT re-derive)
+✅ **`POST /auth/refresh` is deployed and behaves correctly.** Probed live:
+`{}` → **400**; `{"refresh":"not.a.jwt"}` → **401 `{"success":false,"message":"Invalid refresh
+token"}`**. The field name the app sends (`refresh`) matches `AuthController.v2:446`, and the
+response shape the app reads (`data.access` / `data.refresh`) matches `:461-466`.
+✅ **Every authenticated call goes through the refresh choke point.** `getHeaders` is the only
+place that sets `Authorization`; the single hand-rolled header (avatar upload,
+`api/users.ts:132`) calls `ensureFreshAccessToken` first.
+✅ **Nothing writes or deletes the token keys behind `AuthContext`'s back** — the only touchers of
+`@auth_token` / `@auth_refresh_token` are `utils/tokenStore.ts` and `AuthContext`'s
+`persistSession` / `clearSession`.
+✅ **All four sign-in paths persist the refresh token** (`AuthContext:339/360/381/402`).
+✅ **`app.set('trust proxy', 1)`** (`app.ts:35`) — so the limiter keys on the **real client IP**,
+not one global bucket. The blast radius is per-IP, not the whole deployment.
 
-🔴 **The blocker nobody has hit yet: the user app's own `PassengerOffer` type is STALE.** It is
-missing **17** fields the driver app already declares and the server already returns —
-`is_urgent`, `depart_until`, `arrive_from`, `arrive_until`, `payment_type`, `seat_counts`,
-`seat_position_any`, `salon_scope`, `vehicle_class`, `woman_in_car`, `roof_rack_needed`, `trailer`,
-`road_pickup`, `road_pickup_note`, `special_order`, `from_landmark`, `to_landmark`.
-**The passenger app cannot see most of the order it created.** Pre-fill is impossible until this is
-fixed, which is why it is step 1.
+## 🔴 The cause — Hypothesis B, now grounded, not theoretical
+`authLimiter` is **20 requests / 15 minutes, keyed by IP** (`middleware/rateLimiter.ts:97-106` —
+no `keyGenerator`, so express-rate-limit defaults to `req.ip`). It guards **three** routes that
+share that one budget (`auth.routes.v2.ts:28,29,32`):
 
-## Approach
-`CreatePassengerOfferScreen` becomes create-or-edit on a single optional `offerId` route param.
-The 25 pieces of state are hydrated from the fetched order; submit branches to PATCH.
+| route | when it fires |
+|---|---|
+| `POST /auth/refresh` | every ~15 min per app |
+| `POST /auth/logout` | every sign-out |
+| `GET /auth/me` | **every single app launch** (`AuthContext.initializeAuth`) |
 
-⚠️ **The geo cascade is the hard part.** The form holds full `GeoOption` objects; the API stores
-**ids** (`from_province_id`, `from_city_id`, `from_settlement_id`). Rebuilding means fetching each
-level and matching **by id** — targeted lookups, never a scan across provinces (that mistake is
-already logged against the driver app in T-026: `parseLocationText` fanning out country×province
-fetches).
+The **user app and the driver app on the same phone share one IP**, and so does every tester on
+the same Wi-Fi. During an active test session — relaunching, logging out, logging back in, two
+apps — 20 in 15 minutes is genuinely reachable.
 
-⚠️ **Do not resend `from_text`/`to_text` unless the passenger actually re-picks the location.**
-The **mahalla has no id column** (T-029) — it exists only inside the stored text. Rebuilding the text
-from ids would silently delete it. Leaving the field out of the PATCH preserves it exactly.
+And then `performTokenRefresh` (`config/api.ts:153-157`, **identical** in
+`driver-app-standalone/config/api.ts:147-151`) treats **any** non-`ok` as "the session is over":
 
-## Ordering (read before starting)
-⚠️ **T-031 edits the same 757-line file.** Its step 4 is blocked on the owner's salon-option answer,
-so **T-040 goes first** and T-031's remaining steps build on the edit-mode version. Do not run both.
+```ts
+if (!response.ok) {
+  await clearTokens();      // ← throws the refresh token away
+  notifyAuthLost();         // ← AuthContext logs the user out
+  return null;
+}
+```
+
+So a **429 permanently destroys the session** — and the user must log in again, which costs more
+auth requests, which makes the next 429 more likely. A transient **5xx** does the same. Only
+**401/403** should. The T-038 runtime suite missed it because it only ever simulated a 401.
+
+⚠️ **Hypothesis A is still live too and the fix cannot clear it.** A session created *before* the
+T-038 build has **no refresh token on disk**; rebuilding does **not** clear AsyncStorage. Whatever
+we ship, the owner must **log out and log in once** on the new build — see step 7.
+
+## Also found (fix in this card, they are one-liners)
+- 🔴 **`GET /auth/me` behind a 20/15min limiter is simply wrong** — it is an authenticated read
+  called on every launch, and it is starving the refresh it shares the budget with.
+- ⚠️ **The refresh endpoint's failures are untranslated English** — `AuthController.v2:473`
+  (`'Failed to refresh token'`) and `utils/jwt.ts:107-125` (`'Invalid refresh token'`,
+  `'Refresh token expired'`). The live probe returned English with `Accept-Language: uz-UZ`.
+  T-038 translated `middleware/auth.ts`; this endpoint was missed.
 
 ## Steps
-- [x] 1. **DONE 2026-08-08. The order is visible to its own app again.** `PassengerOffer` now mirrors
-  `PassengerOfferAttributes` in the server model — all 17 T-018 fields plus the 8 geo ids.
-  ⚠️ The T-018 field types (`PassengerOfferPaymentType`, `PassengerOfferSeatCounts`, …) **already
-  existed** further down the same file beside `CreatePassengerOfferData`; they are reused rather than
-  redeclared, so there is one copy, not two.
-- [x] 2. **DONE 2026-08-08. The server refuses to edit a dead order.** `updateOffer` now rejects
-  anything that is not `published` or `driver_found` — new `offers.cannotEditInStatus` ×3 locales.
-  Hiding the button in the app would not have been enough; the endpoint was open.
-  `tsc` API **282 = baseline**, user **11** (= current baseline); the 4 errors reported in touched
-  files were **proven identical at `HEAD`** via `git stash`.
-- [x] 3. **DONE 2026-08-08. Edit mode.** Optional `offerId` route param; `isEdit` drives the header,
-  the submit label and POST-vs-PATCH. A spinner covers the fetch — without it the form would flash
-  its create-mode defaults ("now + 1 hour", empty locations) into a form about to be overwritten.
-  ⚠️ The PATCH omits `from_text`/`to_text` by **rest-destructuring**, not `delete` — `delete` on a
-  type that declares them required is a `tsc` error, and casting it away would have hidden the point.
-- [x] 4. **DONE 2026-08-08. Pre-fill.** All 25 pieces of state hydrated, geo included.
-  `hydrateLocation` walks province → city → settlement, **fetching each level from its parent's id
-  and matching by id** — 3 requests per side, not the country×province fan-out T-026 logged against
-  the driver app.
-  ⚠️ **The mahalla guard.** `sameGeo()` compares the *stored ids* with what the form holds; when they
-  match, the text is left out of the PATCH entirely, so the stored string — mahalla included —
-  survives. Rebuilding it from ids would have deleted the mahalla silently on every edit (T-029).
-- [x] 5. **DONE 2026-08-08. Entry point + warning.** Edit button beside Cancel, on the same
-  `published`/`driver_found` condition the server enforces — so an **expired** order stays editable,
-  which is the point: the passenger can move the time forward instead of starting again. With pending
-  driver offers it warns first and keeps them (owner decision).
-- [x] 6. **DONE 2026-08-08. Verification — 125/125.** `tsc`: API **282 = baseline** · admin
-  **0 = baseline** · user **11** · driver **35** (the two apps' one-below is T-038's, not this card);
-  the 2 errors in a touched file were **proven identical at `HEAD`** via `git stash`.
-  A true round trip needs the component running, so the check does it **statically over the real
-  source**: for all **40** sendable fields it asserts the payload writes each one and the pre-fill
-  reads each one — a field missing from either list *is* the bug. Plus the mahalla guard compares ids
-  (not text), the geo cascade matches by id, create still POSTs, and all 9 new keys resolve in uz/ru/en.
-  ⚠️ **It flagged 4, and 3 were the check being wrong, not the code:** `seats_needed` and
-  `max_price_per_seat` are deliberately never sent (T-018 — the server derives the seat count) and
-  `arrive_from` is not collected by this form. Omitting a field from a PATCH means "leave unchanged",
-  which is correct. **Checked before dismissing:** `buildOfferFields` recomputes `seats_needed`
-  whenever `seat_counts` or `salon_scope` is sent, and the edit payload always sends both — so
-  changing the seat breakdown does update it. Script: `scratchpad/t040-check.js`.
-- [ ] 7. **Owner: deploy the API, rebuild the user app.** Edit an order's time, route, seats and
-  flags; confirm nothing else changed and the mahalla survived.
+- [x] 1. **DONE 2026-08-09. The 429 is real, and it fires exactly where predicted.** 23 rapid
+  `POST /auth/refresh` against test3 from one IP: requests **1-20 → 401**, **21-23 → 429** with
+  `{"success":false,"message":"Juda ko'p so'rov yuborildi…","data":{"retryAfterSec":895}}`.
+  So T-033's JSON limiter handler works, the 429 **is** translated — and the pre-fix app would have
+  read that as "your session is over" and wiped a perfectly valid refresh token for 15 minutes.
+  ⚠️ It also exposed step 5's target in the same output: the **401 came back in English**
+  (`"Invalid refresh token"`) despite `Accept-Language: uz-UZ`, while the 429 was translated.
+- [x] 2. **DONE 2026-08-09. Only 401/403 ends the session.** The non-`ok` branch is split in both
+  apps; everything else logs and returns `null`, keeping both tokens exactly like the offline path.
+  ⚠️ **The `!access` branch had the same bug and is fixed too** — a 200 the app cannot parse used
+  to log the user out. It now keeps the session; if the server really did rotate and the new pair
+  was lost, the stored refresh token is already revoked and the **next** attempt gets a 401, which
+  ends the session through the correct branch. That is the right way to reach that conclusion.
+  ✅ The 99-line block is **verified byte-identical** between the two apps.
+- [x] 3. **DONE 2026-08-09. Every session-end says why.** A `console.warn` on the fatal branch
+  carrying the status, one on each survivable branch, and a distinct line for the pre-T-038 install
+  ("no refresh token on disk — sign out and in once"). The next report is now a one-line diagnosis.
+- [x] 4. **DONE 2026-08-09. The budgets are split — and keyed by USER, not IP.**
+  🔴 **Per-IP was the deeper bug.** One phone runs both apps behind one IP, an office Wi-Fi puts
+  every tester behind one, and a **mobile carrier NAT puts thousands of real users behind one** —
+  so an IP-keyed refresh budget is a *shared* budget and would have kept firing in production long
+  after the testers went home. New `tokenSubjectKey` decodes (never verifies) the token in the
+  request and keys on `userId`, falling back to IP — the same shape as `otpSendLimiter`'s
+  `phone || req.ip`. Decoding is safe here: it picks a counter and grants nothing.
+  New `refreshLimiter` **30 / 15 min / user** (a healthy app needs ~8/hour with both apps installed)
+  and `sessionReadLimiter` **120 / 15 min / user** for `/auth/me`. `/auth/logout` stays on
+  `authLimiter` — it is rare. ⚠️ **Numbers were chosen by me, not the owner** — easy to change,
+  they are two literals in `rateLimiter.ts`.
+- [x] 5. **DONE 2026-08-09. The refresh endpoint speaks the caller's language.** `refreshToken`
+  now resolves `Accept-Language` and returns translated messages; 2 new keys
+  (`auth.refreshTokenRequired`, `auth.tokenRefreshed`) ×3 locales, reusing the existing
+  `auth.tokenExpired` / `auth.tokenInvalid`.
+  ⚠️ **The fragile part, deliberately:** `utils/jwt.ts` is a pure utility with no request context,
+  so it throws English `Error`s and the controller picks the key by testing `/expired/i` against
+  the message. Drift there degrades to `tokenInvalid` — a safe answer, not a crash — and step 6
+  pins the real messages so drift is caught.
+- [x] 6. **DONE 2026-08-09. 98/98 + 8/8, and the suite is proven able to fail.**
+  `tsc`: API **282 = baseline** · admin **0 = baseline** · user **11** · driver **35** (the apps'
+  one-below is T-038's, not this card's). Zero errors in either app's touched file; the 11 in the
+  two touched API files were **proven identical to `HEAD`** via `git stash`.
+  **98/98 runtime matrix** driving **both apps' real transpiled modules** through
+  `ensureFreshAccessToken` with a controlled `fetch`: 401/403 end the session and clear both tokens;
+  **429, 500, 502, 503, network, abort, unparseable body and a 200 with no access token all leave
+  the session and BOTH tokens intact**; the pre-T-038 install makes **no network call at all**;
+  rotation stores the new refresh token; 6 concurrent callers cause **exactly one** refresh; and a
+  screen still holding its sign-in token re-reads storage instead of rotating again.
+  🔴 **Proven to fail against the pre-fix code: 32 checks red** when the two app files are stashed —
+  this reproduces the owner's bug rather than merely asserting the new code does what it says.
+  **8/8 limiter check** mounting the **real** `refreshLimiter`/`sessionReadLimiter` on a throwaway
+  express app: user A is blocked at exactly #31, and **user B on the same IP is unaffected** — the
+  claim the whole fix rests on. The 429 is JSON, translated, and carries `retryAfterSec`.
+  Scripts: `scratchpad/t041-check.js`, `scratchpad/t041-limiter-check.js`.
+- [ ] 7. **Owner: deploy the API, rebuild both apps — then LOG OUT AND LOG IN ONCE.**
+  ⚠️ The one-time re-login is **mandatory and cannot be skipped**: a pre-T-038 session has no
+  refresh token on disk and no code change can repair it. Then leave the app idle >15 min and
+  confirm it is still signed in.
 - [ ] 8. Commit (only after the owner's approval).
 
 ## Files to touch
-- `user-app-standalone/api/passengerOffers.ts` — the stale type
-- `user-app-standalone/screens/CreatePassengerOfferScreen.tsx` — edit mode + pre-fill
-- `user-app-standalone/screens/MyPassengerOffersScreen.tsx` — the Edit button + warning
-- `user-app-standalone/navigation/**` — the `offerId` param
-- `user-app-standalone/translations/{uz,ru,en}.ts`
-- `api,admin,db/apps/api/src/services/PassengerOfferService.ts` — the status guard (+ i18n)
-- ❌ **No migration.**
+- `user-app-standalone/config/api.ts` — the non-`ok` split + logging
+- `driver-app-standalone/config/api.ts` — the same, byte-identical
+- `api,admin,db/apps/api/src/middleware/rateLimiter.ts` — a limiter for `/auth/me`, one for refresh
+- `api,admin,db/apps/api/src/routes/auth.routes.v2.ts` — wire them up
+- `api,admin,db/apps/api/src/controllers/AuthController.v2.ts` + `src/utils/jwt.ts` — i18n
+- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts`
+- ❌ **No migration. No app-storage change** (the keys must stay exactly as they are).
 
 ## Risks / open questions (READ before coding)
-- ⚠️ **A silently dropped field is the failure mode here.** 25 pieces of state, and a PATCH that
-  omits one leaves the old value while the form showed the passenger something else. Step 6's
-  round-trip check exists for exactly this and is not optional.
-- ⚠️ **The mahalla cannot be rebuilt from ids** (T-029). Preserve it by not resending the text.
-- ⚠️ **`buildOfferFields` validates the patch against the stored row**, so a partial PATCH is safe —
-  but the `≥30 min in the future` rule still applies to a non-urgent order. Editing an order whose
-  time has already passed **must move the time forward**, or the server will refuse it. Surface that
-  as a real message, not a generic failure.
-- ⚠️ **T-031 conflict** — see Ordering.
-- ⚠️ **Three cards are uncommitted in this tree** (T-037, T-038, T-039). Keep the commits separate.
+- ❓ **Open question for the owner:** after installing the new build, did you **log out and log
+  back in**? If not, Hypothesis A alone explains the screenshots and step 2 is still worth doing,
+  but it will not change what you see until you re-login once.
+- ⚠️ **Loosening `authLimiter` is a security trade-off** — `/auth/refresh` is unauthenticated, so
+  its limiter is real brute-force protection. Do not simply raise the number; split the routes so
+  each gets a budget that fits its actual traffic.
+- ⚠️ **Do not "fix" this by keeping the session on a 401.** A rejected refresh token genuinely
+  means the session is over; the bug is treating *everything else* the same way.
+- ⚠️ **Both apps carry identical code** — every app-side change is made twice (project convention).
+- ⚠️ **Four cards are uncommitted/undeployed in this tree** (T-037, T-038, T-039 device tests;
+  T-040 deploy). Keep this card's commit separate.
+- 🚫 **Do not touch `JWT_EXPIRES_IN`** (owner, 2026-08-08).
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
-- 🚫 **Do not touch `JWT_EXPIRES_IN`** (owner, 2026-08-08).
 
 ## Session notes (one line per work session)
-- **2026-08-08** — card opened from the owner's report. Backend proven complete and safe first; the
-  real blocker turned out to be the user app's **stale `PassengerOffer` type**, 17 fields behind the
-  driver app's, which makes pre-fill impossible until fixed.
+- **2026-08-09** — card opened. Ruled out the endpoint (probed live: deployed and correct), the app
+  plumbing (all calls go through `getHeaders`; nothing writes the token keys behind `AuthContext`)
+  and a global limiter bucket (`trust proxy` is set). Hypothesis B is now **grounded**: `/auth/me`
+  shares a **20/15min per-IP** budget with `/auth/refresh`, and a 429 is treated as a fatal session
+  end. Plan written; **awaiting approval**.
+- **2026-08-09 (approved, steps 1-6 done)** — the 429 was reproduced against the live API on the
+  21st request, and the pre-fix apps fail 32 of the new checks. Two things turned out to be bigger
+  than the plan assumed: the **`!access` branch** carried the same "any failure = logout" bug, and
+  the limiter being **keyed by IP** would have kept firing in production behind carrier NAT long
+  after the test session ended — so the new budgets key on the **user** in the token, not the IP.
 
 ## Resume point (for the next chat)
-**Steps 1-6 DONE. Only step 7 (owner: deploy + test) and step 8 (commit) remain.**
+**Steps 1-6 DONE. Only step 7 (owner: deploy + rebuild + test) and step 8 (commit) remain.**
 
-A passenger can now tap **Edit** on an order, get the whole form pre-filled, change anything and
-save. Create mode is untouched. An **expired** order is still editable on purpose — moving the
-departure time forward is the repair for T-039's dead end.
+Two independent defects were fixed, and the card needed both:
+1. **The apps over-reacted.** `performTokenRefresh` ended the session on **any** non-`ok` — a 429,
+   a 5xx, even a 200 it could not parse. Now only **401/403** does.
+2. **The server made that fire constantly.** `/auth/refresh` shared a **20-per-15-min per-IP**
+   budget with `/auth/logout` and `GET /auth/me` — and `/auth/me` runs on every app launch, with
+   both apps on one phone counting against the same IP. Now: `refreshLimiter` 30/15min and
+   `sessionReadLimiter` 120/15min, both **keyed on the user in the token, not the IP**.
 
-**The two things that made this work, and would break it if changed:**
-1. **The app's `PassengerOffer` type was 17 fields behind the server** — the passenger app could not
-   see most of its own order. Everything else depended on fixing that first.
-2. **`from_text`/`to_text` are omitted from the PATCH when the geo ids are unchanged.** The mahalla
-   has no id column (T-029) and lives only inside that string; rebuilding it would delete it.
-
-🛑 **API deploy required** (the status guard + its 3 locales), then rebuild the user app.
-⚠️ Editing an order whose time has passed **must move the time forward** — the server still enforces
-≥30 min for non-urgent orders. The message is the server's own and is translated.
+🛑 **API deploy required** (limiters + the translated refresh messages), then rebuild both apps.
+⚠️ **The owner must LOG OUT AND LOG IN ONCE.** A pre-T-038 session holds no refresh token and
+rebuilding does not clear AsyncStorage — no code change can repair that install. The app now says
+so in the log: *"no refresh token on disk (pre-T-038 session — sign out and in once)"*.
 
 **Baselines to compare `tsc` against:** API **282**, admin **0**, user app **12** (currently **11**),
 driver app **36** (currently **35**) — both one below, from T-038's logout fix.

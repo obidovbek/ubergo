@@ -133,6 +133,9 @@ export default {
     accountDisabled: 'Akkaunt faol emas',
     tokenExpired: 'Sessiya muddati tugagan',
     tokenInvalid: 'Token noto\'g\'ri',
+    // T-041 — `POST /auth/refresh` answered in hard-coded English until now.
+    refreshTokenRequired: 'Yangilash tokeni yuborilmadi',
+    tokenRefreshed: 'Sessiya yangilandi',
     // T-038 — the auth middleware used to throw these in hard-coded English, so
     // every 401 reached the apps untranslated no matter the Accept-Language.
     noToken: 'Avtorizatsiya tokeni yuborilmadi',

@@ -7,6 +7,70 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-041 (P1) 🔴 **T-038 shipped and the owner is STILL logged out.** Reported 2026-08-08 after
+  the owner deployed the API and rebuilt both apps; **re-confirmed 2026-08-09 with two screenshots**
+  ("Ruxsat berilmagan" on *Mening safar so'rovlarim*, "Sessiya muddati tugagan" on *Mening
+  bronlarim*, both **inside** the app). ⚠️ **Plan written 2026-08-09 → `docs/PLAN.md`, awaiting
+  approval.** 🔴 **Hypothesis B is now GROUNDED and is the lead cause:** `authLimiter` is
+  **20 req / 15 min keyed by IP** and guards **three** routes at once — `/auth/refresh`,
+  `/auth/logout` and **`GET /auth/me`, which fires on every app launch** — with both apps on one
+  phone sharing that IP. `performTokenRefresh` then treats the resulting **429 as a fatal session
+  end**. ✅ **Ruled out 2026-08-09:** the endpoint (probed live — 400/401, correct field names and
+  response shape), the app plumbing (every call goes through `getHeaders`; nothing writes the token
+  keys behind `AuthContext`), and a single global limiter bucket (`app.set('trust proxy', 1)`).
+  **Steps 1-6 ALL DONE 2026-08-09.** Two independent defects, and the card needed both:
+  the **apps over-reacted** (any non-`ok` ended the session — now only **401/403**), and the
+  **server made that fire constantly** (`/auth/refresh` shared a 20/15min per-IP budget with
+  `/auth/logout` and `/auth/me`).
+  🔴 **Per-IP keying was the deeper bug and would have outlived the test session:** a mobile carrier
+  NAT puts thousands of real users behind one IP. The new `refreshLimiter` (30/15min) and
+  `sessionReadLimiter` (120/15min) key on the **user in the token**, not the IP.
+  ⚠️ **The `!access` branch had the same bug** — a 200 the app could not parse used to log the user
+  out; it now keeps the session and lets the next attempt's 401 make that call properly.
+  ⚠️ **Limiter numbers were chosen by Claude, not the owner** — two literals in `rateLimiter.ts`.
+  **98/98** runtime matrix over **both apps' real modules**, **proven able to fail (32 red against
+  pre-fix code)**; **8/8** limiter check proving user B on the same IP is unaffected; the live 429
+  reproduced on request #21. `tsc` API **282** · admin **0** · user **11** · driver **35**.
+  🛑 **Only step 7 (owner: deploy the API, rebuild both apps, **LOG OUT AND LOG IN ONCE**) and
+  step 8 (commit) remain.** ⚠️ The re-login is mandatory — a pre-T-038 install holds no refresh
+  token and rebuilding does not clear AsyncStorage. ⚠️ Plan is **`docs/PLAN.md`**.
+  ✅ **Confirmed working:** the API deploy is live (the 401 now reads **"Sessiya muddati tugagan"**,
+  T-038's translated `auth.tokenExpired`, so the error plumbing and the translations both work), the
+  server **does** return `refresh` on OTP verify (`AuthController.v2:255`), and `AuthContext` **does**
+  persist it via `persistSession(user, access, refresh)` at all four sign-in sites.
+  **Hypothesis A — most likely, not yet confirmed: this is the expected ONE-TIME transition.**
+  T-038 warned about it. A session created *before* the new build has **no refresh token on disk**,
+  so `performTokenRefresh` returns null, the stale access token 401s, and the screen's own handler
+  logs the user out. ⚠️ **Rebuilding the app does not clear AsyncStorage** — the owner must log out
+  and log in again **once** to get a refresh token stored. **Ask before doing anything else.**
+  🔴 **Hypothesis B — a real defect found in T-038's own code, worth fixing regardless.**
+  `performTokenRefresh` treats **any** non-`ok` response as "the session is over": it clears both
+  tokens and fires `notifyAuthLost()`. But `POST /auth/refresh` sits behind **`authLimiter`
+  (20 requests / 15 min)**, so a **429 destroys the session** — and so would a transient **5xx**.
+  Only **401/403** should end it; everything else should be treated like the network-error path,
+  which already (correctly) keeps the session. The runtime suite did not catch this because it only
+  ever simulated a 401.
+  ⚠️ Both apps carry the identical code, so the fix is made twice.
+  → `docs/PLAN.md` when started
+
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
+  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
+> **fails**.
 - [ ] T-040 (P1) **A passenger cannot edit an order at all — the endpoint exists, nothing calls it.**
   Reported by the owner 2026-08-08. **Grounded in code the same day; same shape as T-037.**
   ✅ **The backend is complete and safe.** `PATCH /passenger-offers/:id` is routed
@@ -27,26 +91,19 @@
   `offerId`; and when drivers have already offered, **warn but keep their offers**.
   ⚠️ **Ordering:** this collides with **T-031** in the same 757-line file. T-031 step 4 is blocked on
   an owner answer, so T-040 goes first and T-031's remaining steps build on the edit-mode version.
-  → `docs/PLAN.md`
+  **Steps 1-6 ALL DONE 2026-08-08.** Edit button → the same form pre-filled → PATCH.
+  🔴 **The blocker was not the feature:** the user app's `PassengerOffer` type was **17 fields behind
+  the server**, so the passenger app could not see most of its own order. Fixed first.
+  ⚠️ **The mahalla guard:** `from_text`/`to_text` are omitted from the PATCH when the geo ids are
+  unchanged — the mahalla has no id column (T-029) and lives only inside that string, so rebuilding
+  it would delete it silently on every edit.
+  ✅ An **expired** order stays editable on purpose — moving the time forward is the repair for T-039.
+  **125/125** checks: for all **40** sendable fields, the payload writes it *and* the pre-fill reads
+  it. `tsc` API **282** · admin **0** · user **11** · driver **35**.
+  **Committed by the owner as `6b84aaf` 2026-08-08** (⚠️ swept in `.claude/settings.json` again).
+  🛑 **Only step 7 remains — owner: deploy the API, rebuild the user app, test.**
+  ⚠️ Plan is **`docs/PLAN-T040.md`**.
 
-- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
-  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
-  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
-  landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
-  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
-  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
-  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
-  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
-
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
-> **fails**.
 - [ ] T-039 (P1) 🔴 **A passenger order the passenger still sees as "Faol" is invisible to every
   driver once its departure time passes — and an "urgent" one is invisible from birth.**
   Found 2026-08-08 from the owner's device.
