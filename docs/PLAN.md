@@ -4,206 +4,147 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ⏸️ **T-040** → `docs/PLAN-T040.md`. Steps 1-6 + 8 done; step 7 = owner device test.
-> ⏸️ **T-039** → `docs/PLAN-T039.md`. Steps 1-3 done; step 4 = owner (**deploy the API**), step 5 commit.
-> ⏸️ **T-038** → `docs/PLAN-T038.md`. Steps 1-6 done; step 7 = owner (**deploy API FIRST**), step 8 commit.
-> ⏸️ **T-037** → `docs/PLAN-T037.md`. Steps 1, 3-6 done; step 2/7 = owner device test, step 8 commit.
-> ✅ **T-036 CLOSED** → `docs/PLAN-T036.md`.
+> ⏸️ **T-042** → written up in `docs/TODO.md`. Three defects fixed 2026-08-10; owner rebuild pending.
+> ✅ **T-041 CLOSED** → `docs/PLAN-T041.md`. ✅ **T-038 CLOSED** → `docs/PLAN-T038.md`.
+> ⏸️ **T-040** → `docs/PLAN-T040.md`. ⏸️ **T-039** → `docs/PLAN-T039.md`.
+> ⏸️ **T-037** → `docs/PLAN-T037.md`. Steps 1, 3-6 done; device test found T-042.
 > ⏸️ **T-031/T-033/T-030/T-027/T-018/T-026A/T-025** → their own `docs/PLAN-T0*.md`.
-> ⏸️ **Also parked:** T-011 · T-012 · T-014 · T-015 · T-016 · T-017.
 
 ## Task
-- **ID / name:** T-041 — T-038 shipped and the owner is **still** logged out
+- **ID / name:** T-044 — a tapped push must open the **exact** screen, in both apps
 - **Goal (definition of "done"):**
-  1. A refresh the server **rejected** (401/403) is the **only** thing that ends a session.
-     A **429**, any **5xx**, a timeout or a malformed body must leave the session intact.
-  2. `/auth/me` — called on **every app launch** — stops eating the refresh budget.
-  3. The refresh endpoint's own failures are **translated**, like every other auth message.
-  4. When a session does end, the **reason** is visible in the log, so the next report is
-     diagnosable in one line instead of another day of tracing.
-  5. Both apps changed identically; `tsc` at baselines.
-- **Why now:** the owner deployed T-038, rebuilt both apps, and is still being logged out.
-- **Source:** owner, 2026-08-08, re-confirmed 2026-08-09 with two screenshots.
+  1. Every push type that **has** a real destination opens **that** destination, with params —
+     not a generic list, in **both** apps.
+  2. A type with no exact destination still lands somewhere honest and never crashes.
+  3. A malformed / unknown / hostile payload can never navigate to a route that does not exist.
+  4. Both apps' mappers stay structurally identical (project duplicate-by-convention rule).
+  5. `tsc` at baselines: API **282** · admin **0** · user **12** · driver **35**.
+- **Why now:** owner, 2026-08-10 — *"any notification on click should open that exactly page or
+  screen in both apps"*.
+- **Scope decision (owner, 2026-08-10):** **push taps only, app-side.** No API change, no deploy —
+  rebuild both apps. The two blockers found while scoping are logged as their own cards, **not**
+  done here: **T-045** (in-app list rows) and **T-024** (the passenger's "drivers who offered").
 
-## Evidence from the owner's device (2026-08-09)
-Two screenshots, both at 4:50, both **inside** the app (not bounced to the login screen):
-- *Mening safar so'rovlarim* → dialog **"Ruxsat berilmagan / Sizning sessiyangiz tugagan yoki
-  noto'g'ri. Iltimos, qayta kirish qiling."** — the app's own `errors.unauthorized`
-  (`translations/uz.ts:252` + `:578`), i.e. a **401 handled by the screen**.
-- *Mening bronlarim* → toast **"Xato / Sessiya muddati tugagan"** — the **server's** translated
-  `auth.tokenExpired` (`i18n/translations/uz.ts:134`).
+## What already works — do NOT rebuild it
+✅ **The tap plumbing is complete and correct in BOTH apps** and is not the problem:
+`App.tsx` → `setupNotificationTapHandler(handleNotificationTap)`, a `pendingTarget` park for taps
+that arrive before the navigator exists (cold start / pre-auth), and
+`flushPendingNotification()` on `NavigationContainer.onReady` **and** on auth state change
+(`RootNavigator`). Cold start, background and pre-login are all already handled.
+**This card only changes `routeForNotification()` — the destination table — in each app.**
 
-⇒ The app sent an **expired access token** and `ensureFreshAccessToken` did **not** replace it.
-Both counters read 0 because both list calls 401'd.
+## The real gaps (grounded 2026-08-10)
+**Every push except `otp` carries `offer_id` plus a join id**, so exact routing is possible.
 
-## What was checked and RULED OUT 2026-08-09 (do NOT re-derive)
-✅ **`POST /auth/refresh` is deployed and behaves correctly.** Probed live:
-`{}` → **400**; `{"refresh":"not.a.jwt"}` → **401 `{"success":false,"message":"Invalid refresh
-token"}`**. The field name the app sends (`refresh`) matches `AuthController.v2:446`, and the
-response shape the app reads (`data.access` / `data.refresh`) matches `:461-466`.
-✅ **Every authenticated call goes through the refresh choke point.** `getHeaders` is the only
-place that sets `Authorization`; the single hand-rolled header (avatar upload,
-`api/users.ts:132`) calls `ensureFreshAccessToken` first.
-✅ **Nothing writes or deletes the token keys behind `AuthContext`'s back** — the only touchers of
-`@auth_token` / `@auth_refresh_token` are `utils/tokenStore.ts` and `AuthContext`'s
-`persistSession` / `clearSession`.
-✅ **All four sign-in paths persist the refresh token** (`AuthContext:339/360/381/402`).
-✅ **`app.set('trust proxy', 1)`** (`app.ts:35`) — so the limiter keys on the **real client IP**,
-not one global bucket. The blast radius is per-IP, not the whole deployment.
+### Driver app — 4 types dumped to the generic list by a STALE comment
+`utils/notificationRouting.ts:56-62` sends `driver_request_confirmed`,
+`driver_request_rejected`, `driver_not_chosen` and `offer_cancelled_by_passenger` to
+`Notifications`, with the comment *"There is no screen for these yet (T-023/T-024)"*.
+🔴 **That is out of date — T-037 built `MyJoinRequests` AND `PassengerOfferDetails`**, and both are
+registered in `MainNavigator`. All four are outcomes of the driver's own bid, which is exactly what
+`MyJoinRequests` lists.
+✅ `passenger_join_request` / `passenger_cancelled` → `OfferPassengers({offerId})` **already exact.**
 
-## 🔴 The cause — Hypothesis B, now grounded, not theoretical
-`authLimiter` is **20 requests / 15 minutes, keyed by IP** (`middleware/rateLimiter.ts:97-106` —
-no `keyGenerator`, so express-rate-limit defaults to `req.ip`). It guards **three** routes that
-share that one budget (`auth.routes.v2.ts:28,29,32`):
+### User app — everything lands on one of two list screens
+`utils/notificationRouting.ts` has **no params at all** (`interface NotificationTarget { screen }`).
+`OfferDetails` exists and takes `{ offerId }`, so the booking notifications can open the actual ride.
 
-| route | when it fires |
-|---|---|
-| `POST /auth/refresh` | every ~15 min per app |
-| `POST /auth/logout` | every sign-out |
-| `GET /auth/me` | **every single app launch** (`AuthContext.initializeAuth`) |
-
-The **user app and the driver app on the same phone share one IP**, and so does every tester on
-the same Wi-Fi. During an active test session — relaunching, logging out, logging back in, two
-apps — 20 in 15 minutes is genuinely reachable.
-
-And then `performTokenRefresh` (`config/api.ts:153-157`, **identical** in
-`driver-app-standalone/config/api.ts:147-151`) treats **any** non-`ok` as "the session is over":
-
-```ts
-if (!response.ok) {
-  await clearTokens();      // ← throws the refresh token away
-  notifyAuthLost();         // ← AuthContext logs the user out
-  return null;
-}
-```
-
-So a **429 permanently destroys the session** — and the user must log in again, which costs more
-auth requests, which makes the next 429 more likely. A transient **5xx** does the same. Only
-**401/403** should. The T-038 runtime suite missed it because it only ever simulated a 401.
-
-⚠️ **Hypothesis A is still live too and the fix cannot clear it.** A session created *before* the
-T-038 build has **no refresh token on disk**; rebuilding does **not** clear AsyncStorage. Whatever
-we ship, the owner must **log out and log in once** on the new build — see step 7.
-
-## Also found (fix in this card, they are one-liners)
-- 🔴 **`GET /auth/me` behind a 20/15min limiter is simply wrong** — it is an authenticated read
-  called on every launch, and it is starving the refresh it shares the budget with.
-- ⚠️ **The refresh endpoint's failures are untranslated English** — `AuthController.v2:473`
-  (`'Failed to refresh token'`) and `utils/jwt.ts:107-125` (`'Invalid refresh token'`,
-  `'Refresh token expired'`). The live probe returned English with `Accept-Language: uz-UZ`.
-  T-038 translated `middleware/auth.ts`; this endpoint was missed.
+## 🔴 The trap this card must not fall into
+**`offer_id` does NOT mean the same thing in every payload.** Two different entities share the name:
+- `join_confirmed` · `join_rejected` · `driver_arrived` · `driver_10min_away` ·
+  `offer_cancelled_by_driver` → `offer_id` is a **DRIVER offer**. `OfferDetailsScreen` fetches
+  `OffersAPI.getOfferDetails` → `DriverOffer`. ✅ Safe to open.
+- `driver_join_request` · `driver_request_cancelled` → `offer_id` is the passenger's **OWN
+  PassengerOffer**. Feeding that to `OfferDetails` would fetch a **driver** offer by a **passenger**
+  offer id — a wrong row or a 404, presented as the user's own trip.
+  ⇒ These two stay on `MyPassengerOffers` until **T-024** exists. That is the honest destination.
 
 ## Steps
-- [x] 1. **DONE 2026-08-09. The 429 is real, and it fires exactly where predicted.** 23 rapid
-  `POST /auth/refresh` against test3 from one IP: requests **1-20 → 401**, **21-23 → 429** with
-  `{"success":false,"message":"Juda ko'p so'rov yuborildi…","data":{"retryAfterSec":895}}`.
-  So T-033's JSON limiter handler works, the 429 **is** translated — and the pre-fix app would have
-  read that as "your session is over" and wiped a perfectly valid refresh token for 15 minutes.
-  ⚠️ It also exposed step 5's target in the same output: the **401 came back in English**
-  (`"Invalid refresh token"`) despite `Accept-Language: uz-UZ`, while the 429 was translated.
-- [x] 2. **DONE 2026-08-09. Only 401/403 ends the session.** The non-`ok` branch is split in both
-  apps; everything else logs and returns `null`, keeping both tokens exactly like the offline path.
-  ⚠️ **The `!access` branch had the same bug and is fixed too** — a 200 the app cannot parse used
-  to log the user out. It now keeps the session; if the server really did rotate and the new pair
-  was lost, the stored refresh token is already revoked and the **next** attempt gets a 401, which
-  ends the session through the correct branch. That is the right way to reach that conclusion.
-  ✅ The 99-line block is **verified byte-identical** between the two apps.
-- [x] 3. **DONE 2026-08-09. Every session-end says why.** A `console.warn` on the fatal branch
-  carrying the status, one on each survivable branch, and a distinct line for the pre-T-038 install
-  ("no refresh token on disk — sign out and in once"). The next report is now a one-line diagnosis.
-- [x] 4. **DONE 2026-08-09. The budgets are split — and keyed by USER, not IP.**
-  🔴 **Per-IP was the deeper bug.** One phone runs both apps behind one IP, an office Wi-Fi puts
-  every tester behind one, and a **mobile carrier NAT puts thousands of real users behind one** —
-  so an IP-keyed refresh budget is a *shared* budget and would have kept firing in production long
-  after the testers went home. New `tokenSubjectKey` decodes (never verifies) the token in the
-  request and keys on `userId`, falling back to IP — the same shape as `otpSendLimiter`'s
-  `phone || req.ip`. Decoding is safe here: it picks a counter and grants nothing.
-  New `refreshLimiter` **30 / 15 min / user** (a healthy app needs ~8/hour with both apps installed)
-  and `sessionReadLimiter` **120 / 15 min / user** for `/auth/me`. `/auth/logout` stays on
-  `authLimiter` — it is rare. ⚠️ **Numbers were chosen by me, not the owner** — easy to change,
-  they are two literals in `rateLimiter.ts`.
-- [x] 5. **DONE 2026-08-09. The refresh endpoint speaks the caller's language.** `refreshToken`
-  now resolves `Accept-Language` and returns translated messages; 2 new keys
-  (`auth.refreshTokenRequired`, `auth.tokenRefreshed`) ×3 locales, reusing the existing
-  `auth.tokenExpired` / `auth.tokenInvalid`.
-  ⚠️ **The fragile part, deliberately:** `utils/jwt.ts` is a pure utility with no request context,
-  so it throws English `Error`s and the controller picks the key by testing `/expired/i` against
-  the message. Drift there degrades to `tokenInvalid` — a safe answer, not a crash — and step 6
-  pins the real messages so drift is caught.
-- [x] 6. **DONE 2026-08-09. 98/98 + 8/8, and the suite is proven able to fail.**
-  `tsc`: API **282 = baseline** · admin **0 = baseline** · user **11** · driver **35** (the apps'
-  one-below is T-038's, not this card's). Zero errors in either app's touched file; the 11 in the
-  two touched API files were **proven identical to `HEAD`** via `git stash`.
-  **98/98 runtime matrix** driving **both apps' real transpiled modules** through
-  `ensureFreshAccessToken` with a controlled `fetch`: 401/403 end the session and clear both tokens;
-  **429, 500, 502, 503, network, abort, unparseable body and a 200 with no access token all leave
-  the session and BOTH tokens intact**; the pre-T-038 install makes **no network call at all**;
-  rotation stores the new refresh token; 6 concurrent callers cause **exactly one** refresh; and a
-  screen still holding its sign-in token re-reads storage instead of rotating again.
-  🔴 **Proven to fail against the pre-fix code: 32 checks red** when the two app files are stashed —
-  this reproduces the owner's bug rather than merely asserting the new code does what it says.
-  **8/8 limiter check** mounting the **real** `refreshLimiter`/`sessionReadLimiter` on a throwaway
-  express app: user A is blocked at exactly #31, and **user B on the same IP is unaffected** — the
-  claim the whole fix rests on. The 429 is JSON, translated, and carries `retryAfterSec`.
-  Scripts: `scratchpad/t041-check.js`, `scratchpad/t041-limiter-check.js`.
-- [ ] 7. **Owner: deploy the API, rebuild both apps — then LOG OUT AND LOG IN ONCE.**
-  ⚠️ The one-time re-login is **mandatory and cannot be skipped**: a pre-T-038 session has no
-  refresh token on disk and no code change can repair it. Then leave the app idle >15 min and
-  confirm it is still signed in.
-- [ ] 8. Commit (only after the owner's approval).
+- [x] 1. **DONE 2026-08-10. Driver app — the 4 stale types now open `MyJoinRequests`.**
+  The comment claiming those screens did not exist was replaced with one recording that T-037 built
+  them. All **6** driver-audience types now resolve exactly: `passenger_join_request` and
+  `passenger_cancelled` were already `OfferPassengers({offerId})`.
+- [x] 2. **DONE 2026-08-10. User app — params support + the exact ride.**
+  Widen `NotificationTarget` to `{ screen, params? }` (mirroring the driver app's shape, which
+  already has it), add the same `parseOfferId` guard, and route
+  `join_confirmed` · `join_rejected` · `driver_arrived` · `driver_10min_away` ·
+  `offer_cancelled_by_driver` → `OfferDetails({ offerId })`, **falling back to `MyBookings` when the
+  id is missing or malformed**.
+  ⚠️ `driver_join_request` / `driver_request_cancelled` stay on `MyPassengerOffers` — see the trap
+  above. Leave a comment saying why, and pointing at T-024.
+  ⚠️ **`driver_10min_away` is LIVE** (`OfferPassengerService:771`) — an earlier grep missed it
+  because `[a-z_]` does not match the digits in `10min`. It is already routed; keep it.
+  ⚠️ **Both `navigate()` call sites had to change too** — `goOrPark` and `flushPendingNotification`
+  passed only `target.screen`, so params would have been silently dropped on the parked (cold-start)
+  path even after the mapper produced them.
+  ⚠️ **The module's header comment said "every destination is a param-less route"** — now false.
+  Corrected rather than left: a stale comment is exactly what caused T-042's crash.
+- [x] 3. **DONE 2026-08-10. Both mappers are structurally identical.** Verified by diffing the two
+  files with comments stripped: the **only** differences are the route tables themselves, which must
+  differ (different apps, different audiences). `NotificationTarget`, `parseOfferId`, the
+  guarded-id-with-fallback shape, the `default` case and all three exported functions match.
+- [x] 4. **DONE 2026-08-10. 72/72, and the suite is proven able to fail.**
+  `tsc`: user **11** · driver **35** — both exactly at their current baselines, zero errors in
+  either touched file. **72/72 runtime matrix** driving **both apps' real transpiled modules**
+  through the exported `handleNotificationTap` with a recording navigation ref (so it exercises the
+  real routing + `goOrPark` path, not a copy of the table): all **13** API types land on their exact
+  destination; **every destination is asserted against the route names PARSED FROM each app's
+  `MainNavigator` source**, so renaming a route fails the check instead of passing silently;
+  6 hostile payloads per app (missing/null `data`, unknown type, `type` as a number and as an
+  object) never throw and never invent a route; 7 bad `offer_id` forms per id-carrying type degrade
+  to the list with **no params at all** rather than NaN; and a good id arrives as a **number**, not
+  a string.
+  🔴 **Proven to fail against the pre-change code: 11 checks red** when the two files are stashed —
+  it reproduces the actual gap rather than merely agreeing with the new table.
+  ✅ The trap is pinned explicitly: `driver_join_request` / `driver_request_cancelled` must **not**
+  reach `OfferDetails` and must carry **no** `offerId`.
+  Script: `scratchpad/t044-routing-check.js` (+ `t044-rn-stub.js`).
+- [ ] 5. Owner: rebuild both apps, tap a real push of each kind.
+- [ ] 6. Commit (only after the owner's approval).
 
 ## Files to touch
-- `user-app-standalone/config/api.ts` — the non-`ok` split + logging
-- `driver-app-standalone/config/api.ts` — the same, byte-identical
-- `api,admin,db/apps/api/src/middleware/rateLimiter.ts` — a limiter for `/auth/me`, one for refresh
-- `api,admin,db/apps/api/src/routes/auth.routes.v2.ts` — wire them up
-- `api,admin,db/apps/api/src/controllers/AuthController.v2.ts` + `src/utils/jwt.ts` — i18n
-- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts`
-- ❌ **No migration. No app-storage change** (the keys must stay exactly as they are).
+- `driver-app-standalone/utils/notificationRouting.ts` — the 4 stale destinations
+- `user-app-standalone/utils/notificationRouting.ts` — params support + exact ride
+- ❌ **No API change, no migration, no deploy** (owner's scope decision).
+- ❌ **Do not touch** `App.tsx`, `RootNavigator.tsx` or `PushService.ts` in either app — the
+  plumbing already works and is out of scope.
 
 ## Risks / open questions (READ before coding)
-- ❓ **Open question for the owner:** after installing the new build, did you **log out and log
-  back in**? If not, Hypothesis A alone explains the screenshots and step 2 is still worth doing,
-  but it will not change what you see until you re-login once.
-- ⚠️ **Loosening `authLimiter` is a security trade-off** — `/auth/refresh` is unauthenticated, so
-  its limiter is real brute-force protection. Do not simply raise the number; split the routes so
-  each gets a budget that fits its actual traffic.
-- ⚠️ **Do not "fix" this by keeping the session on a 401.** A rejected refresh token genuinely
-  means the session is over; the bug is treating *everything else* the same way.
-- ⚠️ **Both apps carry identical code** — every app-side change is made twice (project convention).
-- ⚠️ **Four cards are uncommitted/undeployed in this tree** (T-037, T-038, T-039 device tests;
-  T-040 deploy). Keep this card's commit separate.
-- 🚫 **Do not touch `JWT_EXPIRES_IN`** (owner, 2026-08-08).
+- 🔴 **The `offer_id` ambiguity above is the whole risk of this card.** Getting it wrong opens a
+  stranger's trip, or a 404, in the user's own booking screen. Re-read the trap section.
+- ⚠️ **Do not "improve" the parking/flush logic.** It is correct and already handles cold start,
+  background and pre-auth. Changing it risks the one part that demonstrably works.
+- ⚠️ Unknown types must keep falling through to `Notifications` — a build that has never heard of a
+  future type must not crash.
+- ⚠️ Both apps carry near-identical code; every change is considered for both.
+- ⚠️ **T-042 is uncommitted in this tree** (driver app: crash fix, layout, re-join status).
+  Keep this card's commit separate.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
 
 ## Session notes (one line per work session)
-- **2026-08-09** — card opened. Ruled out the endpoint (probed live: deployed and correct), the app
-  plumbing (all calls go through `getHeaders`; nothing writes the token keys behind `AuthContext`)
-  and a global limiter bucket (`trust proxy` is set). Hypothesis B is now **grounded**: `/auth/me`
-  shares a **20/15min per-IP** budget with `/auth/refresh`, and a 429 is treated as a fatal session
-  end. Plan written; **awaiting approval**.
-- **2026-08-09 (approved, steps 1-6 done)** — the 429 was reproduced against the live API on the
-  21st request, and the pre-fix apps fail 32 of the new checks. Two things turned out to be bigger
-  than the plan assumed: the **`!access` branch** carried the same "any failure = logout" bug, and
-  the limiter being **keyed by IP** would have kept firing in production behind carrier NAT long
-  after the test session ended — so the new budgets key on the **user** in the token, not the IP.
+- **2026-08-10** — card opened. Plumbing confirmed complete in both apps (not the problem); the gap
+  is the destination table. Found the driver app's stale T-023/T-024 comment (those screens now
+  exist, built by T-037), the user app's total lack of params, and the **`offer_id` means two
+  different entities** trap. Scope set by the owner to push-taps-only. **Awaiting approval.**
+- **2026-08-10 (approved, steps 1-4 done)** — both mappers updated and verified 72/72, with 11 red
+  proven against the pre-change code. Two things were bigger than the plan assumed: **both
+  `navigate()` call sites** dropped params (so the cold-start parked path would have lost them even
+  once the mapper was right), and the user module's header comment **asserted "param-less"**, which
+  the change falsified — corrected on the spot, since a stale comment is what caused T-042.
 
 ## Resume point (for the next chat)
-**Steps 1-6 DONE. Only step 7 (owner: deploy + rebuild + test) and step 8 (commit) remain.**
+**Steps 1-4 DONE 2026-08-10. Only step 5 (owner: rebuild both apps, tap a real push of each kind)
+and step 6 (commit) remain.**
 
-Two independent defects were fixed, and the card needed both:
-1. **The apps over-reacted.** `performTokenRefresh` ended the session on **any** non-`ok` — a 429,
-   a 5xx, even a 200 it could not parse. Now only **401/403** does.
-2. **The server made that fire constantly.** `/auth/refresh` shared a **20-per-15-min per-IP**
-   budget with `/auth/logout` and `GET /auth/me` — and `/auth/me` runs on every app launch, with
-   both apps on one phone counting against the same IP. Now: `refreshLimiter` 30/15min and
-   `sessionReadLimiter` 120/15min, both **keyed on the user in the token, not the IP**.
+Every push type that has a real destination now opens it, in both apps:
+- **Driver** — `passenger_join_request`/`passenger_cancelled` → `OfferPassengers({offerId})`
+  (already exact); the 4 outcome types → **`MyJoinRequests`**, which T-037 built and a **stale
+  comment** had been hiding.
+- **User** — the 5 booking types → **`OfferDetails({offerId})`**, the actual ride.
+  `driver_join_request`/`driver_request_cancelled` deliberately stay on `MyPassengerOffers`
+  (their `offer_id` is a **PassengerOffer**; `OfferDetails` fetches a **DriverOffer**) → **T-024**.
 
-🛑 **API deploy required** (limiters + the translated refresh messages), then rebuild both apps.
-⚠️ **The owner must LOG OUT AND LOG IN ONCE.** A pre-T-038 session holds no refresh token and
-rebuilding does not clear AsyncStorage — no code change can repair that install. The app now says
-so in the log: *"no refresh token on disk (pre-T-038 session — sign out and in once)"*.
-
-**Baselines to compare `tsc` against:** API **282**, admin **0**, user app **12** (currently **11**),
-driver app **36** (currently **35**) — both one below, from T-038's logout fix.
+🛑 **No API deploy** — app-side only. Rebuild BOTH apps.
+⚠️ T-042 (driver app) is uncommitted in the same tree; keep the commits separate.
+**Baselines:** API **282** · admin **0** · user **11** · driver **35**.

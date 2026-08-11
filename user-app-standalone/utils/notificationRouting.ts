@@ -16,9 +16,13 @@
  * So a tap is parked in `pendingTarget` and replayed by `flushPendingNotification()`,
  * which the navigator calls once it is actually ready.
  *
- * Every destination below is a param-less route that exists in MainNavigator, so
- * an unknown or malformed payload can only ever fall through to Notifications —
- * it can never navigate to a route that isn't there.
+ * Every destination below is a route that exists in MainNavigator, so an unknown
+ * or malformed payload can only ever fall through to Notifications — it can never
+ * navigate to a route that isn't there. Ids are validated before use (T-044), so
+ * a bad `offer_id` degrades to the list rather than pushing NaN into a screen
+ * that reads `route.params.offerId`.
+ * (This said "param-less" until T-044 added `OfferDetails({ offerId })` — the
+ *  comment is kept accurate deliberately: a stale one caused the T-042 crash.)
  */
 
 import { createNavigationContainerRef } from '@react-navigation/native';
@@ -27,25 +31,55 @@ export const navigationRef = createNavigationContainerRef<any>();
 
 interface NotificationTarget {
   screen: string;
+  params?: Record<string, any>;
 }
 
 let pendingTarget: NotificationTarget | null = null;
 
+/** Push `data` values are strings, so the id needs parsing AND checking. */
+const parseOfferId = (value: any): number | null => {
+  const id = Number(value);
+  return Number.isFinite(id) && id > 0 ? id : null;
+};
+
 /**
  * Where a given push should land. Types come from the API's notify* calls:
  * see OfferPassengerService, DriverOfferService and OfferDriverService.
+ *
+ * 🔴 **`offer_id` does NOT mean the same thing in every payload**, and this is
+ * the one thing to get right here. Two different entities share the field name:
+ *
+ *   - the notifications below about a booking the passenger MADE carry the id of
+ *     a **DriverOffer** — which is what `OfferDetailsScreen` fetches
+ *     (`OffersAPI.getOfferDetails` → `DriverOffer`). Safe to open.
+ *   - `driver_join_request` / `driver_request_cancelled` carry the id of the
+ *     passenger's **own PassengerOffer**. Passing that to `OfferDetails` would
+ *     fetch a *driver* offer by a *passenger*-offer id — a wrong row or a 404,
+ *     shown to the user as their own trip. They stay on the list. See below.
  */
 const routeForNotification = (data: any): NotificationTarget => {
   switch (data?.type) {
-    // Things that happened to a booking the passenger made on a driver's offer
+    // Things that happened to a booking the passenger made on a driver's offer.
+    // `offer_id` is that DRIVER offer, so open it directly instead of dropping
+    // the passenger on a list to hunt for the trip they were just told about.
+    // A missing or malformed id falls back to the list rather than pushing NaN
+    // into a screen that reads `route.params.offerId`.
     case 'join_confirmed':
     case 'join_rejected':
     case 'driver_arrived':
     case 'driver_10min_away':
-    case 'offer_cancelled_by_driver':
-      return { screen: 'MyBookings' };
+    case 'offer_cancelled_by_driver': {
+      const offerId = parseOfferId(data?.offer_id);
+      return offerId
+        ? { screen: 'OfferDetails', params: { offerId } }
+        : { screen: 'MyBookings' };
+    }
 
-    // Drivers responding to the passenger's own ride request
+    // Drivers responding to the passenger's own ride request.
+    // ⚠️ Deliberately NOT routed to `OfferDetails` — see the entity note above.
+    // The exact destination is the "drivers who offered" screen, which does not
+    // exist yet (T-024). Until it does, the passenger's own request list is the
+    // honest answer; T-024 is where this becomes exact.
     case 'driver_join_request':
     case 'driver_request_cancelled':
       return { screen: 'MyPassengerOffers' };
@@ -61,7 +95,10 @@ const routeForNotification = (data: any): NotificationTarget => {
 const goOrPark = (target: NotificationTarget) => {
   if (navigationRef.isReady()) {
     try {
-      navigationRef.navigate(target.screen as never);
+      // `as any` matches how the rest of this app navigates: the route types do
+      // not enumerate these screens (T-028), and navigate()'s two-arg overload
+      // rejects the usual `as never` cast.
+      (navigationRef.navigate as any)(target.screen, target.params);
       return;
     } catch (error) {
       // The navigator is mounted but this route is not in the CURRENT tree —
@@ -89,7 +126,7 @@ export const flushPendingNotification = () => {
   pendingTarget = null;
 
   try {
-    navigationRef.navigate(target.screen as never);
+    (navigationRef.navigate as any)(target.screen, target.params);
   } catch (error) {
     console.warn('Pending notification navigation failed, dropping it:', error);
   }

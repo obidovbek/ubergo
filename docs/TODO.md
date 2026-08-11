@@ -7,7 +7,139 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-041 (P1) 🔴 **T-038 shipped and the owner is STILL logged out.** Reported 2026-08-08 after
+- [ ] T-044 (P1) **A tapped push must open the EXACT screen, in both apps.** Owner, 2026-08-10:
+  *"any notification on click should open that exactly page or screen in both apps"*.
+  **Approved and STEPS 1-4 DONE 2026-08-10.** Every push type with a real destination now opens it
+  in both apps. Driver: the 4 outcome types → **`MyJoinRequests`** (the screen T-037 built, which a
+  stale comment had been hiding); `passenger_join_request`/`passenger_cancelled` were already exact.
+  User: the 5 booking types → **`OfferDetails({offerId})`**, the actual ride.
+  🔴 **Two things the plan underestimated:** **both `navigate()` call sites** passed only the screen
+  name, so params would have been dropped on the parked cold-start path even with a correct mapper;
+  and the user module's header comment **asserted "every destination is a param-less route"** —
+  falsified by this change and corrected on the spot, because a stale comment is exactly what caused
+  T-042's crash.
+  **72/72** runtime matrix over **both apps' real transpiled modules** via the exported
+  `handleNotificationTap` — all 13 API types, 6 hostile payloads each, 7 malformed-id forms — with
+  **every destination asserted against route names parsed from the real `MainNavigator` source**, so
+  a renamed route fails instead of passing. **Proven able to fail: 11 red against pre-change code.**
+  `tsc` user **11** · driver **35**, both at baseline, touched files clean.
+  🛑 **Only step 5 (owner: rebuild BOTH apps, tap a real push of each kind) and step 6 (commit)
+  remain. No API deploy.** ⚠️ Plan is **`docs/PLAN.md`**.
+  ✅ **The tap plumbing is already complete and correct in BOTH apps** — handler, cold-start
+  parking, flush on navigator-ready and on auth change. **Not the problem; do not rebuild it.**
+  🔴 **The gap is the destination table.** Driver app: 4 types (`driver_request_confirmed`,
+  `driver_request_rejected`, `driver_not_chosen`, `offer_cancelled_by_passenger`) dump to the
+  generic list because of a **stale comment** — *"no screen for these yet (T-023/T-024)"* — but
+  **T-037 built `MyJoinRequests` and `PassengerOfferDetails`** and both are registered.
+  User app: `NotificationTarget` has **no params at all**, so everything lands on one of two list
+  screens even though `OfferDetails` exists and takes `{offerId}`.
+  🔴 **The trap that defines this card: `offer_id` means TWO DIFFERENT ENTITIES.** For
+  `join_confirmed`/`join_rejected`/`driver_arrived`/`driver_10min_away`/`offer_cancelled_by_driver`
+  it is a **driver** offer (safe for `OfferDetails`). For `driver_join_request`/
+  `driver_request_cancelled` it is the passenger's **own PassengerOffer** — feeding that to
+  `OfferDetails` would fetch a driver offer by a passenger-offer id: a wrong row or a 404 shown as
+  the user's own trip. Those two stay on `MyPassengerOffers` until **T-024** exists.
+  **Scope (owner, 2026-08-10): push taps only, app-side — no API change, no deploy.** The two
+  blockers found while scoping are split out as **T-045** and **T-024**, not done here.
+  ⚠️ Every push except `otp` carries `offer_id` + a join id, so exact routing is possible.
+  ⚠️ **`driver_10min_away` IS live** (`OfferPassengerService:771`); an early grep missed it because
+  `[a-z_]` skips the digits in `10min`.
+
+- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
+  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
+  landmark row genuinely had no icon.
+  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
+  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
+  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
+  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
+  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
+  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
+  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
+  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+
+## ⏸️ Parked — implemented, awaiting owner device test
+> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
+> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
+> **fails**.
+- [ ] T-042 (P1) 🔴 **Three defects found by the owner's T-037 device test, 2026-08-10 — all fixed
+  the same day, all awaiting a driver-app rebuild.**
+
+  **① Driver app CRASHES TO THE PHONE'S HOME SCREEN when opening a passenger order's details.**
+  Search finds the orders, but tapping *"Details"* or the card itself kills the app.
+  **Root cause found and fixed the same day — a one-line read, `offer.passenger.name`.**
+  🔴 **Two endpoints under the SAME `/public/passenger-offers` prefix return DIFFERENT shapes.**
+  The **browse list** (`PassengerOfferService.getPublicOffers:1265`) hand-builds a mapped object
+  ending in `passenger: { id, name }`. The **detail** (`getOfferById:840`) does `return offer` — the
+  **raw Sequelize model**, whose include is aliased **`as: 'user'`**. So `offer.passenger` is
+  `undefined` on the detail screen, and `.name` threw **during render**. React Native has no error
+  boundary above the screen, so the process died to the launcher — exactly what the owner saw.
+  ⚠️ **This is the SAME defect class T-037 already found and fixed once**, for
+  `GET /driver/join-requests` (journal 2026-08-08). The helper written for it —
+  `passengerNameOf` (`api/passengerOffers.ts`) — was applied only to the screen observed failing.
+  **The sweep was incomplete, and the detail screen kept the bare read.**
+  🔴 **A comment in the type actively caused the bug:** it claimed the `public/*` browse **and
+  detail** endpoints both build the mapped shape. Only the browse does. Corrected.
+  **Fixed app-side (owner decision 2026-08-10):** use the existing helper; **no API deploy**, driver
+  rebuild only. `passenger` is now **optional** on the type (it always was, in truth) with `user`
+  alongside — which is what makes a bare `.passenger.name` fail to compile from now on.
+  Also fixed the same latent read in `SearchPassengerOffersScreen:560` (works today only because the
+  list happens to carry the mapped shape) and added `passengerUnknown` ×3 locales.
+  `tsc` driver **35 = baseline** (proven via `git stash`), zero errors in the 6 touched files;
+  **12/12** runtime checks driving the real module — including the crash **reproduced** against the
+  old expression — and **18/18** i18n keys evaluated across uz/ru/en.
+  🛑 **Only the owner's rebuild + retest remains, then the commit.**
+  ⚠️ **The API shape mismatch is NOT fixed** — deliberately, per the owner. Logged as **T-043**.
+  → this card's work is done in place; no separate plan file.
+
+  **② The search results merged into the route picker (owner, 2026-08-10).** Same screen, separate
+  defect, fixed in the same pass. 🔴 **The screen had TWO independent scroll surfaces:** a
+  `ScrollView` with **`maxHeight: 270`** holding the country/city picker, sitting as a **sibling** of
+  the `FlatList`. So the card could never scroll away — it ate ~270px permanently — and since the
+  picker and the offer cards share the **same white / radius-20 / shadow** styling, the two read as
+  one continuous sheet exactly at the boundary. That is the "merging".
+  ⚠️ The `FlatList` also had **no `flex: 1`**, so the two fought over the leftover space.
+  **Fix (owner chose "scrolls away with the list"):** the picker is now the list's
+  **`ListHeaderComponent`** — **one** scroll surface, so it slides up out of the way and the results
+  get the whole screen. Plus a **labelled seam** (`resultsCount` + rule, ×3 locales) so the two
+  surfaces can never read as one, a **stronger shadow** on the picker so it sits visually *above* the
+  results, and the card's `marginHorizontal` dropped so it shares the list's exact left/right edge.
+  ⚠️ `emptyContainer` had `flex: 1` + `paddingTop: 80` from when it filled a bare container; it now
+  sits under the header inside the list, so it is `flexGrow` + balanced padding — the old values
+  pushed the empty state off the bottom of small phones.
+  `tsc` driver **35 = baseline**; **27/27** i18n keys evaluated across uz/ru/en and **21/21**
+  `{count}` placeholder checks.
+
+  **③ Re-entering an offer the driver already applied to re-offered the "take this order" button
+  (owner, 2026-08-10).** ✅ **The server was never at risk** — `OfferDriverService.joinOffer:109-129`
+  refuses a duplicate with a translated 400, so no bad row could be written. **The defect was that
+  the app invited an action that could not succeed:** the footer keyed off a local `joinSent`
+  boolean initialised to `false` on **every mount**, set only by a successful submit *in that screen
+  session*. Leaving and returning reset it, so the driver re-entered seats and a price before being
+  refused.
+  🔴 **Worse for two statuses:** `rejected` and `cancelled` are **permanent** refusals
+  (`cannotJoinAfterRejected` / `cannotJoinAfterCancelled`), so the button was a **dead end**, not
+  merely a wasted trip.
+  ⚠️ **The detail payload cannot answer "did I already apply?"** — the offer's `drivers` list is
+  deliberately **owner-only** (rival bids: name, plate, price are none of a driver's business), and
+  that gate is correct and was left alone. The screen now asks
+  **`GET /driver/join-requests`**, which returns only the driver's **own** rows — already built,
+  already authenticated, leaks nothing. **No API change, no deploy.**
+  The footer now shows the **real** status with its own wording and colour (sent / confirmed /
+  rejected / cancelled) instead of one green "sent" banner — a rejected driver seeing green would
+  believe their offer was still live. Pull-to-refresh re-checks it, so a passenger's decision taken
+  while the screen is open lands on the next pull.
+  ⚠️ The lookup is **deliberately non-fatal**: if it fails the order stays readable and the driver
+  may still try — the server remains the real guard. 3 new keys ×3 locales.
+  **31/31** runtime checks (incl. string/number `offer_id` matching, all four statuses distinct in
+  every locale, and the **old boolean proven to re-offer the button**); `tsc` **35 = baseline**.
+
+> 🟢 T-041 closed 2026-08-10.
+
+<details><summary>✅ T-041 — CLOSED 2026-08-10, moved to Done (full history kept here)</summary>
+
+- [x] ~~T-041 (P1)~~ 🔴 **T-038 shipped and the owner is STILL logged out.** Reported 2026-08-08 after
   the owner deployed the API and rebuilt both apps; **re-confirmed 2026-08-09 with two screenshots**
   ("Ruxsat berilmagan" on *Mening safar so'rovlarim*, "Sessiya muddati tugagan" on *Mening
   bronlarim*, both **inside** the app). ⚠️ **Plan written 2026-08-09 → `docs/PLAN.md`, awaiting
@@ -51,26 +183,10 @@
   which already (correctly) keeps the session. The runtime suite did not catch this because it only
   ever simulated a 401.
   ⚠️ Both apps carry the identical code, so the fix is made twice.
-  → `docs/PLAN.md` when started
+  → `docs/PLAN.md`
 
-- [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
-  Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
-  were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
-  landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
-  **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
-  **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
-  the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
-  but uncounted**. Steps 4-12 remain. ⚠️ Its plan is **`docs/PLAN-T031.md`** (moved intact
-  2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
+</details>
 
-## ⏸️ Parked — implemented, awaiting owner device test
-> These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
-> only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
-> **fails**.
 - [ ] T-040 (P1) **A passenger cannot edit an order at all — the endpoint exists, nothing calls it.**
   Reported by the owner 2026-08-08. **Grounded in code the same day; same shape as T-037.**
   ✅ **The backend is complete and safe.** `PATCH /passenger-offers/:id` is routed
@@ -143,7 +259,9 @@
   🛑 **Only step 4 (owner: deploy the API, rebuild the user app, retest) and step 5 (commit) remain.**
   ⚠️ Plan is **`docs/PLAN-T039.md`**.
 
-- [ ] T-038 (P1) 🔴 **Every user of BOTH apps is silently logged out ~15 minutes after login — the
+<details><summary>✅ T-038 — CLOSED 2026-08-10 (device-confirmed via T-041), moved to Done; history kept</summary>
+
+- [x] ~~T-038 (P1)~~ 🔴 **Every user of BOTH apps is silently logged out ~15 minutes after login — the
   refresh token is thrown away.** Reported by the owner 2026-08-08 from a device: the user app's
   "Mening bronlarim" showed a toast **"Xato / Invalid or expired token"**, and "before last logged
   out maybe for this issue". **Fully traced in code the same day; the owner's guess was right.**
@@ -184,8 +302,10 @@
   `adminAuth`'s catch rewrote every failure as "Invalid or expired token".
   ⚠️ **Everyone gets logged out ONE more time** — existing installs hold no refresh token, so their
   current session still ends at its next expiry. Warn the testers.
-  🛑 **Only step 7 (owner: deploy the API **FIRST**, then rebuild both apps) and step 8 (commit)
-  remain. Nothing has run on a device.** ⚠️ Plan is **`docs/PLAN-T038.md`**.
+  ✅ **Steps 7-8 done: deployed, rebuilt and device-confirmed 2026-08-10 together with T-041**,
+  which fixed the remaining hole in this same mechanism. Plan: **`docs/PLAN-T038.md`**.
+
+</details>
 
 - [ ] T-037 (P1) **Driver app: passenger orders are unreachable — no route, no detail screen, no
   join.** Raised by the owner 2026-08-08 ("user creates offer but in the driver app there is no way
@@ -218,9 +338,15 @@
   (2) `offer.passenger` **does not exist** on `GET /driver/join-requests` (raw model → `offer.user`;
   only `public/*` builds the mapped shape) → guaranteed crash on every row; (3) `menu.myOffers`,
   `common.all`, `common.viewAll` existed in **uz only** (same class as T-035).
-  🛑 **Only step 7 (owner: rebuild the driver app, walk the loop) and step 8 (commit) remain.
-  Nothing has run on a device.** ⚠️ The loop cannot be fully demoed — the passenger's "drivers who
+  🔴 **DEVICE TEST 2026-08-10 — PARTIAL FAIL.** ✅ The search screen is reachable and **finds
+  orders** (steps 1 + 5 confirmed on a device — the wiring works). ❌ Opening an order's **details
+  crashed the app to the phone's home screen** → **T-042**, root-caused and fixed the same day
+  (`offer.passenger.name` on a payload whose shape has `user`). **Retest after the driver rebuild.**
+  🛑 **Step 7 (owner: rebuild the driver app, walk the loop) and step 8 (commit) remain.**
+  ⚠️ The loop cannot be fully demoed — the passenger's "drivers who
   offered" screen is **T-024** and does not exist, so confirm the offer landed via the DB or admin.
+  ⚠️ **Still unwalked past the details screen:** the join sheet and `MyJoinRequestsScreen` were
+  never reached, so their own never-executed-code defects (T-037 found three) are still unproven.
   ⚠️ Its plan is **`docs/PLAN-T037.md`** (moved intact 2026-08-08 so T-038 could use `docs/PLAN.md`).
 
 > T-014/T-015 committed in `5b315a6`, T-016 in
@@ -369,6 +495,35 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-045 (P2) **The in-app notifications list is a dead end — and offer events never reach it.**
+  Split out of **T-044** by owner decision 2026-08-10 (that card is push-taps-only).
+  Two separate problems, found while scoping:
+  1. **Tapping a row navigates nowhere.** The user app opens a **detail modal**
+     (`NotificationsScreen.handleNotificationPress`); the driver app only **marks it read**
+     (`handleMarkAsRead`) — there is no `navigate` in either screen. Once T-044 lands, the same
+     `routeForNotification` mapper can be reused here, so this is small **on the app side**.
+  2. 🔴 **The far bigger half: those events are not in the list at all.** `notifyDriver` /
+     `notifyPassenger` in `OfferPassengerService`, `OfferDriverService`, `DriverOfferService` and
+     `PassengerOfferService` only look up `PushToken` and send **fire-and-forget FCM** — they never
+     call `NotificationService.createNotification`. The **only** writer in the whole API is
+     `AuthController.v2:90`. So a passenger who misses the push has **no record of it anywhere**.
+  ✅ **No migration needed** — the `notifications` table exists with a **JSONB `data` column**
+  (`20250131000001-create-notifications.cjs`), which is exactly what the routing mapper reads.
+  ⚠️ Needs an **API deploy**. ⚠️ Decide whether persistence goes inside `notifyDriver`/
+  `notifyPassenger` (one place each, catches every caller) rather than at the ~13 call sites.
+- [ ] T-043 (P2) **Two endpoints under `/public/passenger-offers` return different shapes for the
+  same object.** Split out of **T-042** by owner decision 2026-08-10 (app-side fix first so the
+  device test was unblocked). **This is the root cause T-042 only worked around.**
+  `GET /public/passenger-offers` (list) returns a hand-mapped object with `passenger: {id, name}`;
+  `GET /public/passenger-offers/:id` (detail) returns the **raw Sequelize model** with `user`.
+  Same prefix, same logical object, two shapes — which crashed the driver app to the launcher once
+  already and will keep producing that class of bug.
+  ⚠️ **Why it was not fixed at the API:** `getOfferById` is **shared** — the passenger app's own
+  order view and T-040's edit flow both call it, and it is the return value of `createOffer` and
+  `updateOffer`. Changing what it returns risks all of those, so it needs its own testing pass.
+  **Suggested shape:** leave `getOfferById` alone and give the *public* controller its own mapper
+  (`getPublicOfferById`), so the two public endpoints agree and nothing else moves.
+  ⚠️ Check the **user app** for the same bare `.passenger` reads before closing.
 - [ ] T-034 (P1) 🔒 **Two OTP security holes.** Split out of T-033 by owner decision 2026-08-08 so
   the device-test fix stayed tight. Both verified in code, neither is theoretical.
   1. **Secrets in the server log.** `OtpService.ts:297` prints `sendOtp code <code>` and `:102`
@@ -430,6 +585,11 @@
   `user-app-standalone/api/passengerOffers.ts` with zero call sites. Accepting sets the offer to
   `driver_found` and auto-rejects + notifies the losing drivers (server side already done).
   Found 2026-08-02.
+  🔴 **Now also blocks T-044.** A `driver_join_request` push — the passenger being told a driver
+  wants their trip — has **no exact screen to open**, so T-044 must leave it on the
+  `MyPassengerOffers` list. ⚠️ **Do not "fix" that by routing it to `OfferDetails`**: its `offer_id`
+  is the passenger's **own PassengerOffer**, while `OfferDetails` fetches a **DriverOffer** — it
+  would load a wrong row or 404. This card is the real fix.
 - [ ] T-019 (P1) **[OWNER OR-008]** User registration → Figma layout (`K_Reg001.png`); move the
   referral block (Tel/ID/PROMO) to a second screen. App-only; backend fields already exist.
   → `docs/OWNER_REQUESTS.md` OR-008
@@ -484,6 +644,33 @@
 - [ ] T-010 (P3) Add a real test suite (none exists today)
 
 ## ✅ Done (newest on top)
+- [x] T-041 **Only a rejected refresh ends the session; the auth rate limits are split and keyed by
+  user** — **device-confirmed by the owner 2026-08-10**, committed `0ccde30`.
+  Two independent defects, and the card needed both. **The apps over-reacted:**
+  `performTokenRefresh` treated **any** non-`ok` as "session over" — a 429, a 5xx, even a **200 it
+  could not parse** — clearing both tokens; now only **401/403** does, and every other outcome is
+  survivable like the offline path. **The server made that fire constantly:** `/auth/refresh`,
+  `/auth/logout` and **`GET /auth/me` (every app launch)** shared one **20-per-15-min** budget.
+  🔴 **Per-IP keying was the deeper bug** and would have outlived the test session — a carrier NAT
+  puts thousands of real users behind one IP. New `refreshLimiter` (30/15min) and
+  `sessionReadLimiter` (120/15min) key on the **user in the token** (`tokenSubjectKey`), not the IP.
+  ✅ **Owner decided 2026-08-10: keep 30 and 120 as they are** — per-user budgets make a real user
+  tripping them unlikely, so they will not break in production. **Do not revisit.** If a 429 ever
+  turns up in a user report, they are two literals in `rateLimiter.ts`.
+  The refresh endpoint's messages are now translated too.
+  **98/98** runtime matrix over both apps' real modules, **proven able to fail (32 red against
+  pre-fix code)**; **8/8** limiter check proving user B on the same IP is unaffected.
+  Plan: `docs/PLAN.md` (closed in place).
+- [x] T-038 **Refresh tokens: every user of both apps was silently logged out ~15 min after login** —
+  implemented 2026-08-08, **device-confirmed 2026-08-10 as part of T-041**, which repaired the
+  remaining hole in the same mechanism. The refresh token was received and **thrown away** (no
+  storage key existed) and `refreshAccessToken()` had **zero call sites**; now both apps persist it
+  and `getHeaders` swaps a spent access token behind **one in-flight promise** (mandatory —
+  `rotateTokens` revokes the old refresh token on use). The API's 401s are translated.
+  🔴 Three defects found beyond the diagnosis: a stale caller token would have re-rotated on every
+  request; `logout` never revoked anything in **either** app (un-awaited `getHeaders`); and
+  `adminAuth`'s catch rewrote every failure as "Invalid or expired token".
+  Committed in `c940940` + `0ccde30`. Plan: `docs/PLAN-T038.md`.
 - [x] T-036 **All 33 modals in both apps onto one `AppModal` shell** — 2026-08-08.
   **Owner spot-checked on a device and approved the look** ("that's ok"); ⚠️ **the walk of every
   modal is NOT finished** and continues alongside other work — if one fails, re-open this card.

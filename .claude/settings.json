@@ -152,7 +152,15 @@
       "Bash(xargs -I{} echo \"driver app: {} errors \\(baseline 36, currently 35\\)\")",
       "Bash(xargs -I{} echo \"admin    : {} errors \\(baseline 0\\)\")",
       "Bash(node t041-check.js)",
-      "Bash(node t041-limiter-check.js)"
+      "Bash(node t041-limiter-check.js)",
+      "Bash(sed -i \"s|const ts = require\\('typescript'\\);|const ts = require\\('d:/projects/UbexGo/driver-app-standalone/node_modules/typescript'\\);|\" t037-crash-check.js)",
+      "Bash(node t037-crash-check.js)",
+      "Bash(sed -i \"s|'searchPassengerOffers.viewDetails',|'searchPassengerOffers.viewDetails',\\\\n  'searchPassengerOffers.resultsCount',\\\\n  'searchPassengerOffers.emptySelectTitle',\\\\n  'searchPassengerOffers.emptyNoneTitle',|\" t037-i18n-check.js)",
+      "Bash(node t037-i18n-check.js)",
+      "Bash(node t042-placeholder-check.js)",
+      "Bash(cd \"d:/projects/UbexGo/api,admin,db/apps/api\" && grep -n \"data\\\\|type\" src/models/Notification.ts | head -20 && echo \"=== app-side type ===\" && grep -n \"interface Notification\" -A 14 ../../../../user-app-standalone/api/notifications.ts 2>/dev/null | head -18)",
+      "Read(//d/user-app-standalone/api/**)",
+      "Bash(node t044-routing-check.js)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

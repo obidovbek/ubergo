@@ -5,6 +5,147 @@
 
 ---
 
+## 2026-08-10 (3) — T-044: the push plumbing was fine; the destinations were the bug
+
+- **Owner:** *"any notification on click should open that exactly page or screen in both apps."*
+  The first useful finding was what **not** to build: the tap plumbing is already complete and
+  careful in both apps — handler, a `pendingTarget` park for taps arriving before the navigator
+  exists, flush on navigator-ready **and** on auth change. Cold start and pre-login were solved.
+  **The gap was one function: the destination table.**
+- 🔴 **The driver app was one stale comment away from working.** Four types fell through to the
+  generic list under *"there is no screen for these yet (T-023/T-024)"* — but **T-037 built
+  `MyJoinRequests` and registered it**. The code was correct when written and quietly wrong ever
+  since. That is now twice this week a stale comment has been the proximate cause of a defect
+  (T-042's crash was the other), which is a pattern worth naming: **comments assert facts about
+  other files, and nothing checks them.**
+- **The trap that justified planning first.** `offer_id` means **two different entities**. For the
+  passenger's booking notifications it is a **DriverOffer** — safe to open in `OfferDetails`. For
+  `driver_join_request` it is the passenger's **own PassengerOffer**, and `OfferDetailsScreen`
+  fetches `OffersAPI.getOfferDetails` → a *driver* offer. Routing "a driver wants your trip" to
+  `OfferDetails` would have fetched a **wrong row or a 404 and presented it as the user's own trip**.
+  It was the most tempting deep-link on the board and it had to be left on the list until T-024.
+- **Two things bigger than the plan assumed.** Both `navigate()` call sites passed only
+  `target.screen`, so params would have been **silently dropped on the parked cold-start path** even
+  with a perfect mapper — the exact case (tap while the app is dead) that matters most. And the user
+  module's header comment asserted *"every destination is a param-less route"*, which this change
+  falsified; corrected immediately rather than left to rot into the next T-042.
+- **The check that earns its keep:** every destination is asserted against route names **parsed out
+  of each app's real `MainNavigator` source**, not a hand-typed list. A renamed route now fails the
+  suite instead of passing while the app navigates nowhere. **11 red against the pre-change files**
+  proves it measures the gap rather than agreeing with the new code.
+- **Scoped down deliberately.** Two blockers found while investigating were split out rather than
+  absorbed: **T-045** (the in-app list navigates nowhere — and, far worse, `notifyDriver`/
+  `notifyPassenger` **never persist a row at all**, so a missed push leaves no record anywhere) and
+  **T-024** (the passenger's "drivers who offered" screen).
+- **Next:** owner rebuilds both apps and taps a real push of each kind. No API deploy.
+
+---
+
+## 2026-08-10 (2) — T-042: the same bug in the screen the sweep skipped, then the layout behind it
+
+- **The owner's T-037 device test half-passed.** Driver search **finds** passenger orders — the
+  T-037 wiring works. But tapping *"Details"* **killed the app to the phone's home screen**.
+- **Cause: `offer.passenger.name`, one line.** Two endpoints under the **same**
+  `/public/passenger-offers` prefix return **different shapes**. The browse list is hand-mapped and
+  ends in `passenger: {id, name}`; the detail (`getOfferById`) does `return offer` — the **raw
+  Sequelize model**, whose include is aliased **`as: 'user'`**. So `passenger` was `undefined` and
+  `.name` threw **during render**, where RN has no error boundary. Hence a hard process death rather
+  than an error screen — the symptom that made it look catastrophic.
+- 🔴 **The uncomfortable part: T-037 already found and fixed this exact bug, and I missed a screen.**
+  On 2026-08-08 the same mismatch was traced for `GET /driver/join-requests` and a helper was
+  written for it — `passengerNameOf`. It was applied to the **one screen observed failing**, not to
+  every screen reading that field. Two days later the untouched screen crashed on a device.
+  **A fix applied to the observed instance instead of the class is a half-fix**; the search should
+  have been "who else reads `.passenger`" the moment the shape mismatch was understood.
+- 🔴 **A comment caused the bug.** The type's doc block asserted the `public/*` browse **and detail**
+  endpoints both build the mapped shape. Only the browse does. Whoever wrote the detail screen —
+  me — read that and used a bare `.name` with confidence. **A wrong comment is worse than none.**
+  It is corrected, and the fix is now structural: `passenger` is **optional** on the type, so a bare
+  `.passenger.name` no longer compiles.
+- **The type was lying in the same direction.** `passenger` was declared **required** while the
+  server frequently does not send it. TypeScript then actively certified the crashing line as safe.
+  Marking it optional is not defensive padding — it is the type finally matching reality.
+- **Swept the whole app this time**, which caught `SearchPassengerOffersScreen:560` doing the same
+  bare read. It works *today* only because the list happens to carry the mapped shape — a latent
+  copy of the same crash, now closed.
+- **Owner decided app-side only** (driver rebuild, no API deploy) — the shape mismatch is the real
+  root cause but `getOfferById` is shared with the passenger app and T-040's edit flow, so changing
+  it needs its own testing pass. Logged as **T-043** rather than smuggled into a crash fix.
+- **12/12 runtime checks, and the crash is reproduced** against the old expression
+  (`TypeError: Cannot read properties of undefined`) — the check can fail, which is the only reason
+  its passing means anything. **18/18** i18n keys evaluated across uz/ru/en. `tsc` driver
+  **35 = baseline**, proven by stashing.
+- **Then the layout, same screen, same session.** The owner: *"the list merges with the
+  search country/city card"*. 🔴 **The screen had two independent scroll surfaces** — a `ScrollView`
+  with **`maxHeight: 270`** holding the picker, as a **sibling** of the `FlatList`. The card could
+  never scroll away, so it ate ~270px forever; and because the picker and the offer cards use the
+  **same white / radius-20 / shadow**, they read as one continuous sheet right at the seam.
+  The `FlatList` had no `flex: 1` either, so the two fought over the remaining space.
+- **Fixed by making it ONE scroll surface** — the picker became `ListHeaderComponent`, so it slides
+  away and the results get the whole screen. **The "merging" was a symptom of the structure, not of
+  the styling**; a divider alone would have papered over a card that still stole a third of the
+  screen forever. The seam got a labelled break too (`{count}` orders + rule), and the picker a
+  slightly stronger shadow so it reads as sitting *above* the results rather than being one of them.
+- **A stale style nearly shipped with it:** `emptyContainer` was `flex: 1` + `paddingTop: 80`, sized
+  for when it filled a bare container. Inside the list, under a header, that pushed the empty state
+  off the bottom on small phones. Moving a block between containers invalidates its layout
+  assumptions — worth checking every time, not just when something looks wrong.
+- **Third find, and the owner's question was the right instinct:** *"driver sends a request, re-enters
+  the offer, and can send again — is that normal?"* No. ✅ **The server was never at risk** —
+  `joinOffer` refuses duplicates with a translated 400. **But the app offered an action that could
+  not succeed:** the footer read a local `joinSent` boolean that reset to `false` on every mount, so
+  re-entering brought the green CTA back and the driver re-typed seats and a price before being
+  refused. For `rejected`/`cancelled` — **permanent** refusals — it was a dead end, not a wasted trip.
+- **The interesting constraint:** the detail payload *cannot* answer "did I already apply?", because
+  the offer's `drivers` list is deliberately **owner-only** — rival bids (name, plate, price) are
+  none of a driver's business. That gate is right, so the answer came from
+  `GET /driver/join-requests`, which returns only the driver's own rows. **The privacy rule shaped
+  the fix instead of being weakened by it**, and no API change was needed.
+- **Same class of bug as the crash, one layer up:** local component state standing in for server
+  truth. `joinSent` was a *guess* about what the backend knew, and like every guess it was wrong the
+  moment the screen remounted. The banner also had to split by status — one green "sent" for all
+  four would tell a **rejected** driver their offer was still live.
+- **Next:** owner rebuilds the driver app and re-walks T-037 — the join sheet and
+  `MyJoinRequestsScreen` are still unreached, so their never-executed code is still unproven.
+
+---
+
+## 2026-08-10 — T-041 CLOSED on a device: the session survives. T-038 closes with it.
+
+- **The owner device-tested and the refresh-token issue is resolved.** Committed as `0ccde30`.
+  T-041 is done end-to-end, and **T-038 closes with it** — T-041 was repairing the mechanism T-038
+  built, so one device test settles both. Two cards leave the board; the *Now* section drops to one.
+- **What actually made the difference — two defects, and the card needed both.** Fixing either alone
+  would have left the owner logged out:
+  1. **The apps over-reacted.** `performTokenRefresh` treated **any** non-`ok` as "the session is
+     over" — clearing both tokens and firing `notifyAuthLost()`. A 429 did it. A transient 5xx did
+     it. So did a **200 whose body the app could not parse**. Only **401/403** does now.
+  2. **The server made that fire constantly.** `/auth/refresh`, `/auth/logout` and **`GET /auth/me`**
+     shared one **20-per-15-min** budget — and `/auth/me` runs on **every app launch**, with both
+     apps on one phone counting against the same key.
+- **The deeper bug was the limiter *key*, not the number.** Raising 20 to 60 would have hidden this
+  through the test session and then reappeared in production: the budget was keyed on **IP**, and a
+  mobile carrier NAT puts thousands of real users behind one. The new `refreshLimiter` (30/15min)
+  and `sessionReadLimiter` (120/15min) key on the **user in the token** via `tokenSubjectKey`, which
+  decodes (never verifies) — safe, because it only picks a counter and grants nothing.
+- **The 8/8 limiter check tested the claim the fix rests on**, not the limiter: user A blocked at
+  exactly #31, **user B on the same IP unaffected**. An assertion that "the limiter limits" would
+  have passed against the broken per-IP version too.
+- **Proving the suite could fail was worth more than the 98 green checks.** Stashing the two app
+  files turned **32 of them red** — so the matrix reproduces the owner's actual bug rather than
+  merely agreeing with the new code. The T-038 suite had been 28/28 green and still missed this,
+  because it only ever simulated a **401** — the one status that was already handled correctly.
+- **Recurring lesson, third time this week:** the bug was in the branch nobody had executed. T-037's
+  three defects, T-038's `logout`, and now the non-401 refresh path — all code that existed, looked
+  right, and had never run.
+- ✅ **Owner reviewed the two numbers I had chosen (30 and 120) and decided to keep them** — with
+  per-user budgets a real user will not trip them. Settled, not to be revisited; they are two
+  literals in `rateLimiter.ts` if a 429 ever shows up in a user report.
+- **Next:** no active task. The owner's device tests continue on **T-037 · T-039 · T-040**
+  (and further back T-033 · T-030 · T-027 · T-025); **T-031** is the only card left in *Now*.
+
+---
+
 ## 2026-08-08 (2) — device testing turned into five cards; the pattern was "the backend was already done"
 
 - **Task:** the owner device-tested and reported four things. Four cards came out of it —

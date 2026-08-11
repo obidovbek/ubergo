@@ -29,6 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as PassengerOffersAPI from '../api/passengerOffers';
+import { passengerNameOf } from '../api/passengerOffers';
 import * as DriverAPI from '../api/driver';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
@@ -65,7 +66,24 @@ export default function PassengerOfferDetailsScreen() {
   const [priceInput, setPriceInput] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [joinSent, setJoinSent] = useState(false);
+
+  /**
+   * The driver's OWN existing request on this offer, or null if they have none.
+   *
+   * ⚠️ This used to be a bare `joinSent` boolean starting at `false`, set only by
+   * a successful submit **in the current screen session**. Leaving the screen and
+   * coming back reset it, so the green "take this order" button reappeared for an
+   * offer the driver had already applied to (owner, 2026-08-10). The server does
+   * refuse the duplicate — `OfferDriverService.joinOffer:109-129` — so no bad row
+   * was ever written, but the driver was invited to fill in seats and a price for
+   * something that could never succeed. For `rejected` and `cancelled` it is
+   * worse: those refusals are PERMANENT, so the button was a dead end.
+   *
+   * The detail payload cannot answer this — the offer's `drivers` list is
+   * deliberately owner-only (rival bids are none of a driver's business), so we
+   * ask `GET /driver/join-requests`, which returns only this driver's own rows.
+   */
+  const [myJoin, setMyJoin] = useState<PassengerOffersAPI.OfferDriver | null>(null);
 
   const loadOffer = useCallback(async () => {
     try {
@@ -79,6 +97,26 @@ export default function PassengerOfferDetailsScreen() {
       setRefreshing(false);
     }
   }, [offerId, t]);
+
+  /**
+   * Has this driver already applied to this offer?
+   *
+   * Deliberately non-fatal: if this call fails the order is still perfectly
+   * readable, so we leave `myJoin` null and let the driver try. The server is
+   * the real guard and will refuse a duplicate with a translated 400 — this
+   * lookup exists to stop them WASTING the attempt, not to enforce the rule.
+   */
+  const loadMyJoin = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const requests = await PassengerOffersAPI.getMyJoinRequests(token);
+      const mine = requests.find((r) => Number(r.offer_id) === Number(offerId));
+      setMyJoin(mine ?? null);
+    } catch {
+      setMyJoin(null);
+    }
+  }, [token, offerId]);
 
   // The driver has exactly one vehicle (profile.vehicle) — this mirrors
   // OfferWizardScreen.loadVehicles rather than offering a picker.
@@ -113,11 +151,15 @@ export default function PassengerOfferDetailsScreen() {
   useEffect(() => {
     loadOffer();
     loadVehicle();
-  }, [loadOffer, loadVehicle]);
+    loadMyJoin();
+  }, [loadOffer, loadVehicle, loadMyJoin]);
 
   const handleRefresh = () => {
     setRefreshing(true);
     loadOffer();
+    // Pull-to-refresh must re-check this too: the passenger may have confirmed
+    // or rejected the driver while this screen sat open.
+    loadMyJoin();
   };
 
   const openJoin = () => {
@@ -160,7 +202,7 @@ export default function PassengerOfferDetailsScreen() {
 
     try {
       setSubmitting(true);
-      await PassengerOffersAPI.joinPassengerOffer(token, offer.id, {
+      const created = await PassengerOffersAPI.joinPassengerOffer(token, offer.id, {
         vehicle_id: vehicle.id,
         seats_offered: seatsOffered,
         offered_price_per_seat: pricePerSeat,
@@ -168,7 +210,9 @@ export default function PassengerOfferDetailsScreen() {
       });
 
       setJoinVisible(false);
-      setJoinSent(true);
+      // Trust the row the server just created, so the footer is correct
+      // immediately; the next open/refresh re-reads it from the API anyway.
+      setMyJoin(created ?? null);
       showToast.success(
         t('passengerOfferDetails.sentTitle'),
         t('passengerOfferDetails.sentMessage')
@@ -181,6 +225,49 @@ export default function PassengerOfferDetailsScreen() {
       setSubmitting(false);
     }
   };
+
+  /**
+   * How the footer presents an existing request. Each status gets its own
+   * wording and colour — lumping them together as one green "sent" banner would
+   * tell a REJECTED driver their offer is still live.
+   *
+   * `rejected` and `cancelled` are terminal: `joinOffer` refuses a second
+   * attempt permanently (`cannotJoinAfterRejected` / `cannotJoinAfterCancelled`),
+   * so no button is offered in those states — there is nothing the driver can do
+   * here, and pretending otherwise is what caused the original complaint.
+   */
+  const joinBanner = (() => {
+    switch (myJoin?.status) {
+      case 'confirmed':
+        return {
+          icon: 'checkmark-done-circle' as const,
+          color: '#047857',
+          style: styles.bannerSuccess,
+          text: t('passengerOfferDetails.statusConfirmed'),
+        };
+      case 'rejected':
+        return {
+          icon: 'close-circle' as const,
+          color: '#B91C1C',
+          style: styles.bannerDanger,
+          text: t('passengerOfferDetails.statusRejected'),
+        };
+      case 'cancelled':
+        return {
+          icon: 'ban' as const,
+          color: '#6B7280',
+          style: styles.bannerMuted,
+          text: t('passengerOfferDetails.statusCancelled'),
+        };
+      default: // pending
+        return {
+          icon: 'checkmark-circle' as const,
+          color: '#047857',
+          style: styles.bannerSuccess,
+          text: t('passengerOfferDetails.alreadySent'),
+        };
+    }
+  })();
 
   const renderRow = (icon: keyof typeof Ionicons.glyphMap, label: string, value: string) => (
     <View style={styles.detailRow}>
@@ -267,7 +354,15 @@ export default function PassengerOfferDetailsScreen() {
               {renderRow(
                 'person-outline',
                 t('passengerOfferDetails.passenger'),
-                offer.passenger.name
+                // ⚠️ NOT `offer.passenger.name` — that crashed the whole app.
+                // The browse list and this detail endpoint sit under the same
+                // `/public/passenger-offers` prefix but return DIFFERENT shapes:
+                // the list is hand-mapped and ends in `passenger: {id, name}`,
+                // while `getOfferById` returns the raw Sequelize model, whose
+                // include is aliased `as: 'user'`. So `passenger` is undefined
+                // here, and reading `.name` off it threw during render — with no
+                // error boundary above, that killed the process to the launcher.
+                passengerNameOf(offer) || t('passengerOfferDetails.passengerUnknown')
               )}
               {renderRow(
                 'people-outline',
@@ -293,13 +388,14 @@ export default function PassengerOfferDetailsScreen() {
             )}
           </ScrollView>
 
-          {/* CTA */}
+          {/* CTA — reflects the driver's REAL state on this offer, not just what
+              happened while this screen instance was mounted. */}
           <View style={styles.footer}>
-            {joinSent ? (
-              <View style={styles.sentBanner}>
-                <Ionicons name="checkmark-circle" size={20} color="#047857" />
-                <Text style={styles.sentBannerText}>
-                  {t('passengerOfferDetails.alreadySent')}
+            {myJoin ? (
+              <View style={[styles.sentBanner, joinBanner.style]}>
+                <Ionicons name={joinBanner.icon} size={20} color={joinBanner.color} />
+                <Text style={[styles.sentBannerText, { color: joinBanner.color }]}>
+                  {joinBanner.text}
                 </Text>
               </View>
             ) : (
@@ -577,15 +673,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     minHeight: 52,
+    paddingHorizontal: 16,
     borderRadius: 14,
-    backgroundColor: '#ECFDF5',
     borderWidth: 1,
+  },
+  // Per-status skins. The banner is no longer always green — a rejected driver
+  // seeing a green "sent" banner would think their offer was still live.
+  bannerSuccess: {
+    backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
+  },
+  bannerDanger: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+  },
+  bannerMuted: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   sentBannerText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#047857',
+    flexShrink: 1,
+    // Colour comes from `joinBanner.color` at the call site — it varies by
+    // status, so deliberately none here.
   },
   sheetBody: {
     paddingHorizontal: 16,

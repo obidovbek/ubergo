@@ -66,22 +66,19 @@ export interface PassengerOffer {
   road_pickup_note?: string | null;
   special_order?: PassengerOfferSpecialOrder | null;
   note?: string;
-  passenger: {
+  /**
+   * ⚠️ OPTIONAL, and that is not defensive padding — it is the truth.
+   * Only the hand-mapped BROWSE list (`getPublicOffers`) builds this shape.
+   * `GET /public/passenger-offers/:id` returns the raw Sequelize model, which
+   * carries `user` instead. Marking it required is what let
+   * `offer.passenger.name` compile on the detail screen and crash the app.
+   * Read it through `passengerNameOf()`, never directly.
+   */
+  passenger?: {
     id: number;
     name: string;
   };
-}
-
-/**
- * The offer as it arrives on a join request.
- *
- * ⚠️ `GET /driver/join-requests` returns the **raw Sequelize model**, so the
- * nested offer carries `user` — it does NOT carry the mapped `passenger` shape
- * that the `public/*` browse and detail endpoints build in
- * `PassengerOfferService`. Reading `offer.passenger.name` here is a crash.
- */
-export interface JoinRequestOffer extends Omit<PassengerOffer, 'passenger'> {
-  passenger?: PassengerOffer['passenger'];
+  /** The raw-model shape, from the detail endpoint and join requests. */
   user?: {
     id: number;
     first_name?: string;
@@ -89,6 +86,23 @@ export interface JoinRequestOffer extends Omit<PassengerOffer, 'passenger'> {
     display_name?: string;
   };
 }
+
+/**
+ * The offer as it arrives on a join request.
+ *
+ * ⚠️ Two response shapes exist for the same logical object, and the earlier
+ * version of this comment got the boundary WRONG — it said the `public/*`
+ * browse **and detail** endpoints both build the mapped `passenger` shape.
+ * Only the **browse list** does. The detail endpoint
+ * (`GET /public/passenger-offers/:id`) and `GET /driver/join-requests` both
+ * return the **raw Sequelize model**, whose include is aliased `as: 'user'`.
+ * That wrong comment is why the detail screen was written with a bare
+ * `offer.passenger.name` — which crashed the app to the launcher.
+ *
+ * `PassengerOffer` now models both shapes, so this is a plain alias kept for
+ * the existing call sites' readability.
+ */
+export type JoinRequestOffer = PassengerOffer;
 
 /** Best available name for the passenger, whichever shape the offer came in. */
 export const passengerNameOf = (offer?: JoinRequestOffer): string => {

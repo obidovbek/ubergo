@@ -52,14 +52,18 @@ const routeForNotification = (data: any): NotificationTarget => {
         : { screen: 'OffersList' };
     }
 
-    // Outcomes of the driver's own request on a passenger's ride offer. There is
-    // no screen for these yet (T-023/T-024), so the message list is the honest
-    // destination rather than a route that does not exist.
+    // Outcomes of the driver's OWN bid on a passenger's ride request.
+    //
+    // ⚠️ These used to fall through to `Notifications` with a comment saying
+    // "there is no screen for these yet (T-023/T-024)". That went stale: T-037
+    // built `MyJoinRequestsScreen` and registered it, and it lists exactly these
+    // bids with their status — so it is the right destination for all four.
+    // It takes no params (no `useRoute`), so none are passed.
     case 'driver_request_confirmed':
     case 'driver_request_rejected':
     case 'driver_not_chosen':
     case 'offer_cancelled_by_passenger':
-      return { screen: 'Notifications' };
+      return { screen: 'MyJoinRequests' };
 
     default:
       return { screen: 'Notifications' };
