@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-11 (3) — seven cards in one run, and the recurring lesson was about my own checks
+
+- **Task:** clear everything that was actually buildable, with device testing batched at the end at
+  the owner's request. **T-049, T-050, T-051, T-052, T-053, T-024, T-034, T-043, T-045.**
+- **Done:**
+  - **T-024** closed the passenger↔driver loop — the passenger can finally answer the drivers who
+    offered. It also closed **T-044's known compromise**: `driver_join_request` now routes exactly,
+    because the new screen takes the same entity id the payload carries.
+  - **T-034 (P1 security)** — OTP codes, the Eskiz bearer token, whole user rows and push tokens are
+    out of the logs; phone numbers are masked. And the brute-force cap **fires for the first time**.
+  - **T-043** removed the root cause behind T-042's launcher crash — both public endpoints now share
+    one mapper instead of disagreeing about the same object.
+  - **T-045** — every ride notification is now recorded. Before, `createNotification` had **one
+    caller in the entire API**.
+  - Plus **T-049** (i18n), **T-050** (wordmark), **T-051** (tab refetch + ordering), **T-052/T-053**
+    (dead login/register code deleted).
+- **Decisions (owner):** delete the leaking logs rather than gate them; fix the OTP cap without
+  changing the code length; build both halves of T-045 and **write the notification row even when
+  the push fails**; entry point for T-024 = the existing driver-count row; accept behind a dialog
+  naming the consequence.
+- **Problems — and the pattern is uncomfortable:** three times today **my verification was wrong
+  before the code was**. A regex ran past a Set literal and "found" `center` and `700` as event
+  types. A suite crashed instead of reporting red, twice, hiding the very gap it existed to measure.
+  And a `\b` mangled by shell escaping failed 14 checks against perfectly good code.
+  **A check that cannot fail cleanly proves nothing, and one that fails wrongly sends you hunting a
+  bug you invented.** I caught all three only because the results looked implausible — which is not
+  a method. The habit that actually worked was running every suite against the **pre-change** code
+  and demanding red.
+- **The other recurring theme: copying a neighbouring line copies its bugs.** T-024 reproduced a
+  wrong `getErrorMessage(error, t('key'))` call by imitation — the second parameter is the `t`
+  *function*. `tsc` caught it; the suite never would have.
+- **Deleting dead code twice REDUCED the error count** (user 11→10→9): both `login()` and
+  `register()` were carrying real type errors nobody could ever reach. Good evidence they were
+  genuinely dead, and a reminder that a baseline error count can hide inside unreachable code.
+- **Lint:** `npm run lint` in the API still fails as **T-032** documents — **28,575 errors, almost
+  entirely `␍` CRLF noise** on Windows, which drowns everything real. Filtering that out, the four
+  files I touched hold **17** genuine findings vs **16** before: I introduced two `no-explicit-any`,
+  fixed one, and **deliberately kept** the other — a single-line `as any` for Sequelize includes the
+  model type does not carry, matching what the original inline mapper did.
+- **Next:** the owner deploys and device-tests. **THREE cards share one API deploy** (T-034, T-043,
+  T-045 — no migration in any). Both apps need rebuilding. Then **T-047** (killed-app tap) needs a
+  `logcat` line before I write another word of it — I have mis-diagnosed that path twice.
+- **Commit:** proposed below; not committed.
+
+---
+
 ## 2026-08-11 (2) — a device day: two fixes, two closures, and one bug I have now mis-diagnosed twice
 
 - **T-046 shipped and half-worked.** The server no longer abandons drivers' bids when a passenger

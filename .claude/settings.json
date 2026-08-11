@@ -183,7 +183,17 @@
       "Bash(timeout 60 grep -rn \"getOfferDrivers\\\\|confirmDriver\\\\|rejectDriver\" --include=\"*.tsx\" user-app-standalone --exclude-dir=node_modules)",
       "Bash(grep -oE \"t\\\\\\('[a-zA-Z_.]+'\\\\\\)|t\\\\\\(\\\\`offerDrivers\\\\.[a-z_\\\\$\\\\{\\\\}]+\\\\`\\\\\\)\" user-app-standalone/screens/OfferDriversScreen.tsx)",
       "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t024-check.cjs\")",
-      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t034-check.cjs\")"
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t034-check.cjs\")",
+      "Bash(timeout 60 grep -rn \"getOfferById\" \"api,admin,db/apps/api/src\" --include=\"*.ts\")",
+      "Bash(timeout 60 grep -rn \"createNotification\" \"api,admin,db/apps/api/src\" --include=\"*.ts\")",
+      "Bash(node /tmp/t043.cjs)",
+      "Bash(rm -f /tmp/t043.cjs)",
+      "Bash(timeout 60 grep -rn \"\\\\.passenger\\\\.\\\\|\\\\.passenger?\\\\.\" --include=\"*.tsx\" --include=\"*.ts\" user-app-standalone --exclude-dir=node_modules)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t045-check.cjs\")",
+      "Bash(timeout 300 npm run lint)",
+      "Bash(timeout 300 npx eslint src/services/NotificationService.ts src/services/OtpService.ts src/services/PassengerOfferService.ts src/services/OfferDriverService.ts src/services/OfferPassengerService.ts src/services/DriverOfferService.ts src/controllers/PublicPassengerOfferController.ts)",
+      "Bash(timeout 300 npx eslint src/services/NotificationService.ts src/services/OtpService.ts src/services/PassengerOfferService.ts src/controllers/PublicPassengerOfferController.ts)",
+      "Bash(timeout 120 npx eslint src/services/PassengerOfferService.ts)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

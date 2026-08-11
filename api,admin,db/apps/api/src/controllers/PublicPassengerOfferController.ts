@@ -51,7 +51,11 @@ export class PublicPassengerOfferController {
   static async getPublicOffer(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const offer = await PassengerOfferService.getOfferById(id);
+      // T-043: the PUBLIC mapper, so this endpoint and the browse list return
+      // the same shape. This used to return the raw model — whose include is
+      // aliased `user`, not `passenger` — which is what crashed the driver app
+      // to the phone's launcher in T-042.
+      const offer = await PassengerOfferService.getPublicOfferById(String(id));
 
       return successResponse(res, { offer });
     } catch (error) {

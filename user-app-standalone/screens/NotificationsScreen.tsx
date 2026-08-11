@@ -25,8 +25,29 @@ import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { useNotifications, Notification } from '../contexts/NotificationContext';
 import { AppModal } from '../components/AppModal';
+import { handleNotificationTap } from '../utils/notificationRouting';
 
 const theme = createTheme('light');
+
+/**
+ * Event types that have a real destination — T-045.
+ *
+ * ⚠️ These MUST stay in step with the `case` labels in
+ * `utils/notificationRouting.ts`. They are listed rather than imported because
+ * that module keeps its mapper private on purpose (see `handleNotificationPress`).
+ * A type missing here only means the row opens the modal instead of navigating —
+ * a soft failure, never a wrong destination, because the mapper still decides
+ * where the tap actually goes.
+ */
+const ROUTABLE_EVENT_TYPES = new Set([
+  'join_confirmed',
+  'join_rejected',
+  'driver_arrived',
+  'driver_10min_away',
+  'offer_cancelled_by_driver',
+  'driver_join_request',
+  'driver_request_cancelled',
+]);
 
 export const NotificationsScreen: React.FC = () => {
   const { token } = useAuth();
@@ -45,11 +66,37 @@ export const NotificationsScreen: React.FC = () => {
 
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
+  /**
+   * T-045: a row with a real destination now navigates; everything else keeps
+   * the detail modal.
+   *
+   * ⚠️ The modal is deliberately KEPT rather than replaced. It is the only way
+   * to read a message longer than the two lines the row shows — for the welcome
+   * message, or any future announcement, it *is* the content. Navigation is
+   * added for the events that have somewhere to go, not swapped in for it.
+   *
+   * ⚠️ The check is "does this row carry a routable event type", NOT "what does
+   * the mapper return". `routeForNotification` stays module-private — widening a
+   * device-confirmed module's API for one caller invites a second, divergent
+   * copy of the destination table, which is exactly the class of bug T-044 and
+   * T-042 were. The mapper still owns *where* a tap goes; this only decides
+   * *whether* to hand it over.
+   */
   const handleNotificationPress = async (notification: Notification) => {
     // Mark as read if unread
     if (!notification.read) {
       await markAsRead(notification.id);
     }
+
+    // Anything the mapper would send to `Notifications` (the screen we are
+    // already on) must fall through to the modal, or the tap looks dead.
+    const eventType = (notification.data as any)?.type;
+
+    if (eventType && ROUTABLE_EVENT_TYPES.has(eventType)) {
+      handleNotificationTap(notification.data);
+      return;
+    }
+
     // Show detail modal
     setSelectedNotification(notification);
   };

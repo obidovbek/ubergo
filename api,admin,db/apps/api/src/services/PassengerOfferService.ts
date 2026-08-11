@@ -30,6 +30,7 @@ import type {
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
+import { NotificationService } from './NotificationService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { t } from '../i18n/translator.js';
@@ -1255,52 +1256,91 @@ export class PassengerOfferService {
       }
     );
 
-    const mappedOffers = offers.map((offer) => {
-      const offerWithIncludes = offer as any;
-
-      // payer_phone is deliberately absent — see getOfferById()
-      return {
-        id: offer.id,
-        from_text: offer.from_text,
-        from_landmark: offer.from_landmark,
-        to_text: offer.to_text,
-        to_landmark: offer.to_landmark,
-        start_at: offer.start_at,
-        depart_until: offer.depart_until,
-        arrive_from: offer.arrive_from,
-        arrive_until: offer.arrive_until,
-        is_urgent: offer.is_urgent,
-        max_price_per_seat: offer.max_price_per_seat,
-        currency: offer.currency,
-        payment_type: offer.payment_type,
-        seats_needed: offer.seats_needed,
-        seat_counts: offer.seat_counts,
-        seat_position_any: offer.seat_position_any,
-        salon_scope: offer.salon_scope,
-        vehicle_class: offer.vehicle_class,
-        vehicle_types: offer.vehicle_types,
-        front_seat: offer.front_seat,
-        pets: offer.pets,
-        large_baggage: offer.large_baggage,
-        woman_in_car: offer.woman_in_car,
-        roof_rack_needed: offer.roof_rack_needed,
-        trailer: offer.trailer,
-        road_pickup: offer.road_pickup,
-        road_pickup_note: offer.road_pickup_note,
-        special_order: offer.special_order,
-        note: offer.note,
-        passenger: {
-          id: offerWithIncludes.user?.id,
-          name:
-            offerWithIncludes.user?.display_name ||
-            `${offerWithIncludes.user?.first_name || ''} ${offerWithIncludes.user?.last_name || ''}`.trim(),
-        },
-      };
-    });
+    const mappedOffers = offers.map((offer) => this.toPublicOffer(offer));
 
     return {
       items: mappedOffers,
       total,
+    };
+  }
+
+  /**
+   * The ONE public shape of a passenger offer — T-043.
+   *
+   * 🔴 This exists because the two endpoints under `/public/passenger-offers`
+   * used to disagree. The browse list built this mapped object inline; the
+   * detail did `return offer` — the **raw Sequelize model**, whose include is
+   * aliased **`as: 'user'`**. So `passenger` was `undefined` on the detail, and
+   * the driver app's `offer.passenger.name` threw during render, killing the
+   * process to the phone's launcher (**T-042**).
+   *
+   * T-042 fixed the *app* (owner's call, to unblock a device test). This is the
+   * root cause: same prefix, same logical object, two shapes. Both public
+   * endpoints now go through here, so they cannot drift apart again.
+   *
+   * ⚠️ `payer_phone` is deliberately absent — a driver browsing offers has no
+   * business with the phone number of whoever is paying (see `getOfferById`,
+   * which excludes it for non-owner views).
+   * ⚠️ Deliberately NOT applied to `getOfferById` itself: that is shared with
+   * the passenger's own order view and T-040's edit flow, and is the return
+   * value of `createOffer`/`updateOffer`. Changing it would move all of those.
+   */
+  /**
+   * The PUBLIC detail endpoint — T-043. Same shape as the browse list, because
+   * it is literally the same mapper.
+   *
+   * `getOfferById` is left untouched on purpose: it is shared with the
+   * passenger's own order view and T-040's edit flow, and is the return value of
+   * `createOffer`/`updateOffer`. This wrapper gives the *public* route its own
+   * shape without moving any of that.
+   */
+  static async getPublicOfferById(offerId: string) {
+    const offer = await this.getOfferById(offerId);
+    return this.toPublicOffer(offer);
+  }
+
+  private static toPublicOffer(offer: PassengerOffer) {
+    // The Sequelize includes (`user`) are not on the model's type, so this alias
+    // is the one place that widening happens — kept to a single line rather than
+    // typing the parameter itself as `any`.
+    const offerWithIncludes = offer as any;
+
+    return {
+      id: offer.id,
+      from_text: offer.from_text,
+      from_landmark: offer.from_landmark,
+      to_text: offer.to_text,
+      to_landmark: offer.to_landmark,
+      start_at: offer.start_at,
+      depart_until: offer.depart_until,
+      arrive_from: offer.arrive_from,
+      arrive_until: offer.arrive_until,
+      is_urgent: offer.is_urgent,
+      max_price_per_seat: offer.max_price_per_seat,
+      currency: offer.currency,
+      payment_type: offer.payment_type,
+      seats_needed: offer.seats_needed,
+      seat_counts: offer.seat_counts,
+      seat_position_any: offer.seat_position_any,
+      salon_scope: offer.salon_scope,
+      vehicle_class: offer.vehicle_class,
+      vehicle_types: offer.vehicle_types,
+      front_seat: offer.front_seat,
+      pets: offer.pets,
+      large_baggage: offer.large_baggage,
+      woman_in_car: offer.woman_in_car,
+      roof_rack_needed: offer.roof_rack_needed,
+      trailer: offer.trailer,
+      road_pickup: offer.road_pickup,
+      road_pickup_note: offer.road_pickup_note,
+      special_order: offer.special_order,
+      note: offer.note,
+      passenger: {
+        id: offerWithIncludes.user?.id,
+        name:
+          offerWithIncludes.user?.display_name ||
+          `${offerWithIncludes.user?.first_name || ''} ${offerWithIncludes.user?.last_name || ''}`.trim(),
+      },
     };
   }
 
@@ -1317,6 +1357,11 @@ export class PassengerOfferService {
     },
     language: Language = 'uz'
   ) {
+    // T-045: record it BEFORE sending, and OUTSIDE the try below, so a push
+    // that fails (stale token, FCM down) still leaves the user a record. The
+    // helper never throws — a notification must not fail a ride.
+    await NotificationService.recordPush(driverId, notification);
+
     try {
       // Get driver's push tokens (only driver app tokens)
       const tokens = await PushToken.findAll({

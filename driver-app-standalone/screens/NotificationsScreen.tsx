@@ -24,6 +24,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import * as NotificationsAPI from '../api/notifications';
 import type { Notification } from '../api/notifications';
+import { handleNotificationTap } from '../utils/notificationRouting';
 
 const theme = createTheme('light');
 
@@ -75,6 +76,26 @@ export const NotificationsScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to mark notification as read:', error);
       showToast('error', t('notifications.markReadError'), error.message);
+    }
+  };
+
+  /**
+   * T-045: tapping a row now goes where the push would have gone.
+   *
+   * ⚠️ Navigation is deliberately OUTSIDE the mark-as-read guard below. That
+   * guard returns early for an already-read row — so before this, tapping a row
+   * you had seen once did nothing at all, forever.
+   *
+   * The destination comes from the SAME `routeForNotification` mapper the push
+   * tap uses (T-044, device-confirmed), so the list and the notification can
+   * never disagree about where an event belongs.
+   */
+  const handleNotificationPress = async (notification: Notification) => {
+    // Mark read first — but never let that failure block the navigation.
+    await handleMarkAsRead(notification);
+
+    if (notification.data) {
+      handleNotificationTap(notification.data);
     }
   };
 
@@ -174,7 +195,7 @@ export const NotificationsScreen: React.FC = () => {
           styles.notificationItem,
           !item.read && styles.unreadNotification,
         ]}
-        onPress={() => handleMarkAsRead(item)}
+        onPress={() => handleNotificationPress(item)}
         activeOpacity={0.7}
       >
         <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>

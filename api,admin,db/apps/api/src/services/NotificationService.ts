@@ -8,7 +8,71 @@ import { AppError } from '../errors/AppError.js';
 import { ErrorMessages } from '../constants/index.js';
 import { Op } from 'sequelize';
 
+/**
+ * Event names that must NEVER be written to the durable notifications list.
+ *
+ * 🔒 `otp` carries a login code in its `data`. A code sitting in a list the user
+ * (or anyone who reaches their session) can re-read defeats the point of it
+ * being single-use and short-lived — the same reasoning that took codes out of
+ * the server logs in T-034 and out of the foreground toast in T-046.
+ */
+const NEVER_PERSIST = new Set(['otp']);
+
 export class NotificationService {
+  /**
+   * Record a push in the durable notifications list — T-045.
+   *
+   * 🔴 Before this, `createNotification` had exactly ONE caller in the whole API
+   * (the signup welcome message). Every ride event — a driver offering, a
+   * passenger cancelling, a booking confirmed — was fire-and-forget FCM, so a
+   * missed push left **no trace anywhere** and the user was simply never told.
+   *
+   * ⚠️ THE `type` TRAP. Two different things share that key:
+   *   - the push's `type` is an EVENT NAME (`driver_join_request`) and is what
+   *     `routeForNotification` reads to decide where a tap goes — so it belongs
+   *     inside `data`;
+   *   - a row's `type` is a SEVERITY (`info|success|warning|error`) and only
+   *     drives the icon.
+   * Passing one as the other breaks the icon *and* the tap routing.
+   *
+   * ⚠️ NEVER THROWS. A notification is not worth failing a confirmed booking
+   * over, and this runs inside ride-critical paths. Failures are logged and
+   * swallowed, matching how `rejectRemainingDrivers` already treats its pushes.
+   *
+   * @returns true if a row was written.
+   */
+  static async recordPush(
+    userId: number,
+    notification: {
+      type: string;
+      title: string;
+      body: string;
+      data?: Record<string, any>;
+    }
+  ): Promise<boolean> {
+    if (NEVER_PERSIST.has(notification.type)) return false;
+
+    try {
+      await this.createNotification(userId, {
+        title: notification.title,
+        // The list column is `message`; the push field is `body`.
+        message: notification.body,
+        // Severity, NOT the event name — see the trap above.
+        type: 'info',
+        // The event name goes here, where the apps' routing mapper reads it.
+        // Spread first so an explicit `type` in the payload cannot overwrite it.
+        data: { ...(notification.data || {}), type: notification.type },
+      });
+      return true;
+    } catch (error) {
+      console.error(
+        `Failed to record notification for user ${userId} (${notification.type}):`,
+        error instanceof Error ? error.message : error
+      );
+      return false;
+    }
+  }
+
   /**
    * Get all notifications for a user
    */

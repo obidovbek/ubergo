@@ -825,6 +825,36 @@
   ⚠️ **Do not conflate with T-047**, which is about a push that DOES arrive and is tapped.
   </details>
 - [ ] T-045 (P2) **The in-app notifications list is a dead end — and offer events never reach it.**
+  ⚠️ Plan is **`docs/PLAN.md`**. **APPROVED and STEPS 1-5 DONE 2026-08-11 — only the owner's deploy
+  + rebuild (step 6) and the commit (step 7) remain.**
+  🔴 **The bigger half was the silence:** `createNotification` had **one caller in the entire API**
+  (the signup welcome message), so every ride event was fire-and-forget FCM and **a missed push left
+  no trace anywhere**. Now all **13 call sites** record — reached by touching just the **6 notify
+  functions** they share, which also covers any call site added later.
+  ⚠️ **Written BEFORE the push and OUTSIDE its try/catch** (owner decision): a stale token or an FCM
+  outage can no longer swallow the record. And `recordPush` **never throws** — a notification must
+  not fail a confirmed booking.
+  🔒 **`otp` is refused outright** — a login code in a re-readable list defeats single-use, the same
+  reasoning as T-034's log purge and T-046's toast exclusion.
+  🔴 **The `type` trap, handled:** a row's `type` is a **severity** (`info|success|…`, drives the
+  icon); a push's `type` is an **event name** (`driver_join_request`, drives the tap). Same key,
+  different meanings — the event name goes into `data`, spread-first so a stray payload `type` cannot
+  shadow it.
+  🔴 **The driver app's routing had to sit OUTSIDE `handleMarkAsRead`,** which returns early for an
+  already-read row — a naive fix inside it would have worked **exactly once per row**. Its handler
+  was also moved below the function it calls (a `const` arrow is in the temporal dead zone until
+  declared — a runtime crash `tsc` does not flag).
+  ⚠️ **`routeForNotification` was deliberately NOT exported**, and the user app **keeps its detail
+  modal** (the only way to read a long message). Widening a device-confirmed module for one caller
+  invites a second, divergent destination table — the exact class of bug behind T-042 and T-044.
+  **54/54** checks, the helper **executed** not grepped — the type trap both ways, `otp` refused, and
+  a **thrown DB error proven not to propagate**. **Proven able to fail: 44 red.**
+  `tsc` API **281** · user **9** · driver **35**, all at baseline (the driver file's 3 errors proven
+  pre-existing via `git stash`).
+  ⚠️ **Two of my own checks were wrong before the code was** — a regex that ran past the Set literal
+  into the stylesheet, and a suite that crashed instead of reporting red. **A suite that cannot fail
+  cleanly proves nothing.**
+  🛑 **THREE cards now share one API deploy: T-034, T-043 and this.** No migration in any of them.
   Split out of **T-044** by owner decision 2026-08-10 (that card is push-taps-only).
   Two separate problems, found while scoping:
   1. **Tapping a row navigates nowhere.** The user app opens a **detail modal**
@@ -840,9 +870,32 @@
   (`20250131000001-create-notifications.cjs`), which is exactly what the routing mapper reads.
   ⚠️ Needs an **API deploy**. ⚠️ Decide whether persistence goes inside `notifyDriver`/
   `notifyPassenger` (one place each, catches every caller) rather than at the ~13 call sites.
-- [ ] T-043 (P2) **Two endpoints under `/public/passenger-offers` return different shapes for the
-  same object.** Split out of **T-042** by owner decision 2026-08-10 (app-side fix first so the
-  device test was unblocked). **This is the root cause T-042 only worked around.**
+- [ ] T-043 (P2) **Two endpoints under `/public/passenger-offers` returned different shapes for the
+  same object.** Split out of **T-042** (app-side fix first, to unblock a device test).
+  **✅ FIXED 2026-08-11 — this closes the ROOT CAUSE T-042 only worked around. API-only, needs a
+  DEPLOY, no migration.**
+  **The inline mapper inside the browse list was extracted to `toPublicOffer()`, and the public
+  detail controller now calls a new `getPublicOfferById()` that runs the same mapper.** One
+  definition, both endpoints — so they cannot drift apart again. The old detail did `return offer`,
+  the **raw Sequelize model**, whose include is aliased **`user`**, which is exactly why
+  `offer.passenger.name` threw during render and killed the driver app to the phone's launcher.
+  ✅ **`getOfferById` is deliberately UNTOUCHED**, as the card required — it is shared with the
+  passenger's own order view and T-040's edit flow and is the return value of
+  `createOffer`/`updateOffer`. The wrapper gives the *public* route its own shape without moving any
+  of that. `payer_phone` stays absent from the public shape.
+  ✅ **`tsc` API 282 → 281** — one *below* baseline: extracting the mapper removed a pre-existing
+  error. ⚠️ A second one surfaced and was fixed properly: the controller passed `req.params.id`
+  (`string | undefined`) into a `string` parameter — previously hidden because the old call site was
+  equally loose.
+  ⚠️ **My first extraction invented a paginated return** (`page`/`limit`/`totalPages`) this function
+  never had, briefly pushing `tsc` to 287. Caught immediately by the typecheck — a reminder that
+  "extract a method" is still a rewrite of its boundaries.
+  **25/25** checks — one shared mapper proven used by both paths, `getOfferById` proven unchanged,
+  the field set verified, and both endpoints simulated over one raw row to confirm identical keys and
+  a readable `passenger.name`. **Proven able to fail: 18 red.**
+  🛑 **Owner: deploy the API, then re-open a passenger order's details in the driver app.** It should
+  behave exactly as it does now — the app-side guard from T-042 stays as belt-and-braces.
+  <details><summary>original report</summary>
   `GET /public/passenger-offers` (list) returns a hand-mapped object with `passenger: {id, name}`;
   `GET /public/passenger-offers/:id` (detail) returns the **raw Sequelize model** with `user`.
   Same prefix, same logical object, two shapes — which crashed the driver app to the launcher once
@@ -853,6 +906,7 @@
   **Suggested shape:** leave `getOfferById` alone and give the *public* controller its own mapper
   (`getPublicOfferById`), so the two public endpoints agree and nothing else moves.
   ⚠️ Check the **user app** for the same bare `.passenger` reads before closing.
+  </details>
 - [ ] T-034 (P1) 🔒 **Two OTP security holes.** Split out of T-033 by owner decision 2026-08-08.
   **✅ BOTH FIXED 2026-08-11 (owner approved: delete the logs; fix the cap only, no code-length
   change). API-only — needs a DEPLOY, no migration.**
@@ -1002,6 +1056,45 @@
 - [ ] T-010 (P3) Add a real test suite (none exists today)
 
 ## ✅ Done (newest on top)
+
+> ⚠️ **2026-08-11: the nine cards below are CODE-COMPLETE but NOT device-tested.** The owner batched
+> testing deliberately. They stay listed here so the board is honest about what is built; if a device
+> test **fails**, move that card back to *Now*.
+> 🛑 **T-034 · T-043 · T-045 share ONE API deploy** (no migration in any). Everything else is
+> app-side and needs **both apps rebuilt**.
+
+- [x] T-045 **Ride notifications are recorded, and the list navigates** — 2026-08-11.
+  `createNotification` had **one caller in the entire API**; now all **13** ride events persist, via
+  the **6** notify functions they share. Written **before the push and outside its try/catch**, so a
+  stale token cannot swallow the record; `recordPush` never throws. 🔒 `otp` never persisted.
+  Both apps' lists now navigate via the T-044 mapper. **54/54, 44 red.** → `docs/PLAN.md`
+- [x] T-043 **The two `/public/passenger-offers` endpoints agree at last** — 2026-08-11.
+  One shared `toPublicOffer()` mapper instead of a hand-built list shape and a raw model on detail.
+  **This is the root cause T-042 only worked around.** `getOfferById` deliberately untouched.
+  `tsc` 282 → **281**. **25/25, 18 red.**
+- [x] T-034 🔒 **Two OTP security holes closed** — 2026-08-11. Codes, the Eskiz bearer token, user
+  rows and push tokens out of the logs; phones masked. **The brute-force cap fires for the first
+  time** — the old lookup by `{target, code}` meant a wrong guess was never even counted.
+  ⚠️ Tightening the read forced a matching change to the write (one live code per phone), or a
+  resend would have silently rejected the first SMS. **30/30, 15 red.**
+- [x] T-024 **The passenger can answer the drivers who offered** — 2026-08-11, committed `e411ec4`.
+  Closes the last hole in the loop **and T-044's deliberate compromise**. Accept is irreversible and
+  rejects everyone else, so the dialog names the count. **136/136, 104 red.** → `docs/PLAN-T024.md`
+- [x] T-053 **`register()`/`RegisterData` removed from both AuthContexts** — 2026-08-11.
+  Dead by the same three tests as `login()`. `tsc` user 10 → **9**.  **46/46, 19 red.**
+- [x] T-052 **`LoginScreen` deleted from both apps** — 2026-08-11. Unreachable (its only link was
+  commented out), pointing at an endpoint the mounted router does not define, collecting
+  email+password for a phone-OTP product. `tsc` user 11 → **10**. **31/31, 17 red.**
+- [x] T-051 **Passenger orders: no more full-page reload on tab swipe, and newest-first** —
+  2026-08-11. Two independent defects; the "refresh" was the whole screen unmounting behind a
+  spinner. Also fixed two latent wrong header counts. **20/20, 10 red.**
+- [x] T-050 **The "UbexGo" wordmark no longer wraps mid-word** — 2026-08-11. Cause was arithmetic,
+  not the font scale: 36px + `letterSpacing: 2` never fit a 140px circle. Fixed at **all 10 sites**.
+  **34/34, 12 red.**
+- [x] T-049 **Driver search card + geo pickers no longer render English** — 2026-08-11. The reported
+  string was **one of nine**; the other 8 only fire on an error, which is why the screen looked done.
+  **21/21** i18n keys evaluated.
+
 - [x] T-044 **A tapped push opens the exact screen, in both apps** — **device-confirmed by the owner
   2026-08-11** (*"push opens exactly page thats solved"*), committed `55718f6`.
   ✅ **The tap plumbing was never the problem** — handler, cold-start parking and flush-on-ready were

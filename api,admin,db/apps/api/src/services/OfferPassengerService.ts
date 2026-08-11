@@ -21,6 +21,7 @@ import type { OfferPassengerStatus } from '../database/models/OfferPassenger.js'
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
+import { NotificationService } from './NotificationService.js';
 import type { Request } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { getUserLanguage } from '../utils/userLanguage.js';
@@ -814,6 +815,11 @@ export class OfferPassengerService {
     },
     language: Language = 'uz'
   ) {
+    // T-045: record it BEFORE sending, and OUTSIDE the try below, so a push
+    // that fails (stale token, FCM down) still leaves the user a record. The
+    // helper never throws — a notification must not fail a ride.
+    await NotificationService.recordPush(driverId, notification);
+
     try {
       // Get driver's push tokens (only driver app tokens)
       const tokens = await PushToken.findAll({
@@ -870,6 +876,11 @@ export class OfferPassengerService {
     },
     language: Language = 'uz'
   ) {
+    // T-045: record it BEFORE sending, and OUTSIDE the try below, so a push
+    // that fails (stale token, FCM down) still leaves the user a record. The
+    // helper never throws — a notification must not fail a ride.
+    await NotificationService.recordPush(passengerId, notification);
+
     try {
       // Get passenger's push tokens (only user app tokens)
       const tokens = await PushToken.findAll({
