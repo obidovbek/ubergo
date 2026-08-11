@@ -4,6 +4,12 @@
  */
 
 export default {
+  // T-054 — shared by utils/contactPhone.ts, which any screen showing a
+  // confirmed counterparty's number can use.
+  contact: {
+    noPhone: "Telefon raqami ko'rsatilmagan",
+    dialFailed: "Qo'ng'iroqni boshlab bo'lmadi",
+  },
   common: {
     continue: 'Davom etish',
     cancel: 'Bekor qilish',
@@ -29,6 +35,14 @@ export default {
     minute: 'Daqiqa',
     camera: 'Kamera',
     gallery: 'Galereya',
+    // T-057 — the PhotoSourceModal's fallback heading. Screens with their own
+    // wording (driverLicense.selectPhoto, …) pass it explicitly.
+    selectPhoto: 'Rasm tanlash',
+    // T-057 — three screens had these hard-coded in Uzbek, so a Russian or
+    // English user was shown Uzbek. The two older screens keep their own
+    // screen-scoped copies, which were already translated.
+    cameraPermissionMessage: 'Kameradan foydalanish uchun ruxsat bering',
+    galleryPermissionMessage: 'Galereyadan rasm tanlash uchun ruxsat bering',
     permissionRequired: 'Ruxsat kerak',
     viewAll: 'Barchasini ko\'rish',
     all: 'Barchasi',
@@ -191,6 +205,8 @@ export default {
     cancelConfirm: 'Ha, bekor qilaman',
     cancelled: 'Taklif bekor qilindi',
     cancelFailed: 'Bekor qilishda xatolik',
+    contactTitle: "Yo'lovchi bilan bog'lanish",
+    noPhone: "Yo'lovchining telefon raqami ko'rsatilmagan",
   },
 
   // Phone Registration Screen

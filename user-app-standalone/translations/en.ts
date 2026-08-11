@@ -3,6 +3,12 @@
  */
 
 export default {
+  // T-054 — shared by utils/contactPhone.ts, which any screen showing a
+  // confirmed counterparty's number can use.
+  contact: {
+    noPhone: 'No phone number on file',
+    dialFailed: 'Could not start the call',
+  },
   common: {
     continue: 'Continue',
     cancel: 'Cancel',
@@ -23,6 +29,9 @@ export default {
     day: 'Day',
     month: 'Month',
     year: 'Year',
+    // T-057 — the TimeWheelModal columns.
+    hour: 'Hour',
+    minute: 'Minute',
     delete: 'Delete',
   },
 
@@ -408,6 +417,8 @@ export default {
     loadFailed: 'Could not load the drivers',
     emptyTitle: 'No offers yet',
     emptyMessage: 'When drivers respond to your request, they will appear here.',
+    contactTitle: 'Contact the driver',
+    noPhone: 'The driver has no phone number on file',
   },
   passengerOffers: {
     createOffer: 'Create Ride Request',

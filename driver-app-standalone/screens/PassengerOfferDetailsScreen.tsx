@@ -29,7 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as PassengerOffersAPI from '../api/passengerOffers';
-import { passengerNameOf } from '../api/passengerOffers';
+import { passengerNameOf, passengerPhoneOf } from '../api/passengerOffers';
 import * as DriverAPI from '../api/driver';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
@@ -39,6 +39,7 @@ import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
+import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 
 /** The one vehicle attached to the driver's profile, as the wizard reads it. */
 interface DriverVehicleSummary {
@@ -392,12 +393,37 @@ export default function PassengerOfferDetailsScreen() {
               happened while this screen instance was mounted. */}
           <View style={styles.footer}>
             {myJoin ? (
-              <View style={[styles.sentBanner, joinBanner.style]}>
-                <Ionicons name={joinBanner.icon} size={20} color={joinBanner.color} />
-                <Text style={[styles.sentBannerText, { color: joinBanner.color }]}>
-                  {joinBanner.text}
-                </Text>
-              </View>
+              <>
+                <View style={[styles.sentBanner, joinBanner.style]}>
+                  <Ionicons name={joinBanner.icon} size={20} color={joinBanner.color} />
+                  <Text style={[styles.sentBannerText, { color: joinBanner.color }]}>
+                    {joinBanner.text}
+                  </Text>
+                </View>
+
+                {/* T-054 — this is the screen the driver actually has open after
+                    browsing, so the confirmed ride's contact belongs here too.
+                    🔴 The number must be read from `myJoin.offer`, NOT from this
+                    screen's `offer`: that one comes from the PUBLIC detail
+                    endpoint, which carries no phone for anybody. */}
+                {myJoin.status === 'confirmed' &&
+                  (passengerPhoneOf(myJoin.offer) ? (
+                    <TouchableOpacity
+                      style={styles.callButton}
+                      onPress={() => dialPhone(passengerPhoneOf(myJoin.offer), t)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="call" size={18} color="#FFFFFF" />
+                      <Text style={styles.callText}>
+                        {formatContactPhone(passengerPhoneOf(myJoin.offer))}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.contactMissing}>
+                      {t('myJoinRequests.noPhone')}
+                    </Text>
+                  ))}
+              </>
             ) : (
               <TouchableOpacity style={styles.cta} onPress={openJoin} activeOpacity={0.85}>
                 <Ionicons name="car-outline" size={20} color="#FFFFFF" />
@@ -676,6 +702,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 52,
+    marginTop: 10,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+  },
+  callText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  contactMissing: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 10,
   },
   // Per-status skins. The banner is no longer always green — a rejected driver
   // seeing a green "sent" banner would think their offer was still live.

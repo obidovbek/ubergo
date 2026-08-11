@@ -12,13 +12,13 @@
 
 import React, { useState } from "react";
 import {
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { DateWheelModal } from "../DateWheelModal";
+import { TimeWheelModal } from "../TimeWheelModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "../../hooks/useTranslation";
 import { CheckRow } from "./CheckRow";
@@ -69,6 +69,8 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const [picker, setPicker] = useState<PickerTarget | null>(null);
+  /** The value the open wheel is editing; committed only on Confirm. */
+  const [draft, setDraft] = useState<Date>(new Date());
 
   const isDeparture = variant === "departure";
   const weekdays = t("passengerOffers.weekdays").split(",");
@@ -97,24 +99,33 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
     return `${formatFullDate(date)} ${formatTime(untilTime)} ${t("passengerOffers.arrivalSummarySuffix")}`;
   };
 
-  const handlePicked = (event: any, picked?: Date) => {
-    const target = picker;
-    if (Platform.OS === "android" || event?.type === "dismissed") {
-      setPicker(null);
-    }
-    if (event?.type !== "set" || !picked || !target) return;
-
-    if (target === "date") onDateChange(picked);
-    else if (target === "from") onFromTimeChange?.(picked);
-    else onUntilTimeChange(picked);
-
-    if (Platform.OS === "ios") setPicker(null);
+  const valueFor = (target: PickerTarget): Date => {
+    if (target === "date") return date ?? new Date();
+    if (target === "from") return fromTime ?? new Date();
+    return untilTime ?? new Date();
   };
 
-  const pickerValue = (): Date => {
-    if (picker === "date") return date ?? new Date();
-    if (picker === "from") return fromTime ?? new Date();
-    return untilTime ?? new Date();
+  /**
+   * The wheels are controlled: `draft` holds the in-progress pick and nothing
+   * reaches the form until Confirm. That is the opposite of the OS picker this
+   * replaced, which fired `onChange` per spin on iOS — so cancelling used to be
+   * impossible once the user had scrolled.
+   */
+  const openPicker = (target: PickerTarget) => {
+    setDraft(valueFor(target));
+    setPicker(target);
+  };
+
+  const closePicker = () => setPicker(null);
+
+  const commitDraft = () => {
+    const target = picker;
+    setPicker(null);
+    if (!target) return;
+
+    if (target === "date") onDateChange(draft);
+    else if (target === "from") onFromTimeChange?.(draft);
+    else onUntilTimeChange(draft);
   };
 
   const controlsDisabled = isDeparture && urgent;
@@ -142,7 +153,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
           <View style={styles.controls}>
             <TouchableOpacity
               style={styles.control}
-              onPress={() => setPicker("date")}
+              onPress={() => openPicker("date")}
               activeOpacity={0.7}
             >
               <Ionicons name="calendar-outline" size={16} color="#4B5563" />
@@ -154,7 +165,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
             {isDeparture && (
               <TouchableOpacity
                 style={styles.control}
-                onPress={() => setPicker("from")}
+                onPress={() => openPicker("from")}
                 activeOpacity={0.7}
               >
                 <Ionicons name="time-outline" size={16} color="#4B5563" />
@@ -168,7 +179,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
 
             <TouchableOpacity
               style={styles.control}
-              onPress={() => setPicker("until")}
+              onPress={() => openPicker("until")}
               activeOpacity={0.7}
             >
               <Ionicons name="time-outline" size={16} color="#4B5563" />
@@ -195,16 +206,31 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
         {!!error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
-      {picker !== null && (
-        <DateTimePicker
-          value={pickerValue()}
-          mode={picker === "date" ? "date" : "time"}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          is24Hour
-          minimumDate={picker === "date" ? new Date() : undefined}
-          onChange={handlePicked}
-        />
-      )}
+      {/* T-057 — the app's own wheels, not the stock OS dialog. */}
+      <DateWheelModal
+        visible={picker === "date"}
+        value={draft}
+        onChange={setDraft}
+        title={t("passengerOffers.pickDate")}
+        // A trip is not a birthday: offer this year and the next, nothing else.
+        earliestYear={new Date().getFullYear()}
+        latestYear={new Date().getFullYear() + 1}
+        onConfirm={commitDraft}
+        onCancel={closePicker}
+      />
+
+      <TimeWheelModal
+        visible={picker === "from" || picker === "until"}
+        value={draft}
+        onChange={setDraft}
+        title={
+          picker === "until"
+            ? t("passengerOffers.pickTimeUntil")
+            : t("passengerOffers.pickTimeFrom")
+        }
+        onConfirm={commitDraft}
+        onCancel={closePicker}
+      />
     </View>
   );
 };

@@ -193,7 +193,23 @@
       "Bash(timeout 300 npm run lint)",
       "Bash(timeout 300 npx eslint src/services/NotificationService.ts src/services/OtpService.ts src/services/PassengerOfferService.ts src/services/OfferDriverService.ts src/services/OfferPassengerService.ts src/services/DriverOfferService.ts src/controllers/PublicPassengerOfferController.ts)",
       "Bash(timeout 300 npx eslint src/services/NotificationService.ts src/services/OtpService.ts src/services/PassengerOfferService.ts src/controllers/PublicPassengerOfferController.ts)",
-      "Bash(timeout 120 npx eslint src/services/PassengerOfferService.ts)"
+      "Bash(timeout 120 npx eslint src/services/PassengerOfferService.ts)",
+      "Bash(npx which *)",
+      "Read(//c/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/t054/**)",
+      "Bash(node run.cjs)",
+      "Bash(node i18n.cjs)",
+      "Bash(sed \"s|'offerDrivers.contactTitle',|'offerDrivers.contactTitle','offerDrivers.doesNotExist',|\" i18n.cjs)",
+      "Bash(node i18n_red.cjs)",
+      "Bash(node util.cjs)",
+      "Bash(mkdir -p red)",
+      "Bash(sed 's| await Linking.openURL\\(`tel:${number}`\\);| const canOpen = await Linking.canOpenURL\\(`tel:${number}`\\);\\\\n if \\(!canOpen\\) { showToast.error\\(t\\(\"common.error\"\\), t\\(\"contact.dialFailed\"\\)\\); return; }\\\\n await Linking.openURL\\(`tel:${number}`\\);|' \"d:/projects/UbexGo/user-app-standalone/utils/contactPhone.ts\")",
+      "Bash(sed 's|\"d:/projects/UbexGo/user-app-standalone\", \"utils/contactPhone.ts\"|X|' util.cjs)",
+      "Bash(sed \"s|path.join\\(REPO, app, 'utils/contactPhone.ts'\\)|app === 'user-app-standalone' ? path.join\\(__dirname, 'red/contactPhone.ts'\\) : path.join\\(REPO, app, 'utils/contactPhone.ts'\\)|\" util.cjs)",
+      "Bash(awk 'NR>=1 && /^  [a-zA-Z]+: \\\\{/ {sect=$1} /selectPhoto:/ {print \"section: \" sect \" line \" NR}' translations/uz.ts)",
+      "Read(//c/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/t057/**)",
+      "Read(//c/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/**)",
+      "Bash(sed -e \"s|'user-app-standalone/utils/contactPhone.ts',|'user-app-standalone/components/TimeWheelModal.tsx','user-app-standalone/components/passengerOffer/TimeWindowCard.tsx','user-app-standalone/screens/CreatePassengerOfferScreen.tsx','user-app-standalone/screens/NotificationsScreen.tsx',|\" -e \"s|'user-app-standalone/screens/OfferDriversScreen.tsx',||\" -e \"s|'contact.noPhone',\\\\n||\" -e \"s|'driver-app-standalone/utils/contactPhone.ts',|'driver-app-standalone/components/PhotoSourceModal.tsx','driver-app-standalone/screens/DriverVehicleScreen.tsx','driver-app-standalone/screens/DriverPassportScreen.tsx','driver-app-standalone/screens/DriverPersonalInfoScreen.tsx','driver-app-standalone/screens/ProfileScreen.tsx',|\" -e \"s|'myJoinRequests.contactTitle',|'common.selectPhoto','common.cameraPermissionMessage','common.galleryPermissionMessage',|\" -e \"s|'offerDrivers.contactTitle',|'common.hour','common.minute',|\" t054/i18n.cjs)",
+      "Bash(node t057/i18n.cjs)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

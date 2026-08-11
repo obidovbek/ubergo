@@ -11,7 +11,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { createTheme } from '../themes';

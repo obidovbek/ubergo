@@ -28,7 +28,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as PassengerOffersAPI from '../api/passengerOffers';
-import { passengerNameOf } from '../api/passengerOffers';
+import { passengerNameOf, passengerPhoneOf } from '../api/passengerOffers';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -36,6 +36,7 @@ import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
+import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
@@ -125,6 +126,12 @@ export default function MyJoinRequestsScreen() {
     const offer = item.offer;
     const colors = STATUS_COLORS[item.status] || STATUS_COLORS.cancelled;
     const passengerName = passengerNameOf(offer);
+    // T-054 — the server sends the passenger's number ONLY on a confirmed
+    // request, so this is empty for every other status even without the check.
+    // The status check stays anyway: the block belongs to an agreed ride, and
+    // leaning on the field's absence alone would make a server change silent.
+    const isConfirmed = item.status === 'confirmed';
+    const passengerPhone = passengerPhoneOf(offer);
 
     return (
       <View style={styles.card}>
@@ -198,6 +205,28 @@ export default function MyJoinRequestsScreen() {
 
         {item.status === 'rejected' && !!item.rejection_reason && (
           <Text style={styles.rejectionReason}>{item.rejection_reason}</Text>
+        )}
+
+        {/* T-054 — the passenger chose this driver; without a number the agreed
+            ride had no way of actually happening. */}
+        {isConfirmed && (
+          <View style={styles.contactBox}>
+            <Text style={styles.contactLabel}>{t('myJoinRequests.contactTitle')}</Text>
+            {passengerPhone ? (
+              <TouchableOpacity
+                style={styles.callButton}
+                onPress={() => dialPhone(passengerPhone, t)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callText}>{formatContactPhone(passengerPhone)}</Text>
+              </TouchableOpacity>
+            ) : (
+              // A passenger who signed up with Google SSO can have no number on
+              // file. Say so rather than showing a button that dials nothing.
+              <Text style={styles.contactMissing}>{t('myJoinRequests.noPhone')}</Text>
+            )}
+          </View>
         )}
 
         {/* The server refuses to cancel a confirmed request, so only pending
@@ -444,6 +473,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#B91C1C',
   },
+  contactBox: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+  },
+  contactLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 8,
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    minHeight: 44,
+  },
+  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: '#6B7280' },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -16,7 +16,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,6 +24,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
+import { PhotoSourceModal } from '../components/PhotoSourceModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -52,6 +52,15 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
+  /** T-057 — which document the source picker is currently answering for. */
+  const [photoSourceFor, setPhotoSourceFor] = useState<
+    | 'license_document'
+    | 'license_sheet_document'
+    | 'self_employment_document'
+    | 'power_of_attorney_document'
+    | 'insurance_document'
+    | null
+  >(null);
   const [personalInfo, setPersonalInfo] = useState({
     first_name: '',
     last_name: '',
@@ -664,24 +673,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       return;
     }
 
-    Alert.alert(
-      t('driverTaxiLicense.chooseImageOrFile'),
-      t('driverTaxiLicense.howToSelectImage'),
-      [
-        {
-          text: t('common.camera'),
-          onPress: () => pickImage(photoType, 'camera'),
-        },
-        {
-          text: t('common.gallery'),
-          onPress: () => pickImage(photoType, 'library'),
-        },
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-      ]
-    );
+    // Which document is being replaced is remembered here; the modal only
+    // answers camera-or-gallery (T-057).
+    setPhotoSourceFor(photoType);
   };
 
   const pickImage = async (photoType: 'license_document' | 'license_sheet_document' | 'self_employment_document' | 'power_of_attorney_document' | 'insurance_document', source: 'camera' | 'library') => {
@@ -690,7 +684,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         if (source === 'camera') {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
+            showToast.error(
               t('common.permissionRequired'),
               t('driverTaxiLicense.cameraPermissionMessage')
             );
@@ -699,7 +693,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
+            showToast.error(
               t('common.permissionRequired'),
               t('driverTaxiLicense.galleryPermissionMessage')
             );
@@ -1417,6 +1411,18 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 </View>
               </View>
       </AppModal>
+
+      {/* Photo source — replaces the bare OS alert (T-057) */}
+      <PhotoSourceModal
+        visible={photoSourceFor !== null}
+        title={t('driverTaxiLicense.chooseImageOrFile')}
+        onSelect={(source) => {
+          const target = photoSourceFor;
+          setPhotoSourceFor(null);
+          if (target) pickImage(target, source);
+        }}
+        onClose={() => setPhotoSourceFor(null)}
+      />
     </SafeAreaView>
   );
 };

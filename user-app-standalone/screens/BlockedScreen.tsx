@@ -14,13 +14,13 @@ import {
   Animated,
   Dimensions,
   Linking,
-  Alert,
   Platform,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { getSupportContact } from '../api/support';
+import { showToast } from '../utils/toast';
 
 const { width } = Dimensions.get('window');
 const theme = createTheme('light');
@@ -144,14 +144,18 @@ export const BlockedScreen: React.FC = () => {
       if (canOpen) {
         await Linking.openURL(emailUrl);
       } else {
-        Alert.alert(
+        // ⚠️ T-056: on Android 11+ `canOpenURL` answers false unless the
+        // manifest declares a matching intent in <queries>, so this branch fires
+        // on phones that DO have a mail app. T-057 only restyles the message;
+        // the wrong condition above is T-056's to fix.
+        showToast.error(
           t('common.error') || 'Error',
           t('auth.emailNotAvailable') || 'Email client is not available on this device'
         );
       }
     } catch (error) {
       console.error('Error opening email:', error);
-      Alert.alert(
+      showToast.error(
         t('common.error') || 'Error',
         t('auth.emailError') || 'Unable to open email client'
       );
@@ -166,14 +170,15 @@ export const BlockedScreen: React.FC = () => {
       if (canOpen) {
         await Linking.openURL(phoneUrl);
       } else {
-        Alert.alert(
+        // ⚠️ Same T-056 caveat as the email branch above.
+        showToast.error(
           t('common.error') || 'Error',
           t('auth.phoneNotAvailable') || 'Phone dialer is not available on this device'
         );
       }
     } catch (error) {
       console.error('Error opening phone:', error);
-      Alert.alert(
+      showToast.error(
         t('common.error') || 'Error',
         t('auth.phoneError') || 'Unable to open phone dialer'
       );

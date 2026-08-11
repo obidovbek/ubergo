@@ -4,6 +4,12 @@
  */
 
 export default {
+  // T-054 — shared by utils/contactPhone.ts, which any screen showing a
+  // confirmed counterparty's number can use.
+  contact: {
+    noPhone: "Telefon raqami ko'rsatilmagan",
+    dialFailed: "Qo'ng'iroqni boshlab bo'lmadi",
+  },
   common: {
     continue: "Davom etish",
     cancel: "Bekor qilish",
@@ -25,6 +31,9 @@ export default {
     day: "Kun",
     month: "Oy",
     year: "Yil",
+    // T-057 — the TimeWheelModal columns.
+    hour: "Soat",
+    minute: "Daqiqa",
   },
 
   errors: {
@@ -444,6 +453,8 @@ export default {
     loadFailed: "Haydovchilarni yuklab bo'lmadi",
     emptyTitle: "Hozircha takliflar yo'q",
     emptyMessage: "Haydovchilar so'rovingizga javob berganda, ular shu yerda ko'rinadi.",
+    contactTitle: "Haydovchi bilan bog'lanish",
+    noPhone: "Haydovchining telefon raqami ko'rsatilmagan",
   },
   passengerOffers: {
     createOffer: "Safar so'rov yaratish",

@@ -84,6 +84,14 @@ export interface PassengerOffer {
     first_name?: string;
     last_name?: string;
     display_name?: string;
+    /**
+     * T-054 — present **only when this driver's own request is `confirmed`**.
+     * The server strips it from every other status
+     * (`OfferDriverService.gatePhones`), and it is absent entirely from the
+     * public browse/detail endpoints. It can also be `null` for a passenger who
+     * signed up via Google SSO. Read it through `passengerPhoneOf()`.
+     */
+    phone_e164?: string | null;
   };
 }
 
@@ -114,6 +122,22 @@ export const passengerNameOf = (offer?: JoinRequestOffer): string => {
     user.display_name ||
     `${user.first_name || ''} ${user.last_name || ''}`.trim()
   );
+};
+
+/**
+ * The passenger's phone, or `''` when there is none to show — T-054.
+ *
+ * 🔴 A bare `offer.user.phone_e164` is the exact expression class that crashed
+ * this app to the launcher in T-042: `offer` and `user` are both optional and
+ * the mapped `passenger` shape has no phone field at all. The helper exists to
+ * make that mistake impossible, exactly like `passengerNameOf` above.
+ *
+ * ⚠️ An empty string here means "nothing to show" — it does NOT distinguish
+ * "not confirmed yet" from "passenger has no number on file". The caller knows
+ * the status; this only knows the payload.
+ */
+export const passengerPhoneOf = (offer?: JoinRequestOffer): string => {
+  return offer?.user?.phone_e164 || '';
 };
 
 export interface OfferDriver {

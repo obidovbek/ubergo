@@ -16,7 +16,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Image,
-  Alert,
   ActivityIndicator,
   TouchableWithoutFeedback,
 } from 'react-native';
@@ -27,6 +26,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
 import { ModalList } from '../components/ModalList';
+import { PhotoSourceModal } from '../components/PhotoSourceModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -86,6 +86,8 @@ export const DriverLicenseScreen: React.FC = () => {
 
   // Photo upload state
   const [uploadingPhoto, setUploadingPhoto] = useState<'front' | 'back' | null>(null);
+  /** T-057 — which photo the source picker is currently answering for. */
+  const [photoSourceFor, setPhotoSourceFor] = useState<'front' | 'back' | null>(null);
   const [photoFrontUri, setPhotoFrontUri] = useState<string | null>(null);
   const [photoBackUri, setPhotoBackUri] = useState<string | null>(null);
 
@@ -423,24 +425,9 @@ export const DriverLicenseScreen: React.FC = () => {
       return;
     }
 
-    Alert.alert(
-      t('driverLicense.selectPhoto'),
-      t('driverLicense.howToSelectPhoto'),
-      [
-        {
-          text: t('common.camera'),
-          onPress: () => pickImage(photoType, 'camera'),
-        },
-        {
-          text: t('common.gallery'),
-          onPress: () => pickImage(photoType, 'library'),
-        },
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-      ]
-    );
+    // Which photo is being replaced is remembered here; the modal only answers
+    // camera-or-gallery (T-057).
+    setPhotoSourceFor(photoType);
   };
 
   const pickImage = async (photoType: 'front' | 'back', source: 'camera' | 'library') => {
@@ -449,7 +436,7 @@ export const DriverLicenseScreen: React.FC = () => {
         if (source === 'camera') {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
+            showToast.error(
               t('common.permissionRequired'),
               t('driverLicense.cameraPermissionMessage')
             );
@@ -458,7 +445,7 @@ export const DriverLicenseScreen: React.FC = () => {
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
+            showToast.error(
               t('common.permissionRequired'),
               t('driverLicense.galleryPermissionMessage')
             );
@@ -1110,6 +1097,18 @@ export const DriverLicenseScreen: React.FC = () => {
                 </View>
               </View>
       </AppModal>
+
+      {/* Photo source — replaces the bare OS alert (T-057) */}
+      <PhotoSourceModal
+        visible={photoSourceFor !== null}
+        title={t('driverLicense.selectPhoto')}
+        onSelect={(source) => {
+          const target = photoSourceFor;
+          setPhotoSourceFor(null);
+          if (target) pickImage(target, source);
+        }}
+        onClose={() => setPhotoSourceFor(null)}
+      />
 
       {/* Country Picker Modal */}
       <ModalList

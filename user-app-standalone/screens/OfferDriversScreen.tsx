@@ -41,6 +41,7 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
+import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   pending: { bg: '#FEF3C7', text: '#B45309' },
@@ -179,6 +180,12 @@ export default function OfferDriversScreen() {
     const isPending = item.status === 'pending';
     const disabled = busyId !== null;
     const v = item.vehicle;
+    // T-054 — the server sends `phone_e164` ONLY on the confirmed row, so this
+    // is `undefined` for every rival bid whether or not the status is checked.
+    // The status check stays anyway: the block belongs to the chosen driver, and
+    // relying on the field's absence alone would make a server change silent.
+    const isConfirmed = item.status === 'confirmed';
+    const driverPhone = item.driver?.phone_e164;
 
     return (
       <View style={styles.card}>
@@ -234,6 +241,28 @@ export default function OfferDriversScreen() {
             <Text style={styles.messageText}>{item.message}</Text>
           </View>
         ) : null}
+
+        {/* T-054 — the ride was agreed; without this the two people had no way
+            to reach each other and the confirmed booking could not happen. */}
+        {isConfirmed && (
+          <View style={styles.contactBox}>
+            <Text style={styles.contactLabel}>{t('offerDrivers.contactTitle')}</Text>
+            {driverPhone ? (
+              <TouchableOpacity
+                style={styles.callButton}
+                onPress={() => dialPhone(driverPhone, t)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callText}>{formatContactPhone(driverPhone)}</Text>
+              </TouchableOpacity>
+            ) : (
+              // A driver who signed up with Google SSO can have no number on
+              // file. Say so rather than showing a button that dials nothing.
+              <Text style={styles.contactMissing}>{t('offerDrivers.noPhone')}</Text>
+            )}
+          </View>
+        )}
 
         {isPending && (
           <View style={styles.actions}>
@@ -387,6 +416,29 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageText: { fontSize: 14, color: '#4B5563', fontStyle: 'italic' },
+  contactBox: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+  },
+  contactLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 8,
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: '#6B7280' },
   actions: { flexDirection: 'row', marginTop: 12, gap: 10 },
   actionButton: {
     flex: 1,

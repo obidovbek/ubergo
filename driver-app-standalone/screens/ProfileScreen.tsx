@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Alert,
   Platform,
   StatusBar,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
 import { useNavigation } from '@react-navigation/native';
 
 const theme = createTheme('light');
@@ -45,26 +45,23 @@ export const ProfileScreen: React.FC = () => {
     console.log('ProfileScreen: Logout button pressed');
     console.log('ProfileScreen: logout function available:', typeof logout);
 
-    Alert.alert(
-      t('profile.logout'),
-      t('profile.logoutConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Calling logout directly...');
-              await logout();
-              console.log('Direct logout completed');
-            } catch (error) {
-              console.error('Direct logout error:', error);
-            }
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('profile.logout'),
+      message: t('profile.logoutConfirm'),
+      confirmText: t('profile.logout'),
+      cancelText: t('common.cancel'),
+      confirmButtonStyle: 'destructive',
+      onCancel: () => {},
+      onConfirm: async () => {
+        try {
+          console.log('Calling logout directly...');
+          await logout();
+          console.log('Direct logout completed');
+        } catch (error) {
+          console.error('Direct logout error:', error);
+        }
+      },
+    });
   };
 
   const menuItems = [

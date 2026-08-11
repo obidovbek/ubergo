@@ -3,6 +3,12 @@
  */
 
 export default {
+  // T-054 — shared by utils/contactPhone.ts, which any screen showing a
+  // confirmed counterparty's number can use.
+  contact: {
+    noPhone: 'Номер телефона не указан',
+    dialFailed: 'Не удалось начать звонок',
+  },
   common: {
     continue: 'Продолжить',
     cancel: 'Отмена',
@@ -28,6 +34,14 @@ export default {
     minute: 'Минута',
     camera: 'Камера',
     gallery: 'Галерея',
+    // T-057 — the PhotoSourceModal's fallback heading. Screens with their own
+    // wording (driverLicense.selectPhoto, …) pass it explicitly.
+    selectPhoto: 'Выбрать фото',
+    // T-057 — three screens had these hard-coded in Uzbek, so a Russian or
+    // English user was shown Uzbek. The two older screens keep their own
+    // screen-scoped copies, which were already translated.
+    cameraPermissionMessage: 'Разрешите доступ к камере',
+    galleryPermissionMessage: 'Разрешите доступ к галерее',
     permissionRequired: 'Требуется разрешение',
     // `all`/`viewAll` existed in uz only — the i18n check caught it when the
     // T-037 filter bar asked for `common.all` (T-037 step 5).
@@ -191,6 +205,8 @@ export default {
     cancelConfirm: 'Да, отменить',
     cancelled: 'Предложение отменено',
     cancelFailed: 'Ошибка отмены',
+    contactTitle: 'Связь с пассажиром',
+    noPhone: 'У пассажира не указан номер телефона',
   },
 
   phoneRegistration: {

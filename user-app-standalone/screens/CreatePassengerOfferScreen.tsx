@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -57,6 +56,8 @@ import {
   FREE_WAITING_MINUTES,
   type SpecialOrderValue,
 } from "../components/passengerOffer/SpecialOrderPanel";
+import { showToast } from "../utils/toast";
+import { showConfirmDialog } from "../utils/confirmDialog";
 
 type MainStackParamList = {
   Menu: undefined;
@@ -181,7 +182,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       })
       .catch((error) => {
         console.error("Failed to load countries:", error);
-        Alert.alert(t("common.error"), t("passengerOffers.errorLoad"));
+        showToast.error(t("common.error"), t("passengerOffers.errorLoad"));
       });
 
     return () => {
@@ -318,11 +319,16 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       } catch (error: any) {
         if (cancelled) return;
         console.error("Failed to load the offer for editing:", error);
-        Alert.alert(
-          t("common.error"),
-          error?.message || t("passengerOffers.errorLoad"),
-          [{ text: t("common.ok"), onPress: () => navigation.goBack() }],
-        );
+        // A dialog, NOT a toast: the OK button leaves the screen. There is
+        // nothing to edit, so the user must not be left on an empty form.
+        // `ConfirmDialog` renders one button when `cancelText` is omitted.
+        showConfirmDialog({
+          title: t("common.error"),
+          message: error?.message || t("passengerOffers.errorLoad"),
+          confirmText: t("common.ok"),
+          onConfirm: () => navigation.goBack(),
+          onCancel: () => {},
+        });
       } finally {
         if (!cancelled) setIsPreparing(false);
       }
@@ -404,7 +410,9 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      Alert.alert(
+      // The offending fields are already marked inline by `setErrors`, so this
+      // only needs to draw the eye — a toast, not a box to dismiss.
+      showToast.error(
         t("common.error"),
         Object.values(newErrors)[0] || t("passengerOffers.errorAllFields"),
       );
@@ -536,24 +544,24 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         await createPassengerOffer(offerData);
       }
 
-      Alert.alert(
-        t("passengerOffers.success"),
-        isEdit
+      // A dialog, NOT a toast: OK is what returns the user to their list. A
+      // toast would leave them staring at the form they just submitted,
+      // unsure whether it worked.
+      showConfirmDialog({
+        title: t("passengerOffers.success"),
+        message: isEdit
           ? t("passengerOffers.updateSuccessMessage")
           : t("passengerOffers.successMessage"),
-        [
-          {
-            text: t("common.ok"),
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
+        confirmText: t("common.ok"),
+        onConfirm: () => navigation.goBack(),
+        onCancel: () => {},
+      });
     } catch (error: any) {
       console.error(
         isEdit ? "Error updating passenger offer:" : "Error creating passenger offer:",
         error,
       );
-      Alert.alert(
+      showToast.error(
         isEdit ? t("passengerOffers.errorUpdate") : t("passengerOffers.errorCreate"),
         // The server's 400s are already translated (including "this order can no
         // longer be edited" and the ≥30-minutes rule), so show them verbatim.

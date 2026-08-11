@@ -556,6 +556,44 @@ export class OfferDriverService {
   }
 
   /**
+   * Strip `phone_e164` from every row that is not a **confirmed** pairing (T-054).
+   *
+   * 🔴 A phone number is visible ONLY once the passenger has chosen the driver.
+   * `getOfferDrivers` returns **every** bid on the offer, so an ungated include
+   * would hand the passenger the number of every driver who ever bid — and the
+   * mirror endpoint would hand the passenger's number to every bidding driver.
+   * The rule lives here, in the service: an app-side `if` still ships the number
+   * over the wire, and both apps would have to agree about it forever.
+   *
+   * ⚠️ The rows are Sequelize **model instances**, whose getters keep returning
+   * the column no matter what you assign. Blanking must happen on the plain
+   * object — hence `get({ plain: true })`, which converts the includes too.
+   * This is exactly where a "fix" silently does nothing.
+   *
+   * `contactOf` locates the object holding the number, because the two callers
+   * nest it differently: `row.driver` vs `row.offer.user`.
+   */
+  private static gatePhones(
+    rows: OfferDriver[],
+    contactOf: (plain: any) => any | undefined
+  ): any[] {
+    return rows.map((row) => {
+      const plain = row.get({ plain: true }) as any;
+
+      if (plain?.status === 'confirmed') {
+        return plain;
+      }
+
+      const contact = contactOf(plain);
+      if (contact && typeof contact === 'object') {
+        delete contact.phone_e164;
+      }
+
+      return plain;
+    });
+  }
+
+  /**
    * Get driver's join requests
    */
   static async getDriverJoinRequests(driverId: number, status?: OfferDriverStatus) {
@@ -574,11 +612,18 @@ export class OfferDriverService {
         {
           model: PassengerOffer,
           as: 'offer',
+          // 🔴 This include had NO attributes filter, so `payer_phone` shipped to
+          // every driver holding a merely `pending` request — the exact person
+          // `PassengerOfferService.getOfferById` deliberately refuses it to
+          // ("a third party who never used the app"). The guard existed on one
+          // endpoint and not this one (T-054).
+          attributes: { exclude: ['payer_phone'] },
           include: [
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'first_name', 'last_name', 'display_name']
+              // phone_e164 is gated below — only a confirmed request keeps it.
+              attributes: ['id', 'first_name', 'last_name', 'display_name', 'phone_e164']
             }
           ]
         },
@@ -612,7 +657,8 @@ export class OfferDriverService {
       order: [['created_at', 'DESC']]
     });
 
-    return joinRequests;
+    // The driver may contact the passenger only for the request that was confirmed.
+    return this.gatePhones(joinRequests, (row) => row?.offer?.user);
   }
 
   /**
@@ -637,7 +683,8 @@ export class OfferDriverService {
         {
           model: User,
           as: 'driver',
-          attributes: ['id', 'first_name', 'last_name', 'display_name']
+          // phone_e164 is gated below — only the confirmed driver keeps it.
+          attributes: ['id', 'first_name', 'last_name', 'display_name', 'phone_e164']
         },
         {
           model: DriverVehicle,
@@ -669,7 +716,10 @@ export class OfferDriverService {
       order: [['created_at', 'DESC']]
     });
 
-    return drivers;
+    // 🔴 This returns EVERY bid on the offer, not just the winner — so without
+    // the gate the passenger would receive the phone number of every driver
+    // who ever bid on their trip.
+    return this.gatePhones(drivers, (row) => row?.driver);
   }
 
   /**

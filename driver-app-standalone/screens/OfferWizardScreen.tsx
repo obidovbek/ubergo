@@ -15,7 +15,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Modal,
   FlatList,
   StatusBar,

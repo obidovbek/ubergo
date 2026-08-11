@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Platform,
@@ -25,6 +24,7 @@ import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { useNotifications, Notification } from '../contexts/NotificationContext';
 import { AppModal } from '../components/AppModal';
+import { showConfirmDialog } from '../utils/confirmDialog';
 import { handleNotificationTap } from '../utils/notificationRouting';
 
 const theme = createTheme('light');
@@ -109,36 +109,30 @@ export const NotificationsScreen: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
 
-    Alert.alert(
-      t('notifications.markAllRead'),
-      t('notifications.markAllReadConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            await markAllAsRead();
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('notifications.markAllRead'),
+      message: t('notifications.markAllReadConfirm'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: async () => {
+        await markAllAsRead();
+      },
+      onCancel: () => {},
+    });
   };
 
   const handleDelete = async (notification: Notification) => {
-    Alert.alert(
-      t('notifications.delete'),
-      t('notifications.deleteConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            await deleteNotification(notification.id);
-          },
-        },
-      ]
-    );
+    showConfirmDialog({
+      title: t('notifications.delete'),
+      message: t('notifications.deleteConfirm'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      confirmButtonStyle: 'destructive',
+      onConfirm: async () => {
+        await deleteNotification(notification.id);
+      },
+      onCancel: () => {},
+    });
   };
 
   const formatDate = (dateString: string) => {

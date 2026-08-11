@@ -13,7 +13,6 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
   ActivityIndicator,
   Modal,

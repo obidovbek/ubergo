@@ -11,7 +11,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,

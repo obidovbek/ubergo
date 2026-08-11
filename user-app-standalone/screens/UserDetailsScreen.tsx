@@ -13,7 +13,6 @@ import {
   SafeAreaView,
   ScrollView,
   Platform,
-  Alert,
   Modal,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,

@@ -7,6 +7,99 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-057 (P1) **[OWNER items B + A]** 🎨 **The app drops out of its own design in two places: the
+  OS alert box and the OS date picker.** Owner 2026-08-11: *"all alert/info change to good design,
+  for example when passenger create offer alert shows simple"* and *"passenger offer create change
+  datetime picker for better design"*. **Grounded the same day — and the good news is that nothing
+  has to be invented.**
+  ✅ **All three replacements already exist in BOTH apps and are already in use:** `showToast`
+  (`utils/toast.tsx`), `showConfirmDialog` → `components/ConfirmDialog.tsx`, and **`DateWheelModal`**
+  (`components/DateWheelModal.tsx`, built in T-036, an `AppModal`-based day/month/year wheel).
+  ✅ **`ConfirmDialogProvider` IS mounted in both apps** (user `App.tsx:112`, driver `:120`) —
+  checked first, because if it were missing every dialog would already be silently degrading to
+  `Alert` and that would have been the whole bug.
+  🔴 **35 raw `Alert.alert` call sites across 13 files** — user **12**, driver **23**. The owner's
+  own example, `CreatePassengerOfferScreen`, holds **5** of them.
+  🔴 **The `Alert.alert` inside `utils/confirmDialog.tsx` MUST STAY** (1 per app). It is the
+  "provider not mounted" fallback — deleting it would turn a visible ugliness into a silent failure.
+  ⚠️ **6 call sites pass an `onPress` callback** and therefore need a **dialog, not a toast** — a
+  toast has no button, so the navigation would be silently dropped. `CreatePassengerOfferScreen:321`
+  goes **back** on OK; `:539` is the create/update success.
+  🔴 **The picker is the bare OS one:** `TimeWindowCard.tsx:199` renders
+  `@react-native-community/datetimepicker` with `display="default"` — the stock Android dialog,
+  opened three separate times (date / from / until).
+  ⚠️ **`DateWheelModal` is date-only** (`EARLIEST_YEAR = 1900` — it was written for birth dates), so
+  a **`TimeWheelModal`** is the one genuinely new piece. Pass explicit years for a trip date; do
+  **not** change the 1900 default, which `UserDetailsScreen`/`EditProfileScreen` depend on.
+  ⚠️ Touches `CreatePassengerOfferScreen`, which **T-031** and **T-040** also own — additive changes
+  only, but re-read T-031 before resuming it.
+  **Approved and STEPS 1-7 DONE 2026-08-11.** All **35** alert boxes are gone and the create-offer
+  screen picks date and times with the app's own wheels.
+  🔴 **The five registration screens were NOT a toast swap:** their photo alert offers **three**
+  choices and `ConfirmDialog` cannot express that, so a shared **`PhotoSourceModal`** now wraps the
+  existing `ModalList`. One component, five call sites.
+  🔴 **Three of those screens had the strings HARD-CODED IN UZBEK** — a Russian or English driver was
+  shown Uzbek on every photo upload. Fixed here as a side effect.
+  🔴 **The OS time picker could not be cancelled on iOS** (it committed each spin); the new wheels
+  commit only on Confirm. Plus **9 dead `Alert` imports** removed.
+  **58/58** with the wheel maths **executed** — all 60 minute values proven to highlight a bucket,
+  the caller's `Date` proven not mutated, 5 hostile `minuteStep` values proven safe. **31 red against
+  pre-change code.** ⚠️ The suite was **wrong twice before the code was** — it measured an
+  uninvoked stub, then **crashed** instead of reporting red. Both fixed.
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline.
+  🟡 Surfaced **3 pre-existing missing i18n keys** → logged as **T-058**, not absorbed.
+  🛑 **Only step 8 (owner: rebuild BOTH apps, walk create-offer + one alert per app) and step 9
+  (commit) remain.**
+  ❌ No API change, no migration, no deploy. ⚠️ Plan is **`docs/PLAN.md`**.
+
+- [ ] T-054 (P1) 🔴 **[OWNER, item E] A confirmed ride has NO way for the two people to reach each
+  other.** Owner 2026-08-11: *"passenger creates offer → driver sends request → passenger accepts →
+  driver does not see passenger details to contact, and passenger does not see driver contact
+  details"*. **Grounded in code the same day: the phone number is never sent by the API at all.**
+  🔴 **The cause is one repeated `attributes` list.** Every `User` include in `OfferDriverService`
+  is `['id', 'first_name', 'last_name', 'display_name']` — `getOfferDrivers:640` (passenger's view of
+  the drivers), `getDriverJoinRequests:581` (driver's view of the passenger), and the same four in
+  `joinOffer`, `confirmDriver`, `rejectDriver`. **`phone_e164` is in none of them.** So this is not a
+  UI gap the apps could paper over — the data never leaves the server.
+  ✅ **The number itself is easy:** `users.phone_e164` is a plain column on `User` (the `phones`
+  table exists but is not what these flows read). **No migration.**
+  🔴 **The whole difficulty is WHO may see it, and the codebase already has an opinion.**
+  `PassengerOfferService.getOfferById:746` excludes `payer_phone` for non-owners with a comment
+  spelling out why — *"a third party who never used the app"*. So phone numbers here are deliberately
+  gated, and this card must gate the new ones the same way: **only a `confirmed` pairing**, never a
+  pending bid. Adding the field to the shared `attributes` list unguarded would hand the passenger
+  the phone number of **every driver who ever bid**, and hand every bidding driver the passenger's.
+  🔴 **A REAL LEAK FOUND WHILE SCOPING — same subject, opposite direction.**
+  `getDriverJoinRequests:575` includes the whole `PassengerOffer` model with **no `attributes`
+  filter**, so **`payer_phone` ships to any driver holding a `pending` request** — exactly the person
+  `getOfferById` refuses it to. The guard exists on one endpoint and not the other.
+  ⚠️ **The mirror flow is equally broken and is NOT in this card:** `OfferPassengerService` (driver
+  posts an offer → passenger books → driver confirms) contains **zero** occurrences of `phone`. Same
+  defect, different flow → log as its own card, do not absorb.
+  ✅ **Precedent to reuse, not invent:** `BlockedScreen:161` in **both** apps already does
+  `tel:` + `Linking.canOpenURL` + `openURL` with a fallback alert.
+  **Approved 2026-08-11 with all three recommendations** (`phone_e164` only · gate on the join row's
+  `confirmed` status · mirror flow split out as **T-055**). **STEPS 1-7 DONE 2026-08-11.**
+  One helper `gatePhones` serves both endpoints: the include requests the column, the helper deletes
+  it from every row that is not `confirmed`. ⚠️ It edits the **plain object** from
+  `get({ plain: true })` — assigning to the model instance would have changed nothing, which is the
+  one place this "fix" could have silently done nothing.
+  🔴 **A second defect was found and fixed on the driver's details screen:** the number had to be read
+  from `myJoin.offer`, **not** the screen's own `offer` — that one comes from the PUBLIC detail
+  endpoint and carries no phone for anybody.
+  🔴 **The precedent this card was going to copy is itself broken** — `BlockedScreen`'s
+  `canOpenURL('tel:…')` gate fails on Android 11+ for want of a `<queries>` entry. The new
+  `contactPhone` util calls `openURL` directly; **`BlockedScreen` is still broken → T-056.**
+  **340/340** across three suites, **all proven able to fail** (20 red · 4 red · a missing key red):
+  38/38 over the **real transpiled service** incl. `JSON.stringify` leak checks and an unknown status
+  **failing closed**, 268/268 i18n keys **evaluated**, 34/34 over both apps' real util.
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline (the 5 in the touched
+  API file proven pre-existing via `git stash`); **zero** errors in any touched app file.
+  🛑 **Only step 8 (owner: deploy the API, rebuild BOTH apps, walk accept → both sides dial) and
+  step 9 (commit) remain.**
+  ⚠️ Plan is **`docs/PLAN.md`**. ⚠️ **Needs an API deploy** — the fourth card now queued behind one
+  (T-034, T-043, T-045 are the others; still no migration in any).
+
 - [ ] T-024 (P1) **User app: the passenger's "drivers who offered" screen.** ⚠️ Plan is
   **`docs/PLAN.md`**. **APPROVED and STEPS 1-6 DONE 2026-08-11 — only the owner's rebuild + walk
   (step 7) and the commit (step 8) remain.**
@@ -614,6 +707,45 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-058 (P2) 🟡 **Three i18n keys are missing, and two of them render raw to every non-Uzbek
+  driver.** Found by T-057's i18n check, 2026-08-11 — **all three pre-date that card**, proven
+  against `HEAD`, so they were not introduced by it.
+  🔴 **`profile.title` and `profile.myOffers` exist in `uz` ONLY** (driver app). `useTranslation`
+  falls back to the default language and, failing that, **returns the key itself** — so a Russian or
+  English driver sees the literal text `profile.title` at the top of their own profile screen.
+  ⚠️ **This is the same class as T-035 and T-037's defect (3)** — "the key was only ever added to
+  uz". It keeps recurring because nothing checks the three locales against each other.
+  🟡 `notifications.noNotificationsDescription` is missing from **all three** locales of the user
+  app, so the empty-notifications state shows the raw key to everyone.
+  ✅ **The check that found them already exists** — T-057's suite discovers every `t('…')` in a file
+  and *evaluates* it in uz/ru/en rather than grepping. Worth generalising to the whole app: pointed
+  at 9 files it found 3 holes, so the real count is probably higher.
+  ❌ No API change, no migration. Pure translation data + ideally a repo-wide sweep.
+
+- [ ] T-055 (P1) 🔴 **The MIRROR flow has no contact details either — same defect, other direction.**
+  Split out of **T-054** 2026-08-11 (owner decision: log it, do not absorb — keep T-054 small).
+  T-054 fixed *passenger posts a request → driver bids → passenger accepts*. The other half of the
+  product — **driver posts an offer → passenger books → driver confirms** — is served by
+  `OfferPassengerService`, which contains **zero occurrences of `phone`**. So a confirmed booking
+  there still leaves the two people unable to reach each other.
+  ✅ **The pattern to copy already exists and is tested:** `OfferDriverService.gatePhones` + the
+  `contactPhone` util in both apps. This card is that pattern applied to
+  `OfferPassengerService`'s includes and to `OfferPassengersScreen` (driver) / `MyBookingsScreen`
+  (user). ⚠️ Check the status vocabulary first — bookings may not use the literal `'confirmed'`.
+  ❌ No migration expected: `users.phone_e164` is a plain column.
+- [ ] T-056 (P2) 🟡 **`BlockedScreen`'s "call support" button is dead on Android 11+, in BOTH apps.**
+  Found while building T-054, 2026-08-11 — not reported by a user, so no urgency, but it is a real
+  break. `BlockedScreen.tsx:161` (user) / `:147` (driver) gates the dial on
+  `Linking.canOpenURL('tel:…')`. Since Android 11, that call is subject to **package visibility**:
+  it returns **false** unless the manifest declares a `tel` intent in `<queries>`. Both manifests
+  declare **only `https` VIEW**, and Expo 54 targets **SDK 35** — so a blocked user is told *"Phone
+  dialer is not available on this device"* by a phone that plainly has one.
+  ✅ **The fix is already written and tested** — `utils/contactPhone.ts` (T-054) calls `openURL`
+  directly, which package visibility does **not** restrict. Point `BlockedScreen` at it.
+  ⚠️ The same email button (`mailto:`) two functions up has the identical gate — check it too.
+  ⚠️ Editing `AndroidManifest.xml` is the *other* possible fix; prefer the util, since the manifest
+  is Expo-generated and touching it needs the owner's sign-off.
+
 - [ ] T-047 (P1) 🔴 **A push tapped from a KILLED app lands on the main menu, not the destination.**
   Owner device test 2026-08-11, immediately after T-046 was deployed: *"if app closed on click to
   push opens main menu"* (open/background both route correctly).

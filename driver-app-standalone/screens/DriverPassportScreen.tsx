@@ -16,7 +16,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
 import { GeoPickerModal } from '../components/GeoPickerModal';
+import { PhotoSourceModal } from '../components/PhotoSourceModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
 import {
@@ -263,30 +263,18 @@ export const DriverPassportScreen: React.FC = () => {
     }
   };
 
+  /** T-057 — which photo the source picker is currently answering for. */
+  const [photoSourceFor, setPhotoSourceFor] = useState<'front' | 'back' | null>(null);
+
   const handleImagePicker = async (photoType: 'front' | 'back') => {
     if (!token) {
       showToast.error(t('common.error'), 'Autentifikatsiya xatosi');
       return;
     }
 
-    Alert.alert(
-      'Rasm tanlash',
-      'Rasmni qanday tanlamoqchisiz?',
-      [
-        {
-          text: 'Kamera',
-          onPress: () => pickImage(photoType, 'camera'),
-        },
-        {
-          text: 'Galereya',
-          onPress: () => pickImage(photoType, 'library'),
-        },
-        {
-          text: 'Bekor qilish',
-          style: 'cancel',
-        },
-      ]
-    );
+    // Which photo is being replaced is remembered here; the modal only answers
+    // camera-or-gallery (T-057).
+    setPhotoSourceFor(photoType);
   };
 
   const pickImage = async (photoType: 'front' | 'back', source: 'camera' | 'library') => {
@@ -295,18 +283,18 @@ export const DriverPassportScreen: React.FC = () => {
         if (source === 'camera') {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              'Ruxsat kerak',
-              'Kameradan foydalanish uchun ruxsat bering'
+            showToast.error(
+              t('common.permissionRequired'),
+              t('common.cameraPermissionMessage')
             );
             return;
           }
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              'Ruxsat kerak',
-              'Galereyadan rasm tanlash uchun ruxsat bering'
+            showToast.error(
+              t('common.permissionRequired'),
+              t('common.galleryPermissionMessage')
             );
             return;
           }
@@ -1500,6 +1488,16 @@ export const DriverPassportScreen: React.FC = () => {
         }
         onSelect={(option) => geoModalType && handleGeoSelection(geoModalType, option)}
         onClose={() => setGeoModalType(null)}
+      />
+      {/* Photo source — replaces the bare OS alert (T-057) */}
+      <PhotoSourceModal
+        visible={photoSourceFor !== null}
+        onSelect={(source) => {
+          const target = photoSourceFor;
+          setPhotoSourceFor(null);
+          if (target) pickImage(target, source);
+        }}
+        onClose={() => setPhotoSourceFor(null)}
       />
     </SafeAreaView>
   );

@@ -14,11 +14,11 @@ import {
   Animated,
   Dimensions,
   Linking,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
+import { showToast } from '../utils/toast';
 
 const { width } = Dimensions.get('window');
 const theme = createTheme('light');
@@ -129,14 +129,14 @@ export const BlockedScreen: React.FC = () => {
       if (canOpen) {
         await Linking.openURL(emailUrl);
       } else {
-        Alert.alert(
+        showToast.error(
           t('common.error'),
           t('auth.emailNotAvailable')
         );
       }
     } catch (error) {
       console.error('Error opening email:', error);
-      Alert.alert(
+      showToast.error(
         t('common.error'),
         t('auth.emailError')
       );
@@ -151,14 +151,14 @@ export const BlockedScreen: React.FC = () => {
       if (canOpen) {
         await Linking.openURL(phoneUrl);
       } else {
-        Alert.alert(
+        showToast.error(
           t('common.error'),
           t('auth.phoneNotAvailable')
         );
       }
     } catch (error) {
       console.error('Error opening phone:', error);
-      Alert.alert(
+      showToast.error(
         t('common.error'),
         t('auth.phoneError')
       );

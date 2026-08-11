@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -22,6 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { showConfirmDialog } from '../utils/confirmDialog';
 import * as NotificationsAPI from '../api/notifications';
 import type { Notification } from '../api/notifications';
 import { handleNotificationTap } from '../utils/notificationRouting';
@@ -102,14 +102,13 @@ export const NotificationsScreen: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     if (!token || unreadCount === 0) return;
 
-    Alert.alert(
-      t('notifications.markAllRead'),
-      t('notifications.markAllReadConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
+    showConfirmDialog({
+      title: t('notifications.markAllRead'),
+      message: t('notifications.markAllReadConfirm'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onCancel: () => {},
+      onConfirm: async () => {
             try {
               await NotificationsAPI.markAllNotificationsAsRead(token);
               setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -118,25 +117,22 @@ export const NotificationsScreen: React.FC = () => {
             } catch (error: any) {
               console.error('Failed to mark all as read:', error);
               showToast('error', t('notifications.markAllReadError'), error.message);
-            }
-          },
-        },
-      ]
-    );
+        }
+      },
+    });
   };
 
   const handleDelete = async (notification: Notification) => {
     if (!token) return;
 
-    Alert.alert(
-      t('notifications.delete'),
-      t('notifications.deleteConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('notifications.delete'),
-          style: 'destructive',
-          onPress: async () => {
+    showConfirmDialog({
+      title: t('notifications.delete'),
+      message: t('notifications.deleteConfirm'),
+      confirmText: t('notifications.delete'),
+      cancelText: t('common.cancel'),
+      confirmButtonStyle: 'destructive',
+      onCancel: () => {},
+      onConfirm: async () => {
             try {
               await NotificationsAPI.deleteNotification(token, notification.id);
               setNotifications(prev => prev.filter(n => n.id !== notification.id));
@@ -147,11 +143,9 @@ export const NotificationsScreen: React.FC = () => {
             } catch (error: any) {
               console.error('Failed to delete notification:', error);
               showToast('error', t('notifications.deleteError'), error.message);
-            }
-          },
-        },
-      ]
-    );
+        }
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {

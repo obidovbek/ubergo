@@ -105,6 +105,13 @@ export interface OfferDriver {
     first_name: string;
     last_name: string;
     display_name: string;
+    /**
+     * T-054 — present **only on the `confirmed` row**. The server strips it from
+     * every other status (`OfferDriverService.gatePhones`), so a `pending` bid
+     * never carries it: do not build UI that expects it before the passenger has
+     * chosen. It can also be `null` for a driver who signed up via Google SSO.
+     */
+    phone_e164?: string | null;
   };
   vehicle?: {
     make: { name: string };
