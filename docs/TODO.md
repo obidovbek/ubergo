@@ -853,8 +853,39 @@
   **Suggested shape:** leave `getOfferById` alone and give the *public* controller its own mapper
   (`getPublicOfferById`), so the two public endpoints agree and nothing else moves.
   ⚠️ Check the **user app** for the same bare `.passenger` reads before closing.
-- [ ] T-034 (P1) 🔒 **Two OTP security holes.** Split out of T-033 by owner decision 2026-08-08 so
-  the device-test fix stayed tight. Both verified in code, neither is theoretical.
+- [ ] T-034 (P1) 🔒 **Two OTP security holes.** Split out of T-033 by owner decision 2026-08-08.
+  **✅ BOTH FIXED 2026-08-11 (owner approved: delete the logs; fix the cap only, no code-length
+  change). API-only — needs a DEPLOY, no migration.**
+  **① Secrets out of the logs.** Removed every line that printed the **OTP code** (`sendOtp code`,
+  `Sending SMS to … with code:`), the **Eskiz bearer token** (logged as the whole auth
+  `response.data`), the **full user row**, and the **device push token**. Two Eskiz response bodies
+  also went — they can echo the message text, which contains the code.
+  ⚠️ **Phone numbers are now masked** (`+99890***4567`) in logs *and* in all four audit payloads. A
+  phone is personal data and the identifier half of a credential pair.
+  ⚠️ **My own check caught two I had missed** on the first pass — `console.warn('SMS send status:',
+  response.data)` and one unmasked audit payload. Worth noting: the sweep found more than the card
+  had listed.
+  **② The brute-force cap fires for the first time.** `verifyOtp` looked the row up by
+  **`{ target, code }`**, so a WRONG code matched nothing, returned at the `!otpRecord` branch, and
+  never reached the `attempts` increment — `maxAttempts` (5) had never once fired, on a **4-digit**
+  code. The comparison `otpRecord.code === code` was tautological and its `else` branch unreachable.
+  Now: newest live code found **by target alone** → attempt counted **before** comparing → compared
+  with **`timingSafeEqual`** (length-checked first, since that throws on unequal buffers).
+  🔴 **Tightening the read forced a matching change to the WRITE, and missing it would have traded a
+  security hole for a usability one:** a resend used to leave the old code live, and lookup-by-code
+  meant *either* worked. Looking up by target alone would have silently rejected a user who typed the
+  **first** SMS after requesting a second. `sendOtp` now **retires live codes before issuing a new
+  one**, so exactly one is valid at a time.
+  **30/30** checks, **running the real `verifyOtp`** against a fake model — five wrong guesses
+  counted one by one, then the **correct** code refused because the cap had bitten; the happy path
+  still verifies and consumes the row; one phone's failures never touch another's; expired codes
+  refused; 6 hostile inputs never throw. **Proven able to fail: 15 red**, naming each leaking line,
+  including *"a wrong code COUNTS as an attempt"*. `tsc` API **282 = baseline**.
+  🛑 **Owner: DEPLOY THE API, then re-check `kubectl logs` for a live code** (the original evidence).
+  ⚠️ **`OTP_CODE_LENGTH` stays 4 by owner decision** — raising it changes the SMS text and would need
+  the OR-003 SMS-Retriever hash flow re-checked. The real defences now are the working cap plus
+  `otpVerifyLimiter`.
+  <details><summary>original report</summary>
   1. **Secrets in the server log.** `OtpService.ts:297` prints `sendOtp code <code>` and `:102`
   prints the **full Eskiz bearer token** in the auth response. The owner's own `kubectl logs` paste
   on 2026-08-08 contained a live OTP and a live JWT. Anyone with log access can log in as any user.
@@ -866,6 +897,7 @@
   the only real defence left is `otpVerifyLimiter` (10 per 5 min, keyed on phone).
   ⚠️ The fix is a restructure: find the newest live code by `target` **alone**, then compare —
   which also makes `maxAttempts` and the existing audit reasons meaningful.
+  </details>
 - [ ] T-026 (P1) **Offer backend + app hardening** — everything the two 2026-08-02 (3) audits found
   that T-025 deliberately left alone. **Both audits produced the same defect classes in two
   different services**, so fix them as one sweep, not twice.
@@ -908,22 +940,14 @@
   ⚠️ Its premise was **wrong**: it said "the driver can browse passenger orders but has no way to
   offer on one". The browse screen is registered in **no** navigator, so the driver cannot browse
   either. Do not work this card — see T-037 in *Now*.
-- [ ] T-024 (P1) **User app: "drivers who offered" screen.**
-  ✅ **Not to be confused with the driver-side screen (owner asked 2026-08-11, resolved).** The
-  driver app's `PassengerOfferDetailsScreen` being **read-only after bidding is CORRECT** — the bid
-  is the action, and since T-042 ③ the footer shows the driver's **real status** (sent / confirmed /
-  rejected / cancelled) instead of re-offering the button. **Do not add driver actions there.**
-  This card is the **passenger** side, which genuinely has nothing to tap. `MyPassengerOffersScreen` shows
-  "N drivers interested (M pending)" with **nothing to tap** — the passenger is told drivers
-  arrived and cannot answer them. `getOfferDrivers` / `confirmDriver` / `rejectDriver` exist in
-  `user-app-standalone/api/passengerOffers.ts` with zero call sites. Accepting sets the offer to
-  `driver_found` and auto-rejects + notifies the losing drivers (server side already done).
-  Found 2026-08-02.
-  🔴 **Now also blocks T-044.** A `driver_join_request` push — the passenger being told a driver
-  wants their trip — has **no exact screen to open**, so T-044 must leave it on the
-  `MyPassengerOffers` list. ⚠️ **Do not "fix" that by routing it to `OfferDetails`**: its `offer_id`
-  is the passenger's **own PassengerOffer**, while `OfferDetails` fetches a **DriverOffer** — it
-  would load a wrong row or 404. This card is the real fix.
+> ✅ **T-024 is IMPLEMENTED** (steps 1-6, 2026-08-11, committed `e411ec4`) — its live card is in
+> **Now**, above. The stale original that sat here has been removed rather than left to contradict
+> it. One note from it is worth keeping:
+> ⚠️ **Do not confuse this with the driver-side screen.** The driver app's
+> `PassengerOfferDetailsScreen` being **read-only after bidding is CORRECT** — the bid *is* the
+> action, and since T-042 ③ the footer shows the driver's real status instead of re-offering the
+> button. **Do not add driver actions there.**
+
 - [ ] T-019 (P1) **[OWNER OR-008]** User registration → Figma layout (`K_Reg001.png`); move the
   referral block (Tel/ID/PROMO) to a second screen. App-only; backend fields already exist.
   → `docs/OWNER_REQUESTS.md` OR-008

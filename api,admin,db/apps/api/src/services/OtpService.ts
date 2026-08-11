@@ -5,6 +5,7 @@
 
 import axios, { type AxiosInstance } from 'axios';
 import validator from 'validator';
+import { timingSafeEqual } from 'node:crypto';
 import { Op } from 'sequelize';
 import { config } from '../config/index.js';
 import { OtpCode, User, PushToken } from '../database/models/index.js';
@@ -47,6 +48,19 @@ const OTP_RESEND_COOLDOWN_SEC = 60;
 
 /** Runaway guard per phone per hour — see the comment in `checkRateLimit`. */
 const OTP_MAX_PER_HOUR = 1000;
+
+/**
+ * 🔒 T-034. A phone number in a log is still personal data, and it is the
+ * *identifier* half of a credential pair — so logs keep only enough to correlate
+ * a request, never enough to target someone.
+ *
+ * `+998901234567` → `+99890***4567`.
+ */
+const maskPhone = (phone: string): string => {
+  const s = String(phone ?? '');
+  if (s.length <= 8) return '***';
+  return `${s.slice(0, 6)}***${s.slice(-4)}`;
+};
 
 class OtpService {
   private eskizToken: string | null = null;
@@ -114,7 +128,8 @@ class OtpService {
           email: config.eskiz.email,
           password: config.eskiz.password,
         });
-        console.log('Eskiz authentication response:', response.data);
+        // 🔒 T-034: `response.data` carries the full Eskiz BEARER TOKEN.
+        // Printing it handed anyone with log access our SMS account.
         this.eskizToken = response.data.data.token;
         // Token typically expires in 30 days, we'll refresh after 29 days
         this.eskizTokenExpiry = Date.now() + (29 * 24 * 60 * 60 * 1000);
@@ -177,13 +192,11 @@ class OtpService {
    */
   private async sendSms(phone: string, code: string): Promise<boolean> {
     try {
-      console.log('before token send sms to phone', phone);
       const token = await this.authenticateEskiz();
-      console.log('send sms to phone', phone);
       // Clean phone number - Eskiz expects format without +
       const cleanPhone = phone.replace(/\+/g, '');
-      console.log('clean phone', cleanPhone);
-      console.log(`Sending SMS to ${cleanPhone} with code: ${code}`);
+      // 🔒 T-034: never log `code` — this line used to print it verbatim.
+      console.log(`Sending OTP SMS to ${maskPhone(cleanPhone)}`);
 
       const response = await this.eskizClient.post<EskizSendResponse>(
         '/message/sms/send',
@@ -199,7 +212,8 @@ class OtpService {
         }
       );
 
-      console.log('Eskiz SMS response:', response.data);
+      // 🔒 T-034: response bodies from Eskiz can echo the message text, which
+      // contains the code. Log only the outcome, below.
       
       // Check for both 'success' and 'waiting' statuses as valid
       const isSuccess = response.data.status === 'success' || response.data.status === 'waiting';
@@ -207,7 +221,8 @@ class OtpService {
       if (isSuccess) {
         console.log('SMS sent successfully');
       } else {
-        console.warn('SMS send status:', response.data);
+        // 🔒 T-034: `response.data` can echo the message text (with the code).
+        console.warn(`SMS send failed, status=${response.data?.status ?? 'unknown'}`);
       }
 
       return isSuccess;
@@ -329,13 +344,27 @@ class OtpService {
     // Calculate expiry
     const expiresAt = new Date(Date.now() + config.otp.expiryMinutes * 60 * 1000);
     
-    console.log('sendOtp metadata', metadata);
-    console.log('sendOtp channel', channel);
-    console.log('sendOtp phone', phone);
-    console.log('sendOtp code', code);
-    console.log('sendOtp expiresAt', expiresAt);
-    console.log('sendOtp attempts', 0);
-    console.log('sendOtp meta', metadata || {});
+    // 🔒 T-034: this block used to print the OTP **code** in clear text, along
+    // with the phone number and the full metadata. The owner's own `kubectl
+    // logs` paste on 2026-08-08 contained a live code — anyone with log access
+    // could sign in as any user. A log line is not a private place.
+    console.log(`sendOtp: channel=${channel} target=${maskPhone(phone)} expires=${expiresAt.toISOString()}`);
+
+    // 🔒 T-034: retire any code still live for this phone before issuing a new
+    // one, so exactly ONE code is valid at a time.
+    //
+    // This matters because `verifyOtp` now looks up by target alone (it must, or
+    // the attempt cap can never fire). Without this, a resend would leave the
+    // previous code live but unreachable: a user who typed the FIRST SMS after
+    // requesting a second would be told it was wrong. Under the old
+    // lookup-by-code both happened to work, so tightening the read without
+    // tightening the write would have traded a security hole for a usability one.
+    await OtpCode.destroy({
+      where: {
+        target: phone,
+        expires_at: { [Op.gte]: new Date() },
+      },
+    });
 
     // Save OTP to database
     await OtpCode.create({
@@ -356,9 +385,8 @@ class OtpService {
         sent = await this.sendIvr(phone, code);
       } else if (channel === 'push') {
         // Find user by phone
-        console.log('push phone', phone);
         const user = await User.findOne({ where: { phone_e164: phone } });
-        console.log('push user data', user);
+        // 🔒 T-034: never log the whole user row (phone, names, ids).
         if (!user) {
           throw new Error('User not found for provided phone');
         }
@@ -368,7 +396,7 @@ class OtpService {
           where: { user_id: user.id, app: 'user' },
           order: [['updated_at', 'DESC']],
         });
-        console.log('push token', push);
+        // 🔒 T-034: never log the device push token — it is a send capability.
         if (!push) {
           throw new Error('User device token not registered');
         }
@@ -389,7 +417,7 @@ class OtpService {
     await logAudit({
       action: AuditActions.AUTH_OTP_SEND,
       payload: {
-        phone,
+        phone: maskPhone(phone),
         channel,
         sent,
       },
@@ -407,12 +435,28 @@ class OtpService {
   /**
    * Verify OTP code
    */
+  /**
+   * 🔒 T-034: the attempt cap only became real here.
+   *
+   * This used to look the row up by **`{ target, code }`**. A WRONG code
+   * therefore matched no row at all and returned at the `!otpRecord` branch —
+   * long before the `attempts` increment below. So `attempts` counted only
+   * *correct* codes, `config.otp.maxAttempts` (5) never fired once, and the
+   * comparison `otpRecord.code === code` was tautological: the query had
+   * already done the matching, so the `else` branch was unreachable.
+   *
+   * On a **4-digit** code (`OTP_CODE_LENGTH` default) that left `otpVerifyLimiter`
+   * — 10 tries per 5 minutes — as the only brute-force defence.
+   *
+   * Now: find the newest live code by **target alone**, count the attempt, and
+   * only then compare. `maxAttempts` and the audit reasons mean what they say.
+   */
   async verifyOtp(phone: string, code: string): Promise<boolean> {
-    // Find the most recent valid OTP
+    // Newest live code for this target — NOT filtered by the submitted code,
+    // which is the whole point.
     const otpRecord = await OtpCode.findOne({
       where: {
         target: phone,
-        code,
         expires_at: {
           [Op.gte]: new Date(),
         },
@@ -424,32 +468,38 @@ class OtpService {
       await logAudit({
         action: AuditActions.AUTH_OTP_VERIFY_FAILED,
         payload: {
-          phone,
+          phone: maskPhone(phone),
           reason: 'Code not found or expired',
         },
       });
       return false;
     }
 
-    // Check max attempts
+    // Check max attempts. Reached by wrong codes now, so it can actually fire.
     if (otpRecord.attempts >= config.otp.maxAttempts) {
       await logAudit({
         action: AuditActions.AUTH_OTP_VERIFY_FAILED,
         payload: {
-          phone,
+          phone: maskPhone(phone),
           reason: 'Max attempts exceeded',
         },
       });
       return false;
     }
 
-    // Increment attempts
+    // Count the attempt BEFORE comparing, so a wrong guess always costs one
+    // even if something below throws.
     await otpRecord.update({
       attempts: otpRecord.attempts + 1,
     });
 
-    // Verify code
-    const isValid = otpRecord.code === code;
+    // A real comparison at last. `timingSafeEqual` needs equal-length buffers,
+    // so length is checked first — an OTP's length is not a secret.
+    const submitted = String(code ?? '');
+    const expected = String(otpRecord.code ?? '');
+    const isValid =
+      submitted.length === expected.length &&
+      timingSafeEqual(Buffer.from(submitted), Buffer.from(expected));
 
     if (isValid) {
       // Delete OTP after successful verification
@@ -458,7 +508,7 @@ class OtpService {
       await logAudit({
         action: AuditActions.AUTH_OTP_VERIFY,
         payload: {
-          phone,
+          phone: maskPhone(phone),
           channel: otpRecord.channel,
         },
       });
@@ -466,8 +516,11 @@ class OtpService {
       await logAudit({
         action: AuditActions.AUTH_OTP_VERIFY_FAILED,
         payload: {
-          phone,
+          phone: maskPhone(phone),
           reason: 'Invalid code',
+          // Now meaningful: how many of the allowed tries are gone.
+          attempts: otpRecord.attempts + 1,
+          maxAttempts: config.otp.maxAttempts,
         },
       });
     }
