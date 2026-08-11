@@ -8,6 +8,8 @@ export default {
   contact: {
     noPhone: 'Номер телефона не указан',
     dialFailed: 'Не удалось начать звонок',
+    noEmail: 'Адрес электронной почты не указан',
+    emailFailed: 'Не удалось открыть почтовое приложение',
   },
   common: {
     continue: 'Продолжить',
@@ -59,6 +61,7 @@ export default {
     monthOctober: 'Октябрь',
     monthNovember: 'Ноябрь',
     monthDecember: 'Декабрь',
+    info: 'Информация',
   },
 
   errors: {
@@ -333,8 +336,8 @@ export default {
     // `myOffers` was rendered from uz only — ru/en showed the raw key on the
     // home screen. Found and fixed during T-037 step 1.
     myOffers: 'Мои объявления',
-    passengerOrders: 'Заказы\nпассажиров',
-    myJoinRequests: 'Мои\nпредложения',
+    passengerOrders: 'Заказы пассажиров',
+    myJoinRequests: 'Мои предложения',
     viloyatlar: 'Такси\nМеждугородние',
     ichi: 'Такси\nВ пределах\nгорода',
     tuman: 'Такси\nРайон,\nместные и ближние\nрасстояния',
@@ -356,6 +359,8 @@ export default {
     tripHistory: 'История поездок',
     helpSupport: 'Помощь и поддержка',
     settings: 'Настройки',
+    title: 'Профиль',
+    myOffers: 'Мои объявления',
   },
 
   months: {
@@ -673,6 +678,7 @@ export default {
     minutesAgo: '{count} минут назад',
     hoursAgo: '{count} часов назад',
     daysAgo: '{count} дней назад',
+    noNotificationsDescription: 'Новые уведомления появятся здесь',
   },
 
   // T-018 — новые поля заказа пассажира (только отображение)
@@ -829,6 +835,8 @@ export default {
     unknownPassenger: 'Неизвестно',
     confirmPassengerMessage: 'Подтвердить {name} для {seats} мест?',
     confirmPassengerMessageOne: 'Подтвердить {name} для 1 места?',
+    contactTitle: 'Связь с пассажиром',
+    noPhone: 'У пассажира не указан номер телефона',
   },
 };
 

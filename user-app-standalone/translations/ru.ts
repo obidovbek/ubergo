@@ -8,6 +8,8 @@ export default {
   contact: {
     noPhone: 'Номер телефона не указан',
     dialFailed: 'Не удалось начать звонок',
+    noEmail: 'Адрес электронной почты не указан',
+    emailFailed: 'Не удалось открыть почтовое приложение',
   },
   common: {
     continue: 'Продолжить',
@@ -192,6 +194,8 @@ export default {
     tuman: 'Такси\nРайон,\nместные и ближние\nрасстояния',
     empty: 'Такси',
     xalqaro: 'Такси\nМЕЖДУНАРОДНОЕ',
+    driverOffersTitle: 'Предложения водителей',
+    myBookings: 'Мои бронирования',
   },
 
   profile: {
@@ -279,6 +283,7 @@ export default {
     unread: 'Не прочитано',
     additionalInfo: 'Дополнительная информация',
     markAsRead: 'Отметить как прочитанное',
+    noNotificationsDescription: 'Новые уведомления появятся здесь',
   },
 
   // Search Offers Screen
@@ -389,6 +394,8 @@ export default {
     ratingSuccess: 'Успешно',
     ratingSuccessMessage: 'Спасибо за оценку водителя!',
     ratingError: 'Не удалось отправить оценку',
+    contactTitle: 'Связь с водителем',
+    noPhone: 'У водителя не указан номер телефона',
   },
 
   // Passenger Offers

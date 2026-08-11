@@ -80,9 +80,12 @@ navigator entry, one new detail screen, one join sheet, and one list of the driv
   `tsc` driver app **36 = baseline**. **57/57** i18n checks — every key the new menu row *and* the
   whole search screen resolve, **evaluated** in uz/ru/en (babel-transpiled + required, not grepped).
   🛑 **Still needs the device run** — the screen has never rendered.
-- [ ] 2. **Report what step 1 exposes** before building on it. A 1000-line screen that has never
-  rendered will have defects; each one is a decision (fix here vs. board) and the owner should see
-  the list, not a silent sweep.
+- [x] 2. **DONE — superseded, marked 2026-08-11.** This asked for the defects of a never-rendered
+  screen to be *reported* rather than silently swept. That happened, repeatedly and in the open:
+  three were reported in step 1's own notes (bare `getHeaders()` → guaranteed 401, `offer.passenger`
+  vs `offer.user`, uz-only keys), and the ones found later on the device became their **own cards** —
+  **T-042** (the launcher crash), **T-043** (the two disagreeing endpoint shapes). Nothing is
+  pending here; the step was left unticked by oversight.
 - [x] 3. **DONE 2026-08-08. `PassengerOfferDetailsScreen`** — new screen on `getPassengerOfferById`,
   registered as route 15. Route + landmarks, departure, passenger, `seats_needed`,
   `max_price_per_seat` (or "not specified" — the new form collects no price), `note`.

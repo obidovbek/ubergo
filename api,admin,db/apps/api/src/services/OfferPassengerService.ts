@@ -584,6 +584,45 @@ export class OfferPassengerService {
   }
 
   /**
+   * Strip `phone_e164` from every row that is not a **confirmed** pairing (T-055).
+   *
+   * 🔴 A phone number is visible ONLY once the driver has accepted the booking.
+   * `getOfferPassengers` returns **every** request on the offer, so an ungated
+   * include would hand the driver the number of everyone who ever asked for a
+   * seat — and the mirror endpoint would hand the driver's number to a passenger
+   * whose request is still pending. The rule lives here, in the service: an
+   * app-side `if` still ships the number over the wire.
+   *
+   * ⚠️ The rows are Sequelize **model instances**, whose getters keep returning
+   * the column no matter what you assign. Blanking must happen on the plain
+   * object — hence `get({ plain: true })`, which converts the includes too.
+   * This is exactly where a "fix" silently does nothing.
+   *
+   * ⚠️ **This is a deliberate TWIN of `OfferDriverService.gatePhones`.** The two
+   * services own different models and different includes, so they are mirrored
+   * rather than shared — changing one almost certainly means changing the other.
+   */
+  private static gatePhones(
+    rows: OfferPassenger[],
+    contactOf: (plain: any) => any | undefined
+  ): any[] {
+    return rows.map((row) => {
+      const plain = row.get({ plain: true }) as any;
+
+      if (plain?.status === 'confirmed') {
+        return plain;
+      }
+
+      const contact = contactOf(plain);
+      if (contact && typeof contact === 'object') {
+        delete contact.phone_e164;
+      }
+
+      return plain;
+    });
+  }
+
+  /**
    * Get passengers for an offer (driver view)
    */
   static async getOfferPassengers(driverId: number, offerId: number, req?: Request) {
@@ -603,13 +642,17 @@ export class OfferPassengerService {
         {
           model: User,
           as: 'passenger',
-          attributes: ['id', 'first_name', 'last_name', 'display_name']
+          // phone_e164 is gated below — only a confirmed passenger keeps it.
+          attributes: ['id', 'first_name', 'last_name', 'display_name', 'phone_e164']
         }
       ],
       order: [['created_at', 'DESC']]
     });
 
-    return passengers;
+    // 🔴 This returns EVERY request on the offer, not just the accepted ones — so
+    // without the gate the driver would receive the phone number of everyone who
+    // ever asked for a seat, including those they rejected.
+    return this.gatePhones(passengers, (row) => row?.passenger);
   }
 
   /**
@@ -617,8 +660,14 @@ export class OfferPassengerService {
    */
   static async getPassengerBookings(passengerId: number, status?: OfferPassengerStatus) {
     const where: any = { passenger_id: passengerId };
-    
-    if (status) {
+
+    // 🔴 `status` is an ENUM column and arrives straight from the query string
+    // (`OfferPassengerController` casts it with `as any`). An unknown value makes
+    // Postgres raise "invalid input value for enum" — i.e. a 500 for a typo.
+    // The sibling `OfferDriverService.getDriverJoinRequests` already guards this
+    // exact hole; this one did not (T-055).
+    const allowed: OfferPassengerStatus[] = ['pending', 'confirmed', 'rejected', 'cancelled'];
+    if (status && allowed.includes(status)) {
       where.status = status;
     }
 
@@ -628,11 +677,14 @@ export class OfferPassengerService {
         {
           model: DriverOffer,
           as: 'offer',
+          // Moderation columns are the admin's business, not the passenger's.
+          attributes: { exclude: ['rejection_reason', 'reviewed_by', 'reviewed_at'] },
           include: [
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'first_name', 'last_name', 'display_name']
+              // phone_e164 is gated below — only a confirmed booking keeps it.
+              attributes: ['id', 'first_name', 'last_name', 'display_name', 'phone_e164']
             },
             {
               model: DriverVehicle,
@@ -667,7 +719,8 @@ export class OfferPassengerService {
       order: [['created_at', 'DESC']]
     });
 
-    return bookings;
+    // The passenger may contact the driver only for a booking that was accepted.
+    return this.gatePhones(bookings, (row) => row?.offer?.user);
   }
 
   /**

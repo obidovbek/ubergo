@@ -9,6 +9,8 @@ export default {
   contact: {
     noPhone: "Telefon raqami ko'rsatilmagan",
     dialFailed: "Qo'ng'iroqni boshlab bo'lmadi",
+    noEmail: "Email manzili ko'rsatilmagan",
+    emailFailed: "Pochta ilovasini ochib bo'lmadi",
   },
   common: {
     continue: "Davom etish",
@@ -309,6 +311,7 @@ export default {
     unread: "O'qilmagan",
     additionalInfo: "Qo'shimcha ma'lumot",
     markAsRead: "O'qilgan deb belgilash",
+    noNotificationsDescription: "Yangi xabarnomalar shu yerda ko'rinadi",
   },
 
   // Search Offers Screen
@@ -425,6 +428,8 @@ export default {
     ratingSuccess: "Muvaffaqiyat",
     ratingSuccessMessage: "Haydovchini baholaganingiz uchun rahmat!",
     ratingError: "Baholashni yuborishda xatolik",
+    contactTitle: "Haydovchi bilan bog'lanish",
+    noPhone: "Haydovchining telefon raqami ko'rsatilmagan",
   },
 
   // Passenger Offers

@@ -29,6 +29,14 @@ export interface OfferPassenger {
     last_name: string;
     display_name: string;
     avatar_url?: string;
+    /**
+     * T-055 — present **only on a `confirmed` row**. The server strips it from
+     * every other status (`OfferPassengerService.gatePhones`), so a pending or
+     * rejected request never carries it: do not build UI that expects it before
+     * the driver has accepted. It can also be `null` for a passenger who signed
+     * up via Google SSO.
+     */
+    phone_e164?: string | null;
   };
 }
 

@@ -8,6 +8,8 @@ export default {
   contact: {
     noPhone: 'No phone number on file',
     dialFailed: 'Could not start the call',
+    noEmail: 'No email address on file',
+    emailFailed: 'Could not open the mail app',
   },
   common: {
     continue: 'Continue',
@@ -59,6 +61,7 @@ export default {
     monthOctober: 'October',
     monthNovember: 'November',
     monthDecember: 'December',
+    info: 'Info',
   },
 
   errors: {
@@ -333,8 +336,8 @@ export default {
     // `myOffers` was rendered from uz only — ru/en showed the raw key on the
     // home screen. Found and fixed during T-037 step 1.
     myOffers: 'My offers',
-    passengerOrders: 'Passenger\norders',
-    myJoinRequests: 'My sent\noffers',
+    passengerOrders: 'Passenger orders',
+    myJoinRequests: 'My sent offers',
     viloyatlar: 'Taxi\nIntercity',
     ichi: 'Taxi\nWithin\nCity',
     tuman: 'Taxi\nDistrict,\nlocal and nearby\ndistances',
@@ -356,6 +359,8 @@ export default {
     tripHistory: 'Trip History',
     helpSupport: 'Help & Support',
     settings: 'Settings',
+    title: 'Profile',
+    myOffers: 'My offers',
   },
 
   months: {
@@ -673,6 +678,7 @@ export default {
     minutesAgo: '{count} minutes ago',
     hoursAgo: '{count} hours ago',
     daysAgo: '{count} days ago',
+    noNotificationsDescription: 'New notifications will appear here',
   },
 
   // T-018 — new passenger order fields (display only)
@@ -829,6 +835,8 @@ export default {
     unknownPassenger: 'Unknown',
     confirmPassengerMessage: 'Confirm {name} for {seats} seats?',
     confirmPassengerMessageOne: 'Confirm {name} for 1 seat?',
+    contactTitle: 'Contact the passenger',
+    noPhone: 'The passenger has no phone number on file',
   },
 };
 

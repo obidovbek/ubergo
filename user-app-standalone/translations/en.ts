@@ -8,6 +8,8 @@ export default {
   contact: {
     noPhone: 'No phone number on file',
     dialFailed: 'Could not start the call',
+    noEmail: 'No email address on file',
+    emailFailed: 'Could not open the mail app',
   },
   common: {
     continue: 'Continue',
@@ -192,6 +194,8 @@ export default {
     tuman: 'Taxi\nDistrict,\nlocal and nearby\ndistances',
     empty: 'Taxi',
     xalqaro: 'Taxi\nINTERNATIONAL',
+    driverOffersTitle: 'Driver offers',
+    myBookings: 'My bookings',
   },
 
   profile: {
@@ -279,6 +283,7 @@ export default {
     unread: 'Unread',
     additionalInfo: 'Additional Information',
     markAsRead: 'Mark as Read',
+    noNotificationsDescription: 'New notifications will appear here',
   },
 
   // Search Offers Screen
@@ -389,6 +394,8 @@ export default {
     ratingSuccess: 'Success',
     ratingSuccessMessage: 'Thank you for rating the driver!',
     ratingError: 'Failed to submit rating',
+    contactTitle: 'Contact the driver',
+    noPhone: 'The driver has no phone number on file',
   },
 
   // Passenger Offers

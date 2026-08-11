@@ -31,6 +31,7 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
+import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 
 export default function MyBookingsScreen() {
   const navigation = useNavigation();
@@ -192,6 +193,12 @@ export default function MyBookingsScreen() {
     if (!offer) return null;
 
     const canCancel = ['pending', 'confirmed'].includes(item.status);
+    // T-055 — the server sends the driver's number ONLY on a confirmed booking,
+    // so this is empty for every other status even without the check. The status
+    // check stays anyway: the block belongs to an accepted booking, and leaning
+    // on the field's absence alone would make a server change silent.
+    const isConfirmed = item.status === 'confirmed';
+    const driverPhone = OffersAPI.driverPhoneOf(offer);
 
     return (
       <TouchableOpacity 
@@ -286,6 +293,28 @@ export default function MyBookingsScreen() {
             </Text>
           )}
         </View>
+
+        {/* T-055 — the seat is confirmed; without this the passenger had no way
+            to reach the driver who accepted them. */}
+        {isConfirmed && (
+          <View style={styles.contactBox}>
+            <Text style={styles.contactLabel}>{t('myBookings.contactTitle')}</Text>
+            {driverPhone ? (
+              <TouchableOpacity
+                style={styles.callButton}
+                onPress={() => dialPhone(driverPhone, t)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callText}>{formatContactPhone(driverPhone)}</Text>
+              </TouchableOpacity>
+            ) : (
+              // A driver who signed up with Google SSO can have no number on
+              // file. Say so rather than showing a button that dials nothing.
+              <Text style={styles.contactMissing}>{t('myBookings.noPhone')}</Text>
+            )}
+          </View>
+        )}
 
         {/* Rejection Reason */}
         {item.rejection_reason && (
@@ -771,6 +800,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4,
   },
+  contactBox: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+  },
+  contactLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 8,
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    minHeight: 44,
+  },
+  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: '#6B7280' },
   rejectionContainer: {
     backgroundColor: '#FEF2F2',
     borderRadius: 12,

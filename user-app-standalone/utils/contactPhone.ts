@@ -5,8 +5,8 @@
  * driver have been paired by a **confirmed** request. The server gates that
  * (`OfferDriverService.gatePhones`); this file only renders and dials it.
  *
- * 🔴 **Do NOT copy the `BlockedScreen` dial pattern** (`BlockedScreen.tsx:161`),
- * even though it is the obvious neighbour to imitate. It gates on
+ * 🔴 **Do NOT reintroduce a `canOpenURL` gate** (T-056 removed the last one),
+ * even though gating on it looks like the careful thing to do. It relies on
  * `Linking.canOpenURL('tel:...')`, and on Android 11+ that call is subject to
  * package visibility: it returns **false unless the manifest declares a `tel`
  * intent in `<queries>`**. This app's manifest declares only `https` VIEW, and
@@ -61,5 +61,40 @@ export const dialPhone = async (
   } catch (error) {
     console.error('Error opening dialer:', error);
     showToast.error(t('common.error'), t('contact.dialFailed'));
+  }
+};
+
+/**
+ * Open the mail client with a message pre-filled — T-056.
+ *
+ * 🔴 Same Android 11+ trap as `dialPhone`: `canOpenURL('mailto:…')` answers
+ * false unless the manifest declares a matching intent in `<queries>`, so the
+ * "no mail app" branch fired on phones that plainly have one. `openURL` is not
+ * restricted, so attempt it and report only a real failure.
+ *
+ * Never throws — it is called from an onPress.
+ */
+export const openEmail = async (
+  email: string | null | undefined,
+  t: (key: string) => string,
+  options?: { subject?: string; body?: string }
+): Promise<void> => {
+  const address = (email || '').trim();
+
+  if (!address) {
+    showToast.error(t('common.error'), t('contact.noEmail'));
+    return;
+  }
+
+  const params: string[] = [];
+  if (options?.subject) params.push(`subject=${encodeURIComponent(options.subject)}`);
+  if (options?.body) params.push(`body=${encodeURIComponent(options.body)}`);
+  const query = params.length ? `?${params.join('&')}` : '';
+
+  try {
+    await Linking.openURL(`mailto:${address}${query}`);
+  } catch (error) {
+    console.error('Error opening email client:', error);
+    showToast.error(t('common.error'), t('contact.emailFailed'));
   }
 };

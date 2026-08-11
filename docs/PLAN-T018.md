@@ -339,8 +339,11 @@ later (the `vehicle_usage_type` enum pain in T-020 is the cautionary tale).
     `max_price_per_seat` retyped `number | null` so tsc polices the call sites.
   - Driver app: `formatNumberWithSpaces` was imported but never exported from its `utils/format.ts`
     (user-app-only function) — added. Was hiding in the 41-error baseline as a real crash.
-    🛑 **Blocker before this step can finish:** port `api/geo.ts` into the driver app (see the
-    file list above) — `SearchPassengerOffersScreen` cannot bundle without it.
+    ✅ **BLOCKER CLEARED — verified 2026-08-11.** This said `api/geo.ts` had to be ported into the
+    driver app first. **T-025 step 1 did it** (committed `0371cbd`): the file exists and
+    `SearchPassengerOffersScreen:29-30` imports it. The note is stale; do not re-do the port.
+    🛑 **What actually remains is a device/API run**, not code — create an offer with every field
+    set against test3 and check it in *My offers* and the driver app.
 - [ ] 10. **Owner** — device test on at least two different phones (small + large screen).
 
 ## Risks / open questions (READ before coding)

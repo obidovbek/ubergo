@@ -9,6 +9,8 @@ export default {
   contact: {
     noPhone: "Telefon raqami ko'rsatilmagan",
     dialFailed: "Qo'ng'iroqni boshlab bo'lmadi",
+    noEmail: "Email manzili ko'rsatilmagan",
+    emailFailed: "Pochta ilovasini ochib bo'lmadi",
   },
   common: {
     continue: 'Davom etish',
@@ -58,6 +60,7 @@ export default {
     monthOctober: 'Oktabr',
     monthNovember: 'Noyabr',
     monthDecember: 'Dekabr',
+    info: "Ma'lumot",
   },
 
   errors: {
@@ -335,8 +338,8 @@ export default {
     uzbekistan: "O'zbekiston",
     guest: 'Guest',
     myOffers: 'Mening e\'lonlarim',
-    passengerOrders: 'Yo\'lovchi\nbuyurtmalari',
-    myJoinRequests: 'Yuborilgan\ntakliflarim',
+    passengerOrders: 'Yo\'lovchi buyurtmalari',
+    myJoinRequests: 'Yuborilgan takliflarim',
     activeOffers: 'Faol e\'lonlar',
     noActiveOffers: 'Hozirda faol e\'lonlar yo\'q',
     // Taxi options
@@ -667,6 +670,7 @@ export default {
     minutesAgo: '{count} daqiqa oldin',
     hoursAgo: '{count} soat oldin',
     daysAgo: '{count} kun oldin',
+    noNotificationsDescription: "Yangi xabarnomalar shu yerda ko'rinadi",
   },
 
   // T-018 — yo'lovchi buyurtmasining yangi maydonlari (faqat ko'rsatish uchun)
@@ -772,6 +776,8 @@ export default {
     unknownPassenger: 'Noma\'lum',
     confirmPassengerMessage: '{name} uchun {seats} ta o\'rinni tasdiqlashni xohlaysizmi?',
     confirmPassengerMessageOne: '{name} uchun 1 ta o\'rinni tasdiqlashni xohlaysizmi?',
+    contactTitle: "Yo'lovchi bilan bog'lanish",
+    noPhone: "Yo'lovchining telefon raqami ko'rsatilmagan",
   },
 
   // Offer Wizard

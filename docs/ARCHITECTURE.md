@@ -100,8 +100,15 @@ UbexGo/
 > **Shared-by-copy, not by package.** The two apps are standalone, so
 > `notificationRouting.ts` exists in both with the same shape but different route
 > maps. A change to one is not a change to the other — check both.
-> `AppModal.tsx`, `ModalList.tsx`, `DateWheelModal.tsx` and `tokenStore.ts` are
-> **byte-identical** across the two apps (`diff -q`) — edit them together.
+> `AppModal.tsx`, `ModalList.tsx`, `DateWheelModal.tsx`, `tokenStore.ts` and
+> `utils/contactPhone.ts` (T-054/T-056) are **byte-identical** across the two apps
+> (`diff -q`, re-verified 2026-08-11) — edit them together.
+>
+> **Not identical, and deliberately so:** `TimeWheelModal.tsx` (T-057) exists only
+> in the **user** app — the create-offer screen is the only place that picks a time
+> — and `PhotoSourceModal.tsx` (T-057) only in the **driver** app, where the five
+> registration screens upload documents. Copy them across only when a second
+> caller actually appears.
 
 ## 5. Main data flow (passenger joins an offer)
 

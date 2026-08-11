@@ -17,11 +17,35 @@ export interface DriverOffer {
   seats_free: number;
   seats_total: number;
   note?: string;
+  /**
+   * The hand-mapped shape, built by the browse and detail endpoints.
+   *
+   * ⚠️ **It is NOT present on `GET /passenger/bookings`**, which returns the raw
+   * Sequelize model — there the driver arrives as `user` (below). Two response
+   * shapes for the same logical object is the exact trap that crashed the driver
+   * app to the launcher in T-042, so read the driver through a helper, never a
+   * bare `offer.driver.name`.
+   */
   driver: {
     id?: number;
     name: string;
     rating: number;
     rating_count?: number;
+  };
+  /** The raw-model shape, from `GET /passenger/bookings`. */
+  user?: {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
+    /**
+     * T-055 — present **only when this passenger's own booking is `confirmed`**.
+     * The server strips it from every other status
+     * (`OfferPassengerService.gatePhones`) and it is absent entirely from the
+     * public browse/detail endpoints. Can be `null` for a Google SSO driver.
+     * Read it through `driverPhoneOf()`.
+     */
+    phone_e164?: string | null;
   };
   vehicle: {
     make: string;
@@ -59,6 +83,21 @@ export interface OfferPassenger {
     avatar_url?: string;
   };
 }
+
+/**
+ * The driver's phone, or `''` when there is none to show — T-055.
+ *
+ * 🔴 A bare `offer.user.phone_e164` is the expression class that crashed the
+ * driver app to the launcher in T-042: `offer` and `user` are both optional and
+ * the mapped `driver` shape has no phone field at all.
+ *
+ * ⚠️ An empty string means "nothing to show" — it does NOT distinguish "not
+ * confirmed yet" from "the driver has no number on file". The caller knows the
+ * status; this only knows the payload.
+ */
+export const driverPhoneOf = (offer?: DriverOffer): string => {
+  return offer?.user?.phone_e164 || '';
+};
 
 export interface SearchOffersParams {
   from_text?: string;

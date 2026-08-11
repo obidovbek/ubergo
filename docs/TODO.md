@@ -6,7 +6,103 @@
 >
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
+> 🛑 **STATE AT END OF 2026-08-11: the board is waiting on the owner's device, not on code.**
+> All 18 plan files were swept — **no Claude coding work remains in any of them.** Every unchecked
+> step is the owner's, blocked on an owner answer (**T-030** step 7 · **T-031** steps 4-9 ·
+> **T-047**), or needs a running device and API (**T-018** step 9).
+>
+> **TEN code-complete, untested cards, in exactly two runs:**
+> 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055** (no migration in any).
+> 2. **App rebuild only** → **T-024 · T-046 · T-056 · T-057 · T-058 · T-059**.
+> ⚠️ **T-046 additionally needs its migration run** — it repairs stranded rows and prints the count.
+>
+> 🔴 **Where the risk is concentrated:** the phone gate (`gatePhones`) now exists **twice**, in
+> `OfferDriverService` (T-054) and `OfferPassengerService` (T-055), and neither has been seen on a
+> device. If it is wrong it is wrong in both services and both apps — **walk T-054 first.**
+>
+> ⚠️ Cards below sit in *Now* only because they are awaiting that test; none needs Claude work.
+
 ## 🔥 Now (working on it)
+- [ ] T-059 (P1) **[OWNER item C]** 🎨 **The driver's home menu shows five rows that do nothing, and
+  the labels break mid-phrase.** Owner 2026-08-11: *"both apps remove unnecessary menu items, and
+  make text vertical centered (if there is no icon). in home menu items words braked ugly"*.
+  **STEPS 1-4 DONE 2026-08-11.** The driver menu goes from **8 rows to 3**, all of which navigate.
+  🔴 **Five rows were tappable and dead** — `viloyatlar`, `ichi`, `tuman`, `empty`, `xalqaro` fell
+  into an **empty `else`** with a `// TODO`. ✅ **The user app had already solved this** — the
+  identical five were commented out there long ago; the driver app never got the same treatment.
+  Owner chose **comment out, keep the keys, stay reversible**. The empty `else` went too, so a row
+  added later without a destination has nothing to fall through to.
+  🔴 **The "ugly break" was in the DATA, not the layout** — labels carried hard-coded `
+`
+  (`'Yo'lovchi
+buyurtmalari'`, `'Taksi
+Tuman,
+ichi va Yaqin
+masofalar'`). **2 of the 6 were on
+  LIVE rows**, in all three locales; the user app's labels had none, which is why only the driver
+  menu looked wrong.
+  ⚠️ **The centring complaint was NOT what it sounded like.** `optionButton` was **already**
+  `justifyContent: 'center'` — the icon-less tiles were correct. `myOffers` draws its icon **in
+  flow**, so that tile centred *icon + text as a group* and its label sat lower than its neighbour's.
+  The icon is now absolutely positioned; **no style was added to the tiles themselves.**
+  🔴 **The suite found a defect this card did not go looking for:** `menu.driverOffersTitle` and
+  `menu.myBookings` are **uz-only**, so **RU/EN users saw the raw key on two of their four home
+  tiles.** Fixed in both locales.
+  🔴 **And it exposed a blind spot in T-058's sweep**, which had passed that same app as clean two
+  cards earlier: those keys are referenced as **data** (`titleKey: 'menu.foo'`), never as a literal
+  `t('…')`. The sweep now follows `titleKey`/`labelKey`/`messageKey`/`placeholderKey` — **+16 keys,
+  2685 lookups**; against pre-change code it now finds **7** faults where it used to find 5.
+  **54/54, 26 red** against pre-change code. `tsc` user **9** · driver **35**, both at baseline.
+  ⚠️ **A visual card: the checks cannot prove it looks good.** They prove the rows have destinations,
+  the labels resolve in 3 locales with no forced breaks, and the icon no longer shifts the text.
+  🛑 **Only step 5 (owner: rebuild BOTH apps, look at the home menu) and step 6 (commit) remain.**
+  ❌ No API change, no migration, no deploy. ⚠️ Plan is **`docs/PLAN.md`**.
+
+- [ ] T-055 (P1) 🔴 **The MIRROR flow has no contact details either — same defect, other direction.**
+  Split out of **T-054** 2026-08-11 (owner decision: log it, do not absorb — keep T-054 small).
+  T-054 fixed *passenger posts a request → driver bids → passenger accepts*. The other half of the
+  product — **driver posts an offer → passenger books → driver confirms** — is served by
+  `OfferPassengerService`, which contains **zero occurrences of `phone`**. So a confirmed booking
+  there still leaves the two people unable to reach each other.
+  ✅ **The pattern to copy already exists and is tested:** `OfferDriverService.gatePhones` + the
+  `contactPhone` util in both apps. This card is that pattern applied to
+  `OfferPassengerService`'s includes and to `OfferPassengersScreen` (driver) / `MyBookingsScreen`
+  (user). ⚠️ Check the status vocabulary first — bookings may not use the literal `'confirmed'`.
+  ❌ No migration expected: `users.phone_e164` is a plain column.
+  **PLAN WRITTEN AND AWAITING APPROVAL 2026-08-11 → `docs/PLAN.md`.**
+  ✅ **The card's own open question is ANSWERED:** `OfferPassengerStatus` is
+  `'pending' | 'confirmed' | 'rejected' | 'cancelled'` — **identical** to `OfferDriverStatus`, so
+  T-054's gate transfers unchanged. The two endpoints are `getOfferPassengers:589` (driver's view)
+  and `getPassengerBookings:618` (passenger's view).
+  🔴 **A THIRD defect found while grounding, not in the original card:**
+  **`GET /passenger/bookings?status=junk` returns 500.** `OfferPassengerController:87-91` passes
+  `req.query.status` through `as any` and the service assigns it straight to `where.status` with no
+  allow-list; `status` is a Postgres **enum**, so an unknown value raises *"invalid input value for
+  enum"*. ✅ The sibling `getDriverJoinRequests:566` already guards exactly this, with a comment
+  explaining why — the fix is to mirror it. Folded into this card.
+  ⚠️ Also: `getPassengerBookings` puts **no `attributes` filter** on the `DriverOffer` include, so
+  moderation columns (`rejection_reason`, `reviewed_by`, `reviewed_at`) ship to the passenger.
+  ⚠️ **A FIFTH card would share the same API deploy** (T-034, T-043, T-045, T-054, this).
+  **Approved and STEPS 1-7 DONE 2026-08-11.** The contact fix now covers **both** halves of the
+  product. `gatePhones` is a deliberate **twin** of T-054's — mirrored, not shared, because the two
+  services own different models; the comment on each names the other.
+  🔴 **A FOURTH defect surfaced while wiring the user app:** its type declared only the mapped
+  `driver` shape, but `GET /passenger/bookings` returns the **raw model**, where the driver is
+  `user` — the **T-042 two-shapes trap** again. Now modelled with both, and read through a new
+  `driverPhoneOf()` helper instead of a bare field access.
+  ✅ Moderation columns (`rejection_reason`, `reviewed_by`, `reviewed_at`) no longer ship to the
+  passenger.
+  **49/49** over the **real transpiled service** — the actual endpoints, not just the helper — with
+  the **rejected** passenger's number proven absent from the JSON and ownership still 403ing.
+  🔴 **The 500 is covered both ways:** 6 junk values proven never to reach `where`, and all 4 real
+  values proven still to filter — a guard that refused everything would have passed a weaker test.
+  **25 red against pre-change code.** **253/253** i18n keys evaluated; the insertion point was
+  checked per block, since a naive append would have landed them in T-054's `myJoinRequests`.
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline, **zero errors in any
+  touched file**.
+  🛑 **Only step 8 (owner: deploy the API, rebuild BOTH apps, walk confirm → both sides dial) and
+  step 9 (commit) remain.** ⚠️ Plan is **`docs/PLAN.md`**.
+
 - [ ] T-057 (P1) **[OWNER items B + A]** 🎨 **The app drops out of its own design in two places: the
   OS alert box and the OS date picker.** Owner 2026-08-11: *"all alert/info change to good design,
   for example when passenger create offer alert shows simple"* and *"passenger offer create change
@@ -707,6 +803,20 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-060 (P2) 🔴 **`npm run lint` is BROKEN in BOTH React Native apps — it has not run in a long
+  time and nobody noticed.** Found during `/end-day`, 2026-08-11.
+  Both `package.json`s call `eslint . --ext .ts,.tsx`, but **neither app has an `eslint.config.js`**
+  and the installed **ESLint 9.39** dropped support for `.eslintrc.*`. Both fail identically with
+  *"ESLint couldn't find an eslint.config.(js|mjs|cjs) file"* — **zero files are ever checked.**
+  ⚠️ So every "lint" line in this journal for the apps has been vacuous, and `CLAUDE.md`'s run table
+  advertises a command that cannot work. **This is a tooling gap, not app breakage** — `tsc` has been
+  carrying the whole static-analysis load for both apps.
+  ✅ The API's lint *does* run (T-032 documents its 24,473 CRLF findings), so the fix is a config for
+  the two apps, not a repo-wide migration.
+  ⚠️ Expect a large first run: two apps that have never been linted under a working config. Agree a
+  baseline the way `tsc` has one, rather than trying to reach zero.
+  ❌ No API change, no migration, no deploy.
+
 - [ ] T-058 (P2) 🟡 **Three i18n keys are missing, and two of them render raw to every non-Uzbek
   driver.** Found by T-057's i18n check, 2026-08-11 — **all three pre-date that card**, proven
   against `HEAD`, so they were not introduced by it.
@@ -721,18 +831,20 @@
   and *evaluates* it in uz/ru/en rather than grepping. Worth generalising to the whole app: pointed
   at 9 files it found 3 holes, so the real count is probably higher.
   ❌ No API change, no migration. Pure translation data + ideally a repo-wide sweep.
+  **DONE 2026-08-11. The repo-wide sweep was built and it found MORE than this card recorded — 5
+  faults, not 3.** It discovers every literal `t('…')` in every source file of both apps and
+  **evaluates** it in uz/ru/en: **879 distinct keys, 2637 key×locale lookups.**
+  Fixed: `profile.title` + `profile.myOffers` (uz-only → RU/EN drivers saw the raw key at the top of
+  their own profile), `notifications.noNotificationsDescription` (missing in **all** locales of
+  **both** apps — the card only knew about the user app), and **`common.info`** (missing in all three
+  driver locales — not previously known about at all).
+  **Both apps now report `clean`.** The sweep re-run against pre-change code reproduces exactly the
+  5 faults, so it is proven able to fail.
+  ⚠️ **It is a LOWER BOUND, not a proof:** only literal keys can be checked — `t(`a.${x}`)` and
+  `t(variable)` are skipped by design, since flagging them would be noise.
+  ⚠️ My first insertion escaped an apostrophe wrongly and produced `info: 'Ma'lumot'`, which broke
+  the module; the sweep itself caught it by failing to load. ❌ No API change, no deploy.
 
-- [ ] T-055 (P1) 🔴 **The MIRROR flow has no contact details either — same defect, other direction.**
-  Split out of **T-054** 2026-08-11 (owner decision: log it, do not absorb — keep T-054 small).
-  T-054 fixed *passenger posts a request → driver bids → passenger accepts*. The other half of the
-  product — **driver posts an offer → passenger books → driver confirms** — is served by
-  `OfferPassengerService`, which contains **zero occurrences of `phone`**. So a confirmed booking
-  there still leaves the two people unable to reach each other.
-  ✅ **The pattern to copy already exists and is tested:** `OfferDriverService.gatePhones` + the
-  `contactPhone` util in both apps. This card is that pattern applied to
-  `OfferPassengerService`'s includes and to `OfferPassengersScreen` (driver) / `MyBookingsScreen`
-  (user). ⚠️ Check the status vocabulary first — bookings may not use the literal `'confirmed'`.
-  ❌ No migration expected: `users.phone_e164` is a plain column.
 - [ ] T-056 (P2) 🟡 **`BlockedScreen`'s "call support" button is dead on Android 11+, in BOTH apps.**
   Found while building T-054, 2026-08-11 — not reported by a user, so no urgency, but it is a real
   break. `BlockedScreen.tsx:161` (user) / `:147` (driver) gates the dial on
@@ -745,6 +857,21 @@
   ⚠️ The same email button (`mailto:`) two functions up has the identical gate — check it too.
   ⚠️ Editing `AndroidManifest.xml` is the *other* possible fix; prefer the util, since the manifest
   is Expo-generated and touching it needs the owner's sign-off.
+  **DONE 2026-08-11 (steps 1-2 of 2 code steps).** Both `BlockedScreen`s now call the util; the two
+  handlers collapsed from ~20 lines each to two one-liners.
+  ✅ **The email gate was real too** and is fixed in the same pass — `openEmail()` added to
+  `contactPhone.ts` in both apps, with `contact.noEmail` / `contact.emailFailed` ×3 locales.
+  ⚠️ **A THIRD `canOpenURL` gate exists and was deliberately LEFT ALONE:**
+  `driver…/screens/RegisterFirstScreen.tsx:47` opens an app-store URL. The manifests **do** declare
+  `https` VIEW, so that one works — but if an admin ever configures a `market://` URL it fails
+  **silently** (a bare `console.error`, no user feedback at all). Different defect, not this card.
+  **54/54** over both apps' real transpiled util, **10 red** against a copy with the gate
+  reintroduced. ⚠️ The suite **crashed instead of reporting red** on the first attempt — it indexed
+  `opened[0]` when the bug under test is "nothing was opened". Guarded.
+  🔴 **I broke both files mid-edit**: Python escaping turned `
+` into real newlines inside the email
+  body, giving 6 unterminated-string errors. Caught by `tsc`, repaired, both apps back at baseline.
+  `tsc` user **9** · driver **35**. ❌ No API change, no deploy — app rebuild only.
 
 - [ ] T-047 (P1) 🔴 **A push tapped from a KILLED app lands on the main menu, not the destination.**
   Owner device test 2026-08-11, immediately after T-046 was deployed: *"if app closed on click to

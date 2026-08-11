@@ -28,6 +28,7 @@ import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
+import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
@@ -159,6 +160,11 @@ export default function OfferPassengersScreen() {
   const renderPassenger = ({ item }: { item: OfferPassengersAPI.OfferPassenger }) => {
     const isPending = item.status === 'pending';
     const isConfirmed = item.status === 'confirmed';
+    // T-055 — the server sends the number ONLY on a confirmed row, so this is
+    // undefined for every other status even without the check. The status check
+    // stays anyway: the block belongs to an accepted booking, and leaning on the
+    // field's absence alone would make a server change silent.
+    const passengerPhone = item.passenger?.phone_e164;
 
     return (
       <View style={styles.passengerCard}>
@@ -240,6 +246,28 @@ export default function OfferPassengersScreen() {
               <Text style={styles.rejectionLabel}>{t('offerPassengers.rejectionReason') || 'Rejection Reason'}:</Text>
             </View>
             <Text style={styles.rejectionText}>{item.rejection_reason}</Text>
+          </View>
+        )}
+
+        {/* T-055 — the seat is agreed; without this the driver had no way to
+            reach the passenger they just accepted. */}
+        {isConfirmed && (
+          <View style={styles.contactBox}>
+            <Text style={styles.contactLabel}>{t('offerPassengers.contactTitle')}</Text>
+            {passengerPhone ? (
+              <TouchableOpacity
+                style={styles.callButton}
+                onPress={() => dialPhone(passengerPhone, t)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callText}>{formatContactPhone(passengerPhone)}</Text>
+              </TouchableOpacity>
+            ) : (
+              // A passenger who signed up with Google SSO can have no number on
+              // file. Say so rather than showing a button that dials nothing.
+              <Text style={styles.contactMissing}>{t('offerPassengers.noPhone')}</Text>
+            )}
           </View>
         )}
 
@@ -593,6 +621,29 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 8,
   },
+  contactBox: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+  },
+  contactLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 8,
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    minHeight: 44,
+  },
+  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: '#6B7280' },
   messageContainer: {
     padding: 12,
     backgroundColor: '#E3F2FD',

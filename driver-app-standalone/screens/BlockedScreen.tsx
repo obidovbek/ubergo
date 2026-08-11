@@ -13,12 +13,12 @@ import {
   ScrollView,
   Animated,
   Dimensions,
-  Linking,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { dialPhone, openEmail } from '../utils/contactPhone';
 
 const { width } = Dimensions.get('window');
 const theme = createTheme('light');
@@ -121,49 +121,21 @@ export const BlockedScreen: React.FC = () => {
   const email = supportContact.email;
   const phone = supportContact.phone.replace(/\s/g, '');
 
-  const handleEmailPress = async () => {
-    const emailUrl = `mailto:${email}?subject=${encodeURIComponent('Account Support Request')}&body=${encodeURIComponent('Hello,\n\nI need assistance with my account.\n\nThank you.')}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(emailUrl);
-      if (canOpen) {
-        await Linking.openURL(emailUrl);
-      } else {
-        showToast.error(
-          t('common.error'),
-          t('auth.emailNotAvailable')
-        );
-      }
-    } catch (error) {
-      console.error('Error opening email:', error);
-      showToast.error(
-        t('common.error'),
-        t('auth.emailError')
-      );
-    }
-  };
+  /**
+   * T-056 — both handlers used to gate on `Linking.canOpenURL`, which on Android
+   * 11+ answers **false** unless the manifest declares a matching intent in
+   * `<queries>`. Both manifests declare only `https`, and Expo 54 targets SDK 35,
+   * so a blocked user was told there was no dialer/mail app by a phone that
+   * plainly had both — on the one screen whose entire purpose is contacting
+   * support. `openURL` is not subject to package visibility.
+   */
+  const handleEmailPress = () =>
+    openEmail(email, t, {
+      subject: 'Account Support Request',
+      body: 'Hello,\n\nI need assistance with my account.\n\nThank you.',
+    });
 
-  const handlePhonePress = async () => {
-    const phoneUrl = `tel:${phone}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(phoneUrl);
-      if (canOpen) {
-        await Linking.openURL(phoneUrl);
-      } else {
-        showToast.error(
-          t('common.error'),
-          t('auth.phoneNotAvailable')
-        );
-      }
-    } catch (error) {
-      console.error('Error opening phone:', error);
-      showToast.error(
-        t('common.error'),
-        t('auth.phoneError')
-      );
-    }
-  };
+  const handlePhonePress = () => dialPhone(phone, t);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -13,7 +13,6 @@ import {
   ScrollView,
   Animated,
   Dimensions,
-  Linking,
   Platform,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -21,6 +20,7 @@ import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { getSupportContact } from '../api/support';
 import { showToast } from '../utils/toast';
+import { dialPhone, openEmail } from '../utils/contactPhone';
 
 const { width } = Dimensions.get('window');
 const theme = createTheme('light');
@@ -136,54 +136,21 @@ export const BlockedScreen: React.FC = () => {
   const email = supportContact.email;
   const phone = supportContact.phone.replace(/\s/g, '');
 
-  const handleEmailPress = async () => {
-    const emailUrl = `mailto:${email}?subject=${encodeURIComponent('Account Support Request')}&body=${encodeURIComponent('Hello,\n\nI need assistance with my account.\n\nThank you.')}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(emailUrl);
-      if (canOpen) {
-        await Linking.openURL(emailUrl);
-      } else {
-        // ⚠️ T-056: on Android 11+ `canOpenURL` answers false unless the
-        // manifest declares a matching intent in <queries>, so this branch fires
-        // on phones that DO have a mail app. T-057 only restyles the message;
-        // the wrong condition above is T-056's to fix.
-        showToast.error(
-          t('common.error') || 'Error',
-          t('auth.emailNotAvailable') || 'Email client is not available on this device'
-        );
-      }
-    } catch (error) {
-      console.error('Error opening email:', error);
-      showToast.error(
-        t('common.error') || 'Error',
-        t('auth.emailError') || 'Unable to open email client'
-      );
-    }
-  };
+  /**
+   * T-056 — both handlers used to gate on `Linking.canOpenURL`, which on Android
+   * 11+ answers **false** unless the manifest declares a matching intent in
+   * `<queries>`. Both manifests declare only `https`, and Expo 54 targets SDK 35,
+   * so a blocked user was told there was no dialer/mail app by a phone that
+   * plainly had both — on the one screen whose entire purpose is contacting
+   * support. `openURL` is not subject to package visibility.
+   */
+  const handleEmailPress = () =>
+    openEmail(email, t, {
+      subject: 'Account Support Request',
+      body: 'Hello,\n\nI need assistance with my account.\n\nThank you.',
+    });
 
-  const handlePhonePress = async () => {
-    const phoneUrl = `tel:${phone}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(phoneUrl);
-      if (canOpen) {
-        await Linking.openURL(phoneUrl);
-      } else {
-        // ⚠️ Same T-056 caveat as the email branch above.
-        showToast.error(
-          t('common.error') || 'Error',
-          t('auth.phoneNotAvailable') || 'Phone dialer is not available on this device'
-        );
-      }
-    } catch (error) {
-      console.error('Error opening phone:', error);
-      showToast.error(
-        t('common.error') || 'Error',
-        t('auth.phoneError') || 'Unable to open phone dialer'
-      );
-    }
-  };
+  const handlePhonePress = () => dialPhone(phone, t);
 
   return (
     <SafeAreaView style={styles.container}>

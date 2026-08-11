@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-11 (4) — five cards, and every one of them found a defect it was not looking for
+
+- **Task:** the owner's remaining list (items E, B+A, C) plus the cards those spawned.
+  **T-054, T-055, T-057, T-056, T-058, T-059** — all code-complete, none device-tested.
+- **Done:**
+  - **T-054 / T-055** — a confirmed pair can finally contact each other, on **both** flows. The
+    phone number was never sent by the API at all: `phone_e164` was missing from *every* `User`
+    include in both services. It is now gated server-side on `status === 'confirmed'`.
+  - **T-057** — all **35** OS alert boxes are gone from both apps, and the create-offer screen picks
+    its date and times with the app's own wheels instead of the stock Android dialog.
+  - **T-056** — `BlockedScreen`'s call *and* email buttons were dead on Android 11+.
+  - **T-058** — built the repo-wide i18n sweep instead of patching the 3 known keys, and it found 5.
+  - **T-059** — the driver's home menu went from 8 rows to 3, all of which navigate somewhere.
+- **Decisions (owner):** phone gate = `phone_e164` only, on the join row's `confirmed` status;
+  mirror flow split out rather than absorbed; dead menu rows **commented out, not deleted**, staying
+  reversible; **T-031 parked** — its remaining steps *are* the payment work, and payments/referrals/
+  bonuses are still being designed. Device testing deliberately batched to the end.
+- **The pattern of the day: every card found something it was not looking for.** T-054 found a live
+  `payer_phone` leak to *pending* drivers and that the `BlockedScreen` dial pattern it meant to copy
+  was itself broken. T-055 found `?status=junk` returning **500** and the T-042 two-shapes trap again.
+  T-057 found three driver screens with **hard-coded Uzbek**. T-059 found **two uz-only labels on the
+  user app's own home menu**. Grounding a card properly is what turns up the next one.
+- **Problems — my own checks were wrong three more times, and one of them mattered:**
+  - **T-058's sweep passed an app as clean that was not.** It only saw literal `t('…')` calls, so
+    keys referenced as **data** (`titleKey: 'menu.foo'`) were invisible — which is exactly how two
+    uz-only home-menu labels survived it. **T-059's independent check caught it.** Widened to follow
+    `titleKey`/`labelKey`/…; it now finds 7 faults against pre-change code where it found 5.
+    **A verification tool that reports "clean" is a claim, and this one was overconfident.**
+  - **A suite crashed instead of reporting red — twice more** (T-057's missing component, T-056's
+    empty `opened[]`). Guarded both. That is the third and fourth time this project has hit it.
+  - **I broke two files mid-edit with bad escaping**, turning `
+` into real newlines inside a TS
+    string. `tsc` caught it. The same class of slip mangled a translation edit and a regex patch.
+    **Lesson: use raw strings for anything containing a backslash, and re-read after scripted edits.**
+- **Lint:** 🔴 **cannot run in EITHER RN app** — no `eslint.config.js`, and ESLint 9 dropped
+  `.eslintrc`. So neither app has been linted for some time and nobody noticed → **T-060**.
+  The API lints: **28,689 findings, 24,473 of them CRLF noise** (T-032). In my two touched files:
+  `OfferDriverService` **11 = baseline**; `OfferPassengerService` **12 → 16**, and all four new ones
+  are the `gatePhones` helper's `any`s — **deliberate and identical to its twin**, proven by
+  `git stash`.
+- **Next:** 🛑 **nothing left for me.** All 18 plan files swept — every unchecked step is the owner's,
+  blocked on the owner, or needs a device. **TEN cards await testing** in two runs: one shared API
+  deploy (T-034, T-043, T-045, T-054, T-055) and an app rebuild (T-024, T-046, T-056, T-057, T-058,
+  T-059); T-046 also needs its migration. **Test T-054 first** — the phone gate now exists in two
+  services and if it is wrong it is wrong in both.
+- **Commit:** proposed below; not committed.
+
+---
+
 ## 2026-08-11 (3) — seven cards in one run, and the recurring lesson was about my own checks
 
 - **Task:** clear everything that was actually buildable, with device testing batched at the end at

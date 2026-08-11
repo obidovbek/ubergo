@@ -62,11 +62,18 @@ export const MenuScreen: React.FC = () => {
     // actions, so these needed their own rows.
     { id: 'passengerOrders', titleKey: 'menu.passengerOrders' },
     { id: 'myJoinRequests', titleKey: 'menu.myJoinRequests' },
-    { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
-    { id: 'ichi', titleKey: 'menu.ichi' },
-    { id: 'tuman', titleKey: 'menu.tuman' },
-    { id: 'empty', titleKey: 'menu.empty' },
-    { id: 'xalqaro', titleKey: 'menu.xalqaro' },
+    // T-059 — these five trip *categories* have no destination: they fell into
+    // `handleOptionPress`'s empty `else`, so a driver could tap them and nothing
+    // happened. Commented out rather than deleted (owner, 2026-08-11) so they
+    // are one line away from returning; their translation keys stay in place.
+    // ⚠️ The user app reached the same conclusion long ago — the identical five
+    // are commented out in `user-app-standalone/screens/MenuScreen.tsx`.
+    // Re-adding a row here means giving it a real destination first.
+    // { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
+    // { id: 'ichi', titleKey: 'menu.ichi' },
+    // { id: 'tuman', titleKey: 'menu.tuman' },
+    // { id: 'empty', titleKey: 'menu.empty' },
+    // { id: 'xalqaro', titleKey: 'menu.xalqaro' },
   ];
 
   // Get user display name or initials
@@ -84,10 +91,12 @@ export const MenuScreen: React.FC = () => {
       handleSearchPassengerOffers();
     } else if (optionId === 'myJoinRequests') {
       navigation.navigate('MyJoinRequests');
-    } else {
-      // Handle other menu options
-      // TODO: Add navigation for other options
     }
+    // T-059 — the `else` that used to sit here was empty, which is exactly what
+    // made the five trip-category rows tappable-but-dead. Every row still in
+    // `taxiOptions` above now has a destination, so there is nothing to fall
+    // through to. If a row is ever added without one, it must be given a
+    // destination here rather than a silent no-op.
   };
 
   const handleProfilePress = () => {
@@ -441,7 +450,18 @@ const styles = StyleSheet.create({
     color: '#2563EB',
   },
   offersIconContainer: {
-    marginBottom: 8,
+    // T-059 — absolutely positioned so the icon does NOT push its label down.
+    // Every tile is `justifyContent: 'center'`, so a tile that draws an icon
+    // used to centre *icon + text as a group*, leaving its label sitting lower
+    // than its icon-less neighbour in the same row. That is the "not vertically
+    // centered when there is no icon" the owner saw: the icon-less tiles were
+    // right and this one was the odd one out.
+    // ⚠️ `top: 18` matches `optionButton`'s padding, so the icon keeps its
+    // original inset from the tile edge.
+    position: 'absolute',
+    top: 18,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
