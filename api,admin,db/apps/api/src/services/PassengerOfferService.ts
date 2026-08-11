@@ -952,6 +952,33 @@ export class PassengerOfferService {
 
     await offer.update({ status: 'cancelled' });
 
+    // Cancel the drivers' bids along with the offer.
+    //
+    // Without this the rows stay `pending` FOREVER: the offer is now `cancelled`,
+    // so no other code path will ever touch them again, and every driver keeps
+    // seeing "waiting" for a trip that no longer exists (owner, 2026-08-11).
+    // `confirmDriver` already closes the losing bids on the other path; this one
+    // used to load these rows only to push them, then abandon them.
+    //
+    // `cancelled` rather than `rejected` on purpose: the passenger called the
+    // trip off, they did not judge the driver's offer. `rejected` renders red
+    // with a rejection reason and would misreport what happened.
+    //
+    // Done BEFORE the pushes so a driver who opens the app on the notification
+    // cannot read a row this call is about to change.
+    if (interestedDrivers.length > 0) {
+      const cancelledAt = new Date();
+      await OfferDriver.update(
+        { status: 'cancelled', cancelled_at: cancelledAt },
+        {
+          where: {
+            offer_id: offerId,
+            status: { [Op.in]: ['pending', 'confirmed'] },
+          },
+        }
+      );
+    }
+
     // Send push notifications to all interested drivers. The language is
     // resolved per driver — this is a list of different people, and it used to
     // be written in the cancelling passenger's language for all of them.

@@ -226,6 +226,37 @@ export const showToast = {
       topOffset: 50,
     });
   },
+
+  /**
+   * A toast the user can TAP to go somewhere (T-046).
+   *
+   * Used for pushes that arrive while the app is already open: FCM delivers
+   * those through `onMessage`, which posts no system notification, so without
+   * this the message is invisible and unreachable.
+   *
+   * ⚠️ Navigation happens ONLY in `onPress`. Ignoring the toast must never move
+   * the user — a push can land mid-form (typing a price in the join sheet), and
+   * stealing the screen there would lose their input.
+   *
+   * Longer than the others on purpose: it asks for an action, not just
+   * acknowledgement, so it needs time to be noticed and tapped.
+   */
+  tappable: (title: string, message: string | undefined, onPress: () => void) => {
+    Toast.show({
+      type: 'info',
+      text1: title,
+      text2: message,
+      position: 'top',
+      visibilityTime: 6000,
+      topOffset: 50,
+      onPress: () => {
+        // Dismiss first: leaving it on screen after a tap looks like the tap
+        // was ignored while the new screen is still mounting.
+        Toast.hide();
+        onPress();
+      },
+    });
+  },
 };
 
 export default Toast;

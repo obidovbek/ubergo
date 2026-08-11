@@ -4,147 +4,178 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ⏸️ **T-042** → written up in `docs/TODO.md`. Three defects fixed 2026-08-10; owner rebuild pending.
+> ✅ **T-044 CLOSED** 2026-08-11 → `docs/PLAN-T044.md`. ✅ **T-042 CLOSED** 2026-08-11.
 > ✅ **T-041 CLOSED** → `docs/PLAN-T041.md`. ✅ **T-038 CLOSED** → `docs/PLAN-T038.md`.
 > ⏸️ **T-040** → `docs/PLAN-T040.md`. ⏸️ **T-039** → `docs/PLAN-T039.md`.
-> ⏸️ **T-037** → `docs/PLAN-T037.md`. Steps 1, 3-6 done; device test found T-042.
+> ⏸️ **T-037** → `docs/PLAN-T037.md`. Crash fixed; the join sheet and `MyJoinRequests`
+> have still **never been opened on a device**.
 > ⏸️ **T-031/T-033/T-030/T-027/T-018/T-026A/T-025** → their own `docs/PLAN-T0*.md`.
 
 ## Task
-- **ID / name:** T-044 — a tapped push must open the **exact** screen, in both apps
+- **ID / name:** T-046 — a cancelled passenger offer must cancel the drivers' bids, and a
+  foreground push must be actionable
 - **Goal (definition of "done"):**
-  1. Every push type that **has** a real destination opens **that** destination, with params —
-     not a generic list, in **both** apps.
-  2. A type with no exact destination still lands somewhere honest and never crashes.
-  3. A malformed / unknown / hostile payload can never navigate to a route that does not exist.
-  4. Both apps' mappers stay structurally identical (project duplicate-by-convention rule).
-  5. `tsc` at baselines: API **282** · admin **0** · user **12** · driver **35**.
-- **Why now:** owner, 2026-08-10 — *"any notification on click should open that exactly page or
-  screen in both apps"*.
-- **Scope decision (owner, 2026-08-10):** **push taps only, app-side.** No API change, no deploy —
-  rebuild both apps. The two blockers found while scoping are logged as their own cards, **not**
-  done here: **T-045** (in-app list rows) and **T-024** (the passenger's "drivers who offered").
+  1. Cancelling a passenger offer sets every `pending`/`confirmed` `OfferDriver` row on it to
+     **`cancelled`** (+ `cancelled_at`). No bid is left at "waiting" against a dead offer.
+  2. Rows already stranded in the DB are repaired by a migration.
+  3. A push arriving while the app is **in the foreground** shows a **tappable toast** that
+     navigates to the same destination `routeForNotification` already computes — in **both** apps.
+  4. Ignoring a foreground toast never navigates. It must not steal the screen.
+  5. `tsc` at baselines: API **282** · admin **0** · user **11** · driver **35**.
+- **Why now:** owner device test, 2026-08-11 — *"if passenger cancels own offer push notification
+  comes to driver but on click did not open exactly page. and on driver send offers page request
+  still shows waiting after passenger cancel offer"*.
+- **Owner decisions (2026-08-11):**
+  - Stranded rows → status **`cancelled`**, not `rejected` (Claude's call, owner delegated).
+  - **Repair existing rows: YES.**
+  - Foreground push → **option (a): a tappable toast that navigates on tap.**
 
-## What already works — do NOT rebuild it
-✅ **The tap plumbing is complete and correct in BOTH apps** and is not the problem:
-`App.tsx` → `setupNotificationTapHandler(handleNotificationTap)`, a `pendingTarget` park for taps
-that arrive before the navigator exists (cold start / pre-auth), and
-`flushPendingNotification()` on `NavigationContainer.onReady` **and** on auth state change
-(`RootNavigator`). Cold start, background and pre-login are all already handled.
-**This card only changes `routeForNotification()` — the destination table — in each app.**
+## 🔴 Why the "72/72" in T-044 did not catch this — read before trusting any check here
+T-044's suite drove **`handleNotificationTap`** with 72 payloads and all 72 routed correctly.
+**It never asked who calls that function.** In the foreground, **nobody does**:
+`setupForegroundNotificationHandler` (`PushService.ts:173`) receives the message via `onMessage`,
+`console.log`s it, and drops it — its only `if` is a dead branch for `passenger_join_request` whose
+body is the comment *"Could trigger auto-refresh"*.
+⇒ **The suite verified a mapper that real foreground events never reach.** Same shape as T-042's
+stale comment: it confirmed what I already believed instead of what the app does.
+**Any check written for this card must drive the path the OS actually takes, not the mapper.**
 
-## The real gaps (grounded 2026-08-10)
-**Every push except `otp` carries `offer_id` plus a join id**, so exact routing is possible.
+## The three defects (all grounded 2026-08-11)
 
-### Driver app — 4 types dumped to the generic list by a STALE comment
-`utils/notificationRouting.ts:56-62` sends `driver_request_confirmed`,
-`driver_request_rejected`, `driver_not_chosen` and `offer_cancelled_by_passenger` to
-`Notifications`, with the comment *"There is no screen for these yet (T-023/T-024)"*.
-🔴 **That is out of date — T-037 built `MyJoinRequests` AND `PassengerOfferDetails`**, and both are
-registered in `MainNavigator`. All four are outcomes of the driver's own bid, which is exactly what
-`MyJoinRequests` lists.
-✅ `passenger_join_request` / `passenger_cancelled` → `OfferPassengers({offerId})` **already exact.**
+### ① 🔴 Server: `cancelOffer` abandons the bids — this is the "still waiting"
+`PassengerOfferService.cancelOffer:928-997`. It loads `interestedDrivers` (`pending` + `confirmed`)
+at **:939**, does `await offer.update({ status: 'cancelled' })` at **:953**, pushes each driver at
+**:962**, and **never updates a single `OfferDriver` row.**
+⇒ Those rows stay `pending` **forever** — the offer is `cancelled`, so nothing will ever move them.
+**The driver app is telling the truth; the database is wrong.**
+✅ **The precedent to copy is in this codebase already:** `OfferDriverService.confirmDriver:377-382`
+walks the losing bids and sets each to `rejected` + `rejection_reason` + `rejected_at`. And
+`OfferPassengerService:530-536` cancels a passenger join as `cancelled` + `cancelled_at`.
+**Cancelling the offer is the only path that forgets.**
 
-### User app — everything lands on one of two list screens
-`utils/notificationRouting.ts` has **no params at all** (`interface NotificationTarget { screen }`).
-`OfferDetails` exists and takes `{ offerId }`, so the booking notifications can open the actual ride.
+### ② 🔴 Both apps: a foreground push is dropped (the "did not open exactly page")
+Three delivery paths exist; **two** are wired:
 
-## 🔴 The trap this card must not fall into
-**`offer_id` does NOT mean the same thing in every payload.** Two different entities share the name:
-- `join_confirmed` · `join_rejected` · `driver_arrived` · `driver_10min_away` ·
-  `offer_cancelled_by_driver` → `offer_id` is a **DRIVER offer**. `OfferDetailsScreen` fetches
-  `OffersAPI.getOfferDetails` → `DriverOffer`. ✅ Safe to open.
-- `driver_join_request` · `driver_request_cancelled` → `offer_id` is the passenger's **OWN
-  PassengerOffer**. Feeding that to `OfferDetails` would fetch a **driver** offer by a **passenger**
-  offer id — a wrong row or a 404, presented as the user's own trip.
-  ⇒ These two stay on `MyPassengerOffers` until **T-024** exists. That is the honest destination.
+| App state | Handler | Navigates? |
+|---|---|---|
+| Killed → tapped | `getInitialNotification` (`PushService.ts:219`) | ✅ |
+| Background → tapped | `onNotificationOpenedApp` (`:210`) | ✅ |
+| **Foreground** | `onMessage` (**`:173`**) | ❌ **logs and drops** |
+
+The owner's app was **open**, so FCM delivered via `onMessage`. No system notification is posted and
+nothing navigates — **the app never moved**. "It opened the home menu" is the app *staying* on the
+home menu, not routing there.
+⚠️ **`showToast` cannot do this yet** — the four helpers in each app's `utils/toast.tsx` take only
+`(title, message)` and pass **no `onPress`** to `Toast.show`. Needs a small extension, in both apps.
+
+### ③ 🟡 Rows already stranded
+Every driver who bid on an already-cancelled offer still sees "waiting". Owner: repair them.
 
 ## Steps
-- [x] 1. **DONE 2026-08-10. Driver app — the 4 stale types now open `MyJoinRequests`.**
-  The comment claiming those screens did not exist was replaced with one recording that T-037 built
-  them. All **6** driver-audience types now resolve exactly: `passenger_join_request` and
-  `passenger_cancelled` were already `OfferPassengers({offerId})`.
-- [x] 2. **DONE 2026-08-10. User app — params support + the exact ride.**
-  Widen `NotificationTarget` to `{ screen, params? }` (mirroring the driver app's shape, which
-  already has it), add the same `parseOfferId` guard, and route
-  `join_confirmed` · `join_rejected` · `driver_arrived` · `driver_10min_away` ·
-  `offer_cancelled_by_driver` → `OfferDetails({ offerId })`, **falling back to `MyBookings` when the
-  id is missing or malformed**.
-  ⚠️ `driver_join_request` / `driver_request_cancelled` stay on `MyPassengerOffers` — see the trap
-  above. Leave a comment saying why, and pointing at T-024.
-  ⚠️ **`driver_10min_away` is LIVE** (`OfferPassengerService:771`) — an earlier grep missed it
-  because `[a-z_]` does not match the digits in `10min`. It is already routed; keep it.
-  ⚠️ **Both `navigate()` call sites had to change too** — `goOrPark` and `flushPendingNotification`
-  passed only `target.screen`, so params would have been silently dropped on the parked (cold-start)
-  path even after the mapper produced them.
-  ⚠️ **The module's header comment said "every destination is a param-less route"** — now false.
-  Corrected rather than left: a stale comment is exactly what caused T-042's crash.
-- [x] 3. **DONE 2026-08-10. Both mappers are structurally identical.** Verified by diffing the two
-  files with comments stripped: the **only** differences are the route tables themselves, which must
-  differ (different apps, different audiences). `NotificationTarget`, `parseOfferId`, the
-  guarded-id-with-fallback shape, the `default` case and all three exported functions match.
-- [x] 4. **DONE 2026-08-10. 72/72, and the suite is proven able to fail.**
-  `tsc`: user **11** · driver **35** — both exactly at their current baselines, zero errors in
-  either touched file. **72/72 runtime matrix** driving **both apps' real transpiled modules**
-  through the exported `handleNotificationTap` with a recording navigation ref (so it exercises the
-  real routing + `goOrPark` path, not a copy of the table): all **13** API types land on their exact
-  destination; **every destination is asserted against the route names PARSED FROM each app's
-  `MainNavigator` source**, so renaming a route fails the check instead of passing silently;
-  6 hostile payloads per app (missing/null `data`, unknown type, `type` as a number and as an
-  object) never throw and never invent a route; 7 bad `offer_id` forms per id-carrying type degrade
-  to the list with **no params at all** rather than NaN; and a good id arrives as a **number**, not
-  a string.
-  🔴 **Proven to fail against the pre-change code: 11 checks red** when the two files are stashed —
-  it reproduces the actual gap rather than merely agreeing with the new table.
-  ✅ The trap is pinned explicitly: `driver_join_request` / `driver_request_cancelled` must **not**
-  reach `OfferDetails` and must carry **no** `offerId`.
-  Script: `scratchpad/t044-routing-check.js` (+ `t044-rn-stub.js`).
-- [ ] 5. Owner: rebuild both apps, tap a real push of each kind.
-- [ ] 6. Commit (only after the owner's approval).
+- [x] 1. **DONE 2026-08-11. Server: the bids are cancelled with the offer.**
+  ✅ **Blocker cleared first:** `OfferDriver` already has `cancelled` in its ENUM
+  (`database/models/OfferDriver.ts:136`) and a nullable `cancelled_at` (:156) — **no schema change,
+  no extra approval needed.** ⚠️ The table is **`offer_drivers`** (plural), which the migration uses.
+  A single `OfferDriver.update({status:'cancelled', cancelled_at})` over the same `where` clause,
+  placed **before** the pushes so a driver opening the app on the notification cannot read a row this
+  call is about to change.
+- [x] 2. **DONE 2026-08-11 (written, NOT run). Migration to repair the stranded rows.**
+  `src/database/migrations/20260811000001-cancel-stranded-driver-bids.cjs`. Sets `offer_drivers` to
+  `cancelled` where the row is `pending`/`confirmed` **and** its parent `passenger_offers.status =
+  'cancelled'`; `RETURNING id` so it **prints the repaired count** when it runs.
+  ⚠️ **`cancelled_at` is set to the OFFER's `updated_at`, not `NOW()`** — stamping today's date on a
+  bid that died weeks ago would invent history.
+  ⚠️ **`down` is a deliberate NO-OP.** The prior per-row status is recorded nowhere, so reverting
+  everything to `pending` would resurrect bids on long-dead offers, including legitimately
+  `confirmed` ones. A no-op is honest; a plausible-looking rollback would corrupt data.
+  🛑 **I could not report the row count in advance — the live DB is in test3 and unreachable from
+  here.** The migration prints it as it runs.
+- [x] 3. **DONE 2026-08-11. `showToast.tappable` in BOTH apps.** Added rather than changing the four
+  existing helpers, so every current call site is untouched. 6 s (vs 3-4 s) because it asks for an
+  action, not just acknowledgement, and it hides itself on tap so the tap does not look ignored.
+  The two files remain identical.
+- [x] 4. **DONE 2026-08-11. The foreground path is wired in BOTH apps.**
+  `setupForegroundNotificationHandler` takes a second `onTap` argument and shows a tappable toast
+  built from the FCM `notification` block; the tap calls the **same** `handleNotificationTap`, so
+  there is exactly one destination table. Both dead branches deleted (`passenger_join_request` in the
+  driver app, `otp` in the user app).
+  ⚠️ **No title ⇒ no toast** — an empty bar the user cannot interpret is worse than silence.
+  ⚠️ **`otp` is skipped in the user app**: the code arrives on the OTP screen the user is already
+  looking at, and the mapper has no destination for it.
+  🔴 **Both `App.tsx` call sites had to change too** — `setupForegroundNotificationHandler()` was
+  called with **no arguments**, so a perfect handler would still have done nothing. **This is exactly
+  the T-044 trap** (a correct function nobody calls), so the suite asserts the wiring itself.
+- [x] 5. **DONE 2026-08-11. 27/27, and proven able to fail — 16 red.**
+  The suite drives the **real transpiled `PushService` of both apps**: it registers the actual
+  handler, captures the `onMessage` callback FCM would invoke, and fires FCM-shaped messages at it.
+  **It never calls the mapper directly — that is precisely what T-044 got wrong.**
+  Asserts: a foreground push shows a toast carrying the FCM title/body; **an untapped toast never
+  navigates**; a tap forwards the *original* `data` payload exactly once; no title ⇒ no toast; 7
+  hostile payloads never throw and never navigate; two pushes give two independently-tappable
+  toasts; the user app stays silent for `otp`; and **both `App.tsx` files actually pass the handler**.
+  🔴 **16 red against the pre-change code**, including *"foreground push shows a toast"* — the
+  owner's exact symptom reproduced.
+  `tsc`: API **282** · user **11** · driver **35**, all at baseline. The one error in a touched file
+  (`PushService.ts` `token` implicitly `any`) **proven pre-existing via `git stash`** — line 146
+  before, 147 after, shifted only by my import.
+  ✅ **No new user-visible strings**, so no i18n work: the toast reuses the title/body the server
+  already translated per-driver (`getUserLanguage`).
+  Script: `scratchpad/t046-foreground-check.js`.
+- [ ] 6. Owner: deploy the API, **run the migration**, rebuild both apps, retest the exact repro.
+- [ ] 7. Commit (only after the owner's approval). ⚠️ **Keep `.claude/settings.json` out** — it has
+  been swept into 4 commits now.
 
 ## Files to touch
-- `driver-app-standalone/utils/notificationRouting.ts` — the 4 stale destinations
-- `user-app-standalone/utils/notificationRouting.ts` — params support + exact ride
-- ❌ **No API change, no migration, no deploy** (owner's scope decision).
-- ❌ **Do not touch** `App.tsx`, `RootNavigator.tsx` or `PushService.ts` in either app — the
-  plumbing already works and is out of scope.
+- `api,admin,db/apps/api/src/services/PassengerOfferService.ts` — step 1
+- **NEW** `api,admin,db/apps/api/src/database/migrations/20260811000001-*.cjs` — step 2
+- `driver-app-standalone/utils/toast.tsx` + `user-app-standalone/utils/toast.tsx` — step 3
+- `driver-app-standalone/services/PushService.ts` + `user-app-standalone/services/PushService.ts` — step 4
+- Both apps' `translations/{uz,ru,en}.ts` if any new string is needed
+- ❌ **Do not touch** `notificationRouting.ts` in either app — the destination table is correct and
+  device-confirmed (T-044). This card only changes **who calls it**.
 
 ## Risks / open questions (READ before coding)
-- 🔴 **The `offer_id` ambiguity above is the whole risk of this card.** Getting it wrong opens a
-  stranger's trip, or a 404, in the user's own booking screen. Re-read the trap section.
-- ⚠️ **Do not "improve" the parking/flush logic.** It is correct and already handles cold start,
-  background and pre-auth. Changing it risks the one part that demonstrably works.
-- ⚠️ Unknown types must keep falling through to `Notifications` — a build that has never heard of a
-  future type must not crash.
-- ⚠️ Both apps carry near-identical code; every change is considered for both.
-- ⚠️ **T-042 is uncommitted in this tree** (driver app: crash fix, layout, re-join status).
-  Keep this card's commit separate.
+- 🔴 **Verify `OfferDriver` supports `cancelled` + `cancelled_at` before step 1.** If the ENUM or the
+  column is missing, that is a schema change → **stop and ask** (project rule 4).
+- 🔴 **The migration is a data write.** Owner approval required, row count reported first, and `down`
+  honestly documented as irreversible.
+- ⚠️ **A foreground toast can appear at a bad moment** (mid-form in the join sheet). It must never
+  navigate on its own — tap only. That is the whole point of option (a).
+- ⚠️ **Both apps carry near-identical code** — every app-side change is made twice.
+- ⚠️ **Do not re-verify the mapper and call it done.** T-044 already proved the table is right; this
+  card is about the path that never reaches it.
+- ⚠️ **T-045 overlaps deliberately**: it will persist notifications server-side. This card does not
+  touch `NotificationService` — if both land, re-check that a foreground push does not double-report.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
 
 ## Session notes (one line per work session)
-- **2026-08-10** — card opened. Plumbing confirmed complete in both apps (not the problem); the gap
-  is the destination table. Found the driver app's stale T-023/T-024 comment (those screens now
-  exist, built by T-037), the user app's total lack of params, and the **`offer_id` means two
-  different entities** trap. Scope set by the owner to push-taps-only. **Awaiting approval.**
-- **2026-08-10 (approved, steps 1-4 done)** — both mappers updated and verified 72/72, with 11 red
-  proven against the pre-change code. Two things were bigger than the plan assumed: **both
-  `navigate()` call sites** dropped params (so the cold-start parked path would have lost them even
-  once the mapper was right), and the user module's header comment **asserted "param-less"**, which
-  the change falsified — corrected on the spot, since a stale comment is what caused T-042.
+- **2026-08-11** — card opened from the owner's T-037 device walk. Two symptoms turned out to be
+  **three** defects: the server never cancels the bids (the "waiting" is real data, not a display
+  bug), the **foreground** delivery path drops the payload entirely, and rows are already stranded.
+  🔴 **T-044's 72/72 passed because it tested the mapper, not its callers** — recorded above so the
+  same mistake is not repeated in step 5. **Awaiting approval.**
 
 ## Resume point (for the next chat)
-**Steps 1-4 DONE 2026-08-10. Only step 5 (owner: rebuild both apps, tap a real push of each kind)
-and step 6 (commit) remain.**
+**Steps 1-5 DONE 2026-08-11. Only step 6 (owner: deploy + migrate + rebuild + retest) and step 7
+(commit) remain.**
 
-Every push type that has a real destination now opens it, in both apps:
-- **Driver** — `passenger_join_request`/`passenger_cancelled` → `OfferPassengers({offerId})`
-  (already exact); the 4 outcome types → **`MyJoinRequests`**, which T-037 built and a **stale
-  comment** had been hiding.
-- **User** — the 5 booking types → **`OfferDetails({offerId})`**, the actual ride.
-  `driver_join_request`/`driver_request_cancelled` deliberately stay on `MyPassengerOffers`
-  (their `offer_id` is a **PassengerOffer**; `OfferDetails` fetches a **DriverOffer**) → **T-024**.
+**Three defects fixed:**
+1. **Server** — `cancelOffer` now cancels the drivers' bids instead of abandoning them at `pending`.
+   ✅ No schema change was needed: `cancelled` and `cancelled_at` already existed on `OfferDriver`.
+2. **Both apps** — a **foreground** push (`onMessage`) used to be logged and dropped; it now shows a
+   **tappable toast** routed through the same `handleNotificationTap` as the other two paths.
+   🔴 Both `App.tsx` call sites passed **no arguments**, so the wiring is asserted by the suite.
+3. **Migration written** for the already-stranded rows — **not yet run**.
 
-🛑 **No API deploy** — app-side only. Rebuild BOTH apps.
-⚠️ T-042 (driver app) is uncommitted in the same tree; keep the commits separate.
+🛑 **Step 6 is the owner's, and the ORDER MATTERS:**
+**(a) deploy the API → (b) `npm run db:migrate` → (c) rebuild BOTH apps → (d) retest.**
+The migration only repairs history; without the deploy, new cancellations keep stranding rows.
+⚠️ **The migration prints the number of rows it repaired** — the count could not be gathered in
+advance because test3's DB is unreachable from the dev machine. Its `down` is an intentional no-op.
+
+**The exact repro to retest:** driver bids on a passenger order → passenger cancels it →
+(i) the driver's push, tapped **with the app open**, must land on **`MyJoinRequests`**, and
+(ii) that row must read **cancelled**, not "waiting".
+
 **Baselines:** API **282** · admin **0** · user **11** · driver **35**.

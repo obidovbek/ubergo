@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-11 — T-044 and T-042 close on a device. Two cards off the board, one commit.
+
+- **Owner device test passed on both counts.** *"push opens exactly page thats solved"* and
+  *"opening a passenger order detail's crash also solved"*. **T-044** and **T-042** are done
+  end-to-end, committed as `55718f6` "push navigation".
+- **Both went into ONE commit**, though the plan explicitly asked to keep them separate, and
+  `.claude/settings.json` was swept in for the **fourth** time (T-033, T-036, T-040, now this).
+  No harm — both cards were confirmed in the same test, so the commit is not lying about what was
+  verified. But *"keep the commits separate"* has now been written into a plan and not survived
+  contact three times running. **A rule nothing enforces is a wish.** If commit hygiene actually
+  matters here, it needs a pre-commit hook, not another line in a plan file.
+- **What the two cards leave behind, and it is the same lesson twice:** a stale comment was the
+  proximate cause of *both* defects. T-042's crash came from a type doc-block asserting that two
+  endpoints returned the same shape (they do not); T-044's four dead-ended notification types came
+  from a comment saying *"there is no screen for these yet"* long after T-037 built one.
+  **Comments assert facts about other files and nothing ever checks them.** Both were fixed
+  structurally rather than by editing the prose — `passenger` is now optional so the bare read fails
+  to compile, and the route table is asserted against route names parsed from the real
+  `MainNavigator`. That is the only kind of fix that holds.
+- **T-037 is NOT closed, and it would be easy to think it is.** Its device test failed *on T-042's
+  crash*, so clearing that unblocks it — but only the browse → details path has ever been walked.
+  The **join sheet** and **`MyJoinRequestsScreen`** have still never been opened on a phone, and
+  T-037 found **three** defects in never-executed code the first time it was looked at. The risk
+  there is unchanged; only the obstacle to testing is gone.
+- **Board state:** *Now* is effectively empty. T-031 is the only card left there and it is blocked on
+  an owner answer (was a salon option ticked?). The cheapest win available is finishing T-037's walk
+  on the build already installed; the most valuable next build is **T-024**, which T-044 proved is a
+  real user-facing hole — a passenger gets told "a driver wants your trip", taps the push, and lands
+  on a list with nothing to answer.
+- **One question resolved, and the answer was "working as intended".** The owner asked whether a
+  driver re-entering a passenger order and finding **nothing to do but read** was normal. It is —
+  the driver app's detail screen is read-only *because the bid is the action*, and since T-042 ③ the
+  footer reports the bid's real status instead of re-offering the button. Worth recording because
+  the question spanned two apps and the answers are opposite: **read-only is correct on the driver
+  side and a genuine defect on the passenger side** (T-024), where someone is told a driver wants
+  their trip and has no way to answer.
+- **Next:** owner picks — finish T-037's walk, unblock T-031, or start T-024.
+
+---
+
 ## 2026-08-10 (3) — T-044: the push plumbing was fine; the destinations were the bug
 
 - **Owner:** *"any notification on click should open that exactly page or screen in both apps."*

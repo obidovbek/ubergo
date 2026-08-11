@@ -63,8 +63,14 @@ export default function App() {
         console.error('Error requesting push permissions:', error);
       });
 
-      // Setup foreground notification handler
-      unsubscribeForeground = setupForegroundNotificationHandler();
+      // A push that lands while the app is OPEN arrives here, not through the
+      // two tap handlers below — Android posts no system notification in that
+      // case, so before T-046 the message was invisible and unreachable. It now
+      // shows a toast that routes through the SAME handler when tapped.
+      unsubscribeForeground = setupForegroundNotificationHandler(
+        undefined,
+        handleNotificationTap
+      );
 
       // Tapping a notification must open the message, not the main menu (OR-010).
       // Registered here rather than inside the navigator because the cold-start

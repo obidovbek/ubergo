@@ -160,7 +160,12 @@
       "Bash(node t042-placeholder-check.js)",
       "Bash(cd \"d:/projects/UbexGo/api,admin,db/apps/api\" && grep -n \"data\\\\|type\" src/models/Notification.ts | head -20 && echo \"=== app-side type ===\" && grep -n \"interface Notification\" -A 14 ../../../../user-app-standalone/api/notifications.ts 2>/dev/null | head -18)",
       "Read(//d/user-app-standalone/api/**)",
-      "Bash(node t044-routing-check.js)"
+      "Bash(node t044-routing-check.js)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t046-foreground-check.js\")",
+      "Bash(sed -i \"s|require.resolve\\('@babel/preset-env'\\)|path.join\\(APP_MODULES, '@babel/preset-env'\\)|; s|require.resolve\\('@babel/preset-typescript'\\)|path.join\\(APP_MODULES, '@babel/preset-typescript'\\)|\" t046-foreground-check.js)",
+      "Bash(node t046-foreground-check.js)",
+      "Bash(cp \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t046-foreground-check.js\" ./t046-check.cjs)",
+      "Bash(node t046-check.cjs)"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

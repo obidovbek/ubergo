@@ -7,7 +7,59 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
-- [ ] T-044 (P1) **A tapped push must open the EXACT screen, in both apps.** Owner, 2026-08-10:
+- [ ] T-046 (P1) 🔴 **A cancelled passenger offer leaves every driver's bid at "waiting" forever —
+  and a foreground push is silently dropped.** Found by the owner's device walk 2026-08-11:
+  *"if passenger cancels own offer push notification comes to driver but on click did not open
+  exactly page. and on driver send offers page request still shows waiting after passenger cancel
+  offer"*. **Two symptoms, THREE defects, all grounded the same day.**
+  ① 🔴 **The server abandons the bids.** `PassengerOfferService.cancelOffer:939-953` loads the
+  `pending`/`confirmed` `OfferDriver` rows, cancels the **offer**, pushes every driver — and
+  **never updates one of those rows**. They stay `pending` **forever**, because the offer is now
+  `cancelled` and nothing will ever move them. **The driver app is telling the truth; the DB is
+  wrong.** ✅ The precedent is already in the codebase: `OfferDriverService.confirmDriver:377-382`
+  correctly walks the losing bids on the *other* path. **Cancelling is the one path that forgets.**
+  ② 🔴 **Foreground pushes never navigate, in EITHER app.** Three delivery paths exist and only two
+  are wired — `getInitialNotification` (killed) ✅, `onNotificationOpenedApp` (background) ✅, and
+  **`onMessage` (foreground) ❌ logs the payload and drops it** (`PushService.ts:173`), its only `if`
+  being a dead `passenger_join_request` branch commented *"Could trigger auto-refresh"*. The owner's
+  app was **open**, so nothing navigated — *"it opened the home menu"* is the app **never moving**.
+  ③ 🟡 **Rows already stranded in the DB** — owner decided 2026-08-11 to **repair** them.
+  🔴 **Why T-044's "72/72" passed this:** it drove `handleNotificationTap` with 72 payloads and
+  **never asked who calls it**. In the foreground nobody does. **The suite verified a mapper that
+  real events never reach** — the same shape as T-042's stale comment. Step 5 must drive the OS's
+  actual path, not the mapper.
+  **Owner decisions 2026-08-11:** stranded rows → **`cancelled`** (not `rejected` — the driver was
+  never judged, and `rejected` renders red with a reason); **repair existing rows: yes**; foreground
+  → **a tappable toast that navigates on tap**, never on its own (it must not steal the screen
+  mid-form). ⚠️ `showToast` takes no `onPress` today — needs extending in **both** apps.
+  **Approved and STEPS 1-5 DONE 2026-08-11.** ✅ **No schema change was needed** — `cancelled` and
+  `cancelled_at` already existed on `OfferDriver`; only the service forgot to use them.
+  🔴 **Both `App.tsx` call sites passed NO arguments to the foreground handler**, so even a perfect
+  handler would have done nothing — **the same trap as T-044** (a correct function nobody calls), and
+  the suite now asserts the wiring itself.
+  **27/27** runtime checks driving **both apps' real transpiled `PushService`** — the actual
+  `onMessage` callback FCM invokes, never the mapper — asserting that an **untapped toast does not
+  navigate**, that a tap forwards the original payload once, that 7 hostile payloads never throw, and
+  that both `App.tsx` files pass the handler. **Proven able to fail: 16 red against pre-change code**,
+  including the owner's exact symptom.
+  `tsc` API **282** · user **11** · driver **35**, all at baseline (the one error in a touched file
+  proven pre-existing via `git stash`). No new strings, so no i18n work — the toast reuses the
+  server's already-translated title/body.
+  🛑 **Only step 6 (owner) and step 7 (commit) remain. ORDER MATTERS: deploy the API → run the
+  migration → rebuild BOTH apps → retest.** The migration only repairs history; without the deploy,
+  new cancellations keep stranding rows. ⚠️ It **prints the repaired row count** as it runs (the
+  count could not be gathered in advance — test3's DB is unreachable from the dev machine), and its
+  `down` is an intentional no-op because the prior per-row status is recorded nowhere.
+  ⚠️ Plan is **`docs/PLAN.md`**. ❌ `notificationRouting.ts` untouched: the destination table is
+  correct and device-confirmed.
+
+> 🟢 **T-044 and T-042 both CLOSED 2026-08-11** (owner device test, committed `55718f6`) — moved to
+> *Done*. Only T-031 is left in *Now*, and it is **blocked on an owner answer** (see its 🛑 below),
+> so there is effectively **no active task**: pick one from *Next*, or unblock T-031.
+
+<details><summary>✅ T-044 — CLOSED 2026-08-11, moved to Done (full history kept here)</summary>
+
+- [x] ~~T-044 (P1)~~ **A tapped push must open the EXACT screen, in both apps.** Owner, 2026-08-10:
   *"any notification on click should open that exactly page or screen in both apps"*.
   **Approved and STEPS 1-4 DONE 2026-08-10.** Every push type with a real destination now opens it
   in both apps. Driver: the 4 outcome types → **`MyJoinRequests`** (the screen T-037 built, which a
@@ -45,6 +97,8 @@
   ⚠️ **`driver_10min_away` IS live** (`OfferPassengerService:771`); an early grep missed it because
   `[a-z_]` skips the digits in `10min`.
 
+</details>
+
 - [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
   Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
   were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
@@ -63,8 +117,13 @@
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
 > only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
 > **fails**.
-- [ ] T-042 (P1) 🔴 **Three defects found by the owner's T-037 device test, 2026-08-10 — all fixed
-  the same day, all awaiting a driver-app rebuild.**
+<details><summary>✅ T-042 — CLOSED 2026-08-11 (owner device test, committed `55718f6`); history kept</summary>
+
+- [x] ~~T-042 (P1)~~ 🔴 **Three defects found by the owner's T-037 device test, 2026-08-10 — all fixed
+  the same day. ✅ Device-confirmed 2026-08-11:** *"opening a passenger order detail's crash also
+  solved"*. ⚠️ The owner explicitly confirmed **defect ①** (the crash); ② (the merged list) and
+  ③ (the re-offered join button) shipped in the same build and were not separately reported — treat
+  them as fixed-but-unconfirmed if either resurfaces.
 
   **① Driver app CRASHES TO THE PHONE'S HOME SCREEN when opening a passenger order's details.**
   Search finds the orders, but tapping *"Details"* or the card itself kills the app.
@@ -135,7 +194,9 @@
   **31/31** runtime checks (incl. string/number `offer_id` matching, all four statuses distinct in
   every locale, and the **old boolean proven to re-offer the button**); `tsc` **35 = baseline**.
 
-> 🟢 T-041 closed 2026-08-10.
+</details>
+
+> 🟢 T-041 closed 2026-08-10. 🟢 T-042 + T-044 closed 2026-08-11.
 
 <details><summary>✅ T-041 — CLOSED 2026-08-10, moved to Done (full history kept here)</summary>
 
@@ -338,11 +399,16 @@
   (2) `offer.passenger` **does not exist** on `GET /driver/join-requests` (raw model → `offer.user`;
   only `public/*` builds the mapped shape) → guaranteed crash on every row; (3) `menu.myOffers`,
   `common.all`, `common.viewAll` existed in **uz only** (same class as T-035).
-  🔴 **DEVICE TEST 2026-08-10 — PARTIAL FAIL.** ✅ The search screen is reachable and **finds
-  orders** (steps 1 + 5 confirmed on a device — the wiring works). ❌ Opening an order's **details
-  crashed the app to the phone's home screen** → **T-042**, root-caused and fixed the same day
-  (`offer.passenger.name` on a payload whose shape has `user`). **Retest after the driver rebuild.**
-  🛑 **Step 7 (owner: rebuild the driver app, walk the loop) and step 8 (commit) remain.**
+  🟡 **DEVICE TEST 2026-08-10 — PARTIAL FAIL, blocker cleared 2026-08-11.** ✅ The search screen is
+  reachable and **finds orders**. ❌ Opening an order's **details crashed the app to the phone's home
+  screen** → **T-042**, fixed and **device-confirmed 2026-08-11** (`55718f6`). The browse → details
+  path now works end-to-end.
+  🛑 **Step 7 is only HALF walked.** The **join sheet** and **`MyJoinRequestsScreen`** have still
+  never been opened on a device — T-037 found **three** defects in never-executed code, so the code
+  behind those two screens carries exactly that risk and is still unproven. Step 8 (commit) after.
+  👉 **This is the cheapest card on the board to finish:** no code is believed missing, it needs the
+  owner to tap through *"I'll take this order"* → *My join requests* → cancel, on the build already
+  installed.
   ⚠️ The loop cannot be fully demoed — the passenger's "drivers who
   offered" screen is **T-024** and does not exist, so confirm the offer landed via the DB or admin.
   ⚠️ **Still unwalked past the details screen:** the join sheet and `MyJoinRequestsScreen` were
@@ -579,7 +645,12 @@
   ⚠️ Its premise was **wrong**: it said "the driver can browse passenger orders but has no way to
   offer on one". The browse screen is registered in **no** navigator, so the driver cannot browse
   either. Do not work this card — see T-037 in *Now*.
-- [ ] T-024 (P1) **User app: "drivers who offered" screen.** `MyPassengerOffersScreen` shows
+- [ ] T-024 (P1) **User app: "drivers who offered" screen.**
+  ✅ **Not to be confused with the driver-side screen (owner asked 2026-08-11, resolved).** The
+  driver app's `PassengerOfferDetailsScreen` being **read-only after bidding is CORRECT** — the bid
+  is the action, and since T-042 ③ the footer shows the driver's **real status** (sent / confirmed /
+  rejected / cancelled) instead of re-offering the button. **Do not add driver actions there.**
+  This card is the **passenger** side, which genuinely has nothing to tap. `MyPassengerOffersScreen` shows
   "N drivers interested (M pending)" with **nothing to tap** — the passenger is told drivers
   arrived and cannot answer them. `getOfferDrivers` / `confirmDriver` / `rejectDriver` exist in
   `user-app-standalone/api/passengerOffers.ts` with zero call sites. Accepting sets the offer to
@@ -644,6 +715,49 @@
 - [ ] T-010 (P3) Add a real test suite (none exists today)
 
 ## ✅ Done (newest on top)
+- [x] T-044 **A tapped push opens the exact screen, in both apps** — **device-confirmed by the owner
+  2026-08-11** (*"push opens exactly page thats solved"*), committed `55718f6`.
+  ✅ **The tap plumbing was never the problem** — handler, cold-start parking and flush-on-ready were
+  already complete in both apps. **The bug was one function: the destination table.**
+  🔴 **The driver app was one stale comment away from working:** four types fell through to the
+  generic list under *"there is no screen for these yet (T-023/T-024)"* — but **T-037 had built and
+  registered `MyJoinRequests`**. Second time in one week a stale comment was the proximate cause of a
+  defect (T-042's crash was the other). **Comments assert facts about other files and nothing checks
+  them.**
+  🔴 **The trap that justified planning first: `offer_id` means TWO different entities.** For the
+  passenger's booking pushes it is a **DriverOffer** (safe for `OfferDetails`); for
+  `driver_join_request`/`driver_request_cancelled` it is the passenger's **own PassengerOffer**, so
+  routing it to `OfferDetails` would have fetched a wrong row or 404 **and presented it as the user's
+  own trip**. Those two deliberately stay on `MyPassengerOffers` until **T-024** builds the real
+  screen.
+  ⚠️ **Two things bigger than the plan assumed:** **both `navigate()` call sites** passed only
+  `target.screen`, so params would have been dropped on the parked cold-start path — the tap-while-
+  dead case that matters most — even with a perfect mapper; and the user module's header comment
+  asserted *"every destination is a param-less route"*, falsified by the change and corrected on the
+  spot.
+  **72/72** runtime matrix over **both apps' real transpiled modules**, with every destination
+  asserted against route names **parsed from each app's real `MainNavigator` source** (a renamed
+  route fails instead of passing silently). **Proven able to fail: 11 red against pre-change code.**
+  Split out rather than absorbed: **T-045** (in-app list) and **T-024**. Plan: `docs/PLAN.md`.
+- [x] T-042 **The driver app crashed to the phone's home screen on a passenger order's details** —
+  **device-confirmed 2026-08-11**, committed `55718f6` (together with T-044).
+  **Cause: one line, `offer.passenger.name`.** Two endpoints under the **same**
+  `/public/passenger-offers` prefix return **different shapes** — the browse list is hand-mapped to
+  `passenger: {id, name}`, the detail returns the **raw Sequelize model** aliased **`as: 'user'`**.
+  `passenger` was `undefined` and `.name` threw **during render**, where RN has no error boundary —
+  hence a hard process death rather than an error screen.
+  🔴 **T-037 had already found and fixed this exact bug two days earlier and a screen was missed.**
+  The helper (`passengerNameOf`) was applied to the one screen observed failing, not to the class.
+  **A fix applied to the observed instance instead of the class is a half-fix.**
+  🔴 **A comment caused the bug** — the type asserted both public endpoints built the mapped shape.
+  Fix made structural: `passenger` is now **optional**, so a bare `.passenger.name` no longer
+  compiles. Also fixed the same latent read in `SearchPassengerOffersScreen`.
+  Plus two more in the same pass: the search results **merged into the route picker** (two sibling
+  scroll surfaces, a `maxHeight: 270` `ScrollView` that could never scroll away → picker became the
+  list's `ListHeaderComponent`, one surface), and **re-entering an offer re-offered the join button**
+  (a local `joinSent` boolean reset on every mount → now reads the real status from
+  `GET /driver/join-requests`; the server was never at risk).
+  ⚠️ Root cause deliberately **not** fixed at the API — logged as **T-043**.
 - [x] T-041 **Only a rejected refresh ends the session; the auth rate limits are split and keyed by
   user** — **device-confirmed by the owner 2026-08-10**, committed `0ccde30`.
   Two independent defects, and the card needed both. **The apps over-reacted:**

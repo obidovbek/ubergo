@@ -1,6 +1,7 @@
 import { Platform, PermissionsAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerDevice } from '../api/devices';
+import { showToast } from '../utils/toast';
 
 /**
  * The language this person actually reads. The API stores it on the user, so
@@ -162,9 +163,33 @@ export function subscribeTokenRefresh(apiToken: string) {
 }
 
 /**
- * Setup foreground notification handler
+ * Setup foreground notification handler.
+ *
+ * 🔴 THE THIRD DELIVERY PATH (T-046). A push reaches the app three ways, and
+ * this is the one that used to be dropped:
+ *   - getInitialNotification  — the app was dead    → tap navigates;
+ *   - onNotificationOpenedApp — the app was hidden  → tap navigates;
+ *   - onMessage (HERE)        — the app is OPEN     → Android posts NO system
+ *     notification at all, so there is nothing to tap and the message was
+ *     invisible. This function logged it and threw it away.
+ *
+ * The owner hit exactly that on 2026-08-11: a passenger cancelled a trip, the
+ * driver's app was open, and "tapping the notification" appeared to do nothing —
+ * the app had simply never moved.
+ *
+ * ⚠️ `onTap` is the SAME handler the other two paths use, so there is exactly
+ * one destination table. Do not add a second mapping here.
+ * ⚠️ It fires only when the toast is TAPPED. A push must never yank someone off
+ * the screen they are using.
+ *
+ * @param onNotificationReceived optional observer for the raw message.
+ * @param onTap where a tapped foreground notification should go; receives the
+ *              notification's `data` payload.
  */
-export function setupForegroundNotificationHandler(onNotificationReceived?: (message: any) => void) {
+export function setupForegroundNotificationHandler(
+  onNotificationReceived?: (message: any) => void,
+  onTap?: (data: any) => void
+) {
   if (Platform.OS === 'web') {
     console.log('Foreground notification handler not supported on web platform');
     return () => { }; // Return no-op unsubscribe function
@@ -178,11 +203,17 @@ export function setupForegroundNotificationHandler(onNotificationReceived?: (mes
       onNotificationReceived(remoteMessage);
     }
 
-    // Handle different notification types
-    if (remoteMessage.data?.type === 'passenger_join_request') {
-      console.log('Passenger join request notification received:', remoteMessage.data);
-      // Could trigger auto-refresh of passenger requests
-    }
+    const data = remoteMessage?.data;
+    if (!onTap || !data) return;
+
+    // The FCM `notification` block carries the text the OS would have shown.
+    // Without a title there is nothing legible to display, so stay silent
+    // rather than popping an empty bar the user cannot interpret.
+    const title = remoteMessage?.notification?.title;
+    const body = remoteMessage?.notification?.body;
+    if (!title) return;
+
+    showToast.tappable(title, body, () => onTap(data));
   });
 
   return unsubscribe;
