@@ -14,6 +14,7 @@ import MyBookingsScreen from '../screens/MyBookingsScreen';
 import { CreatePassengerOfferScreen } from '../screens/CreatePassengerOfferScreen';
 import { MyPassengerOffersScreen } from '../screens/MyPassengerOffersScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
+import OfferDriversScreen from '../screens/OfferDriversScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -70,9 +71,17 @@ export const MainNavigator: React.FC = () => {
           headerShown: false,
         }}
       />
-      <Stack.Screen 
-        name="MyPassengerOffers" 
+      <Stack.Screen
+        name="MyPassengerOffers"
         component={MyPassengerOffersScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      {/* T-024: where the passenger answers the drivers who offered. */}
+      <Stack.Screen
+        name="OfferDrivers"
+        component={OfferDriversScreen}
         options={{
           headerShown: false,
         }}

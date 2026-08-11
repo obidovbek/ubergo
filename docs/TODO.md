@@ -7,6 +7,47 @@
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
 ## 🔥 Now (working on it)
+- [ ] T-024 (P1) **User app: the passenger's "drivers who offered" screen.** ⚠️ Plan is
+  **`docs/PLAN.md`**. **APPROVED and STEPS 1-6 DONE 2026-08-11 — only the owner's rebuild + walk
+  (step 7) and the commit (step 8) remain.**
+  **The passenger↔driver loop is now closed end to end:** push → **`OfferDrivers`** (the actual
+  screen, not a list) → name, vehicle, seats, price, message → **Choose** / **Decline**.
+  ✅ **T-044's deliberate compromise is closed with it** — `driver_join_request` now routes exactly.
+  The header comment was corrected too: the rule is not "never pass `offer_id`" but **"the id and the
+  screen must agree about which entity they mean"**.
+  🔴 **`driverNameOf()` was added rather than reading the name inline** — `driver` is optional and
+  has no `name` field. That exact read crashed the driver app to the launcher in T-042, so the helper
+  exists to make the mistake impossible.
+  ⚠️ **A single `busyId` disables every action while one is in flight** — a double tap would fire two
+  confirms and the second 400s "already processed", surfacing as an error *after* a success.
+  🔴 **`tsc` caught a bug the suite could not:** I copied `getErrorMessage(error, t('key'))` from
+  `MyPassengerOffersScreen`, but the second parameter is the **`t` function**, not a fallback string.
+  That screen has been calling it wrong all along (2 of the 9 baseline errors) and I reproduced the
+  bug by imitation. **Copying a neighbouring line copies its bugs.**
+  **136/136** checks over the real transpiled modules — `driverNameOf` against 12 shapes including
+  every T-042 crash shape, the push mapper with destinations **asserted against route names parsed
+  from `MainNavigator`**, 7 malformed ids degrading with no params, the booking notifications proven
+  undisturbed, and 22 keys **evaluated** in uz/ru/en with placeholders intact.
+  **Proven able to fail: 104 red.** `tsc` user **9 = baseline**, nothing new in any touched file.
+  🛑 **Retest carefully with TWO+ drivers waiting** — the dialog's count must match the cascade.
+  **The last hole in the passenger↔driver loop.** `MyPassengerOffersScreen:489` says *"N drivers
+  interested (M pending)"* **with nothing to tap** — the passenger is told drivers arrived and
+  cannot answer them. It also **blocks T-044**: `driver_join_request` has no exact destination.
+  ✅ **Grounded 2026-08-11 — the API is COMPLETE, guarded, and needs no work:**
+  `GET /passenger/offers/:offerId/drivers`, `POST /passenger/drivers/:id/confirm`, `.../reject`,
+  with 404 unknown / 403 not-owner / 400 not-pending / 400 offer-not-published.
+  🔴 **Confirm already cascades server-side:** the offer becomes `driver_found` and
+  `rejectRemainingDrivers` closes out **every other pending driver**, notifying each in their own
+  language. **Accepting is irreversible and affects other people** — hence the dialog.
+  ✅ The three client functions exist with **zero call sites**; the payload aliases (`driver`,
+  `vehicle`) were verified **against the service**, not trusted from the type (the T-042 lesson).
+  **Owner decisions 2026-08-11:** entry point = **the existing driver-count row becomes tappable**
+  (fixing the dead end at its own site); accept shows a **confirm dialog naming the consequence**.
+  🔴 **The trap: `OfferDriver.driver` is OPTIONAL and has no `name` field** (`display_name` /
+  `first_name` / `last_name`). A bare `.driver.name` is exactly what crashed the driver app to the
+  launcher in T-042 — use a helper with a fallback.
+  ❌ No API change, no migration, no deploy. ❌ Driver app untouched.
+
 - [ ] T-046 (P1) 🔴 **A cancelled passenger offer leaves every driver's bid at "waiting" forever —
   and a foreground push is silently dropped.** Found by the owner's device walk 2026-08-11:
   *"if passenger cancels own offer push notification comes to driver but on click did not open
@@ -705,16 +746,32 @@
   ⚠️ Also worth a look while deciding: `AuthContext.login()` and `LoginCredentials` exist only to
   serve this screen.
   </details>
-- [ ] T-053 (P3) **`register()` / `RegisterData` are dead in both apps' `AuthContext`.**
-  Split out of **T-052** 2026-08-11 rather than absorbed — the owner approved deleting the *login
-  screen*, and quietly widening that into an AuthContext sweep would have exceeded the approval.
-  **Dead by the same three tests that condemned `login()`:** nothing outside `AuthContext` calls it,
-  **`/auth/register` does not exist** in the mounted `auth.routes.v2` (only the unmounted v1
-  `auth.routes.ts` defines one), and the product registers by **phone OTP**. It posts email +
-  password + name, which no live endpoint accepts.
-  ⚠️ A comment in **both** `AuthContext.tsx` files records this so it is not mistaken for live code.
-  ⚠️ Removing it also removes `RegisterData` and its entries in `AuthContextType` and (driver app)
-  the `useMemo` value + deps — the same four touch points `login()` had.
+- [x] ~~T-053 (P3)~~ ✅ **DONE 2026-08-11 (owner approved).** `register()` / `RegisterData` removed
+  from **both** `AuthContext`s, along with the now-obsolete T-052 comment. Split out of T-052 rather
+  than absorbed, because that approval covered the *login screen*, not a wider AuthContext sweep.
+  **All three dead-code tests re-verified before touching anything** (not taken on trust from T-052):
+  no external callers, **`/auth/register` absent from the mounted `auth.routes.v2`**, and the product
+  registers by **phone OTP** — the function posted name + email + password, which no live endpoint
+  accepts.
+  ✅ **The removal proved itself again: `tsc` user went 10 → 9.** Second consecutive deletion to
+  *reduce* the error count — the dead function was carrying a real type error nobody could reach.
+  Driver stayed **35 = baseline** (its 4 in-file errors are pre-existing, merely renumbered).
+  **Also removed: 3 dead endpoint constants per app** — `auth.login` (its consumer went in T-052),
+  `auth.register`, and `auth.verifyToken`, all with **zero** references.
+  ⚠️ **`devices/register` was deliberately KEPT** — it shares the word "register" but is the **live
+  push-token endpoint**. Asserted explicitly so a future cleanup cannot take it by name-matching.
+  ⚠️ **The driver's `useMemo` value and dep array were checked to stay in lockstep** (8 each). A
+  mismatch there churns the context identity on every render — the exact mechanism behind **T-017**'s
+  infinite profile-check loop.
+  **46/46** checks: removal complete, **every live path asserted present** (`logout`, `updateUser`,
+  `googleSignIn`, `appleSignIn`, `facebookSignIn`, `sendOtp`, `verifyOtp`, both OTP endpoints,
+  `auth.logout`, `auth.refresh`), and a walk of `screens/components/hooks/navigation` in both apps
+  confirming nothing destructures `register` from `useAuth`. **Proven able to fail: 19 red.**
+  ⚠️ **The first version of this suite was WRONG** — 14 "still present" checks failed on correct
+  code because `\b` was mangled by shell escaping, so the pattern never matched. Fixed to a plain
+  `includes()`. **A check that fails on correct code is as dangerous as one that passes on broken
+  code**; it was caught only because the failures were implausible.
+  🛑 Owner: rebuild both apps — a typecheck cannot prove the auth provider still mounts.
 - [ ] T-051 (P2) **Passenger orders list: switching tabs by swipe reloaded the whole page, and the
   order was wrong.** Owner, 2026-08-11: *"passenger orders list last created on top... if tab changes
   (with thumb left/right) whole page refreshes instead only tab slide."*

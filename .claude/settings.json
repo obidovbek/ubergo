@@ -175,7 +175,14 @@
       "Bash(git rm *)",
       "Bash(node /tmp/t052.cjs)",
       "Bash(rm -f /tmp/t052.cjs)",
-      "Bash(node -e \"0\")"
+      "Bash(node -e \"0\")",
+      "Bash(awk 'NR>=343 && NR<=385 && /^  const [a-zA-Z]+ = /' driver-app-standalone/contexts/AuthContext.tsx)",
+      "Bash(timeout 60 grep -rn \"auth\\\\.verifyToken\" --include=\"*.ts*\" driver-app-standalone --exclude-dir=node_modules)",
+      "Bash(node /tmp/t053.cjs)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t053-check.cjs\")",
+      "Bash(timeout 60 grep -rn \"getOfferDrivers\\\\|confirmDriver\\\\|rejectDriver\" --include=\"*.tsx\" user-app-standalone --exclude-dir=node_modules)",
+      "Bash(grep -oE \"t\\\\\\('[a-zA-Z_.]+'\\\\\\)|t\\\\\\(\\\\`offerDrivers\\\\.[a-z_\\\\$\\\\{\\\\}]+\\\\`\\\\\\)\" user-app-standalone/screens/OfferDriversScreen.tsx)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/047931c4-24f6-4ac5-bed2-d8241998f21b/scratchpad/t024-check.cjs\")"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

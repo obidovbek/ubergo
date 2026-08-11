@@ -383,6 +383,32 @@ export default {
   },
 
   // Passenger Offers
+  // T-024 — the passenger answers the drivers who offered on their request.
+  offerDrivers: {
+    title: 'Drivers who offered',
+    pendingCount: '{count} awaiting your answer',
+    unknownDriver: 'Not specified',
+    seatsOffered: '{count} seats offered',
+    total: 'Total',
+    status_pending: 'Pending',
+    status_confirmed: 'Confirmed',
+    status_rejected: 'Rejected',
+    status_cancelled: 'Cancelled',
+    accept: 'Choose',
+    reject: 'Decline',
+    acceptTitle: 'Choose this driver?',
+    acceptMessage: 'Confirm {name}? This cannot be undone.',
+    acceptMessageOthers: 'Choosing {name} will automatically decline the other {count} drivers. This cannot be undone.',
+    acceptSuccess: 'Driver chosen',
+    acceptFailed: 'Could not choose this driver',
+    rejectTitle: 'Decline this offer?',
+    rejectMessage: "Decline {name}'s offer?",
+    rejectSuccess: 'Offer declined',
+    rejectFailed: 'Could not decline the offer',
+    loadFailed: 'Could not load the drivers',
+    emptyTitle: 'No offers yet',
+    emptyMessage: 'When drivers respond to your request, they will appear here.',
+  },
   passengerOffers: {
     createOffer: 'Create Ride Request',
     myOffers: 'My Ride Requests',

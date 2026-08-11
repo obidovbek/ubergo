@@ -480,17 +480,28 @@ export const MyPassengerOffersScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Driver Info */}
+        {/* Driver Info — T-024: this row used to be the dead end. It told the
+            passenger drivers had arrived and offered nothing to tap; now it
+            opens the screen where they can actually answer them.
+            Only rendered when there IS someone to show. */}
         {driverCount > 0 && (
-          <View style={styles.driverInfo}>
+          <TouchableOpacity
+            style={styles.driverInfo}
+            onPress={(e) => {
+              e.stopPropagation();
+              (navigation as any).navigate('OfferDrivers', { offerId: item.id });
+            }}
+            activeOpacity={0.7}
+          >
             <View style={styles.driverInfoHeader}>
               <Ionicons name="car-outline" size={16} color="#3B82F6" />
               <Text style={styles.driverInfoText}>
                 {driverCount} {driverCount > 1 ? t('passengerOffers.driversInterested') : t('passengerOffers.driverInterested')}
                 {pendingDrivers > 0 && ` (${pendingDrivers} ${t('passengerOffers.pending')})`}
               </Text>
+              <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Action Buttons — a matched offer stays cancellable; that path is the
@@ -931,11 +942,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    // T-024: the label takes the slack so the chevron sits at the right edge,
+    // which is what signals the row is tappable.
+    justifyContent: 'space-between',
   },
   driverInfoText: {
     fontSize: 14,
     color: '#3B82F6',
     fontWeight: '600',
+    // T-024: takes the slack between the car icon and the chevron, so the
+    // chevron is pinned right instead of floating next to the text.
+    flex: 1,
   },
   actionButtons: {
     flexDirection: 'row',

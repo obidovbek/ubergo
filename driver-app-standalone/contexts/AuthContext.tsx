@@ -24,22 +24,7 @@ import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services
 import { clearPendingOtp } from '../utils/pendingOtp';
 import { TOKEN_KEYS, onAuthLost } from '../utils/tokenStore';
 
-/**
- * ⚠️ T-052: `RegisterData`/`register()` are DEAD in the same way `login()` was —
- * nothing outside this file calls them, `/auth/register` does not exist in the
- * mounted `auth.routes.v2`, and the product registers by phone OTP. They are
- * left in place only because the owner approved deleting the **login screen**,
- * not a wider AuthContext sweep. Boarded as T-053.
- */
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  phone: string;
-}
-
 interface AuthContextType extends AuthState {
-  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => Promise<void>;
   // Social auth methods
@@ -340,45 +325,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = useCallback(async (data: RegisterData) => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-
-      const headers = await getHeaders();
-      const response = await fetch(
-        `${API_BASE_URL}${API_ENDPOINTS.auth.register}`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(data),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Registration failed');
-      }
-
-      const responseData = await response.json();
-      const { user, token } = responseData;
-
-      // T-038: these legacy email/password paths get no refresh token from the
-      // server, so the session still ends at the access token's expiry. They are
-      // unused by the shipped app (OTP and social sign-in are the live paths).
-      await persistSession(user, token);
-
-      dispatch({
-        type: AUTH_ACTIONS.REGISTER,
-        payload: { user, token },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Registration failed';
-      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-      throw error;
-    }
-  }, []);
-
-  // `logout` is defined near the top of the component — the AppState effect needs it.
-
   const updateUser = useCallback(async (user: User) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
@@ -505,7 +451,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = useMemo<AuthContextType>(
     () => ({
       ...state,
-      register,
       logout,
       updateUser,
       googleSignIn,
@@ -516,7 +461,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }),
     [
       state,
-      register,
       logout,
       updateUser,
       googleSignIn,

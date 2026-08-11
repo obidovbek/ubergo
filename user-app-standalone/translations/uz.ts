@@ -419,6 +419,32 @@ export default {
   },
 
   // Passenger Offers
+  // T-024 — the passenger answers the drivers who offered on their request.
+  offerDrivers: {
+    title: 'Taklif qilgan haydovchilar',
+    pendingCount: '{count} ta javob kutilmoqda',
+    unknownDriver: "Ko'rsatilmagan",
+    seatsOffered: "{count} ta o'rin taklif qilingan",
+    total: 'Jami',
+    status_pending: 'Kutilmoqda',
+    status_confirmed: 'Tasdiqlangan',
+    status_rejected: 'Rad etilgan',
+    status_cancelled: 'Bekor qilingan',
+    accept: 'Tanlash',
+    reject: 'Rad etish',
+    acceptTitle: 'Haydovchini tanlaysizmi?',
+    acceptMessage: "{name} ni tanlashni tasdiqlaysizmi? Buni ortga qaytarib bo'lmaydi.",
+    acceptMessageOthers: "{name} ni tanlasangiz, qolgan {count} ta haydovchining taklifi avtomatik rad etiladi. Buni ortga qaytarib bo'lmaydi.",
+    acceptSuccess: 'Haydovchi tanlandi',
+    acceptFailed: "Haydovchini tanlab bo'lmadi",
+    rejectTitle: 'Taklifni rad etasizmi?',
+    rejectMessage: '{name} ning taklifini rad etasizmi?',
+    rejectSuccess: 'Taklif rad etildi',
+    rejectFailed: "Taklifni rad etib bo'lmadi",
+    loadFailed: "Haydovchilarni yuklab bo'lmadi",
+    emptyTitle: "Hozircha takliflar yo'q",
+    emptyMessage: "Haydovchilar so'rovingizga javob berganda, ular shu yerda ko'rinadi.",
+  },
   passengerOffers: {
     createOffer: "Safar so'rov yaratish",
     myOffers: "Mening safar so'rovlarim",

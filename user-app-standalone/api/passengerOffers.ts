@@ -440,6 +440,26 @@ export const deletePassengerOffer = async (offerId: number): Promise<void> => {
 };
 
 /**
+ * The driver's display name, whatever shape arrived (T-024).
+ *
+ * 🔴 There is no `driver.name` field — the server sends `display_name`,
+ * `first_name` and `last_name`, and `driver` itself is **optional**. A bare
+ * `offer.driver.name` is exactly the read that crashed the driver app to the
+ * phone's launcher in T-042, so this helper exists to make that mistake
+ * impossible rather than to be tidy.
+ *
+ * @param fallback shown when the server sent no driver at all — pass a
+ *                 translated string, never a hard-coded one.
+ */
+export const driverNameOf = (join: OfferDriver, fallback: string): string => {
+  const d = join?.driver;
+  if (!d) return fallback;
+
+  const full = [d.first_name, d.last_name].filter(Boolean).join(' ').trim();
+  return d.display_name?.trim() || full || fallback;
+};
+
+/**
  * Get drivers for a passenger offer
  */
 export const getOfferDrivers = async (

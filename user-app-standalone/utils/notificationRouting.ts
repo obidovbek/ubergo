@@ -55,7 +55,11 @@ const parseOfferId = (value: any): number | null => {
  *   - `driver_join_request` / `driver_request_cancelled` carry the id of the
  *     passenger's **own PassengerOffer**. Passing that to `OfferDetails` would
  *     fetch a *driver* offer by a *passenger*-offer id — a wrong row or a 404,
- *     shown to the user as their own trip. They stay on the list. See below.
+ *     shown to the user as their own trip. They go to `OfferDrivers` (T-024),
+ *     which is the screen that actually takes a PassengerOffer id.
+ *
+ * ⚠️ So the rule is not "never pass offer_id" — it is that the id and the screen
+ * must agree about which entity they mean.
  */
 const routeForNotification = (data: any): NotificationTarget => {
   switch (data?.type) {
@@ -76,13 +80,20 @@ const routeForNotification = (data: any): NotificationTarget => {
     }
 
     // Drivers responding to the passenger's own ride request.
-    // ⚠️ Deliberately NOT routed to `OfferDetails` — see the entity note above.
-    // The exact destination is the "drivers who offered" screen, which does not
-    // exist yet (T-024). Until it does, the passenger's own request list is the
-    // honest answer; T-024 is where this becomes exact.
+    //
+    // ✅ T-024 built `OfferDrivers`, so these are now exact. It is worth being
+    // explicit about why this is SAFE when routing them to `OfferDetails` never
+    // was: their `offer_id` is the passenger's **own PassengerOffer**, and
+    // `OfferDrivers` takes exactly that — a PassengerOffer id — whereas
+    // `OfferDetails` fetches a *DriverOffer* and would have loaded a wrong row.
+    // The id is the same; the screen that can accept it is what changed.
     case 'driver_join_request':
-    case 'driver_request_cancelled':
-      return { screen: 'MyPassengerOffers' };
+    case 'driver_request_cancelled': {
+      const offerId = parseOfferId(data?.offer_id);
+      return offerId
+        ? { screen: 'OfferDrivers', params: { offerId } }
+        : { screen: 'MyPassengerOffers' };
+    }
 
     // Anything else — including a type this build has never heard of — goes to
     // the message list, which is what "open the message" means at minimum.

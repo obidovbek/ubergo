@@ -17,6 +17,13 @@ export type MainStackParamList = {
   Home: undefined;
   Activity: undefined;
   Profile: undefined;
+  /**
+   * T-024. ⚠️ This list is still missing most of `MainNavigator`'s routes, so
+   * screens navigate through `(navigation as any)` and lose all checking —
+   * that is **T-028**, deliberately not fixed here. This entry is typed
+   * properly so the new route at least cannot be called wrongly.
+   */
+  OfferDrivers: { offerId: number };
 };
 
 // Navigation Props

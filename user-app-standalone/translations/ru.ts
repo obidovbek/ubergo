@@ -383,6 +383,32 @@ export default {
   },
 
   // Passenger Offers
+  // T-024 — the passenger answers the drivers who offered on their request.
+  offerDrivers: {
+    title: 'Предложившие водители',
+    pendingCount: 'Ожидают ответа: {count}',
+    unknownDriver: 'Не указано',
+    seatsOffered: 'Предложено мест: {count}',
+    total: 'Итого',
+    status_pending: 'Ожидает',
+    status_confirmed: 'Подтверждён',
+    status_rejected: 'Отклонён',
+    status_cancelled: 'Отменён',
+    accept: 'Выбрать',
+    reject: 'Отклонить',
+    acceptTitle: 'Выбрать водителя?',
+    acceptMessage: 'Подтвердить выбор {name}? Это действие нельзя отменить.',
+    acceptMessageOthers: 'Если вы выберете {name}, предложения остальных водителей ({count}) будут автоматически отклонены. Это действие нельзя отменить.',
+    acceptSuccess: 'Водитель выбран',
+    acceptFailed: 'Не удалось выбрать водителя',
+    rejectTitle: 'Отклонить предложение?',
+    rejectMessage: 'Отклонить предложение {name}?',
+    rejectSuccess: 'Предложение отклонено',
+    rejectFailed: 'Не удалось отклонить предложение',
+    loadFailed: 'Не удалось загрузить водителей',
+    emptyTitle: 'Пока нет предложений',
+    emptyMessage: 'Когда водители откликнутся на ваш запрос, они появятся здесь.',
+  },
   passengerOffers: {
     createOffer: 'Создать запрос на поездку',
     myOffers: 'Мои запросы на поездку',
