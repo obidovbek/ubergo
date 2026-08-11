@@ -115,24 +115,64 @@ export const handleNotificationTap = (data: any) => {
 };
 
 /**
- * Replay a parked tap. Safe to call as often as you like — it is a no-op when
- * nothing is parked, and it clears the target before navigating so a failure
- * cannot leave the app retrying the same notification forever.
+ * Replay a parked tap. Safe to call as often as you like — a no-op when nothing
+ * is parked.
+ *
+ * 🔴 T-047: this used to DISCARD the target the moment a navigate failed, which
+ * broke every cold-start tap. `NavigationContainer.onReady` fires when ANY
+ * navigator mounts, and on a cold start that is the splash/auth stack — not
+ * `MainNavigator`. So the sequence was: isReady() true → clear the target →
+ * navigate throws (the route is not in the current tree) → "dropping it", with
+ * nothing left for the later retry to replay. The app just stayed where it was,
+ * which the owner saw as "it opens the main menu".
+ *
+ * `goOrPark` had it right all along — it catches and RE-PARKS. The two halves of
+ * one mechanism disagreed for as long as both existed.
+ *
+ * The original clear-first was guarding something real, though: this is called
+ * from an effect that reruns on every auth state change, so a target that can
+ * NEVER succeed (a route removed in a later build, say) would be retried
+ * forever. Hence a bounded retry rather than unconditional re-parking — it
+ * survives the several seconds MainNavigator needs, then gives up for good.
  */
+const MAX_FLUSH_ATTEMPTS = 10;
+let flushAttempts = 0;
+
 export const flushPendingNotification = () => {
   if (!pendingTarget || !navigationRef.isReady()) return;
 
   const target = pendingTarget;
+  // Clear first either way: re-parked below only if the failure looks transient,
+  // so a doomed target can never loop.
   pendingTarget = null;
 
   try {
     (navigationRef.navigate as any)(target.screen, target.params);
+    flushAttempts = 0;
   } catch (error) {
-    console.warn('Pending notification navigation failed, dropping it:', error);
+    flushAttempts += 1;
+
+    if (flushAttempts >= MAX_FLUSH_ATTEMPTS) {
+      console.warn(
+        `Pending notification navigation failed ${flushAttempts}x, giving up:`,
+        error
+      );
+      flushAttempts = 0;
+      return;
+    }
+
+    // Probably just too early — the destination lives in MainNavigator, which
+    // mounts only after authentication. Put it back so the next flush (auth
+    // state change, or navigator ready) can try again.
+    console.warn('Pending notification navigation failed, re-parking it:', error);
+    pendingTarget = target;
   }
 };
 
 /** Test seam / logout cleanup: forget any parked tap. */
 export const clearPendingNotification = () => {
   pendingTarget = null;
+  // Reset the retry budget too — otherwise a previous target's failures would
+  // be charged against the next notification.
+  flushAttempts = 0;
 };

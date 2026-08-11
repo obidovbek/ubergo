@@ -5,6 +5,44 @@
 
 ---
 
+## 2026-08-11 (2) — a device day: two fixes, two closures, and one bug I have now mis-diagnosed twice
+
+- **T-046 shipped and half-worked.** The server no longer abandons drivers' bids when a passenger
+  cancels (they stay `pending` forever otherwise), and a **foreground** push now shows a tappable
+  toast instead of being logged and dropped. Owner confirmed both: open and background pushes route
+  correctly. Committed `892d306`.
+- 🔴 **The killed-app tap still lands on the main menu, and my fix was not the cause.** I found a
+  genuine race — `flushPendingNotification` **discarded** the parked tap when navigate failed, while
+  `goOrPark` **re-parked** it; two halves of one mechanism disagreeing. 14 red against the committed
+  code proves that bug was real. **It was also not (all of) it.**
+  **That is twice I have diagnosed this path from the source and been wrong.** The honest lesson:
+  when a bug survives a confident fix, the next move is *evidence from the device*, not another
+  read of the same files. The card now demands a `logcat` line before any further code.
+- ✅ **T-048 closed as not-a-defect** — the owner's own retest showed pushes *do* arrive when the app
+  is killed. Worth keeping: it rules out delivery for good, so every future notification bug on this
+  project is a **routing** bug until proven otherwise.
+- ✅ **T-031 item 1 closed as working-as-designed, after two rounds of investigation.** "Can't select
+  seats" was the seat steppers correctly disabling themselves because a **salon option was ticked** —
+  booking the whole car makes a per-seat count meaningless.
+  **The uncomfortable part: the code was right and the screen still misled its own author.** The
+  control that causes the lock sits *below* the controls it disables, and nothing explains why they
+  went grey. The owner hit it, I hit it while planning, and both of us called it a bug.
+  ⚠️ **The owner declined the fix** ("works fine"), which is their call — but the diagnosis is now
+  written into the card so a third report gets answered in seconds instead of another investigation.
+  **A correct implementation that reliably produces bug reports is still a design defect**; it just
+  is not an urgent one.
+- **T-049: the reported string was one of nine.** *"passenger needed so many"* was hard-coded English
+  on the offer card. Sweeping the screen turned up **8 more** untranslated toasts — all in geo-picker
+  error paths, which only fire on a failure or an out-of-order tap. The happy path was fully
+  translated, so the screen looked finished. **Fixed the class, not the instance** — that is the
+  T-042 lesson applied on purpose this time. 21/21 keys evaluated across uz/ru/en.
+- **Boarded, not started:** T-050 (the "UbexGo" wordmark wrapping mid-word — rendered in 8+ screens,
+  so it needs one shared treatment or it drifts straight back; likely a large system font size on the
+  owner's phone) and T-051 (swiping between tabs refetches the whole list).
+- **Next:** the logcat line for T-047. Everything else is boarded and can wait.
+
+---
+
 ## 2026-08-11 — T-044 and T-042 close on a device. Two cards off the board, one commit.
 
 - **Owner device test passed on both counts.** *"push opens exactly page thats solved"* and

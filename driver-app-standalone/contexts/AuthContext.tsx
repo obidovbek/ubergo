@@ -24,11 +24,13 @@ import { registerPushTokenWithBackend, subscribeTokenRefresh } from '../services
 import { clearPendingOtp } from '../utils/pendingOtp';
 import { TOKEN_KEYS, onAuthLost } from '../utils/tokenStore';
 
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
+/**
+ * ⚠️ T-052: `RegisterData`/`register()` are DEAD in the same way `login()` was —
+ * nothing outside this file calls them, `/auth/register` does not exist in the
+ * mounted `auth.routes.v2`, and the product registers by phone OTP. They are
+ * left in place only because the owner approved deleting the **login screen**,
+ * not a wider AuthContext sweep. Boarded as T-053.
+ */
 interface RegisterData {
   name: string;
   email: string;
@@ -37,7 +39,6 @@ interface RegisterData {
 }
 
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => Promise<void>;
@@ -339,43 +340,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-
-      const headers = await getHeaders();
-      const response = await fetch(
-        `${API_BASE_URL}${API_ENDPOINTS.auth.login}`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(credentials),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-
-      const data = await response.json();
-      const { user, token } = data;
-
-      // T-038: these legacy email/password paths get no refresh token from the
-      // server, so the session still ends at the access token's expiry. They are
-      // unused by the shipped app (OTP and social sign-in are the live paths).
-      await persistSession(user, token);
-
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN,
-        payload: { user, token },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed';
-      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-      throw error;
-    }
-  }, []);
-
   const register = useCallback(async (data: RegisterData) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
@@ -541,7 +505,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = useMemo<AuthContextType>(
     () => ({
       ...state,
-      login,
       register,
       logout,
       updateUser,
@@ -553,7 +516,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }),
     [
       state,
-      login,
       register,
       logout,
       updateUser,

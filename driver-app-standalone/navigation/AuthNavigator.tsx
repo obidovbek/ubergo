@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LoginScreen } from '../screens/LoginScreen';
 import { PhoneRegistrationScreen } from '../screens/PhoneRegistrationScreen';
 import { OTPVerificationScreen } from '../screens/OTPVerificationScreen';
 import { RegisterFirstScreen } from '../screens/RegisterFirstScreen';
@@ -90,11 +89,6 @@ export const AuthNavigator: React.FC = () => {
         name="DriverLicense"
         component={DriverLicenseScreen}
         options={{ title: 'License Information' }}
-      />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ title: 'Login' }}
       />
     </Stack.Navigator>
   );

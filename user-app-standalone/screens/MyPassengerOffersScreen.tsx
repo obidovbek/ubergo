@@ -63,6 +63,31 @@ export const MyPassengerOffersScreen: React.FC = () => {
   const filters = ['all', 'published', 'completed', 'cancelled'];
   const currentFilterIndex = filters.indexOf(selectedFilter);
 
+  /**
+   * T-051: what the list actually shows — the fetched offers filtered by the
+   * active tab and ordered newest-created first.
+   *
+   * ⚠️ The server orders by `start_at DESC` (departure time), which is NOT what
+   * the passenger expects on their own list: an order created today for a trip
+   * next month would sit above one created a minute ago for tomorrow. The
+   * owner asked for "last created on top", so sort on `created_at` here.
+   * `id` is the tie-breaker — it is monotonic, so two orders created in the same
+   * second still order sensibly.
+   */
+  const visibleOffers = useMemo(() => {
+    const rows =
+      selectedFilter === 'all'
+        ? offers
+        : offers.filter((o) => o.status === selectedFilter);
+
+    return [...rows].sort((a, b) => {
+      const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (bt !== at) return bt - at;
+      return Number(b.id) - Number(a.id);
+    });
+  }, [offers, selectedFilter]);
+
   const scrollToTab = useCallback((index: number) => {
     // Calculate approximate position for the tab
     // Each tab is roughly 80-100px wide, plus padding
@@ -83,8 +108,9 @@ export const MyPassengerOffersScreen: React.FC = () => {
     }
 
     try {
-      const status = selectedFilter === 'all' ? undefined : selectedFilter;
-      const data = await getMyPassengerOffers(status);
+      // T-051: always fetch every status — the tabs filter this list in memory
+      // (see `visibleOffers`), so switching them costs nothing.
+      const data = await getMyPassengerOffers();
       setOffers(data);
     } catch (error: any) {
       console.error('Error loading passenger offers:', error);
@@ -157,10 +183,23 @@ export const MyPassengerOffersScreen: React.FC = () => {
     [selectedFilter, scrollToTab]
   );
 
+  /**
+   * T-051: fetch ONCE per visit, not once per tab.
+   *
+   * This used to be keyed on `selectedFilter`, so every tab change — including a
+   * thumb-swipe — fired a fresh request AND set `isLoading`, which swaps the
+   * whole screen for a spinner (see the early return below). Sliding between
+   * four tabs meant four round-trips and four blank screens.
+   *
+   * The tabs are just a status filter over the same small list, so the list is
+   * loaded once and filtered in memory. Switching tabs is now instant and
+   * offline-safe; pull-to-refresh is still there when the passenger wants fresh
+   * data.
+   */
   useFocusEffect(
     useCallback(() => {
       loadOffers();
-    }, [selectedFilter])
+    }, [])
   );
 
   // Scroll to active tab when filter changes
@@ -610,7 +649,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
 
       <View {...panResponder.panHandlers} style={{ flex: 1 }}>
         <FlatList
-          data={offers}
+          data={visibleOffers}
           renderItem={renderOfferItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}

@@ -755,7 +755,7 @@ export const DriverLicenseScreen: React.FC = () => {
                 <Text style={styles.backButtonText}>{t('common.back')}</Text>
               </View>
             </TouchableOpacity>
-            <Text style={styles.brand}>UbexGo Driver</Text>
+            <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>UbexGo Driver</Text>
             <Text style={styles.title}>{isEditing ? t('editProfile.license') : t('driverLicense.title')}</Text>
             <Text style={styles.subtitle}>{isEditing ? t('editProfile.license') : t('driverLicense.subtitle')}</Text>
             <Text style={styles.description}>

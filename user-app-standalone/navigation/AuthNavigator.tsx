@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LoginScreen } from '../screens/LoginScreen';
 import { PhoneRegistrationScreen } from '../screens/PhoneRegistrationScreen';
 import { OTPVerificationScreen } from '../screens/OTPVerificationScreen';
 import { UserDetailsScreen } from '../screens/UserDetailsScreen';
@@ -62,11 +61,6 @@ export const AuthNavigator: React.FC = () => {
         name="UserDetails"
         component={UserDetailsScreen}
         options={{ title: 'User Details' }}
-      />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ title: 'Login' }}
       />
     </Stack.Navigator>
   );

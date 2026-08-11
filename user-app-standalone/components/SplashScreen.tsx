@@ -119,7 +119,21 @@ export const SplashScreen: React.FC = () => {
             ]}
           >
             <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>{t('splash.appName')}</Text>
+              {/*
+                T-050: the wordmark used to wrap and drop its final "o" onto a
+                second line. "UbexGo" at 36px bold + letterSpacing 2 needs
+                ~150-160px; the circle is 140px wide, so it never fit — a large
+                system font scale only made an existing overflow obvious.
+                One line, always, shrunk to fit rather than re-wrapped.
+              */}
+              <Text
+                style={styles.logoText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {t('splash.appName')}
+              </Text>
             </View>
           </Animated.View>
 
@@ -242,7 +256,14 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 2,
+    // T-050: letterSpacing was the hidden cost — 6 characters carry 6 extra
+    // points of width, which is what pushed "UbexGo" past the 140px circle.
+    letterSpacing: 1,
+    // Give adjustsFontSizeToFit a defined width to shrink into, and keep the
+    // glyphs off the circle's border.
+    width: '100%',
+    paddingHorizontal: 8,
+    textAlign: 'center',
     textShadowColor: 'rgba(74, 144, 226, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,

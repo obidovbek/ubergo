@@ -3,7 +3,6 @@
  * Export all screens for easy importing
  */
 
-export { LoginScreen } from './LoginScreen';
 export { PhoneRegistrationScreen } from './PhoneRegistrationScreen';
 export { OTPVerificationScreen } from './OTPVerificationScreen';
 export { UserDetailsScreen } from './UserDetailsScreen';

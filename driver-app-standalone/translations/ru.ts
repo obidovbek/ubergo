@@ -123,6 +123,15 @@ export default {
     minSeatsLabel: 'Минимум мест',
     minSeatsPlaceholder: 'Любое',
     clearAllFilters: 'Сбросить все фильтры',
+    // T-049: the offer card used to render hard-coded English ("2 seats needed").
+    seatsNeededCount: 'Нужно мест: {count}',
+    // T-049: eight more hard-coded English toasts lived in this screen's geo
+    // pickers. They only fire on an error or an out-of-order tap, which is why
+    // nobody had seen them.
+    loadProvincesFailed: 'Не удалось загрузить области',
+    loadCitiesFailed: 'Не удалось загрузить города',
+    selectCountryFirst: 'Сначала выберите страну',
+    selectProvinceFirst: 'Сначала выберите область',
   },
 
   // Passenger order details (driver side) — T-037

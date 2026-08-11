@@ -123,6 +123,15 @@ export default {
     minSeatsLabel: "Eng kam o'rinlar soni",
     minSeatsPlaceholder: 'Har qanday',
     clearAllFilters: 'Barcha filtrlarni tozalash',
+    // T-049: the offer card used to render hard-coded English ("2 seats needed").
+    seatsNeededCount: "{count} ta o'rin kerak",
+    // T-049: eight more hard-coded English toasts lived in this screen's geo
+    // pickers. They only fire on an error or an out-of-order tap, which is why
+    // nobody had seen them.
+    loadProvincesFailed: 'Viloyatlarni yuklab bo\'lmadi',
+    loadCitiesFailed: 'Shaharlarni yuklab bo\'lmadi',
+    selectCountryFirst: 'Avval davlatni tanlang',
+    selectProvinceFirst: 'Avval viloyatni tanlang',
   },
 
   // Passenger order details (driver side) — T-037

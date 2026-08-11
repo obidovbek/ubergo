@@ -129,7 +129,9 @@ export const DriverDetailsScreen: React.FC = () => {
               <Text style={styles.backButtonText}>← Orqaga</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.logo}>UbexGo Driver</Text>
+          <Text style={styles.logo} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            UbexGo Driver
+          </Text>
           <Text style={styles.title}>{isEditing ? 'Haydovchi turini tahrirlash' : 'Driver registration'}</Text>
         </View>
 

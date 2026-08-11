@@ -16,7 +16,6 @@ export type AuthStackParamList = {
   DriverLicense: undefined;
   DriverVehicle: undefined;
   DriverTaxiLicense: undefined;
-  Login: undefined;
 };
 
 // Main Stack Parameter List - Driver App
@@ -39,7 +38,6 @@ export type DriverDetailsNavigationProp = NativeStackNavigationProp<AuthStackPar
 export type DriverPersonalInfoNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverPersonalInfo'>;
 export type DriverPassportNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverPassport'>;
 export type DriverLicenseNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'DriverLicense'>;
-export type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 // Route Props
 export type PhoneRegistrationRouteProp = {
@@ -52,8 +50,4 @@ export type OTPVerificationRouteProp = {
 
 export type DriverDetailsRouteProp = {
   params: { phoneNumber: string };
-};
-
-export type LoginRouteProp = {
-  params: undefined;
 };

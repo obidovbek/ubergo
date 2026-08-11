@@ -123,6 +123,15 @@ export default {
     minSeatsLabel: 'Minimum seats needed',
     minSeatsPlaceholder: 'Any number',
     clearAllFilters: 'Clear all filters',
+    // T-049: the offer card used to render hard-coded English ("2 seats needed").
+    seatsNeededCount: '{count} seats needed',
+    // T-049: eight more hard-coded English toasts lived in this screen's geo
+    // pickers. They only fire on an error or an out-of-order tap, which is why
+    // nobody had seen them.
+    loadProvincesFailed: 'Failed to load provinces',
+    loadCitiesFailed: 'Failed to load cities',
+    selectCountryFirst: 'Please select a country first',
+    selectProvinceFirst: 'Please select a province first',
   },
 
   // Passenger order details (driver side) — T-037

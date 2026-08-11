@@ -1021,7 +1021,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 <Text style={styles.backButtonText}>{t('driverTaxiLicense.backButton')}</Text>
               </View>
             </TouchableOpacity>
-            <Text style={styles.brand}>UbexGo Driver</Text>
+            <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>UbexGo Driver</Text>
             <Text style={styles.title}>{isEditing ? t('editProfile.taxiLicense') : 'Shaharlar aro'}</Text>
             <Text style={styles.subtitle}>{isEditing ? t('editProfile.taxiLicense') : t('driverTaxiLicense.title')}</Text>
             <Text style={styles.description}>

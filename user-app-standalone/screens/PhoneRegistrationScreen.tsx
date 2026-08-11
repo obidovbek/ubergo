@@ -387,13 +387,6 @@ export const PhoneRegistrationScreen: React.FC = () => {
             </Text>
           </View> */}
 
-          {/* Login Link */}
-          {/* <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>{t('phoneRegistration.alreadyHaveAccount')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>{t('phoneRegistration.login')}</Text>
-            </TouchableOpacity>
-          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

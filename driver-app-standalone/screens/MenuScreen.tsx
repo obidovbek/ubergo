@@ -185,7 +185,16 @@ export const MenuScreen: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logo}>{t('auth.appName')}</Text>
+              {/* T-050: 38px + a profile button competing for the same row is
+                  enough to wrap the wordmark mid-word on a large font scale. */}
+              <Text
+                style={styles.logo}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {t('auth.appName')}
+              </Text>
             </View>
             <TouchableOpacity 
               style={styles.profileButton}

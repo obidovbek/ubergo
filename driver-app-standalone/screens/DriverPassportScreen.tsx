@@ -992,7 +992,7 @@ export const DriverPassportScreen: React.FC = () => {
                 <Text style={styles.backButtonText}>Orqaga</Text>
               </View>
             </TouchableOpacity>
-            <Text style={styles.brand}>UbexGo Driver</Text>
+            <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>UbexGo Driver</Text>
             <Text style={styles.title}>{isEditing ? t('editProfile.passport') : 'Shaharlar aro'}</Text>
             <Text style={styles.subtitle}>{isEditing ? t('editProfile.passport') : 'PASSPORT MA\'LUMOTLARI'}</Text>
             <Text style={styles.description}>

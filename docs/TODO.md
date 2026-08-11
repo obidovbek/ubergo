@@ -100,6 +100,18 @@
 </details>
 
 - [ ] T-031 (P1) **[OWNER OR-012]** Seven fixes on the passenger's "create ride request" screen.
+  ✅ **ITEM 1 CLOSED 2026-08-11 — WORKING AS DESIGNED, no change made. Do not reopen or re-diagnose.**
+  Reported twice (2026-08-02, 2026-08-11) as *"there is no possibility to select any wanted seat"*.
+  **The owner confirmed a salon option WAS ticked.** `seatsLocked = salonScope !== null`
+  (`CreatePassengerOfferScreen:157`) deliberately disables all three `SeatStepper`s (`:778`, `:785`,
+  `:793`) when "butun salon" / "orqa salon" is selected — booking the whole car makes a per-seat
+  count meaningless. **The steppers were not broken; they switched off on purpose.**
+  ⚠️ **The latent usability issue is REAL but the owner declined a fix 2026-08-11** (*"i do not see
+  any issue with this right now, works fine"*): the lock has **no on-screen explanation**, and the
+  checkbox that causes it is drawn **BELOW** the steppers (`:800`, `:806`) — so the cause is
+  off-screen when the user meets the dead controls. It cost two rounds of investigation here, so if
+  a *third* report of "can't select seats" ever arrives, **this is the answer** — the fix would be
+  reordering (checkboxes above the steppers) plus a one-line explanation, not a logic change.
   Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
   were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
   landmark row genuinely had no icon.
@@ -561,6 +573,200 @@
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-047 (P1) 🔴 **A push tapped from a KILLED app lands on the main menu, not the destination.**
+  Owner device test 2026-08-11, immediately after T-046 was deployed: *"if app closed on click to
+  push opens main menu"* (open/background both route correctly).
+  🔴 **ROOT CAUSE FOUND — a race in `flushPendingNotification`, in code T-044 declared correct.**
+  `RootNavigator:196` flushes on `NavigationContainer`'s **`onReady`**. But `onReady` fires when
+  **ANY** navigator mounts — on a cold start that is the **splash/auth** stack, *not* `MainNavigator`.
+  So: `isReady()` is **true** → `flushPendingNotification` **clears `pendingTarget` FIRST**
+  (`notificationRouting.ts:105`) → `navigate('MyJoinRequests')` **throws** (the route does not exist
+  in the current tree) → the `catch` logs *"dropping it"* — **and the target is already gone.**
+  The retry on `RootNavigator:38` then finds `null` and does nothing. The app stays wherever it
+  started: the main menu.
+  ⚠️ **`goOrPark` gets this right** (:82-88) — it catches, then **re-parks**. `flushPendingNotification`
+  discards instead. **The two halves of the same mechanism disagree.**
+  ⚠️ **T-044's 72/72 could not have caught it:** its recording navigation ref always succeeded, so
+  `navigate` never threw and the discard path never ran. **Second time this card's suites have tested
+  a happy path the real app does not take** (T-046 was the first).
+  🔴 **STILL BROKEN AFTER THE FIRST FIX — owner retested 2026-08-11 and the symptom is unchanged:**
+  *"if app closed on click to push opens main menu"*, while open and background both work.
+  ⚠️ **The re-park fix below is correct and verified, but it was NOT the (whole) cause.** Keep it —
+  the discard-on-failure bug was real and is proven by 14 red — but **a second cause remains
+  undiagnosed.**
+  🔴 **Do NOT re-diagnose from the source alone — that has now failed twice on this exact path.**
+  ✅ **What T-048 ruled out:** delivery. Pushes **do** arrive when the app is killed, so this is
+  purely navigation. ✅ Also ruled out: the destination table (device-confirmed), and `PushService`'s
+  `getInitialNotification` wiring (reads correctly).
+  **Next step is EVIDENCE, not code.** The one thing that separates the remaining hypotheses is
+  whether `getInitialNotification` fires at all on a cold start: run the driver app via
+  `npx react-native log-android` (or `adb logcat`), force-close it, tap a real push, and look for
+  **`Notification tapped (app was closed)`**. If that line is **absent**, the handler never sees the
+  tap (registration timing / a `useEffect` cleanup racing the launch). If it is **present**, the tap
+  is parked and something later **navigates over it** — a reset/replace by `RootNavigator` after the
+  flush, which the current suite does not model.
+  ⚠️ A suite that models the navigator will keep passing until it models **whatever happens after**
+  the flush. That is the gap to close next.
+
+  **Fix #1 (2026-08-11, verified, retained but insufficient):** `flushPendingNotification` now
+  **re-parks** on failure,
+  mirroring `goOrPark`, with a **bounded retry** (`MAX_FLUSH_ATTEMPTS = 10`) so the original concern
+  the clear-first was guarding — an unsatisfiable target retried forever by an effect that reruns on
+  every auth/profile change — cannot come back. `clearPendingNotification` resets the budget too, so
+  one doomed notification cannot spend the next one's retries.
+  ✅ **The retry chain was verified, not assumed:** both apps flush on `onReady` **and** on an effect
+  keyed to auth/profile state, and `MainNavigator` renders when `driverProfileComplete` flips — which
+  is in that dependency array, so the flush fires right after it mounts.
+  **28/28** runtime checks over **both apps' real transpiled modules**, driven by a fake navigator
+  that **throws for unmounted routes exactly as React Navigation does** — modelling the true cold
+  start: tap before any navigator → `onReady` for the **auth** stack (isReady true, route absent) →
+  auth completes → `MainNavigator` mounts → the tap must land. Also covers 5 repeated failed flushes,
+  a doomed target being abandoned, no double-navigation, logout clearing, and a fresh budget per
+  notification. **Proven able to fail: 14 red against the committed code**, including the owner's
+  exact symptom in both apps. `tsc` driver **35** · user **11**, both at baseline.
+  ⚠️ **Both apps carry the identical code.** App-side only — no API, no migration.
+- [ ] T-049 (P2) **Driver search card + geo pickers rendered hard-coded English.** Owner,
+  2026-08-11: *"passenger offers found 'passenger needed so many' not translated"*.
+  **✅ FIXED 2026-08-11 (app-side, driver only).** The card at
+  `SearchPassengerOffersScreen:570` rendered `{n} seat/seats needed` **inline in English**, never
+  through `t()` — so it read the same in all three languages.
+  🔴 **The sweep found 8 MORE** hard-coded English toasts on the same screen (`'Error'/'Failed to
+  load provinces'`, `'Select Country'/'Please select a country first'`, ×2 each for from/to). They
+  only fire on a **load error or an out-of-order tap**, which is why nobody had seen them — the
+  screen's happy path was fully translated, so it looked done.
+  ⚠️ **Fixed the class, not just the reported instance** (the T-042 lesson): 5 new keys × uz/ru/en.
+  ⚠️ The screen interpolates with `.replace('{count}', …)`, matching its own `resultsCount`
+  convention rather than introducing a second style.
+  `tsc` driver **35 = baseline** (the 2 in-file errors are T-035's known duplicate `errors:` blocks,
+  shifted 363→372 by the added lines). **21/21** i18n checks — every new key **evaluated** in
+  uz/ru/en, `{count}` verified present, `common.error` confirmed.
+  🛑 Owner: rebuild the driver app and confirm the card + a forced geo error read correctly.
+- [ ] T-050 (P2) **The "UbexGo" wordmark wraps mid-word — the "o" drops to the next line.**
+  Owner, 2026-08-11: *"loading Ubexgo word letter 'o' drops to next line, the same word breaks ugly
+  in main menus."*
+  **✅ FIXED 2026-08-11 in BOTH apps — and the cause was arithmetic, not the font scale.**
+  🔴 **The splash wordmark could never fit.** "UbexGo" at `fontSize: 36` bold **plus
+  `letterSpacing: 2`** needs ~150-160px; `logoCircle` is **`width: 140`** — and the text sits inside
+  that, so the usable width is less again. **It overflowed at the default font size already**; the
+  owner's larger system font only made an existing overflow visible. ⚠️ **`letterSpacing` was the
+  hidden cost** — 6 characters carry 6 extra points of width, and it is easy to read past.
+  **Fix:** `numberOfLines={1}` + `adjustsFontSizeToFit` + `minimumFontScale={0.7}` at **every** site,
+  so the wordmark shrinks instead of wrapping; splash `letterSpacing` 2→1; and the splash text got
+  `width: '100%'` + `paddingHorizontal` so `adjustsFontSizeToFit` has a defined box to shrink into
+  (without it the prop has nothing to measure against).
+  ⚠️ **Fixed all 10 sites, not the 2 reported** — both `SplashScreen`s, both `MenuScreen`s, and the
+  6 driver screens rendering **"UbexGo Driver"**, which is *two words in a tight header* and the most
+  likely of all to wrap. Same class, one pass (the T-042 lesson).
+  ⚠️ **A shared `<Wordmark>` component was considered and rejected** for now: the 10 sites use 4
+  different styles (36px circle, 38px header, 18px brand), so one component would need as many props
+  as it saves. Revisit if a 5th style appears.
+  **34/34** checks over the real sources — every site asserted to carry both props, plus the splash
+  geometry. **Proven able to fail: 12 red** against the pre-fix files. `tsc` driver **35** · user
+  **11**, both at baseline (the one error in a touched file, `DriverDetailsScreen:73`, **proven
+  pre-existing via `git stash`** — my edit is at :132).
+  🛑 Owner: rebuild both apps and confirm the splash + menus.
+  ⚠️ **Found while working, NOT fixed** (out of scope, boarded as **T-052**): both apps'
+  `LoginScreen:74` renders **hard-coded English** `"Welcome to UbexGo"` — never passed through
+  `t()`, so it reads the same in all three languages.
+- [x] ~~T-052 (P3)~~ ✅ **DELETED 2026-08-11 (owner approved option (a)).** Both `LoginScreen.tsx`
+  files, both route registrations + imports, both barrel exports, the commented-out entry link in
+  `PhoneRegistrationScreen`, and `login()`/`LoginCredentials` from **both** `AuthContext`s (the
+  screen was their only consumer — verified before removal).
+  ✅ **The deletion PROVED the code was dead: `tsc` user went 11 → 10.** The error that disappeared
+  was inside the `login` function itself. Driver stayed at **35 = baseline**, its 6 in-file errors
+  unchanged and pre-existing. Zero dangling references remain (`LoginScreen`, `navigate('Login')`,
+  `LoginCredentials` all return no matches).
+  ⚠️ **`register()`/`RegisterData` are dead by the identical test** — no external callers,
+  `/auth/register` absent from the mounted `auth.routes.v2`, and registration is phone-OTP. **Left
+  in place deliberately:** the owner approved deleting the *login screen*, not a wider AuthContext
+  sweep. A comment in both files records this. → **T-053**.
+  <details><summary>original investigation</summary>
+
+  🔴 **`LoginScreen` was DEAD CODE in both apps.** Boarded as "hard-coded English on the login
+  screen"; investigating it showed **the premise was wrong** and the real finding was bigger.
+  **The screen cannot be reached, and would not work if it were:**
+  1. **User app** — its only entry point, the "already have an account / login" link in
+     `PhoneRegistrationScreen:390-397`, is **commented out**.
+  2. **Driver app** — **nothing navigates to it at all** (registered in `AuthNavigator:96`, called
+     from nowhere). Same registered-but-unreachable pattern as **T-037**.
+  3. 🔴 **Its `handleLogin` would 404.** It posts to `/auth/login` (`config/api.ts:48`), but
+     `routes/index.ts:51` mounts **only `auth.routes.v2`**, which has no `/login`. The v1
+     `auth.routes.ts` that does define it is **imported nowhere**.
+  4. **The product authenticates by phone OTP**, not email/password — the screen collects an email
+     and a password, which no live endpoint accepts.
+  ⇒ Its ~9 hard-coded English strings per app are **not** a user-facing i18n bug: no user can see
+  them. Translating them would polish a screen that cannot open and would fail if it did.
+  **The real decision (owner's):** (a) **delete** both `LoginScreen`s + the dead route registration
+  + the commented-out link — ⚠️ deleting files needs owner approval per project rule 4; (b) keep them
+  as a stub for a future email/password login and leave them untranslated; or (c) revive the feature,
+  which needs an **API endpoint** and is a real card, not a cleanup.
+  ⚠️ **Do NOT "fix" this by adding translations** — that would make dead code look maintained and is
+  exactly how it survived this long.
+  ⚠️ Also worth a look while deciding: `AuthContext.login()` and `LoginCredentials` exist only to
+  serve this screen.
+  </details>
+- [ ] T-053 (P3) **`register()` / `RegisterData` are dead in both apps' `AuthContext`.**
+  Split out of **T-052** 2026-08-11 rather than absorbed — the owner approved deleting the *login
+  screen*, and quietly widening that into an AuthContext sweep would have exceeded the approval.
+  **Dead by the same three tests that condemned `login()`:** nothing outside `AuthContext` calls it,
+  **`/auth/register` does not exist** in the mounted `auth.routes.v2` (only the unmounted v1
+  `auth.routes.ts` defines one), and the product registers by **phone OTP**. It posts email +
+  password + name, which no live endpoint accepts.
+  ⚠️ A comment in **both** `AuthContext.tsx` files records this so it is not mistaken for live code.
+  ⚠️ Removing it also removes `RegisterData` and its entries in `AuthContextType` and (driver app)
+  the `useMemo` value + deps — the same four touch points `login()` had.
+- [ ] T-051 (P2) **Passenger orders list: switching tabs by swipe reloaded the whole page, and the
+  order was wrong.** Owner, 2026-08-11: *"passenger orders list last created on top... if tab changes
+  (with thumb left/right) whole page refreshes instead only tab slide."*
+  **✅ FIXED 2026-08-11 (user app, `MyPassengerOffersScreen`). Both halves were real.**
+  🔴 **The refetch:** `useFocusEffect` was keyed on **`selectedFilter`** (`:160`), so every tab change
+  — including a thumb-swipe — fired a **new request**, and `loadOffers` sets `isLoading`, which hits
+  an **early return that replaces the entire screen** (header and tabs included) with a spinner
+  (`:551`). Sliding across four tabs = four round-trips and four blank screens. **The "refresh" the
+  owner saw was the whole page unmounting.**
+  **Fix:** fetch **once per visit** (empty deps, no `status` param) and filter in memory via a
+  memoised `visibleOffers`. The tabs are a status filter over one small list, so switching is now
+  instant and works offline; pull-to-refresh still fetches on demand.
+  🔴 **The ordering was a SECOND, independent defect** — the screen never sorted at all, so it
+  inherited the server's **`start_at DESC`** (`PassengerOfferService:722`) — *departure* time. An
+  order created today for a trip next month outranked one created a minute ago for tomorrow.
+  **Now sorted `created_at DESC` client-side**, with **`id` as the tie-breaker** so two orders
+  created in the same second still order sensibly. ⚠️ Sorts a **copy** (`[...rows]`) — `Array.sort`
+  mutates, and sorting React state in place is a stale-render bug waiting to happen.
+  ✅ **Two latent bugs fixed for free:** `publishedCount`/`completedCount` (`:548`) count from the
+  full list, which was **wrong on every non-"all" tab** before (the fetch only held one status).
+  ⚠️ **Found, deliberately not changed:** `status` includes **`driver_found`**, which **none of the
+  four tabs matches** — such an offer shows under "all" and nowhere else. Pre-existing, and adding a
+  fifth tab is a design decision, not a bug fix. Raise with the owner if it matters.
+  **20/20** checks — wiring asserted against the real source *plus* the filter/sort logic replicated
+  and driven with 6 rows (including equal timestamps and a `driver_found` row). **Proven able to
+  fail: 10 red** against the pre-fix file. `tsc` user **11 = baseline**; the 2 errors in the touched
+  file **proven pre-existing via `git stash`** (shifted 115→141, 240→279 by the added lines).
+  🛑 Owner: rebuild the user app, swipe between tabs, confirm no flash and newest-first order.
+- [x] ~~T-048 (P1)~~ ✅ **CLOSED 2026-08-11 — NOT A DEFECT.** The owner retested and confirmed:
+  *"when driver sends request to passenger offer push comes and all issues solved"* and *"if apps are
+  in background there is no any issues with push notification all works fine"*.
+  **Delivery works.** The original report (*"if app fully closed push does not come"*) was a
+  first-impression guess the owner themself corrected on the next run — worth keeping as a record
+  that **the push transport is sound**, so future notification bugs should be diagnosed as
+  **routing**, not delivery. ⚠️ **This matters for T-047:** pushes DO arrive when killed, so a
+  killed-app tap landing on the main menu is purely a navigation bug.
+  <details><summary>original report</summary>
+  Owner, 2026-08-11: *"before when driver sends request to passenger offer push came now this not
+  works (i think if app open or in background push comes if app fully closed push does not come)"*.
+  ⚠️ **NOT root-caused — do not guess at a fix.** ✅ **The server payload is already correct**:
+  `PushService.sendFCM` sends a `notification` block + `data`, `android.priority: 'high'`,
+  `apns-priority: 10` — which is exactly what a killed app needs to be woken. So this is **not**
+  a data-only-message problem, and T-046 did not change the server's send path.
+  **Likely candidates, in order:** (1) **Android battery optimisation / "restricted" app state**,
+  which silently drops FCM for force-stopped apps — note a **force-stop** disables FCM entirely until
+  the app is next opened by hand; (2) a **stale/invalid token** after the rebuild
+  (`notifyDriver` deactivates tokens on `not-registered`); (3) OEM aggressive power management.
+  **First diagnostic step is evidence, not code:** check the API logs for
+  `✅ Push sent to driver <id>` vs `No active push tokens found` at the moment of the test — that
+  single line separates "server never sent" from "device never showed".
+  ⚠️ **Do not conflate with T-047**, which is about a push that DOES arrive and is tapped.
+  </details>
 - [ ] T-045 (P2) **The in-app notifications list is a dead end — and offer events never reach it.**
   Split out of **T-044** by owner decision 2026-08-10 (that card is push-taps-only).
   Two separate problems, found while scoping:

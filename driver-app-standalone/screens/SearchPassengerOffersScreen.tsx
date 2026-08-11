@@ -258,7 +258,7 @@ export default function SearchPassengerOffersScreen() {
       setFromProvinces(data);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
-      showToast.error('Error', 'Failed to load provinces');
+      showToast.error(t('common.error'), t('searchPassengerOffers.loadProvincesFailed'));
     } finally {
       setGeoLoading(false);
     }
@@ -271,7 +271,7 @@ export default function SearchPassengerOffersScreen() {
       setFromCities(data);
     } catch (error: any) {
       console.error('Failed to load cities:', error);
-      showToast.error('Error', 'Failed to load cities');
+      showToast.error(t('common.error'), t('searchPassengerOffers.loadCitiesFailed'));
     } finally {
       setGeoLoading(false);
     }
@@ -284,7 +284,7 @@ export default function SearchPassengerOffersScreen() {
       setToProvinces(data);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
-      showToast.error('Error', 'Failed to load provinces');
+      showToast.error(t('common.error'), t('searchPassengerOffers.loadProvincesFailed'));
     } finally {
       setGeoLoading(false);
     }
@@ -297,7 +297,7 @@ export default function SearchPassengerOffersScreen() {
       setToCities(data);
     } catch (error: any) {
       console.error('Failed to load cities:', error);
-      showToast.error('Error', 'Failed to load cities');
+      showToast.error(t('common.error'), t('searchPassengerOffers.loadCitiesFailed'));
     } finally {
       setGeoLoading(false);
     }
@@ -345,11 +345,11 @@ export default function SearchPassengerOffersScreen() {
     
     if (type === 'from') {
       if (level === 'province' && !selectedFromCountry) {
-        showToast.error('Select Country', 'Please select a country first');
+        showToast.error(t('common.error'), t('searchPassengerOffers.selectCountryFirst'));
         return;
       }
       if (level === 'city' && !selectedFromProvince) {
-        showToast.error('Select Province', 'Please select a province first');
+        showToast.error(t('common.error'), t('searchPassengerOffers.selectProvinceFirst'));
         return;
       }
       
@@ -360,11 +360,11 @@ export default function SearchPassengerOffersScreen() {
       }
     } else {
       if (level === 'province' && !selectedToCountry) {
-        showToast.error('Select Country', 'Please select a country first');
+        showToast.error(t('common.error'), t('searchPassengerOffers.selectCountryFirst'));
         return;
       }
       if (level === 'city' && !selectedToProvince) {
-        showToast.error('Select Province', 'Please select a province first');
+        showToast.error(t('common.error'), t('searchPassengerOffers.selectProvinceFirst'));
         return;
       }
       
@@ -567,7 +567,10 @@ export default function SearchPassengerOffersScreen() {
           <View style={styles.infoTag}>
             <Ionicons name="people" size={14} color="#6B7280" />
             <Text style={styles.infoTagText}>
-              {item.seats_needed} {item.seats_needed === 1 ? 'seat' : 'seats'} needed
+              {t('searchPassengerOffers.seatsNeededCount').replace(
+                '{count}',
+                String(item.seats_needed)
+              )}
             </Text>
           </View>
         </View>
