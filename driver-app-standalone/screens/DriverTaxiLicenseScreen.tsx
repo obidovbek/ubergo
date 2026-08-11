@@ -34,7 +34,8 @@ import {
   selectableMonthValues,
   selectableYears,
 } from '../utils/dateLimits';
-import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
+import { useFieldScroll } from '../utils/formScroll';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import { updateTaxiLicense, getDriverProfile, getDriverProfileStatus, uploadImage } from '../api/driver';
 import { notifyDriverProfileChanged } from '../utils/driverProfileEvents';
@@ -47,6 +48,12 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
   const isEditing = route.params?.isEditing;
   const { token, updateUser, user } = useAuth();
   const { t } = useTranslation();
+  const {
+    scrollViewRef,
+    rememberContainerOffset,
+    rememberFieldOffset,
+    scrollToFirstError,
+  } = useFieldScroll();
 
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -528,7 +535,8 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
   };
 
   // Validation using translation keys
-  const validateAllFields = (): boolean => {
+  /** @returns the field→message map; empty means the form is valid (T-061). */
+  const validateAllFields = (): Record<string, string> => {
     const validationRules: ValidationRule[] = [
       {
         field: 'license_number',
@@ -664,7 +672,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }, {});
 
     setFieldErrors(errorsMap);
-    return Object.keys(errorsMap).length === 0;
+    // T-061: returns the errors, not just "did it pass" — the caller needs them
+    // to name the first problem and scroll to it.
+    return errorsMap;
   };
 
   const handleImagePicker = async (photoType: 'license_document' | 'license_sheet_document' | 'self_employment_document' | 'power_of_attorney_document' | 'insurance_document') => {
@@ -828,8 +838,11 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
 
   const handleContinue = async () => {
     // Validate all fields before submission
-    if (!validateAllFields()) {
-      showToast.error(t('common.error'), t('formValidation.fixErrors'));
+    const validationErrors = validateAllFields();
+    if (Object.keys(validationErrors).length > 0) {
+      // T-061: name the first problem and scroll to it.
+      scrollToFirstError(validationErrors);
+      showToast.error(t('common.error'), Object.values(validationErrors)[0]);
       return;
     }
 
@@ -891,8 +904,13 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
       }
 
       if (Object.keys(dateErrors).length > 0) {
+        // T-061: a SECOND submit-blocking path on this screen, separate from
+        // `validateAllFields` — the date fields are re-checked here while being
+        // converted to ISO. It carried the same nameless toast, so a bad date
+        // stopped the form with no clue which of the three it was.
         setFieldErrors(dateErrors);
-        showToast.error(t('common.error'), t('formValidation.fixErrors'));
+        scrollToFirstError(dateErrors);
+        showToast.error(t('common.error'), Object.values(dateErrors)[0]);
         setIsLoading(false);
         return;
       }
@@ -937,39 +955,20 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save taxi license info:', error);
 
-      // Check if it's a validation error from backend (422 status) or database error (500 status)
-      const statusCode = error?.response?.status || error?.status;
-      if (statusCode === 422 || statusCode === 500) {
-        // Parse validation errors and map to form fields
-        const apiErrors = parseValidationErrors(error);
+      // T-061: whether the server named fields, not which status it used.
+      // This screen used to also catch 500 and, failing that, GUESS at the
+      // cause by looking for "date"/"sana" in the message — a workaround for
+      // the headless error the API used to send. The API names its fields now,
+      // so the guess is gone: a 500 carrying no field errors is a server
+      // fault and belongs in `handleBackendError`, not in a date warning.
+      const apiErrors = getFieldErrors(error);
+      if (apiErrors) {
+        // Backend field names already match this form's (e.g.
+        // "license_sheet_valid_until"), so they are used as they arrive.
+        setFieldErrors(prev => ({ ...prev, ...apiErrors }));
+        scrollToFirstError(apiErrors);
 
-        // Map backend field names to form field names if needed
-        // Backend may send field names like "license_sheet_valid_until" which match our form fields
-        const mappedErrors: Record<string, string> = {};
-        Object.keys(apiErrors).forEach((apiField) => {
-          // Field names should match, but ensure they're mapped correctly
-          let formField = apiField;
-
-          // Handle any field name mappings if needed (e.g., backend sends different names)
-          mappedErrors[formField] = apiErrors[apiField];
-        });
-
-        // Merge with existing errors and set field errors to display under each field
-        setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
-
-        // Also show a general error toast
-        const firstError = Object.values(mappedErrors)[0];
-        if (firstError) {
-          showToast.error(t('common.error'), firstError);
-        } else {
-          // Check if error message contains date-related errors
-          const errorMessage = error?.response?.data?.message || error?.message || '';
-          if (errorMessage.toLowerCase().includes('date') || errorMessage.toLowerCase().includes('sana')) {
-            showToast.error(t('common.error'), 'Sana maydonlarida xatolik bor. Iltimos, barcha sanalarni to\'g\'ri kiriting.');
-          } else {
-            showToast.error(t('common.error'), t('formValidation.fixErrors'));
-          }
-        }
+        showToast.error(t('common.error'), Object.values(apiErrors)[0]);
       } else {
         // For non-validation errors, show general error
         handleBackendError(error, {
@@ -1000,6 +999,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -1023,7 +1023,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.form}>
+          {/* onLayout: field offsets are measured inside this container, so the
+              scroll needs to know where the container itself starts (T-061). */}
+          <View style={styles.form} onLayout={rememberContainerOffset}>
             <Text style={styles.requiredHint}>{t('userDetails.requiredField')}</Text>
 
             {/* Read-only personal info */}
@@ -1036,7 +1038,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             {/* License Section */}
             <Text style={styles.sectionTitle}>{t('driverTaxiLicense.title')}</Text>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_number')}>
               <Text style={getLabelStyle('license_number')}>
                 {t('driverTaxiLicense.licenseNumber')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1054,7 +1056,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_issue_date')}>
               <Text style={getLabelStyle('license_issue_date')}>
                 {t('driverTaxiLicense.issueDate')}:
               </Text>
@@ -1083,7 +1085,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_registry_number')}>
               <Text style={getLabelStyle('license_registry_number')}>
                 {t('driverTaxiLicense.registryNumber')}:
               </Text>
@@ -1128,7 +1130,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               </Text>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_sheet_number')}>
               <Text style={getLabelStyle('license_sheet_number')}>
                 {t('driverTaxiLicense.licenseSheetNumber')}:
               </Text>
@@ -1146,7 +1148,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_sheet_valid_from')}>
               <Text style={getLabelStyle('license_sheet_valid_from')}>
                 {t('driverTaxiLicense.validFrom')}:
               </Text>
@@ -1175,7 +1177,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_sheet_valid_until')}>
               <Text style={getLabelStyle('license_sheet_valid_until')}>
                 {t('driverTaxiLicense.validUntil')}:
               </Text>
@@ -1225,7 +1227,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
             {/* Self-Employment Section */}
             <Text style={styles.sectionTitle}>{t('driverTaxiLicense.selfEmploymentTitle')}</Text>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('self_employment_number')}>
               <Text style={getLabelStyle('self_employment_number')}>
                 {t('driverTaxiLicense.selfEmploymentNumber')}:
               </Text>

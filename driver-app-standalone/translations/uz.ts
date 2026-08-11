@@ -91,6 +91,10 @@ export default {
 
   auth: {
     appName: 'UbexGo',
+    // T-061 — rendered as its own line under the wordmark on the home menu.
+    // A brand word, so it is not translated; it lives here because every other
+    // string on that screen does.
+    appNameDriverSuffix: 'Driver',
     logout: 'Chiqish',
     accountBlocked: 'Hisobingiz bloklangan',
     accountBlockedDescription: 'Afsuski, sizning hisobingiz bloklangan. Iltimos, qo\'llab-quvvatlash xizmati bilan bog\'laning yoki keyinroq qayta urinib ko\'ring.',
@@ -548,6 +552,17 @@ export default {
     errorUpdate: "Ma'lumotlarni saqlashda xatolik",
     licenseNumberRequired: 'Guvohnoma raqamini kiriting',
     issueDateRequired: 'Berilgan sanani kiriting',
+  },
+
+  // Driver Passport Screen
+  // T-061: the screen is otherwise hard-coded Uzbek. Only the birth-place
+  // labels are translated so far — "Shahar" was the owner's item ③, and its two
+  // neighbours came with it rather than leaving one translated line in three
+  // hard-coded ones. The rest of the screen is still waiting for its pass.
+  driverPassport: {
+    birthPlaceCountry: 'Mamlakat',
+    birthPlaceProvince: 'Viloyat',
+    birthPlaceCityDistrict: 'Shahar / Tuman',
   },
 
   // Driver Vehicle Screen

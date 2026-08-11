@@ -6,7 +6,23 @@
 >
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
-> 🛑 **STATE AT END OF 2026-08-11: the board is waiting on the owner's device, not on code.**
+> 🛑 **STATE AT END OF 2026-08-11: the board is waiting on the owner's device again. No Claude work
+> remains anywhere.**
+>
+> The owner's device test reopened the board with six findings; five became **T-061 — code-complete
+> the same day**. The other two are **T-062** (🛑 blocked: which table owns a driver's email?) and
+> **T-063** (four validators still deliberately unmounted).
+>
+> **ELEVEN code-complete, untested cards, still in exactly two runs:**
+> 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055 · T-061** (no migration in any).
+> 2. **App rebuild** → **T-024 · T-046 · T-056 · T-057 · T-058 · T-059** (+ the driver rebuild T-061 needs).
+> ⚠️ **T-046 additionally needs its migration run.**
+>
+> 🔴 **Two places the risk is concentrated:** the phone gate (`gatePhones`) exists **twice** (T-054 ·
+> T-055) and has never been seen on a device — **walk T-054 first**; and **T-061 mounted a validator
+> on a live route**, so if the passport step starts refusing a real driver, that is the first suspect.
+>
+> 🛑 **Everything else is still waiting on the owner's device, not on code.**
 > All 18 plan files were swept — **no Claude coding work remains in any of them.** Every unchecked
 > step is the owner's, blocked on an owner answer (**T-030** step 7 · **T-031** steps 4-9 ·
 > **T-047**), or needs a running device and API (**T-018** step 9).
@@ -23,6 +39,78 @@
 > ⚠️ Cards below sit in *Now* only because they are awaiting that test; none needs Claude work.
 
 ## 🔥 Now (working on it)
+> ⚠️ **T-061 is the ONLY card in this section with Claude work left.** Everything below it is
+> code-complete and waiting on the owner's device — the file's own *Parked* rule says those do not
+> count against the 2-task limit.
+
+- [ ] T-061 (P1) 🔴 **[OWNER device test 2026-08-11, items ② ③ ④ ⑤ ⑥] Driver registration refuses
+  the driver without saying why — and two of the refusals cannot be got past at all.**
+  Owner: *"pinfl 14talik olish kerak 16ta raqamni ham olyapdi"* · *"viloyatdan keyin shahar/tuman
+  qilish kerak"* · *"malumotlarda hatolik bo'ldi deyapdi qaysi qatordaligini ko'rsatmayapdi"* ·
+  *"haydovchilik guvohnomasida hatolik deyapdi uyogiga o'tmayapdi"* · *"drivernikida tepasida UbexGo
+  driver chiqib tursin"*. **All five grounded in code the same day; none was already fixed.**
+  🔴 **The 16-digit PINFL passes all three layers.** The input has **no `maxLength`**; the blur
+  handler *does* test `/^\d{14}$/` (`DriverPassportScreen:751`) but `handleContinue` checks only
+  "not empty" and then **`setFieldErrors({})` (`:904`) erases the blur error** before posting; the
+  API's `passportValidation` — which enforces exactly 14 — is **never mounted** (`driver.routes.ts:23`
+  is a bare `router.post`); and the column is **`TEXT`**. ⚠️ **Six validators are dead, not one** —
+  the entire driver-registration API has **zero** server-side validation. → **T-063**.
+  🔴 **The nameless error is deliberate, one line up from the fix.** `errorHandler.ts:51,65` send
+  `t('validation.invalid', { field: '' })` into the template **`"{field} noto'g'ri formatda"`** — a
+  sentence with its subject deleted. ✅ **The machinery to name it already exists and already works:**
+  `getFieldName` resolves `fields.<key>` and that dictionary is full (`pinfl: 'JSHSHIR'`,
+  `address_city_district_id: 'Shahar / Tuman'`). **The per-field `errors[]` array is already sent and
+  already correct.**
+  🔴 **And all five screens throw that array away.** Each gates it on **`statusCode === 422`**, but a
+  Sequelize failure returns **400** and a duplicate **409**. The details arrive and are discarded.
+  ⚠️ `SequelizeValidationError` also forwards Sequelize's **English** `e.message` untranslated.
+  🔴 **The licence dead end is a missing `<Text>`.** The seven category rows
+  (`DriverLicenseScreen:816-845`) render a red border and **no message at all**, while `issue_date`
+  and `license_number` on the same screen render theirs — the message is computed and thrown away.
+  Those *optional* fields then **block submit for ever** (`:621-643`): typing a bare year `2015`
+  auto-formats to `20.15`, which cannot parse. **That is "uyogiga o'tmayapdi" exactly.**
+  🔴 **One label, one screen:** `DriverPassportScreen:1299` says `Shahar`; the identical field on the
+  personal-info screen already says `Shahar / Tuman`, as does the picker's own title and the API's
+  field dictionary. ⚠️ Its neighbours `Mamlakat`/`Viloyat` are **hard-coded Uzbek** (T-057 class).
+  🔴 **The wordmark:** the five registration screens already say "UbexGo Driver" (T-050), but the
+  **home menu** (`MenuScreen:205` → `auth.appName`) and the **splash** (`splash.appName`) both say
+  plain **"UbexGo"** in all three locales. Those are the only two call sites.
+  ⚠️ **Owner item ① is NOT in this card** — split as **T-062**, blocked on an owner answer.
+  **Approved and STEPS 1-7 DONE 2026-08-11.** All five findings are fixed.
+  ✅ **Most of the "nameless error" fix was DELETION, not construction** — `err.errors[0].message` was
+  always translated and always named its field; the handler was throwing that away and substituting a
+  blank-subject template. The `fields.*` dictionary and `validation.unique` were already there, unused.
+  🔴 **The status code was the wrong question all along.** Rather than listing 400/409/422 in five
+  screens, one shared **`getFieldErrors(error)`** asks *did the server name any fields?* — so a 400
+  with no `errors[]` still falls through to `handleBackendError` and is not swallowed.
+  🔴 **Three defects this card did not go looking for:** `SequelizeValidationError` forwarded
+  Sequelize's own **English** (*"Validation isEmail on email failed"*) to Uzbek drivers;
+  `parseValidationErrors` read only the axios-shaped `.response`, so a correctly-built `ApiError`
+  looked like it carried no field errors at all; and the taxi screen had a **second**
+  submit-blocking path with the same nameless toast — **found by the suite, not by reading.**
+  Plus **two duplicated success toasts** (passport, licence) that fired twice on every save.
+  🔴 **The wordmark could not simply become "UbexGo Driver"** — at 38px beside the profile button it
+  is ~300px wide, which would re-create the exact overflow **T-050** fixed, ellipsized instead of
+  wrapped. "Driver" is its own line under the wordmark; `auth.appName` still reads plain "UbexGo".
+  ⚠️ **The splash is deliberately untouched** (140px circle) — open question on the plan.
+  ⚠️ **`onLayout` reports y relative to the PARENT**, so the scroll records the form container's
+  offset too; without it every jump lands short by the header's height — and a scroll to the wrong
+  place still *looks* like it worked.
+  **91/91, proven able to fail — 70 red** against pre-change code, driving the **real** middleware
+  and error handler with their whole import graph transpiled, so the assertions land on the shipped
+  translations. The owner's symptoms are reproduced on the old code: the headless
+  **`" noto'g'ri formatda"`**, the English leak, the unmounted PINFL rule.
+  🔴 **The suite was wrong twice before the code was:** a `.*\n` strip pattern silently failed on
+  **CRLF** and made it **crash instead of report** (third and fourth time this project has hit that
+  trap), and a `t\('…'\)` regex matched the tail of `getLabelSty**le('first_name')**`, inventing 42
+  missing i18n keys.
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline, zero errors in any
+  touched file. 🟡 Four dead validators remain unmounted **on purpose** → **T-063**.
+  🛑 **Only step 8 (owner: deploy the API, rebuild the driver app, walk registration — try a 16-digit
+  PINFL, a bad category date, a deliberately wrong field) and step 9 (commit) remain.**
+  ❌ No migration. ❌ User app untouched. ⚠️ **Needs an API deploy** — joins the one already queued
+  (T-034 · T-043 · T-045 · T-054 · T-055), so it costs no extra run. ⚠️ Plan is **`docs/PLAN.md`**.
+
 - [ ] T-059 (P1) **[OWNER item C]** 🎨 **The driver's home menu shows five rows that do nothing, and
   the labels break mid-phrase.** Owner 2026-08-11: *"both apps remove unnecessary menu items, and
   make text vertical centered (if there is no icon). in home menu items words braked ugly"*.
@@ -803,6 +891,37 @@ masofalar'`). **2 of the 6 were on
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+- [ ] T-062 (P1) 🛑 **BLOCKED ON AN OWNER ANSWER — [OWNER device test 2026-08-11, item ①] the two
+  apps write the email to two different tables.** Owner: *"on both app registrations email not
+  correctly entered works?"*
+  ✅ **The format check is fine and was never the problem** — both apps reject a malformed address
+  client-side (`DriverPersonalInfoScreen:1058-1067`, `UserDetailsScreen:417`), and both target
+  columns carry Sequelize's `isEmail`.
+  🔴 **The real defect is where it lands.** The driver's email is written to
+  **`driver_profiles.email`** (`DriverService.upsertDriverProfile`), the passenger's to
+  **`users.email`** (`UserController.updateProfile:139`). One person filling in the driver app
+  therefore has **no** email on their `users` row, and vice versa — so "did it save?" has two
+  different answers depending on which app asked.
+  ⚠️ **`users.email` is `unique`; `driver_profiles.email` is not.** A second account reusing an
+  address gets a bare **409 "conflict"** naming no field (T-061 fixes the *naming*, not this).
+  🛑 **The question for the owner: should a driver's email live on `users.email` (one address per
+  person, unique, and the passenger side already there) or stay on `driver_profiles.email`?**
+  The first is the tidier model but **needs a migration** to move existing rows and would start
+  rejecting a driver whose address is already taken. **Do not start until answered.**
+  ⚠️ Separately: `UserController.ts:120` `console.log`s name, birth date, email and phone numbers —
+  the PII-in-logs class **T-034** was meant to close. Fold in here or log its own card.
+
+- [ ] T-063 (P2) 🔴 **Five more validators are dead code — the driver-registration API validates
+  nothing.** Found while grounding T-061, 2026-08-11.
+  `driverDetailsValidation`, `personalInfoValidation`, `licenseValidation`, `vehicleValidation` and
+  `taxiLicenseValidation` (`middleware/validator.ts:134-170`) are **exported and imported by
+  nothing** — `driver.routes.ts` mounts `authenticate` and no validator at all. **T-061 mounts only
+  `passportValidation`**, deliberately, because a validator switched on over a live route can start
+  rejecting payloads that work today.
+  ⚠️ **Each one needs its real payload proved against it before mounting** — `personalInfoValidation`
+  demands `father_name`, which the app treats as optional. **Do them one at a time, not as a batch.**
+  ❌ No migration. ⚠️ Needs an API deploy.
+
 - [ ] T-060 (P2) 🔴 **`npm run lint` is BROKEN in BOTH React Native apps — it has not run in a long
   time and nobody noticed.** Found during `/end-day`, 2026-08-11.
   Both `package.json`s call `eslint . --ext .ts,.tsx`, but **neither app has an `eslint.config.js`**

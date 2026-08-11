@@ -4,143 +4,211 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ✅ **T-055 moved intact → `docs/PLAN-T055.md`** (steps 1-7 done; owner's deploy + commit remain).
-> ✅ **T-057** → `docs/PLAN-T057.md`. ✅ **T-054** → `docs/PLAN-T054.md`.
-> ✅ **T-045** → `docs/PLAN-T045.md`. ✅ **T-024** → `docs/PLAN-T024.md`.
-> ✅ **T-056 · T-058 done 2026-08-11** — no separate plan files; small enough to live on their cards.
+> ✅ **T-059 moved intact → `docs/PLAN-T059.md`** (steps 1-4 done; owner's rebuild + commit remain).
+> ✅ **T-055** → `docs/PLAN-T055.md`. ✅ **T-057** → `docs/PLAN-T057.md`. ✅ **T-054** →
+> `docs/PLAN-T054.md`. ✅ **T-045** → `docs/PLAN-T045.md`. ✅ **T-024** → `docs/PLAN-T024.md`.
+> ✅ **T-056 · T-058 done 2026-08-11** — small enough to live on their cards.
 > 🔴 **T-047 PARKED** — killed-app push tap; needs a `logcat` line before more code.
-> 🛑 **T-031 PARKED BY THE OWNER 2026-08-11** — its remaining steps 5-9 **are** the payment work
-> (`payment_cash`/`payment_card`/`paid_by_friend` + the waiting-fee setting), and the owner is still
-> designing payments, referrals and bonuses. **Do not start it**; a migration into a 3-boolean shape
-> would very likely be wrong.
+> 🛑 **T-031 PARKED BY THE OWNER 2026-08-11** — its remaining steps **are** the payment work.
 > ⏸️ **T-040 · T-039 · T-037 · T-033 · T-030 · T-027 · T-018 · T-026A · T-025** → their own
 > `docs/PLAN-T0*.md`; most are waiting on the owner, not on code.
 
 ## Task
-- **ID / name:** T-059 — menu cleanup in both apps (owner item C)
+- **ID / name:** T-061 — driver registration: a form that refuses you without saying why
 - **Goal (definition of "done"):**
-  1. No menu row that **does nothing** is shown to a driver.
-  2. Menu labels **wrap to the tile**, instead of breaking where a translator put a `\n`.
-  3. A tile with no icon centres its text vertically.
-  4. Nothing else on the menu changes — the working rows keep their destinations and their badges.
-  5. `tsc` at baselines: API **281** · admin **0** · user **9** · driver **35**.
-- **Why now:** owner, 2026-08-11 — *"both apps remove unnecessary menu items, and make text vertical
-  centered (if there is no icon). in home menu items words braked ugly"*. Last un-started item from
-  the owner's list; everything else there is either done or blocked.
+  1. **A 16-digit PINFL cannot be saved** — the app refuses it, *and* the API refuses it if the app
+     is bypassed. Exactly 14 digits.
+  2. **Every validation failure names its field.** No headless *" noto'g'ri formatda"*, and no raw
+     English Sequelize text ever reaches a driver.
+  3. **No field can hold an error the driver cannot see.** Every registration field that can be given
+     an error renders that error, and the form scrolls to the first one.
+  4. **The licence step can always be completed** — an optional category date is never a permanent
+     dead end.
+  5. The passport birth-place label reads **"Shahar / Tuman"**, not "Shahar".
+  6. The driver app's **home header and splash read "UbexGo Driver"**.
+  7. `tsc` at baselines: API **281** · admin **0** · user **9** · driver **35**.
+- **Why now:** the owner's device test, 2026-08-11 — five of the six findings are on the driver
+  registration flow, and two of them (**⑤ licence, ④ nameless error**) *stop registration outright*.
+  Nothing else on the board needs Claude work.
 
 ## What is already there (verified 2026-08-11 — do NOT re-derive)
-✅ **Both apps' menus are the same code** — identical `optionsGrid` / `optionButton` / `optionText`
-styles, `width: '47%'`, `aspectRatio: 1`, already `justifyContent: 'center'` + `alignItems: 'center'`.
-🔴 **The driver app has FIVE dead rows** — `viloyatlar`, `ichi`, `tuman`, `empty`, `xalqaro`. They
-fall through `handleOptionPress` into an empty `else` with a `// TODO: Add navigation for other
-options` (`MenuScreen.tsx:87-89`). They are tappable and do nothing.
-✅ **The user app ALREADY fixed this** — the identical five are **commented out** at
-`user…/MenuScreen.tsx:59-63`. The driver app simply never got the same treatment. **Owner chose the
-same approach (2026-08-11): comment out, keep the keys, stay reversible.**
-🔴 **The "ugly break" is hard-coded `\n` in the translation data**, not a layout bug:
-- Dead rows (going away anyway): `'Taksi\nViloyatlar Aro'`, `'Taksi\nViloyat\nichi'`,
-  `'Taksi\nTuman,\nichi va Yaqin\nmasofalar'`, `'Taksi\nXALQARO'`.
-- 🔴 **Two LIVE driver rows keep the problem in all three locales:**
-  `menu.passengerOrders` = `'Yo'lovchi\nbuyurtmalari'` / `'Заказы\nпассажиров'` /
-  `'Passenger\norders'`, and `menu.myJoinRequests` = `'Yuborilgan\ntakliflarim'` /
-  `'Мои\nпредложения'` / `'My sent\noffers'`.
-- ✅ **The user app's four labels carry NO `\n`** — which is why only the driver menu looks wrong.
-  That asymmetry is the whole bug.
-⚠️ **The vertical-centring complaint is subtler than it sounds.** `optionButton` is already
-`justifyContent: 'center'`. What differs is that **`myOffers` renders an icon block above its text**
-and the others do not — so the text is centred, but that one tile's text sits lower. Removing `\n`
-changes line counts too. **Re-check on the device before adding any style, and do not "fix" a
-centring that is already correct** (the T-031 item-1 lesson: a correct implementation can still
-mislead, but the answer is not always a code change).
+
+### The PINFL hole is three holes, one per layer (owner item ②)
+🔴 **App:** the input has **no `maxLength`** (`DriverPassportScreen.tsx:1229-1238`). `handleFieldBlur`
+*does* test `/^\d{14}$/` (`:751`) — but `handleContinue` checks only "not empty" (`:856`) and then
+**`setFieldErrors({})` at `:904` wipes the blur error** before posting. So the red text appears, and
+tapping *Keyingi* erases it and saves.
+🔴 **API:** `passportValidation` enforces exactly 14 (`validator.ts:150-156`) — and is **never
+mounted**. `driver.routes.ts:23` is a bare `router.post('/profile/passport', …)`.
+🔴 **DB:** `driver_passports.pinfl` is **`TEXT`** (`DriverPassport.ts:135`). Nothing truncates.
+⚠️ **This is not one dead validator — it is six.** `driverDetailsValidation`, `personalInfoValidation`,
+`passportValidation`, `licenseValidation`, `vehicleValidation`, `taxiLicenseValidation` are exported
+and imported by **nothing**. The whole driver-registration API has **zero** server-side validation.
+
+### Why the error never says which line (owner item ④)
+🔴 **The API blanks the field on purpose:** `errorHandler.ts:51` and `:65` both send
+`t('validation.invalid', language, { field: '' })`, and the template is **`"{field} noto'g'ri
+formatda"`** — so the driver reads a sentence with its subject deleted.
+✅ **The machinery to name it already exists and is already correct.** `formatValidationErrors` →
+`getValidationError` → **`getFieldName`** resolves `fields.<key>`, and that dictionary is populated:
+`pinfl: 'JSHSHIR'`, `address_city_district_id: 'Shahar / Tuman'`, … (`i18n/translations/uz.ts:43+`).
+The per-field `errors[]` array is **already sent and already right** — only the headline is empty.
+🔴 **And the apps throw that array away.** All five driver registration screens gate it on
+**`if (statusCode === 422)`** (`DriverPassportScreen:935`, `DriverLicenseScreen:681`,
+`DriverPersonalInfoScreen:1134`, `DriverVehicleScreen:1703`, `DriverTaxiLicenseScreen:942`) — but a
+**Sequelize** validation failure comes back as **400** (`errorHandler.ts:63-69`) and a duplicate as
+**409** (`:70-72`). So the details arrive and are discarded, and `handleBackendError` shows the
+headless string instead.
+⚠️ **`SequelizeValidationError` leaks English:** `errorHandler.ts:68` forwards Sequelize's own
+`e.message` (*"Validation isEmail on email failed"*) untranslated.
+
+### Why the licence screen is a dead end (owner item ⑤)
+🔴 **The seven category rows render NO error text at all** (`DriverLicenseScreen.tsx:816-845`). They
+get a red border and nothing else — while `issue_date` (`:791`) and `license_number` (`:810`) both
+render theirs. **The message is computed and thrown away.**
+🔴 **And those optional fields block the form.** `handleContinue:621-637` puts an error on any
+category date that fails `parseDate`, then shows the generic `formValidation.fixErrors` toast and
+**returns** (`:639-643`). Typing a bare year — `2015` → auto-formatted to `20.15` by
+`handleDateInputChange` — is unparseable, so *Keyingi* dies silently, for ever, with the cause
+possibly scrolled off-screen. **This is the owner's "u yog'iga o'tmayapdi" exactly.**
+⚠️ **Suspected same class elsewhere, unmeasured:** `errorText` renders vs `fieldErrors` reads are
+13/24 (personal), 13/33 (passport), **2/8 (licence)**, 23/57 (vehicle), 7/20 (taxi). Those ratios are
+a smell, not a count — step 5 must produce the real list.
+
+### The two cosmetics (owner items ③ and ⑥)
+🔴 **One label, one screen:** `DriverPassportScreen.tsx:1299` says **`Shahar`**. The same field on
+`DriverPersonalInfoScreen.tsx:1517` already says **`Shahar / Tuman`**, the picker's own title says
+*"Shahar yoki tumanni tanlang"* (`:260`), and the API's field dictionary says `'Shahar / Tuman'`.
+⚠️ Its neighbours `Mamlakat` (`:1249`) and `Viloyat` (`:1274`) are **hard-coded Uzbek** — the T-057
+class, on the same three lines.
+🔴 **The wordmark:** the five registration screens already say **"UbexGo Driver"** (hard-coded, T-050).
+The **home menu** renders `t('auth.appName')` (`MenuScreen.tsx:205`) and the **splash** renders
+`t('splash.appName')` (`SplashScreen.tsx:135`) — both are **`'UbexGo'`** in all three locales.
+✅ Those are the **only two** call sites of either key in the driver app (grepped).
 
 ## Approach
-Data first, layout second — because most of the visible damage is in the translation strings.
-1. Comment out the five dead driver rows (mirroring the user app exactly, including the comment
-   style), so the tappable-but-dead rows and 4 of the 6 bad labels disappear together.
-2. Strip `\n` from the two surviving driver labels in all three locales and let the tile wrap.
-3. Only then look at centring, with the icon/no-icon difference in mind.
+Server first, then the apps, then the sweeps — because the app-side change for item ④ is
+*"trust what the server sends"*, and that is only worth doing once the server sends something useful.
+Cosmetics last: they are one-liners and must not be what breaks the build.
 
 ## Steps
-- [x] 1. **DONE 2026-08-11. The five dead driver rows are commented out**, mirroring the user app,
-  with a comment naming the reason (no destination exists) so nobody re-adds them blindly.
-  ✅ **The empty `else` went too** — that was the mechanism that made them tappable-but-silent. A row
-  added later without a destination now has nothing to fall through to.
-- [x] 2. **DONE 2026-08-11. `
-` stripped from `menu.passengerOrders` and `menu.myJoinRequests`** in
-  uz/ru/en. The four dead-row labels keep theirs, per the owner's "stay reversible" choice.
-- [x] 3. **DONE 2026-08-11. Centring — and the diagnosis changed the fix.** `optionButton` was
-  **already** `justifyContent: 'center'`, so the icon-less tiles were never wrong. What was wrong is
-  that `myOffers` draws an icon **in flow**, so that tile centred *icon + text as a group* and its
-  label sat lower than its neighbour's in the same row. `offersIconContainer` is now absolutely
-  positioned, so the label centres identically on every tile. **No style was added to the tiles
-  themselves** — fixing a centring that was already correct was the trap the plan warned about.
-- [x] 4. **DONE 2026-08-11. 54/54, proven able to fail — 26 red.**
-  🔴 **The suite found a defect this card did not go looking for:** `menu.driverOffersTitle` and
-  `menu.myBookings` exist in **uz only**, so **RU and EN users saw the raw key on two of their four
-  home tiles.** Fixed in both locales.
-  🔴 **And it exposed a blind spot in T-058's sweep**, which had passed the same app as clean two
-  cards ago: those keys are referenced as **data** (`titleKey: 'menu.foo'`), never as a literal
-  `t('…')`, so the `t()` regex could not see them. The sweep now follows `titleKey` / `labelKey` /
-  `messageKey` / `placeholderKey` too — **+16 keys, 2685 lookups**, both apps clean, and re-running it
-  against pre-change code reproduces **7** faults instead of the 5 it used to find.
-  `tsc` user **9** · driver **35**, both at baseline.
-- [ ] 5. **Owner:** rebuild both apps, look at the home menu.
-- [ ] 6. Commit (only after the owner's approval).
+- [x] 1. **DONE 2026-08-11. `passportValidation` is mounted on `POST /driver/profile/passport`** —
+  and only there. The app's real payload was checked first: `handleContinue` already requires both
+  `id_card_number` and `pinfl` to be non-empty, so the `required` rules cannot fire on a real
+  submission and only the length rules can — which is the point. The route carries a comment naming
+  **T-063** so the other four are not switched on by imitation.
+- [x] 2. **DONE 2026-08-11. Every error has a subject again.** `{ field: '' }` is gone from both
+  sites. ✅ **Nothing had to be built:** `err.errors[0].message` is already translated and already
+  names its field, so the first entry simply *becomes* the headline.
+  🔴 **`SequelizeValidationError` was worse than the card said** — it forwarded Sequelize's own
+  English (*"Validation isEmail on email failed"*) straight to an Uzbek driver. It is now rebuilt
+  from `fields.*` + a validation template, with an unknown validator degrading to a **named**
+  "{field} noto'g'ri formatda" rather than leaking English.
+  ✅ **409 duplicates now name their field too** (`validation.unique` already existed, unused).
+  ⚠️ An **empty** `errors: []` is no longer attached — it is truthy, so it used to send the apps down
+  their "field errors arrived" branch with nothing to show.
+- [x] 3. **DONE 2026-08-11. The PINFL cannot be typed or submitted wrong.** `maxLength={PINFL_LENGTH}`
+  on the input, and **one** `validatePinfl` helper now serves *both* the blur and the submit path —
+  their disagreement was the whole defect (blur caught the 16 digits; submit's "not empty" check
+  passed and `setFieldErrors({})` then erased the blur's error on the way out).
+- [x] 4. **DONE 2026-08-11 — and the status code turned out to be the wrong question.** Instead of
+  listing 400/409/422 in five screens, one shared **`getFieldErrors(error)`** asks *did the server
+  name any fields?* A 400 with no `errors[]` still returns `null` and falls through to
+  `handleBackendError`, so ordinary failures are not swallowed.
+  🔴 **`parseValidationErrors` only read the axios-shaped `.response`** — a correctly-built `ApiError`
+  (which carries `.data`) looked like it had no field errors at all. Now reads both.
+- [x] 5. **DONE 2026-08-11. No invisible errors, and the form jumps to the first one.** New shared
+  `useFieldScroll` (`utils/formScroll.ts`), modelled on the user app's `UserDetailsScreen`.
+  ⚠️ **`onLayout` reports y relative to the PARENT**, and on all five screens the fields sit inside
+  `<View style={styles.form}>` under a header — so the container's own offset is recorded too.
+  Without it every scroll would land short by the header's height, and a scroll that goes to the
+  wrong place still *looks* like it worked.
+  ✅ "First" is decided by the recorded offsets, not a hand-kept field order, so reordering a screen
+  cannot silently break it.
+- [x] 6. **DONE 2026-08-11.** `Shahar` → **`Shahar / Tuman`**, with `Mamlakat`/`Viloyat` moved into a
+  new `driverPassport` i18n section ×3 locales (the screen had **no** section at all — it is
+  hard-coded Uzbek throughout, so this is a first slice, not a full pass).
+  🔴 **The wordmark could NOT simply become "UbexGo Driver".** At `fontSize: 38` beside the profile
+  button it is ~300px wide — folding it into the logo would re-create the exact overflow **T-050**
+  fixed, only ellipsized instead of wrapped. "Driver" is therefore its **own line** under the
+  wordmark (`auth.appNameDriverSuffix`), and `auth.appName` still reads plain "UbexGo".
+  ⚠️ **The splash was deliberately left alone** — see the open question below.
+- [x] 7. **DONE 2026-08-11. 91/91, proven able to fail — 70 red against pre-change code.**
+  The suite drives the **real** modules: the actual `passportValidation` middleware and the actual
+  `errorHandler`, with their whole import graph transpiled so the assertions land on the **shipped**
+  translations rather than stubs. It reproduces the owner's symptoms on the old code — the headless
+  **`" noto'g'ri formatda"`**, Sequelize's English leaking, the unmounted PINFL rule.
+  🔴 **The suite was wrong twice before the code was** — a `.*\n` strip pattern silently failed on
+  **CRLF** (`.` eats the `\r`), so it loaded the real toast module and **crashed instead of
+  reporting**; and a `t\('…'\)` regex matched the tail of `getLabelSty**le('first_name')**`,
+  inventing 42 missing i18n keys. Both fixed, and `formScroll` now hard-fails if it fails to load
+  rather than letting 7 checks silently vanish. **Third and fourth time this project has hit the
+  crash-instead-of-red trap.**
+  `tsc` API **281** · admin **0** · user **9** · driver **35** — all at baseline, **zero errors in
+  any touched file** (the driver app's 4 translation errors proven pre-existing via `git stash`).
+- [ ] 8. **Owner:** deploy the API, rebuild the driver app, walk registration end to end — try a
+  16-digit PINFL, a bad category date, and a deliberately wrong field.
+- [ ] 9. Commit (only after the owner's approval).
 
 ## Files to touch
-- `driver-app-standalone/screens/MenuScreen.tsx` — the five rows + centring
-- `user-app-standalone/screens/MenuScreen.tsx` — centring only (its rows are already correct)
-- `driver-app-standalone/translations/{uz,ru,en}.ts` — strip `\n` from two live labels
-- ❌ **No API change, no migration, no deploy.** ❌ No navigation changes.
+- `api,admin,db/apps/api/src/routes/driver.routes.ts` — mount one validator
+- `api,admin,db/apps/api/src/middleware/errorHandler.ts` — the headless message + Sequelize mapping
+- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts` — a summary key; `fields.*` gaps
+- `driver-app-standalone/screens/DriverPassportScreen.tsx` — PINFL, labels, 400-handling, scroll
+- `driver-app-standalone/screens/DriverLicenseScreen.tsx` — the seven category rows, 400-handling
+- `driver-app-standalone/screens/{DriverPersonalInfo,DriverVehicle,DriverTaxiLicense}Screen.tsx` —
+  400-handling + the invisible-error sweep
+- `driver-app-standalone/translations/{uz,ru,en}.ts` — wordmark, `addressCityRequired`, new labels
+- ❌ **No migration.** ❌ User app untouched. ⚠️ **Needs an API deploy** — it joins the one already
+  queued (T-034 · T-043 · T-045 · T-054 · T-055), so it costs no extra run.
 
 ## Risks / open questions (READ before coding)
-- 🔴 **Do not delete the dead rows' translation keys.** The owner chose "comment out, stay
-  reversible"; orphaning the keys would make restoring them a rewrite in three locales.
-- ⚠️ **`menu.empty` is a name collision** — the driver app has `myJoinRequests.empty` ("you have not
-  sent any offers yet") **and** `menu.empty`. Only the `menu.` one belongs to a dead row. Check the
-  section before touching either.
-- ⚠️ **`\n` may be load-bearing for the tile height** — `aspectRatio: 1` fixes the tile square, so a
-  label that was 2 lines becoming 1 changes where the text sits. That interacts with step 3; do
-  steps 2 and 3 together and judge the result as a whole.
-- ⚠️ Both apps carry near-identical screens — any style change is made twice.
-- ⚠️ This is a **visual** card. `tsc` and a runtime check can prove the rows and keys are right; they
-  **cannot** prove it looks good. The owner's eye is the real test, so keep step 5 honest.
+- 🔴 **Mounting a validator on a live route can break a flow that works today.** `passportValidation`
+  also demands `id_card_number` ≥ 5 and `pinfl` **present** — and the edit path posts `cleanData`
+  with empty strings stripped. Prove the real payload passes **before** step 1 ships.
+- 🔴 **Do not let step 4 swallow ordinary 400s.** Only unpack when the body actually carries
+  `errors[]`; a 400 without it must still reach `handleBackendError`.
+- ⚠️ **Step 5 is where this card can quietly do nothing.** Rendering `<Text>{fieldErrors[k]}</Text>`
+  proves nothing unless something *sets* that key — the suite must drive the real submit handler, not
+  the JSX. (T-054's lesson: the fix that edits the wrong object changes nothing.)
+- ⚠️ **`auth.appName` may not be driver-only in meaning.** Verified today as a single call site, but
+  re-grep before changing the **value** rather than adding a key — a shared key silently renamed is
+  how T-059's uz-only labels happened.
+- 🔴 **OPEN — owner item ① is NOT in this card.** The driver's email is written to
+  `driver_profiles.email`, the passenger's to `users.email` (unique). Filling one leaves the other
+  empty. **Which column should hold a driver's email?** → logged as **T-062**, blocked on that answer.
+- ⚠️ **OPEN — should an unparseable *optional* category date block *Keyingi* at all?**
+  Recommendation: **yes, keep blocking** (it is real data the admin will read) — but visibly, at its
+  own row. **Built that way**; say so if you would rather it be dropped with a warning.
+- ⚠️ **OPEN — the SPLASH screen still says plain "UbexGo".** Only the home menu got the "Driver"
+  line. The splash wordmark lives inside a **140px circle** that T-050 showed could barely hold
+  "UbexGo" at 36px; "UbexGo Driver" cannot fit there at any sensible size. If you want it branded
+  too, the circle has to grow or the lockup has to change — **tell me and it becomes its own card.**
+- ⚠️ These five screens are the ones **T-057 changed and nobody has rebuilt yet.** One rebuild covers
+  both cards; if something looks wrong on the device, T-057 is the other suspect.
 - Environment: Avast breaks npm/Gradle/git TLS (`$env:NODE_OPTIONS="--use-system-ca"`, `GRADLE_OPTS`
   truststore, `git -c http.sslBackend=schannel push origin main`).
 
 ## Session notes (one line per work session)
-- **2026-08-11** — opened after the owner parked T-031 (payment, pending their design discussion).
-  Inventory taken: **5 dead driver rows**, already solved once in the user app; the "ugly break" is
-  **hard-coded `\n` in the data**, and **2 of the 6 bad labels are on LIVE rows**. Owner chose
-  *comment out, stay reversible*.
+- **2026-08-11** — plan written from the owner's device-test list; six findings triaged, five land
+  here, item ① split out as T-062 for want of an owner decision.
+- **2026-08-11** — steps 1-7 done in one pass. Three things the card did not go looking for:
+  Sequelize's **English** leaking to Uzbek drivers, `parseValidationErrors` reading only one of the
+  two error shapes, and a **second** submit-blocking path on the taxi screen with the same nameless
+  toast (found by the suite, not by reading). Two duplicated success toasts removed as well.
 
 ## Resume point (for the next chat)
-**T-059 steps 1-4 DONE 2026-08-11. Only step 5 (owner: rebuild and look) and step 6 (commit)
-remain.** ❌ No API change, no deploy — app rebuild only.
+**T-061 steps 1-7 DONE 2026-08-11. Only step 8 (owner: deploy + rebuild + walk) and step 9 (commit)
+remain.** ⚠️ **Needs an API deploy** — it joins the queued one (T-034 · T-043 · T-045 · T-054 ·
+T-055). ❌ No migration. ❌ User app untouched.
 
-🛑 **THE WHOLE BOARD IS NOW WAITING ON THE OWNER'S DEVICE.** All 18 plan files were swept on
-2026-08-11: **there is no Claude coding work left in any of them.** Every unchecked step is the
-owner's (deploy / migrate / rebuild / walk / commit), blocked on an owner answer (**T-030** step 7,
-**T-031** steps 4-9, **T-047**), or needs a running device and API (**T-018** step 9).
+**What changed:** a 16-digit PINFL is now refused by the app *and* the API; every validation failure
+names its field instead of *" noto'g'ri formatda"*; all five registration screens read the server's
+field errors on **any** status and scroll to the first problem; the licence screen's seven category
+rows finally render their message, so an unparseable date is no longer a permanent dead end; the
+passport label reads **"Shahar / Tuman"**; and the driver home menu is branded **UbexGo / DRIVER**.
 
-**TEN cards are code-complete and untested**, and they split into exactly two runs:
-- **ONE shared API deploy → T-034 · T-043 · T-045 · T-054 · T-055.** No migration in any.
-- **App rebuild only → T-024 · T-046 · T-056 · T-057 · T-058 · T-059.**
-⚠️ **T-046 also needs its migration run** (it repairs stranded rows and prints the repaired count).
-
-🔴 **The risk of testing nothing for this long is concentrated in one place:** the phone gate
-(`gatePhones`) now exists **twice** — `OfferDriverService` (T-054) and `OfferPassengerService`
-(T-055) — and neither has been seen on a device. If it is wrong, it is wrong in both services and
-both apps. **Test T-054 before building anything else on that pattern.**
-
-⚠️ **Lint cannot run in either RN app** (no `eslint.config.js`; ESLint 9 dropped `.eslintrc`) →
-logged as **T-060**. The API's lint runs but is drowned in **24,473 CRLF findings** (T-032).
-
-**What changed today (T-059):** the driver's home menu went from 8 rows to 3, all of which navigate;
-labels wrap to the tile instead of breaking where a translator put a `
-`; a tile's icon no longer
-pushes its label off-centre. Two things surfaced that the card did not ask for — **two uz-only labels
-on the user app's own home menu** (RU/EN users saw raw keys), and **a blind spot in T-058's i18n
-sweep**, which cannot see keys referenced as data (`titleKey: '…'`). Both fixed; the sweep is wider.
-
-**Baselines:** API **281** · admin **0** · user **9** · driver **35**.
+⚠️ The rest of the board is unchanged and still waiting on the owner's device: **ten code-complete,
+untested cards** in two runs — one API deploy (T-034 · T-043 · T-045 · T-054 · T-055, and now this
+card) and one app rebuild (T-024 · T-046 · T-056 · T-057 · T-058 · T-059); **T-046 also needs its
+migration**. **Baselines:** API **281** · admin **0** · user **9** · driver **35**.

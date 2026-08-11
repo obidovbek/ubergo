@@ -5,6 +5,65 @@
 
 ---
 
+## 2026-08-11 (5) — a device test, and the fix for "it won't tell me what's wrong" was mostly deletion
+
+- **Task:** the owner's device test of driver registration — six findings, checked one by one against
+  the code. **None was already fixed.** Five became **T-061** (done); item ① became **T-062**
+  (blocked on an owner answer) and the dead validators **T-063**.
+- **Done — T-061, steps 1-7:**
+  - **A 16-digit PINFL is refused at both layers.** It had been getting through all three: no
+    `maxLength`, a submit check that only asked "not empty" and then **erased the blur handler's
+    correct error** on its way past, and a `passportValidation` middleware that enforces exactly 14
+    and **was mounted on nothing**. The column is `TEXT`, so it saved cleanly.
+  - **Every validation failure names its field again.** The API was sending
+    `t('validation.invalid', { field: '' })` into the template `"{field} noto'g'ri formatda"` — a
+    sentence with its subject deleted. That *is* the owner's *"qaysi qatordaligini ko'rsatmayapdi"*.
+  - **The licence screen is no longer a dead end.** Its seven category rows computed an error message
+    and rendered **only a red border** — while the two fields above them rendered theirs.
+  - Plus **Shahar → Shahar / Tuman**, and the driver home menu now reads **UbexGo / DRIVER**.
+- **The shape of the day: the fix was mostly DELETION.** `err.errors[0].message` was always
+  translated and always named its field; the handler was discarding it and substituting a blank.
+  `fields.*` was fully populated (`pinfl: 'JSHSHIR'`), `validation.unique` existed unused, and
+  `passportValidation` was written and correct. **Almost every piece was already in the codebase and
+  simply not wired up** — which is the third card this month whose real defect was "the right code
+  exists and nothing calls it" (T-037, T-044, now this).
+- **Decisions:** mount **one** validator, not all six — a validator switched on over a live route can
+  start rejecting payloads the app sends happily (`personalInfoValidation` demands `father_name`,
+  which the app treats as optional) → **T-063**, one at a time. And ask *"did the server name any
+  fields?"* rather than listing 400/409/422 in five screens; the status code was never the right
+  question.
+- **Problems:**
+  - 🔴 **The wordmark could not just become "UbexGo Driver".** At 38px beside the profile button it is
+    ~300px wide — folding it in would have re-created **T-050's** exact overflow, ellipsized instead
+    of wrapped. It is a second line now. **The splash is still plain "UbexGo"** and needs an owner
+    decision: its 140px circle cannot hold the longer string at any sensible size.
+  - 🔴 **My suite was wrong twice before the code was — again.** A `.*\n` strip pattern silently
+    failed on **CRLF** (`.` consumes the `\r`), so it loaded the real toast module and **crashed
+    instead of reporting red** — the **third and fourth** time this project has hit that trap. And a
+    `t\('…'\)` regex matched the tail of `getLabelSty**le('first_name')**`, inventing 42 missing i18n
+    keys. `formScroll` now hard-fails if it fails to load, rather than letting 7 checks vanish.
+  - ⚠️ **Three defects the card never went looking for**, all found by verification rather than
+    reading: Sequelize's **English** (*"Validation isEmail on email failed"*) reaching Uzbek drivers;
+    `parseValidationErrors` reading only one of the two error shapes; and a **second**
+    submit-blocking path on the taxi screen with the same nameless toast. Plus two duplicated success
+    toasts firing twice per save.
+- **Verification:** **91/91, proven able to fail — 70 red** against pre-change code, driving the real
+  middleware and error handler with their whole import graph transpiled so assertions land on the
+  **shipped** translations. The owner's symptoms are reproduced on the old code.
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline.
+- **Lint:** 🔴 **still cannot run in the driver app** — `eslint.config.js` missing, ESLint 9 dropped
+  `.eslintrc`, **zero files checked** (exactly **T-060**). The API lints: 28,768 problems, **24,805 of
+  them CRLF noise** (T-032). In my touched files: `driver.routes.ts` **clean**;
+  `errorHandler.ts` **9 → 9**, the identical nine, proven by `git stash` — the new helper added no
+  `any` of its own.
+- **Next:** 🛑 owner. **Deploy the API** (T-061 joins the queued deploy — T-034 · T-043 · T-045 ·
+  T-054 · T-055; still no migration in any), **rebuild the driver app**, walk registration with a
+  16-digit PINFL, a bad category date and a deliberately wrong field. Then **answer T-062** (which
+  table owns a driver's email) and the splash-wordmark question.
+- **Commit:** proposed below; not committed.
+
+---
+
 ## 2026-08-11 (4) — five cards, and every one of them found a defect it was not looking for
 
 - **Task:** the owner's remaining list (items E, B+A, C) plus the cards those spawned.

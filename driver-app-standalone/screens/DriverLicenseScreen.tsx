@@ -36,7 +36,8 @@ import {
   selectableMonthValues,
   selectableYears,
 } from '../utils/dateLimits';
-import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
+import { useFieldScroll } from '../utils/formScroll';
 import { validateForm, validateField, isValidDate, type ValidationRule } from '../utils/validation';
 import { updateLicense, getDriverProfile, uploadImage, fetchCountries, type CountryOption } from '../api/driver';
 
@@ -50,6 +51,12 @@ export const DriverLicenseScreen: React.FC = () => {
   const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
+  const {
+    scrollViewRef,
+    rememberContainerOffset,
+    rememberFieldOffset,
+    scrollToFirstError,
+  } = useFieldScroll();
 
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -638,7 +645,11 @@ export const DriverLicenseScreen: React.FC = () => {
 
     if (Object.keys(errorsMap).length > 0) {
       setFieldErrors(errorsMap);
-      showToast.error(t('common.error'), t('formValidation.fixErrors'));
+      // T-061: was the bare "fix the errors" toast, with the offending row
+      // possibly scrolled off-screen and carrying no message of its own —
+      // between them, that is the dead end the owner hit.
+      scrollToFirstError(errorsMap);
+      showToast.error(t('common.error'), Object.values(errorsMap)[0]);
       return;
     }
 
@@ -663,8 +674,7 @@ export const DriverLicenseScreen: React.FC = () => {
         emergencyContacts: cleanContacts.length > 0 ? cleanContacts : undefined,
       });
 
-      showToast.success(t('common.success'), t('driverLicense.licenseSaved'));
-
+      // T-061: this call was duplicated — two identical toasts on every save.
       showToast.success(t('common.success'), t('driverLicense.licenseSaved'));
 
       if (isEditing) {
@@ -676,12 +686,10 @@ export const DriverLicenseScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save license info:', error);
 
-      // Check if it's a validation error from backend (422 status)
-      const statusCode = error?.response?.status || error?.status;
-      if (statusCode === 422) {
-        // Parse validation errors and map to form fields
-        const apiErrors = parseValidationErrors(error);
-
+      // T-061: whether the server named fields, not which status it used —
+      // our validator throws 422, a model check 400, a duplicate 409.
+      const apiErrors = getFieldErrors(error);
+      if (apiErrors) {
         // Map API field names to form field names if needed
         // Backend sends errors with field names matching DriverLicense model
         const mappedErrors: Record<string, string> = {};
@@ -700,14 +708,9 @@ export const DriverLicenseScreen: React.FC = () => {
 
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
+        scrollToFirstError(mappedErrors);
 
-        // Also show a general error toast
-        const firstError = Object.values(mappedErrors)[0];
-        if (firstError) {
-          showToast.error(t('common.error'), firstError);
-        } else {
-          showToast.error(t('common.error'), t('formValidation.fixErrors'));
-        }
+        showToast.error(t('common.error'), Object.values(mappedErrors)[0]);
       } else {
         // For non-validation errors, show general error
         handleBackendError(error, {
@@ -727,6 +730,7 @@ export const DriverLicenseScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -750,7 +754,9 @@ export const DriverLicenseScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.form}>
+          {/* onLayout: field offsets are measured inside this container, so the
+              scroll needs to know where the container itself starts (T-061). */}
+          <View style={styles.form} onLayout={rememberContainerOffset}>
             <Text style={styles.requiredHint}>{t('userDetails.requiredField')}</Text>
 
             {/* Read-only personal info */}
@@ -764,7 +770,7 @@ export const DriverLicenseScreen: React.FC = () => {
             </View>
 
             {/* License Issue Date */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('issue_date')}>
               <Text style={getLabelStyle('issue_date')}>
                 {t('driverLicense.issueDate')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -794,7 +800,7 @@ export const DriverLicenseScreen: React.FC = () => {
             </View>
 
             {/* License Number */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_number')}>
               <Text style={getLabelStyle('license_number')}>
                 {t('driverLicense.licenseNumber')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -812,34 +818,54 @@ export const DriverLicenseScreen: React.FC = () => {
               )}
             </View>
 
-            {/* Categories */}
+            {/* Categories
+                T-061 (owner item ⑤): these rows used to render a red border and
+                NOTHING ELSE — while `issue_date` and `license_number` above both
+                render their message. The text was computed by `handleFieldBlur`
+                and `handleContinue` and then thrown away, so an unparseable
+                date (typing a bare year: "2015" auto-formats to "20.15") blocked
+                *Keyingi* for ever with no way to find out why. The row is now
+                wrapped so the message has somewhere to live. */}
             {categories.map((category) => {
               const fieldKey = `category_${category.toLowerCase()}` as keyof typeof licenseData;
               return (
-                <View key={category} style={styles.categoryRow}>
-                  <View style={styles.categoryBox}>
-                    <Text style={styles.categoryLabel}>{category}</Text>
+                <View key={category} onLayout={rememberFieldOffset(fieldKey)}>
+                  <View style={styles.categoryRow}>
+                    <View style={styles.categoryBox}>
+                      <Text style={[styles.categoryLabel, fieldErrors[fieldKey] ? styles.labelError : undefined]}>
+                        {category}
+                      </Text>
+                    </View>
+                    <View style={[styles.dateInputContainer, fieldErrors[fieldKey] ? styles.inputError : undefined, { flex: 1 }]}>
+                      <TextInput
+                        style={styles.dateInput}
+                        placeholder={t('driverLicense.categoryDatePlaceholder')}
+                        placeholderTextColor={theme.palette.text.secondary}
+                        value={licenseData[fieldKey] || ''}
+                        onChangeText={(value) => handleDateInputChange(fieldKey, value)}
+                        onBlur={() => handleFieldBlur(fieldKey, licenseData[fieldKey] || '')}
+                        keyboardType="numeric"
+                        maxLength={10}
+                        editable={!isLoading}
+                      />
+                      <TouchableOpacity
+                        style={styles.calendarButton}
+                        onPress={() => openDatePicker(fieldKey)}
+                        disabled={isLoading}
+                      >
+                        <Text style={styles.calendarIcon}>📅</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={[styles.dateInputContainer, fieldErrors[fieldKey] ? styles.inputError : undefined, { flex: 1 }]}>
-                    <TextInput
-                      style={styles.dateInput}
-                      placeholder={t('driverLicense.categoryDatePlaceholder')}
-                      placeholderTextColor={theme.palette.text.secondary}
-                      value={licenseData[fieldKey] || ''}
-                      onChangeText={(value) => handleDateInputChange(fieldKey, value)}
-                      onBlur={() => handleFieldBlur(fieldKey, licenseData[fieldKey] || '')}
-                      keyboardType="numeric"
-                      maxLength={10}
-                      editable={!isLoading}
-                    />
-                    <TouchableOpacity
-                      style={styles.calendarButton}
-                      onPress={() => openDatePicker(fieldKey)}
-                      disabled={isLoading}
-                    >
-                      <Text style={styles.calendarIcon}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {fieldErrors[fieldKey] && (
+                    // The category letter prefixes the message because seven of
+                    // these rows look identical — "which line" is the whole
+                    // complaint. `t()` here takes no params, so no key is
+                    // needed: the letter is already a literal on the row.
+                    <Text style={styles.categoryErrorText}>
+                      {category}: {fieldErrors[fieldKey]}
+                    </Text>
+                  )}
                 </View>
               );
             })}
@@ -1262,6 +1288,15 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: '#E53935',
     marginTop: theme.spacing(0.5),
+  },
+  // T-061: sits under a category ROW, which is a flex line rather than an
+  // `inputGroup`, so it needs its own bottom spacing — `categoryRow` supplies
+  // the gap between rows and the message would otherwise touch the next one.
+  categoryErrorText: {
+    ...theme.typography.caption,
+    color: '#E53935',
+    marginTop: theme.spacing(0.5),
+    marginBottom: theme.spacing(1),
   },
   dateInputContainer: {
     flexDirection: 'row',

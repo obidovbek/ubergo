@@ -56,6 +56,7 @@ flowchart TD
 | Driver ← passenger orders | Browse passenger orders, open one, send an offer, manage sent offers | 🔨 **built 2026-08-08 (T-037)** — the backend was already complete; the search screen existed but was **registered in no navigator**, and 4 of 5 API functions had zero call sites. Now reachable from two new menu rows. **Never run on a device** | `driver-app-standalone/screens/{SearchPassengerOffers,PassengerOfferDetails,MyJoinRequests}Screen.tsx` |
 | Passenger ← drivers who offered | Passenger sees every driver who bid on their request and accepts or declines one | 🔨 **built 2026-08-11 (T-024)** — the API and all three client functions already existed with **zero call sites**; the card was the missing screen. Closes the last hole in the loop **and** T-044's push-routing compromise. ⚠️ **Accepting is irreversible and auto-rejects every other driver** (server-side cascade), so it sits behind a dialog naming the count. **Never run on a device** | `user-app-standalone/screens/OfferDriversScreen.tsx` |
 | Passenger order edit | Passenger edits an existing order instead of cancel-and-recreate | 🔨 **built 2026-08-08 (T-040)** — `PATCH` existed and was safe; nothing called it. Same screen as create, driven by an `offerId` route param. **Never run on a device** | `user-app-standalone/screens/CreatePassengerOfferScreen.tsx` |
+| Driver registration (5 steps) | Personal info → passport → licence → vehicle → taxi licence | 🔨 **repaired 2026-08-11 (T-061), not yet on a device.** 🔴 **The API validates almost none of it:** all six validators in `middleware/validator.ts` were exported and mounted on **nothing**; only `passportValidation` is wired now (PINFL = exactly 14 digits — a 16-digit one used to save, the column is `TEXT`). The other four are **T-063**, to be mounted one at a time against their real payloads. ⚠️ Errors used to be unusable: the API blanked the field name (`{ field: '' }` into `"{field} noto'g'ri formatda"`) and the screens discarded `errors[]` unless the status was **422** — but Sequelize sends **400** and duplicates **409**. All five screens now read them on any status via `getFieldErrors()` and scroll to the first problem | `driver-app-standalone/screens/Driver*Screen.tsx` · `utils/formScroll.ts` · API `middleware/{validator,errorHandler}.ts` · `routes/driver.routes.ts` |
 | Driver app | Auth, profile, vehicle, offers list | 🔨 in progress | `driver-app-standalone/` |
 | — Offer wizard (4 steps) | Create/edit offer UI | 🔨 **built & wired** (3900 lines, registered in `MainNavigator`), not device-verified — was wrongly marked "planned" until 2026-08-02 | `driver-app-standalone/screens/OfferWizardScreen.tsx` |
 | User app | Auth, browse & join offers | 🔨 in progress | `user-app-standalone/` |
@@ -109,6 +110,16 @@ UbexGo/
 > — and `PhotoSourceModal.tsx` (T-057) only in the **driver** app, where the five
 > registration screens upload documents. Copy them across only when a second
 > caller actually appears.
+>
+> **`utils/formScroll.ts` (T-061) — driver app only.** `useFieldScroll()` remembers
+> each field's y and scrolls to the topmost one carrying an error; all five
+> registration screens use it. It generalises the on-focus scrolling the **user**
+> app's `UserDetailsScreen` already had inline — that screen was the model, and is
+> the obvious first caller if this is ever copied across.
+> ⚠️ **`onLayout` reports y relative to the PARENT**, so a screen must register its
+> form container (`rememberContainerOffset`) as well as its fields, or every jump
+> lands short by the header's height — and a scroll to the wrong place still looks
+> like it worked.
 
 ## 5. Main data flow (passenger joins an offer)
 

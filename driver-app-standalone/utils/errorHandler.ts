@@ -197,8 +197,12 @@ export const isAuthError = (error: any): boolean => {
 export const parseValidationErrors = (error: any): Record<string, string> => {
   const errors: Record<string, string> = {};
 
-  if (error?.response?.data?.errors) {
-    const backendErrors = error.response.data.errors;
+  // Both shapes: the axios-like `.response` some modules hand-build, and the
+  // plain `.data` that `ApiError` carries (T-061 — reading only the first meant
+  // a correctly-shaped `ApiError` looked like it had no field errors at all).
+  const backendErrors = error?.response?.data?.errors ?? error?.data?.errors;
+
+  if (backendErrors) {
 
     if (Array.isArray(backendErrors)) {
       backendErrors.forEach((err: any) => {
@@ -214,6 +218,26 @@ export const parseValidationErrors = (error: any): Record<string, string> => {
   }
 
   return errors;
+};
+
+/**
+ * The field errors the server sent, or `null` if it sent none.
+ *
+ * T-061 — every registration screen used to ask `if (statusCode === 422)`
+ * before unpacking `errors[]`. But 422 is only what OUR validator middleware
+ * throws: a **model**-level failure (`User.email`'s `isEmail`) comes back as
+ * **400** and a duplicate as **409**. So the server named the field, the app
+ * threw the answer away, and the driver got a generic toast — the owner's
+ * "it says the data is wrong but not which line".
+ *
+ * The status code was never the right question. This asks the real one: did
+ * the server name any fields? A 400 that carries no `errors[]` still returns
+ * `null` here, so ordinary failures keep falling through to
+ * `handleBackendError` and are not silently swallowed.
+ */
+export const getFieldErrors = (error: any): Record<string, string> | null => {
+  const errors = parseValidationErrors(error);
+  return Object.keys(errors).length > 0 ? errors : null;
 };
 
 /**

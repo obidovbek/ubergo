@@ -204,6 +204,17 @@ export const MenuScreen: React.FC = () => {
               >
                 {t('auth.appName')}
               </Text>
+              {/* T-061 (owner item ⑥): the driver app's home screen was branded
+                  exactly like the passenger's. "Driver" is a SECOND line rather
+                  than part of the wordmark on purpose — "UbexGo Driver" at 38px
+                  is ~300px wide and cannot fit this row beside the profile
+                  button, so folding it into the logo would re-create the very
+                  overflow T-050 fixed (it would just ellipsize instead of
+                  wrapping). The registration screens can hard-code the full
+                  string only because theirs is 18px. */}
+              <Text style={styles.logoSuffix} numberOfLines={1}>
+                {t('auth.appNameDriverSuffix')}
+              </Text>
             </View>
             <TouchableOpacity 
               style={styles.profileButton}
@@ -299,6 +310,16 @@ const styles = StyleSheet.create({
   logoContainer: {
     flex: 1,
     alignItems: 'center',
+  },
+  // T-061: sits directly under the wordmark, sized so it reads as part of the
+  // same lockup rather than as a heading of its own.
+  logoSuffix: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#10B981',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    marginTop: -4,
   },
   logo: {
     fontSize: 38,

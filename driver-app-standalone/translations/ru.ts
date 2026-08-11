@@ -92,6 +92,8 @@ export default {
 
   auth: {
     appName: 'UbexGo',
+    // T-061 — see the uz file: a brand word, deliberately untranslated.
+    appNameDriverSuffix: 'Driver',
     logout: 'Выйти',
     accountBlocked: 'Аккаунт заблокирован',
     accountBlockedDescription: 'К сожалению, ваш аккаунт заблокирован. Пожалуйста, свяжитесь со службой поддержки или попробуйте позже.',
@@ -556,6 +558,13 @@ export default {
     errorUpdate: 'Ошибка сохранения данных',
     licenseNumberRequired: 'Пожалуйста, введите номер прав',
     issueDateRequired: 'Пожалуйста, введите дату выдачи',
+  },
+
+  // Driver Passport Screen — see the uz file for why only these three exist.
+  driverPassport: {
+    birthPlaceCountry: 'Страна',
+    birthPlaceProvince: 'Область',
+    birthPlaceCityDistrict: 'Город / Район',
   },
 
   // Driver Vehicle Screen

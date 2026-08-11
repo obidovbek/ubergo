@@ -231,7 +231,26 @@
       "Read(//c/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/t059/**)",
       "Bash(node t059/run.cjs)",
       "Bash(grep -v \"␍\\\\|Delete \\\\`\")",
-      "Bash(python \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/lintcheck.py\")"
+      "Bash(python \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/0dfc7644-e36b-42f2-8110-ac24b0fdf70f/scratchpad/lintcheck.py\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\api,admin,db\\\\apps\\\\api\"; $out = npx tsc --noEmit 2>&1 | Out-String; \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count)",
+      "Bash(awk 'NR>=560 && NR<=590' uz.ts)",
+      "Bash(awk 'NR<=581 && /^  [a-zA-Z]+: \\\\{/ {line=NR\": \"$0} END{}{} ' uz.ts)",
+      "Bash(awk -F: '$1<581')",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"TOTAL: \" + \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count; \"--- touched files:\"; $out -split \"`n\" | Select-String -Pattern \"DriverPassportScreen|formScroll|errorHandler|translations\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\"; git stash push -- driver-app-standalone \"api,admin,db\" 2>&1 | Select-Object -Last 2; cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"BASELINE TOTAL: \" + \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count; \"--- pre-existing in translations:\"; \\($out -split \"`n\" | Select-String -Pattern \"translations/\"\\) -join \"`n\")",
+      "Bash(grep -n \"parseValidationErrors\\\\|handleBackendError\\\\|^import\\\\|const { t }\\\\|<ScrollView\\\\|View style={styles.form}\\\\|showToast.success\\(t\\('common.success'\\), t\\('driverLicense.licenseSaved'\\)\\)\" DriverLicenseScreen.tsx)",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"TOTAL: \" + \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count; \"--- in touched files:\"; \\($out -split \"`n\" | Select-String -Pattern \"DriverLicenseScreen|DriverPassportScreen|formScroll|utils/errorHandler\"\\) -join \"`n\")",
+      "Bash(grep -n \"<ScrollView$\\\\|<ScrollView\\\\s*$\\\\|View style={styles.form}\" DriverPersonalInfoScreen.tsx)",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"TOTAL: \" + \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count; \"--- in touched files:\"; \\($out -split \"`n\" | Select-String -Pattern \"DriverLicenseScreen|DriverPassportScreen|DriverPersonalInfoScreen|formScroll|utils/errorHandler\"\\) -join \"`n\")",
+      "Bash(grep -n \"parseValidationErrors\\\\|fixErrors\\\\|const { t } = useTranslation\\\\|<ScrollView$\\\\|View style={styles.form}\" DriverVehicleScreen.tsx)",
+      "Bash(awk 'NR>=1290 && NR<=1400' DriverVehicleScreen.tsx)",
+      "Bash(grep -o '\\\\\\\\r')",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/45933f0f-e511-4b4f-b669-3a637849723a/scratchpad/tag-offsets.mjs\" driver-app-standalone/screens/DriverVehicleScreen.tsx)",
+      "Bash(grep -n \"parseValidationErrors\\\\|fixErrors\\\\|const { t } = useTranslation\\\\|<ScrollView$\\\\|View style={styles.form}\" DriverTaxiLicenseScreen.tsx)",
+      "Bash(awk '/const validateAllFields/,/^  };/' DriverTaxiLicenseScreen.tsx)",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/45933f0f-e511-4b4f-b669-3a637849723a/scratchpad/tag-offsets.mjs\" driver-app-standalone/screens/DriverTaxiLicenseScreen.tsx)",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $out = npx tsc --noEmit 2>&1 | Out-String; \"TOTAL: \" + \\($out -split \"`n\" | Select-String -Pattern \"error TS\" -AllMatches\\).Count; \"--- in touched files:\"; \\($out -split \"`n\" | Select-String -Pattern \"DriverLicenseScreen|DriverPassportScreen|DriverPersonalInfoScreen|DriverVehicleScreen|DriverTaxiLicenseScreen|formScroll|utils/errorHandler\"\\) -join \"`n\")",
+      "Bash(node \"C:/Users/Bekzod/AppData/Local/Temp/claude/d--projects-UbexGo/45933f0f-e511-4b4f-b669-3a637849723a/scratchpad/verify-t061.mjs\")"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

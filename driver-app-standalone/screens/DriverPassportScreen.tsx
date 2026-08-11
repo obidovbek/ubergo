@@ -35,11 +35,24 @@ import {
   selectableMonthValues,
   selectableYears,
 } from '../utils/dateLimits';
-import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
+import { useFieldScroll } from '../utils/formScroll';
 import { validateField, isValidDate } from '../utils/validation';
 import { updatePassport, getDriverProfile, fetchGeoCountries, fetchGeoProvinces, fetchGeoCityDistricts, uploadImage, type GeoOption } from '../api/driver';
 
 const theme = createTheme('light');
+
+/**
+ * A JSHSHIR (PINFL) is exactly 14 digits.
+ *
+ * T-061 — the owner's device test entered 16 and it saved. The rule lived in
+ * `handleFieldBlur` only, and `handleContinue` erased that error on its way
+ * past (`setFieldErrors({})`), so the red text appeared and then submitted
+ * anyway. It is a constant now because three places need to agree: the input's
+ * `maxLength`, the blur check and the submit check.
+ */
+const PINFL_LENGTH = 14;
+const PINFL_PATTERN = /^\d{14}$/;
 
 export const DriverPassportScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -47,6 +60,12 @@ export const DriverPassportScreen: React.FC = () => {
   const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
+  const {
+    scrollViewRef,
+    rememberContainerOffset,
+    rememberFieldOffset,
+    scrollToFirstError,
+  } = useFieldScroll();
 
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -709,6 +728,21 @@ export const DriverPassportScreen: React.FC = () => {
     });
   };
 
+  /**
+   * T-061 — one rule, used by both the blur handler and the submit handler.
+   * They used to disagree: blur tested the 14 digits, submit tested only
+   * "not empty" and then cleared every field error before posting.
+   */
+  const validatePinfl = (value: string): string | null => {
+    if (!value || value.trim() === '') {
+      return 'JSHSHIR (PINFL) raqamini kiriting';
+    }
+    if (!PINFL_PATTERN.test(value.trim())) {
+      return `JSHSHIR (PINFL) ${PINFL_LENGTH} raqamdan iborat bo'lishi kerak`;
+    }
+    return null;
+  };
+
   const handleFieldBlur = (field: string, value: any) => {
     let error: string | null = null;
 
@@ -746,11 +780,7 @@ export const DriverPassportScreen: React.FC = () => {
         }
         break;
       case 'pinfl':
-        if (!value || value.trim() === '') {
-          error = 'JSHSHIR (PINFL) raqamini kiriting';
-        } else if (!/^\d{14}$/.test(value.trim())) {
-          error = 'JSHSHIR (PINFL) 14 raqamdan iborat bo\'lishi kerak';
-        }
+        error = validatePinfl(value);
         break;
       case 'issue_date':
         if (!value) {
@@ -853,8 +883,12 @@ export const DriverPassportScreen: React.FC = () => {
       validationErrors.id_card_number = 'ID karta raqamini kiriting';
     }
 
-    if (!formData.pinfl) {
-      validationErrors.pinfl = 'JSHSHIR (PINFL) raqamini kiriting';
+    // T-061: was `if (!formData.pinfl)` — "not empty" only. A 16-digit value
+    // passed here, and `setFieldErrors({})` below then wiped the blur error
+    // that HAD caught it, so the form posted the bad number.
+    const pinflError = validatePinfl(formData.pinfl);
+    if (pinflError) {
+      validationErrors.pinfl = pinflError;
     }
 
     if (!formData.issue_date) {
@@ -897,7 +931,12 @@ export const DriverPassportScreen: React.FC = () => {
 
     if (Object.keys(validationErrors).length > 0) {
       setFieldErrors(validationErrors);
-      showToast.error(t('common.error'), t('formValidation.fixErrors'));
+      // T-061: the toast used to be the bare "fix the errors", with the field
+      // itself possibly several screens away. Name the first problem AND go to
+      // it — the offsets decide which is first, so this stays right if the
+      // fields are reordered.
+      scrollToFirstError(validationErrors);
+      showToast.error(t('common.error'), Object.values(validationErrors)[0]);
       return;
     }
 
@@ -917,8 +956,8 @@ export const DriverPassportScreen: React.FC = () => {
 
       await updatePassport(token, cleanData);
 
-      showToast.success(t('common.success'), 'Passport ma\'lumotlari saqlandi');
-
+      // T-061: this call was duplicated, so every successful save stacked two
+      // identical toasts. Same copy-paste on DriverLicenseScreen.
       showToast.success(t('common.success'), 'Passport ma\'lumotlari saqlandi');
 
       if (isEditing) {
@@ -930,22 +969,15 @@ export const DriverPassportScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save passport info:', error);
 
-      // Check if it's a validation error from backend (422 status)
-      const statusCode = error?.response?.status || error?.status;
-      if (statusCode === 422) {
-        // Parse validation errors and map to form fields
-        const apiErrors = parseValidationErrors(error);
-
+      // T-061: whether the server named fields, not which status it used —
+      // our validator throws 422, a model check 400, a duplicate 409.
+      const apiErrors = getFieldErrors(error);
+      if (apiErrors) {
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...apiErrors }));
+        scrollToFirstError(apiErrors);
 
-        // Also show a general error toast
-        const firstError = Object.values(apiErrors)[0];
-        if (firstError) {
-          showToast.error(t('common.error'), firstError);
-        } else {
-          showToast.error(t('common.error'), t('formValidation.fixErrors'));
-        }
+        showToast.error(t('common.error'), Object.values(apiErrors)[0]);
       } else {
         // For non-validation errors, show general error
         handleBackendError(error, {
@@ -965,6 +997,7 @@ export const DriverPassportScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -988,7 +1021,9 @@ export const DriverPassportScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.form}>
+          {/* onLayout: field offsets are measured inside this container, so the
+              scroll needs to know where the container itself starts (T-061). */}
+          <View style={styles.form} onLayout={rememberContainerOffset}>
             <Text style={styles.requiredHint}>{t('userDetails.requiredField')}</Text>
 
             {/* Personal Info (Read-only from previous step) */}
@@ -1002,7 +1037,7 @@ export const DriverPassportScreen: React.FC = () => {
             </View>
 
             {/* Passport Information */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('first_name')}>
               <Text style={getLabelStyle('first_name')}>
                 {t('userDetails.firstName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1020,7 +1055,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('last_name')}>
               <Text style={getLabelStyle('last_name')}>
                 {t('userDetails.lastName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1038,7 +1073,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('father_name')}>
               <Text style={getLabelStyle('father_name')}>
                 {t('userDetails.fatherName')}
               </Text>
@@ -1056,7 +1091,7 @@ export const DriverPassportScreen: React.FC = () => {
             </View>
 
             {/* Gender */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('gender')}>
               <Text style={getLabelStyle('gender')}>
                 {t('userDetails.gender')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1090,7 +1125,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('birth_date')}>
               <Text style={getLabelStyle('birth_date')}>
                 {t('userDetails.birthDate')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1119,7 +1154,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('issue_date')}>
               <Text style={getLabelStyle('issue_date')}>
                 Berilgan sanasi <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1148,7 +1183,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('expiry_date')}>
               <Text style={getLabelStyle('expiry_date')}>
                 Amal qilish muddati <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1177,7 +1212,7 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('citizenship')}>
               <Text style={getLabelStyle('citizenship')}>
                 Fuqaroligi <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1203,7 +1238,7 @@ export const DriverPassportScreen: React.FC = () => {
             </View>
 
             {/* ID Card Number */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('id_card_number')}>
               <Text style={getLabelStyle('id_card_number')}>
                 ID Karta raqami <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1222,7 +1257,7 @@ export const DriverPassportScreen: React.FC = () => {
             </View>
 
             {/* PINFL */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('pinfl')}>
               <Text style={getLabelStyle('pinfl')}>
                 JSHSHIR (PINFL) <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1234,6 +1269,9 @@ export const DriverPassportScreen: React.FC = () => {
                 onChangeText={(value) => updateField('pinfl', value)}
                 onBlur={() => handleFieldBlur('pinfl', formData.pinfl)}
                 keyboardType="numeric"
+                // T-061: a JSHSHIR is exactly 14 digits. Without this the field
+                // accepted 16 and the whole stack let them through.
+                maxLength={PINFL_LENGTH}
                 editable={!isLoading}
               />
               {fieldErrors.pinfl && (
@@ -1244,9 +1282,9 @@ export const DriverPassportScreen: React.FC = () => {
             {/* Birth Place */}
             <Text style={styles.sectionTitle}>Tug'ilgan joyi:</Text>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('birth_place_country')}>
               <Text style={getLabelStyle('birth_place_country')}>
-                Mamlakat
+                {t('driverPassport.birthPlaceCountry')}
               </Text>
               <TouchableOpacity
                 style={[
@@ -1269,9 +1307,9 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('birth_place_region')}>
               <Text style={getLabelStyle('birth_place_region')}>
-                Viloyat
+                {t('driverPassport.birthPlaceProvince')}
               </Text>
               <TouchableOpacity
                 style={[
@@ -1294,9 +1332,13 @@ export const DriverPassportScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            {/* T-061 (owner item ③): this said just "Shahar", while the picker
+                it opens is titled "Shahar yoki tumanni tanlang" and the very
+                same field on DriverPersonalInfoScreen says "Shahar / Tuman".
+                The list has always held both — only this label disagreed. */}
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('birth_place_city')}>
               <Text style={getLabelStyle('birth_place_city')}>
-                Shahar
+                {t('driverPassport.birthPlaceCityDistrict')}
               </Text>
               <TouchableOpacity
                 style={[

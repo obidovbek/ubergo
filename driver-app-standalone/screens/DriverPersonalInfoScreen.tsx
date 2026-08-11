@@ -28,7 +28,8 @@ import { GeoPickerModal } from '../components/GeoPickerModal';
 import { PhotoSourceModal } from '../components/PhotoSourceModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
-import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
+import { useFieldScroll } from '../utils/formScroll';
 import {
   updatePersonalInfo,
   getDriverProfileStatus,
@@ -53,6 +54,12 @@ export const DriverPersonalInfoScreen: React.FC = () => {
   const isEditing = route.params?.isEditing;
   const { user, token, logout } = useAuth();
   const { t } = useTranslation();
+  const {
+    scrollViewRef,
+    rememberContainerOffset,
+    rememberFieldOffset,
+    scrollToFirstError,
+  } = useFieldScroll();
 
   type GeoFieldType =
     | 'country'
@@ -1088,7 +1095,10 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
     if (Object.keys(combinedErrors).length > 0) {
       setFieldErrors(combinedErrors);
-      showToast.error(t('common.error'), t('formValidation.fixErrors'));
+      // T-061: name the first problem and scroll to it, instead of the bare
+      // "fix the errors" on a form this long.
+      scrollToFirstError(combinedErrors);
+      showToast.error(t('common.error'), Object.values(combinedErrors)[0]);
       return;
     }
 
@@ -1116,8 +1126,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
       await updatePersonalInfo(token, cleanData as Partial<DriverProfile>);
 
-      showToast.success(t('common.success'), t('driver.profileUpdated'));
-
+      // T-061: this call was duplicated — two identical toasts on every save.
       showToast.success(t('common.success'), t('driver.profileUpdated'));
 
       if (isEditing) {
@@ -1129,12 +1138,12 @@ export const DriverPersonalInfoScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save personal info:', error);
 
-      // Check if it's a validation error from backend (422 status)
-      const statusCode = error?.response?.status || error?.status;
-      if (statusCode === 422) {
-        // Parse validation errors and map to form fields
-        const apiErrors = parseValidationErrors(error);
-
+      // T-061: whether the server named fields, not which status it used —
+      // our validator throws 422, a model check 400, a duplicate 409. The
+      // email on this very screen is checked by the User/DriverProfile model,
+      // so its failure is a 400 and used to be discarded here.
+      const apiErrors = getFieldErrors(error);
+      if (apiErrors) {
         // Map API field names to form field names if needed
         const mappedErrors: Record<string, string> = {};
         Object.keys(apiErrors).forEach((apiField) => {
@@ -1162,14 +1171,9 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...mappedErrors }));
+        scrollToFirstError(mappedErrors);
 
-        // Also show a general error toast
-        const firstError = Object.values(mappedErrors)[0];
-        if (firstError) {
-          showToast.error(t('common.error'), firstError);
-        } else {
-          showToast.error(t('common.error'), t('formValidation.fixErrors'));
-        }
+        showToast.error(t('common.error'), Object.values(mappedErrors)[0]);
       } else {
         // For non-validation errors, show general error
         handleBackendError(error, {
@@ -1189,6 +1193,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -1231,11 +1236,13 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.form}>
+          {/* onLayout: field offsets are measured inside this container, so the
+              scroll needs to know where the container itself starts (T-061). */}
+          <View style={styles.form} onLayout={rememberContainerOffset}>
             <Text style={styles.requiredHint}>{t('userDetails.requiredField')}</Text>
 
             {/* Personal Information */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('first_name')}>
               <Text style={getLabelStyle('first_name')}>
                 {t('userDetails.firstName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1251,7 +1258,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               {fieldErrors.first_name && <Text style={styles.errorText}>{fieldErrors.first_name}</Text>}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('last_name')}>
               <Text style={getLabelStyle('last_name')}>
                 {t('userDetails.lastName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1267,7 +1274,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               {fieldErrors.last_name && <Text style={styles.errorText}>{fieldErrors.last_name}</Text>}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('father_name')}>
               <Text style={getLabelStyle('father_name')}>
                 {t('userDetails.fatherName')}
               </Text>
@@ -1284,7 +1291,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             </View>
 
             {/* Gender */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('gender')}>
               <Text style={getLabelStyle('gender')}>
                 {t('userDetails.gender')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1317,7 +1324,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             </View>
 
             {/* Birth Date */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('birth_date')}>
               <Text style={getLabelStyle('birth_date')}>
                 {t('userDetails.birthDate')}
               </Text>
@@ -1445,7 +1452,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
             </AppModal>
 
             {/* Email */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('email')}>
               <Text style={getLabelStyle('email')}>
                 {t('userDetails.email')}
               </Text>
@@ -1465,7 +1472,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
 
             {/* Current Address */}
             <Text style={styles.sectionTitle}>Hozirgi yashash manzili</Text>
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('address_country_id')}>
               <Text style={getLabelStyle('address_country_id')}>Mamlakat</Text>
               <TouchableOpacity
                 style={[
@@ -1488,7 +1495,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('address_province_id')}>
               <Text style={getLabelStyle('address_province_id')}>Viloyat</Text>
               <TouchableOpacity
                 style={[
@@ -1513,7 +1520,7 @@ export const DriverPersonalInfoScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('address_city_district_id')}>
               <Text style={getLabelStyle('address_city_district_id')}>Shahar / Tuman</Text>
               <TouchableOpacity
                 style={[

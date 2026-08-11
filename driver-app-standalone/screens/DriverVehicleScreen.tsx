@@ -28,7 +28,8 @@ import { GeoPickerModal } from '../components/GeoPickerModal';
 import { PhotoSourceModal } from '../components/PhotoSourceModal';
 import { showToast } from '../utils/toast';
 import { resolveImageUrl } from '../utils/imageUrl';
-import { handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
+import { useFieldScroll } from '../utils/formScroll';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import {
   updateVehicle,
@@ -70,6 +71,12 @@ export const DriverVehicleScreen: React.FC = () => {
   const isEditing = route.params?.isEditing;
   const { token } = useAuth();
   const { t } = useTranslation();
+  const {
+    scrollViewRef,
+    rememberContainerOffset,
+    rememberFieldOffset,
+    scrollToFirstError,
+  } = useFieldScroll();
 
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -1082,7 +1089,8 @@ export const DriverVehicleScreen: React.FC = () => {
   };
 
   // Validation using translation keys
-  const validateAllFields = (): boolean => {
+  /** @returns the field→message map; empty means the form is valid (T-061). */
+  const validateAllFields = (): Record<string, string> => {
     const validationRules: ValidationRule[] = [
       {
         field: 'vehicle_type_id',
@@ -1318,7 +1326,10 @@ export const DriverVehicleScreen: React.FC = () => {
     }, {});
 
     setFieldErrors(errorsMap);
-    return Object.keys(errorsMap).length === 0;
+    // T-061: returns the errors, not just "did it pass". The caller could only
+    // show a generic "fix the errors" toast while this handed back a boolean —
+    // it had thrown away the very thing the driver needed to be told.
+    return errorsMap;
   };
 
   const handleFieldChange = (field: string, value: any) => {
@@ -1613,8 +1624,12 @@ export const DriverVehicleScreen: React.FC = () => {
 
   const handleContinue = async () => {
     // Validate all fields before submission
-    if (!validateAllFields()) {
-      showToast.error(t('common.error'), t('formValidation.fixErrors'));
+    const validationErrors = validateAllFields();
+    if (Object.keys(validationErrors).length > 0) {
+      // T-061: name the first problem and scroll to it. This screen is the
+      // longest of the five, so "something is wrong" was the least usable here.
+      scrollToFirstError(validationErrors);
+      showToast.error(t('common.error'), Object.values(validationErrors)[0]);
       return;
     }
 
@@ -1698,22 +1713,15 @@ export const DriverVehicleScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to save vehicle info:', error);
 
-      // Check if it's a validation error from backend (422 status)
-      const statusCode = error?.response?.status || error?.status;
-      if (statusCode === 422) {
-        // Parse validation errors and map to form fields
-        const apiErrors = parseValidationErrors(error);
-
+      // T-061: whether the server named fields, not which status it used —
+      // our validator throws 422, a model check 400, a duplicate 409.
+      const apiErrors = getFieldErrors(error);
+      if (apiErrors) {
         // Merge with existing errors and set field errors to display under each field
         setFieldErrors(prev => ({ ...prev, ...apiErrors }));
+        scrollToFirstError(apiErrors);
 
-        // Also show a general error toast
-        const firstError = Object.values(apiErrors)[0];
-        if (firstError) {
-          showToast.error(t('common.error'), firstError);
-        } else {
-          showToast.error(t('common.error'), t('formValidation.fixErrors'));
-        }
+        showToast.error(t('common.error'), Object.values(apiErrors)[0]);
       } else {
         // For non-validation errors, show general error
         handleBackendError(error, {
@@ -1733,6 +1741,7 @@ export const DriverVehicleScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -1756,11 +1765,13 @@ export const DriverVehicleScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.form}>
+          {/* onLayout: field offsets are measured inside this container, so the
+              scroll needs to know where the container itself starts (T-061). */}
+          <View style={styles.form} onLayout={rememberContainerOffset}>
             <Text style={styles.requiredHint}>{t('userDetails.requiredField')}</Text>
 
             {/* Vehicle Basic Information */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_type_id')}>
               <Text style={getLabelStyle('vehicle_type_id')}>
                 {t('driverVehicle.vehicleType')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1785,7 +1796,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_make_id')}>
               <Text style={getLabelStyle('vehicle_make_id')}>
                 {t('driverVehicle.make')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1810,7 +1821,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_model_id')}>
               <Text style={getLabelStyle('vehicle_model_id')}>
                 {t('driverVehicle.model')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1837,7 +1848,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_body_type_id')}>
               <Text style={getLabelStyle('vehicle_body_type_id')}>
                 {t('driverVehicle.bodyType')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1862,7 +1873,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_color_id')}>
               <Text style={getLabelStyle('vehicle_color_id')}>
                 {t('driverVehicle.color')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1894,7 +1905,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             {/* Tech Passport Information */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('tech_passport_series')}>
               <Text style={getLabelStyle('tech_passport_series')}>
                 {t('driverVehicle.techPassportSeries')}: <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1912,7 +1923,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('license_plate')}>
               <Text style={getLabelStyle('license_plate')}>
                 {t('driverVehicle.licensePlate')}: 1. <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1930,7 +1941,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('model')}>
               <Text style={getLabelStyle('model')}>
                 {t('driverVehicle.modelName')}: 2. <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1948,7 +1959,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('vehicle_color_id')}>
               <Text style={getLabelStyle('vehicle_color_id')}>
                 {t('driverVehicle.colorField')}: 3. <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -1980,7 +1991,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             {/* Company Information */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('company_name')}>
               <Text style={getLabelStyle('company_name')}>{t('driverVehicle.company')}: 4.</Text>
               <TextInput
                 style={getInputStyle('company_name')}
@@ -1999,7 +2010,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Owner Personal Information */}
             <Text style={styles.sectionTitle}>{t('driverVehicle.ownerInfo')}: 4.</Text>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_first_name')}>
               <Text style={getLabelStyle('owner_first_name')}>
                 {t('driverVehicle.firstName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2017,7 +2028,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_last_name')}>
               <Text style={getLabelStyle('owner_last_name')}>
                 {t('driverVehicle.lastName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2035,7 +2046,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_father_name')}>
               <Text style={getLabelStyle('owner_father_name')}>
                 {t('driverVehicle.fatherName')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2056,7 +2067,7 @@ export const DriverVehicleScreen: React.FC = () => {
             {/* Owner Address */}
             <Text style={styles.sectionTitle}>{t('driverVehicle.address')}: 5.</Text>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_address_country_id')}>
               <Text style={getLabelStyle('owner_address_country_id')}>
                 {t('driverVehicle.country')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2081,7 +2092,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_address_province_id')}>
               <Text style={getLabelStyle('owner_address_province_id')}>
                 {t('driverVehicle.province')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2108,7 +2119,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_address_city_district_id')}>
               <Text style={getLabelStyle('owner_address_city_district_id')}>
                 {t('driverVehicle.cityDistrict')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2205,7 +2216,7 @@ export const DriverVehicleScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_address_street')}>
               <Text style={getLabelStyle('owner_address_street')}>
                 {t('driverVehicle.street')} <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2237,7 +2248,7 @@ export const DriverVehicleScreen: React.FC = () => {
               />
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('owner_pinfl')}>
               <Text style={getLabelStyle('owner_pinfl')}>
                 {t('driverVehicle.pinfl')}: 8. <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2258,7 +2269,7 @@ export const DriverVehicleScreen: React.FC = () => {
             </View>
 
             {/* Vehicle Specifications */}
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('year')}>
               <Text style={getLabelStyle('year')}>
                 {t('driverVehicle.year')}: 9. <Text style={styles.requiredMarker}>*</Text>
               </Text>
@@ -2298,7 +2309,7 @@ export const DriverVehicleScreen: React.FC = () => {
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('gross_weight')}>
               <Text style={getLabelStyle('gross_weight')}>
                 {t('driverVehicle.grossWeight')}: 11.
               </Text>
@@ -2323,7 +2334,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('unladen_weight')}>
               <Text style={getLabelStyle('unladen_weight')}>
                 {t('driverVehicle.unladenWeight')}: 12.
               </Text>
@@ -2390,7 +2401,7 @@ export const DriverVehicleScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('seating_capacity')}>
               <Text style={getLabelStyle('seating_capacity')}>
                 {t('driverVehicle.seatingCapacity')}: 17.
               </Text>
