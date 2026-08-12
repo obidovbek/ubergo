@@ -65,6 +65,21 @@ const routeForNotification = (data: any): NotificationTarget => {
     case 'offer_cancelled_by_passenger':
       return { screen: 'MyJoinRequests' };
 
+    // The passenger EDITED a request this driver is committed to or bidding on
+    // (T-065). Unlike the four above, the point of this push is the new terms —
+    // so open the ride itself rather than a list of bids.
+    //
+    // ⚠️ `offer_id` here is the passenger's own PassengerOffer, which is exactly
+    // what `PassengerOfferDetails` takes (`PassengerOfferDetailsScreen:56`).
+    // Do NOT route it anywhere that expects a DriverOffer id — that is the trap
+    // documented at the top of the user app's copy of this file.
+    case 'passenger_offer_updated': {
+      const offerId = parseOfferId(data?.offer_id);
+      return offerId
+        ? { screen: 'PassengerOfferDetails', params: { offerId } }
+        : { screen: 'MyJoinRequests' };
+    }
+
     default:
       return { screen: 'Notifications' };
   }

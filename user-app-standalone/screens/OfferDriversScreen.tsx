@@ -20,7 +20,7 @@
  * this screen for the driver app.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -38,6 +38,7 @@ import * as PassengerOffersAPI from '../api/passengerOffers';
 import { driverNameOf } from '../api/passengerOffers';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { subscribePushReceived } from '../utils/pushEvents';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
@@ -98,6 +99,21 @@ export default function OfferDriversScreen() {
       load();
     }, [load])
   );
+
+  // T-068 — a driver bidding on, or withdrawing from, THIS request while the
+  // passenger is looking at the list of drivers. Scoped by `offer_id` so a push
+  // about a different request cannot reload this one.
+  // ⚠️ Push `data` values are strings; `offerId` may be a number. Compare coerced.
+  // ⚠️ `load(true)` uses the refresh path — the full-screen loader would blank
+  // the list the passenger is mid-decision on.
+  useEffect(() => {
+    return subscribePushReceived(
+      (_type, data) => {
+        if (String(data?.offer_id) === String(offerId)) load(true);
+      },
+      ['driver_join_request', 'driver_request_cancelled']
+    );
+  }, [offerId, load]);
 
   const pendingCount = drivers.filter((d) => d.status === 'pending').length;
 

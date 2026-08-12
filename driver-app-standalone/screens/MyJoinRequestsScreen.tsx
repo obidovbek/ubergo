@@ -11,7 +11,7 @@
  * says so out loud rather than pretending it is undoable.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -32,6 +32,7 @@ import { passengerNameOf, passengerPhoneOf } from '../api/passengerOffers';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { subscribePushReceived } from '../utils/pushEvents';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
@@ -89,6 +90,20 @@ export default function MyJoinRequestsScreen() {
       loadRequests();
     }, [loadRequests])
   );
+
+  // T-068 — a push that lands while this screen is open used to show a toast over
+  // a list that kept displaying the old data. `useFocusEffect` above does not
+  // help: the screen is already focused, so nothing re-runs. Refresh in place;
+  // navigation still happens only on a tap.
+  useEffect(() => {
+    return subscribePushReceived(() => loadRequests(), [
+      'driver_request_confirmed',
+      'driver_request_rejected',
+      'driver_not_chosen',
+      'offer_cancelled_by_passenger',
+      'passenger_offer_updated',
+    ]);
+  }, [loadRequests]);
 
   const handleRefresh = () => {
     setRefreshing(true);

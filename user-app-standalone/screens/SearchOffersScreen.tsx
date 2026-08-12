@@ -632,10 +632,185 @@ export default function SearchOffersScreen() {
     </TouchableOpacity>
   );
 
+  /**
+   * The route picker, rendered as the results list's header (T-066).
+   *
+   * 🔴 It used to be a `<ScrollView maxHeight: 270>` sitting as a SIBLING of the
+   * `FlatList` — two independent scroll surfaces. The card could therefore never
+   * scroll away and ate ~270px of every screen for ever, and because it shares
+   * the offer cards' white / radius-20 / shadow styling the two read as one
+   * continuous sheet exactly at the boundary. That is the "merging" the owner
+   * reported on 2026-08-12.
+   *
+   * Making it `ListHeaderComponent` gives the screen ONE scroll surface, so the
+   * picker slides up out of the way and the results get the whole screen.
+   *
+   * ⚠️ Identical to the fix T-042 ② made in the driver app's
+   * `SearchPassengerOffersScreen` on 2026-08-10 — that sweep stopped at the app
+   * where the bug was observed and never reached this one.
+   */
+  const searchHeader = (
+    <>
+      <View style={styles.searchContainer}>
+        {/* From and To in a compact row */}
+        <View style={styles.locationRow}>
+          {/* From Location Section */}
+          <View style={styles.locationColumn}>
+            <View style={styles.locationHeader}>
+              <View style={styles.locationDot} />
+              <Text style={styles.sectionLabel}>{t('searchOffers.from')}</Text>
+            </View>
+
+            {/* From Country Selection - Compact */}
+            <TouchableOpacity
+              style={styles.countryButtonCompact}
+              onPress={() => openGeoModal('from', 'country')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="globe" size={14} color="#6B7280" />
+              <Text style={styles.countryButtonText} numberOfLines={1}>
+                {selectedFromCountry ? selectedFromCountry.name : t('searchOffers.selectCountry')}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            {/* From Province Selection */}
+            {selectedFromCountry && (
+              <TouchableOpacity
+                style={styles.geoSelectButtonCompact}
+                onPress={() => openGeoModal('from', 'province')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.geoSelectTextCompact}>
+                  {selectedFromProvince ? selectedFromProvince.name : t('searchOffers.selectProvince')}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+
+            {/* From City Selection (Optional) */}
+            {selectedFromProvince && (
+              <TouchableOpacity
+                style={styles.geoSelectButtonCompact}
+                onPress={() => openGeoModal('from', 'city')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.geoSelectTextCompact, !selectedFromCity && styles.geoSelectTextPlaceholder]}>
+                  {selectedFromCity ? selectedFromCity.name : t('searchOffers.cityOptional')}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+
+            {/* Clear From Selection */}
+            {(selectedFromProvince || selectedFromCity) && (
+              <TouchableOpacity
+                style={styles.clearButtonCompact}
+                onPress={() => clearGeoSelection('from')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Swap Button */}
+          <View style={styles.swapContainer}>
+            <TouchableOpacity
+              style={styles.swapButton}
+              onPress={swapLocations}
+              activeOpacity={0.7}
+              disabled={!selectedFromProvince || !selectedToProvince}
+            >
+              <Ionicons
+                name="swap-vertical"
+                size={20}
+                color={selectedFromProvince && selectedToProvince ? '#10B981' : '#D1D5DB'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* To Location Section */}
+          <View style={styles.locationColumn}>
+            <View style={styles.locationHeader}>
+              <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.sectionLabel}>{t('searchOffers.to')}</Text>
+            </View>
+
+            {/* To Country Selection - Compact */}
+            <TouchableOpacity
+              style={styles.countryButtonCompact}
+              onPress={() => openGeoModal('to', 'country')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="globe" size={14} color="#6B7280" />
+              <Text style={styles.countryButtonText} numberOfLines={1}>
+                {selectedToCountry ? selectedToCountry.name : t('searchOffers.selectCountry')}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            {/* To Province Selection */}
+            {selectedToCountry && (
+              <TouchableOpacity
+                style={styles.geoSelectButtonCompact}
+                onPress={() => openGeoModal('to', 'province')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.geoSelectTextCompact}>
+                  {selectedToProvince ? selectedToProvince.name : t('searchOffers.selectProvince')}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+
+            {/* To City Selection (Optional) */}
+            {selectedToProvince && (
+              <TouchableOpacity
+                style={styles.geoSelectButtonCompact}
+                onPress={() => openGeoModal('to', 'city')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.geoSelectTextCompact, !selectedToCity && styles.geoSelectTextPlaceholder]}>
+                  {selectedToCity ? selectedToCity.name : t('searchOffers.cityOptional')}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+
+            {/* Clear To Selection */}
+            {(selectedToProvince || selectedToCity) && (
+              <TouchableOpacity
+                style={styles.clearButtonCompact}
+                onPress={() => clearGeoSelection('to')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* A labelled seam, so the picker and the results can never read as one
+          continuous sheet again. Only meaningful once there are results. */}
+      {offers.length > 0 && (
+        <View style={styles.resultsSeam}>
+          <Text style={styles.resultsCount}>
+            {t('searchOffers.resultsCount').replace('{count}', String(offers.length))}
+          </Text>
+          <View style={styles.resultsRule} />
+        </View>
+      )}
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -659,170 +834,6 @@ export default function SearchOffersScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Geo Selection Container - Scrollable */}
-      <ScrollView 
-        style={styles.searchScrollView}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-      >
-        <View style={styles.searchContainer}>
-          {/* From and To in a compact row */}
-          <View style={styles.locationRow}>
-            {/* From Location Section */}
-            <View style={styles.locationColumn}>
-              <View style={styles.locationHeader}>
-                <View style={styles.locationDot} />
-                <Text style={styles.sectionLabel}>{t('searchOffers.from')}</Text>
-              </View>
-              
-              {/* From Country Selection - Compact */}
-              <TouchableOpacity
-                style={styles.countryButtonCompact}
-                onPress={() => openGeoModal('from', 'country')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="globe" size={14} color="#6B7280" />
-                <Text style={styles.countryButtonText} numberOfLines={1}>
-                  {selectedFromCountry ? selectedFromCountry.name : t('searchOffers.selectCountry')}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
-              </TouchableOpacity>
-              
-              {/* From Province Selection */}
-              {selectedFromCountry && (
-                <TouchableOpacity
-                  style={styles.geoSelectButtonCompact}
-                  onPress={() => openGeoModal('from', 'province')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.geoSelectTextCompact}>
-                    {selectedFromProvince ? selectedFromProvince.name : t('searchOffers.selectProvince')}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-
-              {/* From City Selection (Optional) */}
-              {selectedFromProvince && (
-                <TouchableOpacity
-                  style={styles.geoSelectButtonCompact}
-                  onPress={() => openGeoModal('from', 'city')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.geoSelectTextCompact, !selectedFromCity && styles.geoSelectTextPlaceholder]}>
-                    {selectedFromCity ? selectedFromCity.name : t('searchOffers.cityOptional')}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-
-              {/* Clear From Selection */}
-              {(selectedFromProvince || selectedFromCity) && (
-                <TouchableOpacity
-                  style={styles.clearButtonCompact}
-                  onPress={() => clearGeoSelection('from')}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close-circle" size={16} color="#EF4444" />
-                  <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Swap Button */}
-            <View style={styles.swapContainer}>
-              <TouchableOpacity
-                style={styles.swapButton}
-                onPress={swapLocations}
-                activeOpacity={0.7}
-                disabled={!selectedFromProvince || !selectedToProvince}
-              >
-                <Ionicons 
-                  name="swap-vertical" 
-                  size={20} 
-                  color={selectedFromProvince && selectedToProvince ? '#10B981' : '#D1D5DB'} 
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* To Location Section */}
-            <View style={styles.locationColumn}>
-              <View style={styles.locationHeader}>
-                <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
-                <Text style={styles.sectionLabel}>{t('searchOffers.to')}</Text>
-              </View>
-              
-              {/* To Country Selection - Compact */}
-              <TouchableOpacity
-                style={styles.countryButtonCompact}
-                onPress={() => openGeoModal('to', 'country')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="globe" size={14} color="#6B7280" />
-                <Text style={styles.countryButtonText} numberOfLines={1}>
-                  {selectedToCountry ? selectedToCountry.name : t('searchOffers.selectCountry')}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
-              </TouchableOpacity>
-              
-              {/* To Province Selection */}
-              {selectedToCountry && (
-                <TouchableOpacity
-                  style={styles.geoSelectButtonCompact}
-                  onPress={() => openGeoModal('to', 'province')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.geoSelectTextCompact}>
-                    {selectedToProvince ? selectedToProvince.name : t('searchOffers.selectProvince')}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-
-              {/* To City Selection (Optional) */}
-              {selectedToProvince && (
-                <TouchableOpacity
-                  style={styles.geoSelectButtonCompact}
-                  onPress={() => openGeoModal('to', 'city')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.geoSelectTextCompact, !selectedToCity && styles.geoSelectTextPlaceholder]}>
-                    {selectedToCity ? selectedToCity.name : t('searchOffers.cityOptional')}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-
-              {/* Clear To Selection */}
-              {(selectedToProvince || selectedToCity) && (
-                <TouchableOpacity
-                  style={styles.clearButtonCompact}
-                  onPress={() => clearGeoSelection('to')}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close-circle" size={16} color="#EF4444" />
-                  <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Selected Route Display */}
-          {/* {selectedFromProvince && selectedToProvince && (
-            <View style={styles.selectedLocationCard}>
-              <Text style={styles.selectedLocationLabel}>Searching Route:</Text>
-              <Text style={styles.selectedLocationText}>
-                {selectedFromProvince.name}
-                {selectedFromCity && ` (${selectedFromCity.name})`}
-                {' → '}
-                {selectedToProvince.name}
-                {selectedToCity && ` (${selectedToCity.name})`}
-              </Text>
-            </View>
-          )} */}
-        </View>
-      </ScrollView>
-
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10B981" />
@@ -833,6 +844,7 @@ export default function SearchOffersScreen() {
           data={offers}
           renderItem={renderOffer}
           keyExtractor={(item) => String(item.id)}
+          ListHeaderComponent={searchHeader}
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -1074,21 +1086,42 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EF4444',
   },
-  searchScrollView: {
-    maxHeight: 270,
-  },
   searchContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    marginHorizontal: 20,
     marginBottom: 16,
     marginTop: 8,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    // T-066 — a deliberately stronger shadow than the offer cards below it
+    // (0.06 / radius 8). The picker now scrolls in the same surface as the
+    // results, so it has to read as sitting ABOVE them rather than as the first
+    // card in the list; matching their elevation is what made the two merge.
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  // T-066 — the labelled break between the picker and the results. Without it
+  // the two white/rounded/shadowed surfaces read as one continuous sheet, which
+  // is the "merging" the owner reported.
+  resultsSeam: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  resultsCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  resultsRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
   },
   locationRow: {
     flexDirection: 'row',
@@ -1226,6 +1259,9 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 24,
+    // T-066 — the list now owns everything below the app header, so an empty
+    // result set must still be able to centre itself in that space.
+    flexGrow: 1,
   },
   offerCard: {
     backgroundColor: '#FFFFFF',
@@ -1382,10 +1418,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emptyContainer: {
-    flex: 1,
+    // T-066 — the empty state now renders BELOW the picker inside the SAME
+    // list, so it centres in the leftover space rather than the whole screen.
+    // `flex: 1` + `paddingTop: 80` were sized for when this filled a bare
+    // sibling container; kept as-is they push the empty state off the bottom of
+    // small phones — exactly what happened in the driver app during T-042 ②.
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 80,
+    paddingTop: 32,
+    paddingBottom: 32,
     paddingHorizontal: 40,
   },
   emptyIconContainer: {

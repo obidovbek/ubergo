@@ -168,20 +168,6 @@ new i18n keys, and one new case in the driver app's routing table. The user app 
 - **2026-08-12** — plan written after grounding: `updateOffer` notifies nobody while `cancelOffer`
   30 lines below does it correctly; the destination screen and the per-language notify helper both
   already exist. Owner chose **confirmed + pending** and **name the changed fields**.
-- **2026-08-12** — steps 1-6 done. The predicted hazard was **bigger** than the card said: the edit
-  screen re-sends the **whole ~40-field form**, so `Object.keys(fields)` would have announced ~40
-  changed fields on every save. `changedFields` does a normalised value-diff instead.
-- **2026-08-12 (end of day)** — **lint run.** API: **7 real findings before and after — the
-  identical seven**, so this card introduced **zero** new ones (and no new `any`, despite
-  `changedFields` handling untyped values). The other 28,780 lines are CRLF/prettier noise
-  (**T-032**). 🔴 **Neither RN app can be linted at all** (**T-060** — ESLint 9, no flat config),
-  and that is where most of today's code went — so T-068 · T-069 · T-070 · T-071 · T-072 are
-  **unlinted, not lint-clean.**
-
-> ⚠️ **T-065 is only part of this session's work.** After it, **T-068 · T-070 · T-071(⑪) · T-072 ·
-> T-069** were all built and are code-complete — their write-ups live on their **cards in
-> `docs/TODO.md`**, not here, because each was small enough not to need its own plan file.
-> **T-073 was measured and needs no code** (the screen is clean; see its card).
 
 ## Resume point (for the next chat)
 **STEPS 1-6 DONE 2026-08-12. Only step 7 (owner: deploy the API, rebuild the DRIVER app, walk it)
@@ -202,41 +188,8 @@ instead — and the suite proves a no-op edit is silent.
 **Verification:** 51/51 with `changedFields` **executed**, **39 red** against pre-change code.
 `tsc` API **281** · driver **35**, both at baseline, zero errors in any touched file.
 
-## 🛑 WHOLE-BOARD STATE AT END OF 2026-08-12 — read this before starting anything
-
-**There is NO Claude work left anywhere.** All 24 plan files were swept: **51 unchecked steps, every
-one of them the owner's** — a deploy, a rebuild, a device walk, or a commit awaiting approval. The
-only exceptions are **T-030 step 7** and **T-018 steps 9-10** (blocked on an owner answer / needing a
-running device), and **T-031**, whose 9 remaining steps *are* the payment work and which the **owner
-parked on 2026-08-11**.
-
-**EIGHT cards went code-complete today** (T-065 · T-066 · T-067 · T-068 · T-069 · T-070 ·
-T-071 ⑪ · T-072) and clear in the runs already queued — **no extra deploy, no extra rebuild, no
-migration**:
-
-| Run | Clears |
-|---|---|
-| **API deploy** | T-034 · T-043 · T-045 · T-054 · T-055 · T-061 · **T-065** |
-| **Driver rebuild** | T-024 · T-046 · T-056-T-059 · T-061 · **T-065 · T-068 · T-070 · T-071 · T-072** |
-| **User rebuild** | T-024 · T-046 · T-056-T-059 · **T-066 · T-067 · T-068 · T-069 · T-071 · T-072** |
-
-⚠️ **ORDER MATTERS: deploy → run T-046's migration → rebuild both apps.**
-🔴 **Walk T-054 first** — `gatePhones` exists in two services and has never run on a device.
-
-**FOUR things are blocked on the owner, not on code:**
-1. **T-073** — measured **clean** (66 keys, 3 locales, 0 unresolved). A missing key renders the
-   **key**, never English, so the reported mechanism cannot happen. **Needs a screenshot of the
-   actual English text.** Do NOT edit translation files on a guess.
-2. **T-074** — no structural cause found; the chip strip matches one that works. **Needs a
-   recording**; "slide" may mean a pager that exists in neither app.
-3. **T-071 item ⑫** — "remove icons where titles and back buttons close" has no unambiguous
-   referent. **Needs a screenshot.**
-4. **T-064** — owner approved *a confirmed driver may withdraw and the offer reopens to
-   `published`*, but the sub-question is unanswered: **do the auto-rejected drivers reopen?**
-   (recommendation on the card: **no**).
-
-**Unblocked if the owner wants more code without a device:** **T-035** (duplicate `errors:` blocks —
-re-confirmed present today), **T-060/T-032** (lint cannot run in either RN app).
-
-**Baselines (all verified at end of day):** API **281** · admin **0** · user **9** · driver **35**.
-**Today's suites:** 56/56 · 51/51 · 60/60 · 49/49, all proven able to fail (51 · 39 · 34 · 10 red).
+⚠️ **Two cards are code-complete and waiting on the owner's device from today alone:** T-066 + T-067
+(user-app rebuild, **no deploy**). The older batch is unchanged: one API deploy (T-034 · T-043 ·
+T-045 · T-054 · T-055 · T-061) and one app rebuild (T-024 · T-046 · T-056 · T-057 · T-058 · T-059);
+**T-046 also needs its migration**. **Baselines:** API **281** · admin **0** · user **9** ·
+driver **35**.

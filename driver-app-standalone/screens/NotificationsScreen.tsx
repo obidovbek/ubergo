@@ -17,6 +17,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { BackButton } from '../components/BackButton';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
@@ -237,21 +239,32 @@ export const NotificationsScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
+        {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
+        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
         <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
+        {/*
+          T-072 — an ICON, not the sentence.
+
+          🔴 The label is a whole sentence — uz "Barchasini o'qilgan deb
+          belgilash" (33 chars), ru "Отметить все как прочитанные" (28) — and it
+          sat in a `flexDirection: 'row'` beside a `flex: 1`, 24px, weight-800
+          title. At 13px plus 32px of padding the button claimed ~230px, leaving
+          the title ~100px on a 360dp screen, so it wrapped (owner, 2026-08-12).
+
+          ✅ The sentence is not lost — `handleMarkAllAsRead` already opens a
+          confirm dialog whose title IS `notifications.markAllRead`, so the words
+          appear the moment the icon is tapped.
+          ⚠️ Kept identical to the user app's copy of this header.
+        */}
         {unreadCount > 0 ? (
           <TouchableOpacity
             style={styles.markAllButton}
             onPress={handleMarkAllAsRead}
             activeOpacity={0.8}
+            accessibilityLabel={t('notifications.markAllRead')}
+            accessibilityRole="button"
           >
-            <Text style={styles.markAllText}>{t('notifications.markAllRead')}</Text>
+            <Ionicons name="checkmark-done" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -318,16 +331,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // T-071 — layout only; the tile itself comes from <BackButton />.
   backButton: {
-    padding: 8,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#10B981',
-    fontWeight: '700',
   },
   headerTitle: {
     flex: 1,
@@ -337,11 +343,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   headerSpacer: {
-    width: 60,
+    // T-072 — matches the icon button's footprint so the title sits in the same
+    // place whether or not there are unread notifications.
+    width: 40,
   },
   markAllButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    // T-072 — a square icon button (~40px) instead of a ~230px sentence.
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10B981',
     borderRadius: 12,
     shadowColor: '#10B981',
@@ -352,12 +363,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
-  },
-  markAllText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   listContent: {
     padding: 16,

@@ -39,6 +39,52 @@ export default {
   },
 
   // Field names
+  // Passenger-offer column names for the "what changed" push (T-065).
+  // Deliberately separate from `fields` below — see the note in uz.ts.
+  offerFields: {
+    from_text: 'Pickup location',
+    from_lat: 'Pickup coordinates',
+    from_lng: 'Pickup coordinates',
+    from_country_id: 'Pickup country',
+    from_province_id: 'Pickup province',
+    from_city_id: 'Pickup city / district',
+    from_settlement_id: 'Pickup settlement',
+    from_landmark: 'Pickup landmark',
+    to_text: 'Destination',
+    to_lat: 'Destination coordinates',
+    to_lng: 'Destination coordinates',
+    to_country_id: 'Destination country',
+    to_province_id: 'Destination province',
+    to_city_id: 'Destination city / district',
+    to_settlement_id: 'Destination settlement',
+    to_landmark: 'Destination landmark',
+    start_at: 'Departure time',
+    depart_until: 'Latest departure time',
+    arrive_from: 'Arrival time',
+    arrive_until: 'Latest arrival time',
+    is_urgent: 'Urgent trip',
+    seats_needed: 'Number of seats',
+    max_price_per_seat: 'Price per seat',
+    currency: 'Currency',
+    payment_type: 'Payment method',
+    payer_phone: "Payer's phone number",
+    seat_counts: 'Seat layout',
+    seat_position_any: 'Any seat position',
+    salon_scope: 'Salon type',
+    vehicle_class: 'Vehicle class',
+    vehicle_types: 'Vehicle types',
+    front_seat: 'Front seat',
+    pets: 'Pets',
+    large_baggage: 'Large baggage',
+    woman_in_car: 'Woman in the car',
+    roof_rack_needed: 'Roof rack needed',
+    trailer: 'Trailer',
+    road_pickup: 'Pickup along the way',
+    road_pickup_note: 'Pickup along the way note',
+    special_order: 'Special order',
+    note: 'Note',
+  },
+
   fields: {
     // User fields
     first_name: 'First Name',
@@ -288,6 +334,10 @@ export default {
     // Offer cancelled by passenger (to driver)
     offerCancelledByPassengerTitle: '❌ Ride Cancelled',
     offerCancelledByPassengerBody: 'The passenger cancelled the ride from {from} to {to}. Check other offers.',
+
+    // Passenger edited a ride request a driver is committed to or bidding on (T-065)
+    passengerOfferUpdatedTitle: '✏️ Ride request changed',
+    passengerOfferUpdatedBody: 'The request from {from} to {to} changed: {changed}. Check the new terms.',
     
     // Driver arrival notifications (to passenger)
     driver10MinAwayTitle: '⏰ Driver Approaching',

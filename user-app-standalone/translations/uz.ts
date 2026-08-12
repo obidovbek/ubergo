@@ -324,6 +324,7 @@ export default {
     cityOptional: "Shahar (ixtiyoriy)",
     clear: "Tozalash",
     noRidesAvailable: "Safar mavjud emas",
+    resultsCount: "{count} ta taklif",
     noRidesMessage:
       "Bu yo'nalish bo'yicha takliflar topilmadi. Qidiruv mezonlarini o'zgartirib ko'ring.",
     selectLocations: "Manzilni tanlang",
@@ -375,6 +376,12 @@ export default {
     messagePlaceholder: "Haydovchiga xabar qo'shing (ixtiyoriy)",
     totalPrice: "Jami narx",
     requestToJoin: "Qo'shilish so'rovi",
+    myRequest_pending: "So'rovingiz yuborildi",
+    myRequest_confirmed: "So'rovingiz tasdiqlandi",
+    myRequest_rejected: "So'rovingiz rad etildi",
+    myRequest_cancelled: "So'rovingiz bekor qilindi",
+    myRequestHint_rejected: "Bu taklifga qayta qo'shila olmaysiz",
+    myRequestHint_cancelled: "Bu taklifga qayta qo'shila olmaysiz",
     loadingDetails: "Taklif tafsilotlari yuklanmoqda...",
     confirmJoin: "Qo'shilishni tasdiqlash",
     confirmJoinMessage:

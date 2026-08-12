@@ -7,6 +7,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
+import { formatDateTime } from '../../utils/date';
+import { formatNumberWithSpaces } from '../../utils/format';
 import type { DriverOffer, OfferStatus } from '../../api/driverOffers';
 
 const getStatusColor = (status: OfferStatus): string => {
@@ -103,7 +105,7 @@ const formatLocation = (
 };
 
 export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const statusColor = getStatusColor(offer.status);
 
   const statusText = (() => {
@@ -253,6 +255,42 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
           );
         })}
       </View>
+
+      {/*
+        T-068/T-070 — what actually identifies an offer.
+
+        🔴 This card used to show the status, an `ID: <n>` and the route, and
+        nothing else — so a driver who runs the same route repeatedly saw N
+        identical cards distinguished only by a database id, and had to open each
+        one to find out which was which (owner, 2026-08-12).
+
+        ⚠️ `price_per_seat` is a DECIMAL that pg returns as a STRING. Round via
+        Number() — and never compare two of these with `<`/`>`, which was the
+        root cause behind three separate bugs on 2026-08-02.
+      */}
+      <View style={styles.factsRow}>
+        <View style={styles.fact}>
+          <MaterialIcons name="schedule" size={14} color="#6B7280" />
+          <Text style={styles.factText} numberOfLines={1}>
+            {formatDateTime(offer.start_at, currentLanguage)}
+          </Text>
+        </View>
+
+        <View style={styles.fact}>
+          <MaterialIcons name="event-seat" size={14} color="#6B7280" />
+          <Text style={styles.factText}>
+            {offer.seats_free}/{offer.seats_total}
+          </Text>
+        </View>
+
+        <View style={styles.fact}>
+          <MaterialIcons name="payments" size={14} color="#6B7280" />
+          <Text style={styles.factPrice} numberOfLines={1}>
+            {formatNumberWithSpaces(Math.round(Number(offer.price_per_seat)))}{' '}
+            {offer.currency}
+          </Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -395,6 +433,38 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
     fontStyle: 'italic',
+  },
+  // T-070 — the identifying facts, below the route.
+  // ⚠️ `flexWrap` on purpose: at a large system font size these three would
+  // otherwise overflow the card, which is the T-050 class of bug.
+  factsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  fact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    // Lets a long date shrink rather than push the price off the card.
+    flexShrink: 1,
+  },
+  factText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  factPrice: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '700',
+    flexShrink: 1,
   },
 });
 

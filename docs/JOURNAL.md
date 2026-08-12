@@ -5,6 +5,72 @@
 
 ---
 
+## 2026-08-12 — thirteen owner findings: eight built, three handed back, and one of my own cards was wrong
+
+- **Task:** the owner's device-test batch of 13 items. All grounded in code the same day and boarded
+  as **T-064…T-074**; then **T-066+T-067, T-065, T-068, T-070, T-071(⑪), T-072, T-069** built.
+- **The shape of the day: four of the thirteen were defects this project had already fixed ONCE**,
+  in the other app or the other direction. **T-066** and **T-067** are T-042 ② and ③ reappearing in
+  the app whose sweep was never done; **T-065** is the notify-everyone rule that `cancelOffer`
+  follows and `updateOffer`, thirty lines above it, did not. *A fix applied to the observed instance
+  instead of the class is a half-fix* — written in the journal on 2026-08-10, and here is the bill.
+- 🔴 **The most valuable thing I did all day was refuse to write code twice.**
+  - **T-073** ("Uzbek app shows English"): **measured, and the screen is clean** — 66 keys evaluated
+    across 3 locales, 0 unresolved, 0 hard-coded fallbacks. And the reported mechanism **cannot
+    happen**: `useTranslation` returns the **key** on a miss, never English. Editing translation
+    files here would have meant changing correct code to chase a symptom I could not reproduce.
+  - **T-074** ("tab slide not works"): the chip strip is structurally identical to one that works in
+    the same app. No cause found, so no fix invented. It may not even mean the chips — a *pager*
+    exists nowhere in either app. **Two sessions were burned on T-047 exactly this way.**
+- 🔴 **And one of my own cards was wrong.** T-069 claimed the passenger could save a past departure.
+  **It could not** — `CreatePassengerOfferScreen:377` has always refused anything under 31 minutes.
+  The real defect was narrower: the *wheel offered* those dates, so the refusal only arrived after
+  the whole form was filled. Fixed that instead, and corrected the card.
+- **Decisions (owner):** T-065 notifies **the confirmed driver AND every pending bidder**, naming
+  the changed fields; T-064 — a confirmed driver **may** withdraw and the offer reopens to
+  `published`; T-072 — the mark-all-read control becomes an **icon**.
+- **Traps avoided, each one previously paid for:**
+  - **T-065's `buildOfferFields` reports "sent", not "changed"** — and the edit screen re-sends the
+    **whole ~40-field form**. The obvious implementation would have pushed *"the route, the time,
+    the seats, the payment changed"* every time someone fixed a typo. **A missing-notification bug
+    would have become a spam bug.**
+  - **T-069's `minimumDate` is opt-in** because `DateWheelModal` also serves the **birth-date**
+    pickers — the 2026-08-08 trap mirrored (*"no compile error, no visible symptom until a driver
+    posted a trip in the past"*).
+  - **T-071 left five back buttons alone**: the registration screens render a *labelled* `← Orqaga`
+    with a `disabled` state, not a bare arrow. Converting them would have silently deleted a visible
+    label — more than "make the back buttons identical".
+- **Problems — my checks were wrong four more times, and the guards are what caught them:**
+  - A suite **crashed instead of reporting** (fifth time on this project): `tsc` exits non-zero on
+    the pre-existing T-035 duplicate blocks and an unguarded `execSync` hid every i18n result.
+  - **Four false failures were my own comments** — the fix documents the defect it removed
+    (*"it used to be `maxHeight: 270`"*), so "maxHeight 270 gone" failed against correct code.
+    **Documenting a defect must not look identical to still having it.**
+  - Hand-rolled TS type-stripping produced a file that would not parse; it failed loudly only
+    because the loader hard-fails rather than skipping — otherwise 15 behavioural checks would have
+    vanished and reported green on the one function T-065 depends on.
+  - A `[^}]*` regex stopped at a nested `shadowOffset: { … }` and called a correct pair of shadows
+    wrong. **Every one of these was found by a guard added after an earlier session was bitten.**
+- **Verification: 216 checks across four suites, all proven able to fail** — 56/56 (51 red),
+  51/51 (39 red), 60/60 (34 red), 49/49 (10 red). T-065's `changedFields` and T-068's event module
+  are **executed**, not read; T-068's red is precisely the T-044/T-046 failure mode (the 26 module
+  checks stayed green while every *wiring* check failed — a correct emitter nobody calls).
+  `tsc` API **281** · admin **0** · user **9** · driver **35**, all at baseline; every error inside a
+  touched file **proven pre-existing via `git stash`**.
+- **Lint:** API — **7 real findings before and after my change, the identical seven** (proven by
+  `git stash`), so T-065 added **none**, and no new `any` despite `changedFields` handling untyped
+  values. The other **28,780** lines are CRLF/prettier noise (**T-032**).
+  🔴 **Neither RN app can be linted at all** (**T-060** — ESLint 9, no flat config) — and **that is
+  where most of today's code went**. So T-068 · T-069 · T-070 · T-071 · T-072 are **unlinted, not
+  lint-clean**; `tsc` and the runtime suites are all the evidence they have.
+- **Next:** 🛑 owner. **One API deploy** (T-065 joins the queued one) and **one rebuild of both
+  apps** clears eight cards. **Order: deploy → T-046's migration → rebuilds.** Then: a screenshot
+  for T-073 and T-071 ⑫, a recording for T-074, and the T-064 sub-question (do auto-rejected
+  drivers reopen?). If more code is wanted without a device: **T-035** or **T-060/T-032**.
+- **Commit:** not committed — message proposed below.
+
+---
+
 ## 2026-08-11 (5) — a device test, and the fix for "it won't tell me what's wrong" was mostly deletion
 
 - **Task:** the owner's device test of driver registration — six findings, checked one by one against

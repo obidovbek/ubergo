@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as OfferPassengersAPI from '../api/offerPassengers';
 import { useAuth } from '../hooks/useAuth';
 import { showToast } from '../utils/toast';
+import { subscribePushReceived } from '../utils/pushEvents';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from '../hooks/useTranslation';
@@ -53,20 +54,40 @@ export default function OfferPassengersScreen() {
     }
   }, [token, offerId]);
 
-  const loadPassengers = async () => {
+  /**
+   * @param silent skip the full-screen spinner and the error toast — used by the
+   *   push refresh (T-068), where the driver is already looking at the list.
+   *   Replacing it with a spinner because a push arrived would be worse than the
+   *   stale data, and a failed background re-fetch is not worth interrupting for.
+   */
+  const loadPassengers = async (silent = false) => {
     if (!token) return;
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await OfferPassengersAPI.getOfferPassengers(token, offerId);
       setPassengers(data);
     } catch (error: any) {
+      if (silent) return;
       const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
       showToast.error(t('common.error'), errorMsg);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // T-068 — refresh in place when a push about THIS offer lands while the screen
+  // is open. Scoped by `offer_id`: a passenger joining some other offer must not
+  // reload the list the driver is reading.
+  // ⚠️ Push `data` values are strings; `offerId` is a number. Compare coerced.
+  useEffect(() => {
+    return subscribePushReceived(
+      (_type, data) => {
+        if (String(data?.offer_id) === String(offerId)) loadPassengers(true);
+      },
+      ['passenger_join_request', 'passenger_cancelled']
+    );
+  }, [token, offerId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

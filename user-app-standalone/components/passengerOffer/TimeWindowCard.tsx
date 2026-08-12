@@ -215,6 +215,19 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
         // A trip is not a birthday: offer this year and the next, nothing else.
         earliestYear={new Date().getFullYear()}
         latestYear={new Date().getFullYear() + 1}
+        /*
+          T-069 — a departure cannot be in the past.
+
+          🔴 `validateForm` already REFUSES a past time at submit
+          (`CreatePassengerOfferScreen:377`, 31-minute minimum, message
+          "Vaqt kamida 30 daqiqadan keyin bo'lishi kerak"). The defect the owner
+          hit is that the wheel still OFFERED those dates, so the refusal only
+          arrived after filling the whole form. The driver app's wizard has
+          restricted its own wheels all along; this brings the passenger side
+          into line. Submit stays the real guard — this only stops the user
+          choosing something that is going to be rejected.
+        */
+        minimumDate={new Date()}
         onConfirm={commitDraft}
         onCancel={closePicker}
       />
@@ -228,6 +241,9 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
             ? t("passengerOffers.pickTimeUntil")
             : t("passengerOffers.pickTimeFrom")
         }
+        // T-069 — quarter-hours only (owner, 2026-08-12). A departure window
+        // does not need per-minute precision, and 4 rows beat 12.
+        minuteStep={15}
         onConfirm={commitDraft}
         onCancel={closePicker}
       />

@@ -4,7 +4,7 @@
  * Redesigned with modern, clean UI
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as OffersAPI from '../api/offers';
 import { useAuth } from '../hooks/useAuth';
@@ -28,6 +28,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
+import { subscribePushReceived } from '../utils/pushEvents';
+
+/**
+ * How each status of the passenger's OWN request is presented (T-067).
+ *
+ * 🔴 The four must look different. A rejected passenger shown the green
+ * "sent" treatment would believe their request was still live — the exact
+ * mistake T-042 ③ found on the driver side of this same flow.
+ */
+const REQUEST_STATUS_COLORS: Record<
+  OffersAPI.OfferPassenger['status'],
+  { bg: string; text: string; icon: string }
+> = {
+  pending: { bg: '#FEF3C7', text: '#92400E', icon: 'time-outline' },
+  confirmed: { bg: '#D1FAE5', text: '#065F46', icon: 'checkmark-circle' },
+  rejected: { bg: '#FEE2E2', text: '#991B1B', icon: 'close-circle' },
+  cancelled: { bg: '#F3F4F6', text: '#4B5563', icon: 'ban-outline' },
+};
 
 export default function OfferDetailsScreen() {
   const navigation = useNavigation();
@@ -40,6 +58,26 @@ export default function OfferDetailsScreen() {
   const [offer, setOffer] = useState<OffersAPI.DriverOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  /**
+   * This passenger's OWN request on this offer, if they already made one (T-067).
+   *
+   * 🔴 Without it the screen offered "join" unconditionally, every time, for
+   * ever — the server refuses the duplicate with a translated 400
+   * (`OfferPassengerService:100-120`), so the passenger picked seats, confirmed
+   * a price in a dialog, and only then got an error. For `rejected` and
+   * `cancelled`, which are PERMANENT refusals, it was a dead end rather than
+   * merely a wasted trip.
+   *
+   * ⚠️ `null` means "no request", `undefined` means "not looked up yet / the
+   * lookup failed" — the two must stay distinct, because treating a failed
+   * lookup as "no request" would re-offer the button exactly as before and this
+   * fix would silently do nothing.
+   *
+   * ⚠️ At most ONE row can exist: `offer_passengers` has a unique index on
+   * `(offer_id, passenger_id)`, which is also why the server can refuse so
+   * confidently. So this is a `find`, never "the newest of several".
+   */
+  const [myRequest, setMyRequest] = useState<OffersAPI.OfferPassenger | null | undefined>(undefined);
   const [seatsRequested, setSeatsRequested] = useState(1);
   const [message, setMessage] = useState('');
   
@@ -51,6 +89,65 @@ export default function OfferDetailsScreen() {
   useEffect(() => {
     loadOffer();
   }, [offerId]);
+
+  /**
+   * Re-check on every focus, not just on mount (T-067).
+   *
+   * This screen has no pull-to-refresh, and the reported symptom is precisely
+   * "join, leave, come back, and the button is offered again". Focus also picks
+   * up a driver's confirm/reject taken while the screen sat in the background.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadMyRequest();
+    }, [offerId, token])
+  );
+
+  // T-068 — the driver confirms or rejects while this screen is open. Focus does
+  // not fire (the screen is already focused), so without this the footer would
+  // keep claiming "your request has been sent" after it had been decided.
+  // ⚠️ Scoped by `offer_id`: a decision on a different booking must not repaint
+  // this one.
+  useEffect(() => {
+    return subscribePushReceived(
+      (_type, data) => {
+        if (String(data?.offer_id) === String(offerId)) loadMyRequest();
+      },
+      ['join_confirmed', 'join_rejected', 'offer_cancelled_by_driver']
+    );
+  }, [offerId, token]);
+
+  /**
+   * Ask the server what this passenger has already done with this offer (T-067).
+   *
+   * ✅ `GET /passenger/bookings` returns ONLY the caller's own rows, so this
+   * leaks nothing. The offer's own `passengers` list is deliberately owner-only
+   * (rival bids are none of a passenger's business) and is NOT widened for this.
+   *
+   * ⚠️ Deliberately NON-FATAL: if the lookup fails the offer stays readable and
+   * the passenger may still try — the server remains the real guard. But note
+   * the failure sets `null` only via the catch below setting it to `undefined`,
+   * so a failed lookup is never mistaken for "no request exists".
+   */
+  const loadMyRequest = async () => {
+    if (!token) {
+      setMyRequest(null);
+      return;
+    }
+    try {
+      const bookings = await OffersAPI.getMyBookings(token);
+      // `offer_id` is an INTEGER column and both entry points into this screen
+      // deliver a number, but compare coercion-safely anyway: nothing enforces
+      // that the two screens keep agreeing about the type.
+      const mine = bookings.find((b) => String(b.offer_id) === String(offerId));
+      setMyRequest(mine ?? null);
+    } catch {
+      // Leave it `undefined` — "unknown", not "none". The footer falls back to
+      // offering the button, which is what happens today, and the server still
+      // refuses a duplicate.
+      setMyRequest(undefined);
+    }
+  };
 
   const loadOffer = async () => {
     try {
@@ -149,6 +246,11 @@ export default function OfferDetailsScreen() {
             t('offerDetails.joinSuccess'),
             t('offerDetails.joinSuccessMessage')
           );
+          // The screen navigates away below, but re-read the real row rather
+          // than assuming — if the navigation is ever removed, the footer must
+          // still stop offering the button (T-067). A local "joinSent" boolean
+          // is exactly the guess that broke the driver side in T-042 ③.
+          loadMyRequest();
           setTimeout(() => {
             navigation.goBack();
             (navigation as any).navigate('MyBookings');
@@ -536,21 +638,64 @@ export default function OfferDetailsScreen() {
             </Text>
           </View>
           
-          <TouchableOpacity
-            style={[styles.joinButton, joining && styles.joinButtonDisabled]}
-            onPress={handleJoin}
-            disabled={joining}
-            activeOpacity={0.8}
-          >
-            {joining ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-                <Text style={styles.joinButtonText}>{t('offerDetails.requestToJoin')}</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* T-067 — the footer reports what this passenger ALREADY did, instead
+              of re-offering an action the server will refuse. A single green
+              "sent" banner for all four statuses would tell a REJECTED passenger
+              their request was still live, so each status gets its own wording
+              and colour. `undefined` (unknown / lookup failed) deliberately
+              falls through to the button: the server is still the real guard. */}
+          {myRequest ? (
+            <View
+              style={[
+                styles.requestStatusBox,
+                { backgroundColor: REQUEST_STATUS_COLORS[myRequest.status].bg },
+              ]}
+            >
+              <Ionicons
+                name={REQUEST_STATUS_COLORS[myRequest.status].icon as any}
+                size={20}
+                color={REQUEST_STATUS_COLORS[myRequest.status].text}
+              />
+              <View style={styles.requestStatusTextGroup}>
+                <Text
+                  style={[
+                    styles.requestStatusTitle,
+                    { color: REQUEST_STATUS_COLORS[myRequest.status].text },
+                  ]}
+                >
+                  {t(`offerDetails.myRequest_${myRequest.status}`)}
+                </Text>
+                {/* Only the two PERMANENT refusals need explaining — for those
+                    the passenger can never join this offer again. */}
+                {(myRequest.status === 'rejected' || myRequest.status === 'cancelled') && (
+                  <Text
+                    style={[
+                      styles.requestStatusHint,
+                      { color: REQUEST_STATUS_COLORS[myRequest.status].text },
+                    ]}
+                  >
+                    {t(`offerDetails.myRequestHint_${myRequest.status}`)}
+                  </Text>
+                )}
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.joinButton, joining && styles.joinButtonDisabled]}
+              onPress={handleJoin}
+              disabled={joining}
+              activeOpacity={0.8}
+            >
+              {joining ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                  <Text style={styles.joinButtonText}>{t('offerDetails.requestToJoin')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -1049,6 +1194,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+  },
+  // T-067 — replaces the join button once this passenger already has a request.
+  requestStatusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+  },
+  requestStatusTextGroup: {
+    flex: 1,
+  },
+  requestStatusTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  requestStatusHint: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+    opacity: 0.9,
   },
   joinButtonDisabled: {
     backgroundColor: '#9CA3AF',

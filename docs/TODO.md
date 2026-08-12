@@ -6,6 +6,29 @@
 >
 > **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
 
+> 📥 **2026-08-12 — A NEW OWNER BATCH OF 13 FINDINGS IS BOARDED AS T-064…T-074** (bottom of
+> *Later*), grounded the same day.
+> ✅ **EIGHT OF THE THIRTEEN ARE CODE-COMPLETE 2026-08-12** — T-065 · T-066 · T-067 · T-068 ·
+> T-069 · T-070 · T-071 (item ⑪) · T-072. **All ride runs already queued: one API deploy (T-065
+> only) and one rebuild of both apps.** No extra deploy, no extra rebuild, no migration anywhere.
+> 🛑 **THREE REMAIN, ALL BLOCKED ON THE OWNER, NOT ON CODE:**
+> • **T-064** — unblocked in principle (a confirmed driver may withdraw; the offer reopens to
+>   `published`) but **not started**, and it still carries one unanswered sub-question: do the
+>   auto-rejected drivers reopen? *(recommendation on the card: no)*.
+> • **T-073** — **measured and the screen came back CLEAN** (66 keys evaluated, 3 locales, 0
+>   unresolved). The reported mechanism cannot happen: a missing key renders the **key**, never
+>   English. **Needs a screenshot of the actual English text.**
+> • **T-074** — no structural cause found; needs a screen recording, and "slide" may mean a pager
+>   that exists nowhere in either app.
+> ⚠️ **Two smaller owner questions are open inside finished cards:** **T-071 item ⑫** needs a
+> screenshot, and its five *labelled* registration back buttons were deliberately left alone (see
+> the card); **T-069** turned out to have a wrong premise — the passenger side already refused past
+> departures at submit.
+> 🔴 **Three of the thirteen are defects already fixed ONCE in the other app** — T-066 = T-042②,
+> T-067 = T-042③, T-065 = the rule `cancelOffer` follows and `updateOffer` does not.
+> ⚠️ **This batch does NOT change the state below:** the eleven code-complete cards are still
+> waiting on the same two runs (one API deploy, one app rebuild).
+
 > 🛑 **STATE AT END OF 2026-08-11: the board is waiting on the owner's device again. No Claude work
 > remains anywhere.**
 >
@@ -447,6 +470,16 @@ masofalar'`). **2 of the 6 were on
 > These are **not** counted against the 2-task *Now* limit: no Claude work is left on them, they
 > only need the owner to confirm on a phone. Move a card back to *Now* only if a device test
 > **fails**.
+
+> 📌 **EIGHT CARDS JOINED THIS SECTION 2026-08-12 — T-065 · T-066 · T-067 · T-068 · T-069 · T-070 ·
+> T-071(⑪) · T-072.** Their full write-ups stay **in place at the bottom of *Later***, where they
+> were boarded, rather than being copied here — one home per card, so the detail cannot drift.
+> ⚠️ **They are deliberately NOT in *Done*.** On this board *Done* means **owner device-confirmed**
+> (that is how T-041, T-042 and T-044 got there). These are **code-complete and untested**, which is
+> a different and weaker claim — and the whole point of this section.
+> **They clear in the runs already queued:** one API deploy (**T-065** only) and one rebuild of both
+> apps. ❌ No migration in any of the eight. ⚠️ **T-046 still needs its own migration**, between the
+> deploy and the rebuilds.
 <details><summary>✅ T-042 — CLOSED 2026-08-11 (owner device test, committed `55718f6`); history kept</summary>
 
 - [x] ~~T-042 (P1)~~ 🔴 **Three defects found by the owner's T-037 device test, 2026-08-10 — all fixed
@@ -1395,6 +1428,407 @@ masofalar'`). **2 of the 6 were on
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+
+> 📥 **OWNER DEVICE-TEST BATCH 2026-08-12 — 13 findings, boarded as T-064…T-074.**
+> Grounded in code the same day (all except ④ and ① confirmed by reading; see each card).
+> ⚠️ **Nothing here is started.** The owner picks; `/new-task` writes the plan.
+> 🔴 **The pattern of this batch: FOUR of the thirteen are defects this project has already fixed
+> ONCE, in the other app or the other direction** — T-066 is T-042② in the user app, T-067 is
+> T-042③ in the user app, T-065 is the notify-everyone rule `cancelOffer` follows and `updateOffer`
+> does not. **A fix applied to the observed instance instead of the class is a half-fix** (journal
+> 2026-08-10). Whichever card is started, sweep the sibling.
+
+- [ ] T-064 (P1) 🔴 **[OWNER ⑤] An accepted driver can never back out.** Owner 2026-08-12:
+  *"passenger created offer → driver send request → passenger accepted → if driver wants to cancel
+  there is no chance"*. **Grounded 2026-08-12 — this is deliberate, at both layers, and undoing it
+  is a product decision, not a bug fix.**
+  🔴 `OfferDriverService.cancelJoin:515-517` throws **400 `offers.cannotCancelConfirmed`** for a
+  `confirmed` row, and `MyJoinRequestsScreen:232-234` hides the button with a comment naming that
+  rule (*"The server refuses to cancel a confirmed request, so only pending ones offer the button"*).
+  So the app is telling the truth — the **rule itself** is what the owner is disputing.
+  ⚠️ **The passenger side is NOT symmetric:** `PassengerOfferService.cancelOffer:929` explicitly
+  accepts `driver_found` and its comment says *"A passenger who already picked a driver must still be
+  able to call it off"*. **One party can walk away from an agreed ride and the other cannot.**
+  ✅ **UNBLOCKED — owner decided 2026-08-12: YES, a confirmed driver may withdraw, and the offer
+  REOPENS.** The passenger's offer goes back to **`published`** so other drivers can bid again, and
+  the passenger is pushed.
+  ⚠️ **The reopen is the hard half, not the withdrawal.** `confirmDriver:377-382` auto-rejects every
+  losing bid (`rejection_reason: 'another_driver_chosen'`) and moves the offer to `driver_found`.
+  Reversing that raises questions the decision does not answer on its own: **do those auto-rejected
+  drivers get reopened to `pending`, or stay rejected and have to bid again?** Recommendation:
+  **leave them rejected** — they were told they lost and may have taken other work; silently
+  re-enlisting them would let a driver be "confirmed" for a ride they stopped tracking. **Say so if
+  you want the other behaviour.**
+  ⚠️ The passenger must be pushed — `notifyPassenger` is already in `cancelJoin` for the pending
+  case, so the call exists; it needs a **new type** (`driver_withdrew`) plus a destination in the
+  **user** app's `notificationRouting` table, or the tap dead-ends (T-044's rule).
+  ⚠️ `offers.cannotCancelConfirmed` becomes dead — check for other callers before deleting it.
+  ⚠️ **`start_at` may already have passed** by the time a driver withdraws; reopening a stale offer
+  puts it straight back into T-039's expired-but-"Faol" hole. Decide what `published` means there.
+  ❌ Migration only if a distinct "withdrawn" status is wanted over reusing `cancelled`.
+  ⚠️ **Needs an API deploy** + a user-app rebuild.
+
+- [ ] T-065 (P1) 🔴 **[OWNER ⑥] The passenger can rewrite an agreed ride and the confirmed driver is
+  never told.** Owner 2026-08-12: *"passenger accepted → if passenger edits own offer push not comes
+  to dealed driver"*. **Grounded 2026-08-12 — confirmed, and the precedent sits 30 lines below it.**
+  🔴 `PassengerOfferService.updateOffer:882-921` validates, patches, audit-logs and returns. **It
+  sends nothing to anybody** — there is no `notifyDriver` call in the whole method.
+  🔴 **And it deliberately allows editing after the deal:** `:897` permits both `published` **and
+  `driver_found`**, so the time, the route or the seat count of a ride a driver has already committed
+  to can change silently under them.
+  ✅ **The pattern to copy is immediately below:** `cancelOffer:986-1006` loads the interested
+  drivers, resolves **each driver's own language** via `getUserLanguage`, and pushes
+  `offer_cancelled_by_passenger`. The same loop with a new type is the whole fix.
+  ⚠️ **`updateOffer` returns `Object.keys(fields)` into the audit log already** — so *what changed*
+  is available for free; a push saying only "your ride changed" is worth less than one naming the
+  field. ⚠️ Needs a **new push type** + its destination in **both** apps' `notificationRouting`
+  (T-044's table), or the tap dead-ends. ⚠️ New `push.*` keys ×3 locales.
+  ❌ No migration. ⚠️ **Needs an API deploy.**
+  **Approved and STEPS 1-6 DONE 2026-08-12.** Owner decisions: notify **the confirmed driver AND
+  every pending bidder**, and **name the changed fields** rather than sending a generic "it changed".
+  🔴 **The hazard was real and bigger than the card said.** `buildOfferFields` reports what was
+  **sent**, not what **changed**, and `CreatePassengerOfferScreen:531-542` re-sends the **whole
+  ~40-field form** on every edit — so the obvious implementation would have announced "the route,
+  the time, the seats, the payment changed" every time a passenger fixed a typo. **That would have
+  turned a missing-notification bug into a spam bug.** New `changedFields` does a normalised
+  value-diff: DECIMAL-as-string (the 2026-08-02 root cause), Date-vs-ISO, JSONB key order, and
+  null/undefined/`''` all meaning unset.
+  ⚠️ **`Promise.allSettled`, not `all`** — the edit is already committed when the pushes fire, so
+  one driver's failure must not cancel the rest or surface as a failed save. (`cancelOffer` uses
+  `all`; that is correct *there* and wrong here.)
+  🔴 **Reuse of the existing `fields.*` dictionary was checked and REJECTED on evidence** — it is
+  entirely driver-registration and shares **not one key** with the offer columns; merging would make
+  `category`/`year` ambiguous between a licence and a ride request. New `offerFields.*` ×3 locales
+  covering all **41** writable columns, taken from `PassengerOfferAttributes` rather than guessed.
+  ✅ The audit log now records the real diff too, instead of ~40 fields per save.
+  **51/51 with `changedFields` EXECUTED, 39 red** against pre-change code — the red reproduces the
+  bug from the other side, showing the old behaviour would have reported ~40 changed fields.
+  Destination asserted against route names **parsed from the real `MainNavigator`**.
+  `tsc` API **281** · driver **35**, both at baseline, zero errors in any touched file.
+  🛑 **Only step 7 (owner: deploy the API, rebuild the DRIVER app, confirm a driver then edit the
+  time) and step 8 (commit) remain.** ❌ **User app untouched.** ⚠️ Plan is **`docs/PLAN.md`**.
+
+- [ ] T-066 (P1) 🔴 **[OWNER ⑦] The user app's search picker merges with the results — T-042 ② again,
+  in the other app.** Owner 2026-08-12: *"driver creates offer → passenger searches and finds list of
+  offers → search blog and found offer list merges?"* **Grounded 2026-08-12: byte-for-byte the same
+  structure T-042 diagnosed and fixed in the driver app on 2026-08-10.**
+  🔴 `SearchOffersScreen.tsx:663` is a `ScrollView` with **`maxHeight: 270`** (`:1077-1078`) sitting
+  as a **sibling** of the `FlatList` at `:832` — two independent scroll surfaces, so the picker can
+  never scroll away and permanently eats ~270px; and because both use the same white/radius/shadow
+  card styling they read as one continuous sheet at the seam. **That is the "merging".**
+  ✅ **The fix is already written and device-confirmed** — driver `SearchPassengerOffersScreen`: make
+  the picker the list's **`ListHeaderComponent`** (one scroll surface), add the labelled
+  `resultsCount` seam, strengthen the picker's shadow, drop the card's `marginHorizontal`.
+  ⚠️ **Check `emptyContainer` too** — in the driver app its `flex: 1` + `paddingTop: 80` pushed the
+  empty state off small phones once it moved inside the list. Same trap here.
+  🔴 **Worth naming: T-042 fixed one app and the sweep stopped there.** ❌ No API change, no
+  migration, no deploy. ❌ Driver app untouched.
+  **Approved and STEPS 1-6 DONE 2026-08-12** (planned and built jointly with **T-067** — same app,
+  same rebuild, and splitting them would have repeated the very half-fix that caused both).
+  ✅ **The predicted trap was REAL:** `emptyContainer` was still `flex: 1` + `paddingTop: 80`, so
+  without checking it the empty state would have been pushed off the bottom of small phones —
+  invisible on a big screen, which is how it survived in the driver app the first time.
+  ⚠️ Two deviations from the recipe, both checked rather than copied: the offer card had **no**
+  `marginHorizontal` to drop, and `ScrollView` **must stay imported** because the filter modal uses
+  it. `searchContainer` lost its own `marginHorizontal` instead, since `listContainer` already pads.
+  **56/56 with T-067, 51 red** against pre-change code. `tsc` user **9 = baseline**, zero errors in
+  either touched screen. ⚠️ **A visual card — the checks prove structure, not looks:** one scroll
+  surface, the `maxHeight` cap and the orphaned copy gone, the empty state reachable, the picker's
+  shadow outranking the cards'. Whether it *reads* right is the owner's rebuild.
+  🛑 **Only step 7 (owner: rebuild the USER app, search a route, scroll) and step 8 (commit)
+  remain.** ⚠️ Plan is **`docs/PLAN.md`**.
+
+- [ ] T-067 (P1) 🔴 **[OWNER ⑧] The user app offers "join" for a ride the passenger has already
+  joined — T-042 ③ again, in the other app.** Owner 2026-08-12: *"driver creates offer → passenger
+  joined that offer → passenger still can send another request to that offer?"*
+  **Grounded 2026-08-12.** ✅ **The server was never at risk:** `OfferPassengerService:100-120`
+  refuses every existing row with a translated 400 — `alreadyJoined` for `pending`/`confirmed`,
+  **`cannotJoinAfterRejected`** and **`cannotJoinAfterCancelled`** for the other two.
+  🔴 **The app is worse than the driver app was.** The driver at least had a `joinSent` boolean that
+  reset on mount; `OfferDetailsScreen` has **no join state at all** — grepped: one `joinOffer` call
+  (`:143`) and **zero** occurrences of `joinSent`/`hasJoined`. The CTA is offered unconditionally,
+  every time, for ever.
+  🔴 **`rejected` and `cancelled` are PERMANENT refusals**, so for those two the button is a **dead
+  end**, not a wasted trip — the passenger picks seats, confirms a price in a dialog, and is refused.
+  ✅ **Precedent to copy:** the driver app asks `GET /driver/join-requests` for its own rows and
+  renders the real status with its own wording and colour. The passenger's equivalent is
+  **`GET /passenger/bookings`** (`getPassengerBookings:618`) — already built, already authenticated,
+  and **T-055 just touched it**, so re-read that card first.
+  ⚠️ The offer's `passengers` list is owner-only by design; do **not** widen it to answer this.
+  ❌ No API change, no migration, no deploy.
+  **Approved and STEPS 1-6 DONE 2026-08-12** (built jointly with **T-066**).
+  ✅ **The privacy gate shaped the fix rather than being weakened by it** — the answer comes from
+  `GET /passenger/bookings`, which returns only the caller's own rows. The owner-only `passengers`
+  list was **not** widened. **No API change.**
+  🔴 **The three-state distinction is the whole card:** `null` = no request, a row = has one,
+  **`undefined` = unknown / lookup failed**. Collapsing "failed" into "none" would re-offer the
+  button exactly as today and this fix would have *appeared* done while changing nothing. A failed
+  lookup deliberately falls through to the button — the server is still the real guard.
+  🔴 **Each status gets its own colour and wording.** One green "sent" banner for all four would
+  tell a **rejected** passenger their request was still live — the exact mistake T-042 ③ found on
+  the driver side of this same flow. The two permanent refusals also say *why* they are final.
+  ⚠️ **Deviation:** the plan said pull-to-refresh; this screen **has none**, so it re-checks on
+  **focus** — which matches the owner's actual symptom (*join → leave → come back → button is back*)
+  and also catches a driver's decision taken while the screen was backgrounded.
+  ✅ Step 1 checked the two things this codebase has been bitten by and both came out clean:
+  `offer_passengers.offer_id` is an **INTEGER** (not the DECIMAL-as-string class) and both entry
+  points deliver a number; the four client statuses match the four the server branches on. It also
+  turned up a **unique index on `(offer_id, passenger_id)`** — which is *why* the server can refuse
+  so confidently, and why the lookup is a `find` rather than "newest of several".
+  **56/56 with T-066, 51 red.** `tsc` user **9 = baseline**, zero errors in either touched screen.
+  🛑 **Only step 7 (owner: rebuild the USER app, join an offer, re-enter it) and step 8 (commit)
+  remain.** ⚠️ Plan is **`docs/PLAN.md`**.
+
+- [ ] T-068 (P1) 🔴 **[OWNER ⑨] A push arrives, the app is open, and the screen keeps showing stale
+  data — both apps.** Owner 2026-08-12: *"if push notification comes and app is open the page not
+  refreshes still shows before push notification come data, in both apps"*.
+  **Grounded 2026-08-12 — confirmed, and it is one argument in each app.**
+  🔴 `setupForegroundNotificationHandler(onNotificationReceived?, onTap?)` (`PushService.ts:189`)
+  has an observer slot for exactly this, and **both** call sites pass **`undefined`** for it —
+  user `App.tsx:70-73`, driver `App.tsx:69-72`. So T-046 made the foreground push *visible and
+  tappable* but nothing ever tells the screen underneath that its data is out of date.
+  ⚠️ **The existing comment states the constraint the fix must respect:** *"A push must never yank
+  someone off the screen they are using."* Refreshing in place is fine; navigating is not.
+  ⚠️ **Do not simply refetch on every push** — an `otp` push must not reload a list, and a refetch
+  while the user is mid-form must not discard input. The push `type` is in `data` and is the
+  natural filter. ⚠️ Needs an app-level subscription (context or emitter) that screens opt into;
+  T-046's lesson was that a correct handler nobody calls does nothing, so the check must drive the
+  **real** `onMessage` callback and assert a subscribed screen was told.
+  ❌ No API change, no migration, no deploy.
+  **STEPS DONE 2026-08-12 — code-complete.** New `utils/pushEvents.ts`, **byte-identical in both
+  apps** (the T-036 convention), modelled on the existing `driverProfileEvents.ts` (T-017) rather
+  than inventing a second event convention — including its rule that one throwing listener must not
+  take the others down.
+  🔴 **The fix at `App.tsx` is one argument per app:** the observer slot was being passed
+  **`undefined`** in both. Nothing else about the plumbing was wrong.
+  🔴 **Filtering happens in ONE place, not per screen.** `otp` is deliberately absent from
+  `RIDE_DATA_PUSH_TYPES`, so a code arriving while someone types it can never reload the list
+  underneath them — and a future `otp`-like type cannot accidentally start doing so either.
+  ✅ **Seven screens subscribe**, each to only the types it cares about: user — `MyBookings`,
+  `MyPassengerOffers`, `OfferDrivers`, **`OfferDetails`** (whose T-067 lookup goes stale the same
+  way); driver — `MyJoinRequests`, `OfferPassengers`, `OffersList`.
+  ⚠️ **The two offer-scoped screens filter on `offer_id`** so a push about a *different* ride cannot
+  reload the one being read — compared coerced, since push `data` values are strings.
+  ⚠️ **Refreshes are silent by design:** screens that showed a full-screen spinner gained a
+  `silent`/`isRefresh` path. Replacing the list someone is reading with a spinner because a push
+  arrived would be worse than the stale data. **Navigation still happens only on a TAP.**
+  **60/60 driving both apps' REAL transpiled module, 34 red** against the unwired code — and the red
+  is precisely the T-044/T-046 failure mode: the 26 module checks stayed **green** while every
+  *wiring* check failed, i.e. a correct emitter nobody calls.
+  `tsc` user **9** · driver **35**, both at baseline; the 2 errors in a touched file **proven
+  pre-existing via `git stash`** (the `getErrorMessage(error, t('key'))` bug from T-024).
+  🛑 **Only the owner's rebuild of BOTH apps and the commit remain.** ❌ No API change, no deploy.
+
+- [ ] T-069 (P2) 🔴 **[OWNER ② + ③] Create-offer time: the passenger can depart in the past, and both
+  apps offer 60 minutes where the owner wants 4.** Owner 2026-08-12: *"passenger/driver create offer
+  time cannot create offer before time creating offer"* · *"round time munites to quarter only
+  0/15/30/45"*. **Grounded 2026-08-12 — and the two apps are in opposite states.**
+  🔴 **Past departure — PASSENGER side only.** `TimeWindowCard.tsx` passes `DateWheelModal`
+  `earliestYear={new Date().getFullYear()}` (`:216`) — so **1 January of the current year is
+  selectable** — and gives `TimeWheelModal` **no minimum at all**. ✅ The **driver** side does guard:
+  `OfferWizardScreen:590` rejects anything under `now + 30 min`, and its `generateHours`/
+  `generateMinutes` (`:743`, `:762`) hide past values when the date is today.
+  ⚠️ **This is the exact risk the 2026-08-08 journal flagged and T-057 then walked into:** moving a
+  picker onto the shared wheels *"would have dropped the past-date guard silently — no compile error,
+  no visible symptom"*. T-057 swapped the passenger screen onto the wheels. **Confirm whether the
+  submit handler validates the time before assuming the wheel is the only gap.**
+  🔴 **Quarter-hour minutes — BOTH apps, two different mechanisms.** User: `TimeWheelModal` already
+  takes a **`minuteStep` prop, default 5** (`:38,48`) — a one-argument change. Driver:
+  `generateMinutes:786` loops `minute++`, i.e. **all 60**, and the driver app **has no
+  `TimeWheelModal`** (it has `DateWheelModal` only — checked the components folder).
+  ⚠️ **`selectedMinuteBucket` (`:79-86`) already snaps a stored 07 to the 05 bucket**, so an existing
+  offer being edited will not render an unselectable value — but the value it *saves* still needs
+  rounding, or an edit silently moves the departure time.
+  🛑 **Ask the owner:** does the 30-minute minimum advance apply to passengers too, or only "not in
+  the past"? ❌ No migration. ❌ No API change unless the server should validate it too.
+  **DONE 2026-08-12 — code-complete. ⚠️ AND THE CARD'S OWN DIAGNOSIS OF ITEM ② WAS WRONG.**
+  🔴 **Correction: the passenger side was NEVER able to save a past departure.**
+  `CreatePassengerOfferScreen:377` already rejects anything under **31 minutes** away, with a clear
+  message (*"Vaqt kamida 30 daqiqadan keyin bo'lishi kerak"*). The 30-minute question above is
+  therefore **already answered by the shipped code** — it applies to passengers today.
+  **The real defect is narrower and still real:** the wheel *offered* past dates, so the refusal
+  only arrived after the whole form was filled. The wheels now stop at today, matching what the
+  driver wizard has always done. **Submit remains the real guard; this only stops the user choosing
+  something destined to be rejected.**
+  🔴 **`minimumDate` is deliberately OPT-IN on `DateWheelModal`.** Its other callers are the
+  **birth-date** pickers (`UserDetailsScreen`, `EditProfileScreen`) which must keep offering
+  1900→today. Defaulting it on would be the 2026-08-08 trap mirrored — *"no compile error, no
+  visible symptom until a driver posted a trip in the past"*.
+  ✅ **Quarter-hours in both apps** (item ③). User: `minuteStep={15}` — the prop already existed.
+  Driver: `generateMinutes` walked **all 60**; it now rounds the "30 minutes' notice" floor **UP** to
+  the next quarter via a new `MINUTE_STEP` constant.
+  ⚠️ **A floor past :45 legitimately yields an EMPTY minute list** — correct, because
+  `generateHours` has already dropped unusable hours, and the driver moves the hour column instead.
+  **Asserted deliberately** so it is a decision, not a device surprise.
+  **49/49 with the wheel maths EXECUTED, 10 red** against pre-change code. Proven: **today stays
+  selectable** (a `>` instead of `>=` would have silently removed it), no column can ever render
+  empty, next month/year are unfiltered, leap-year February still has 29 days, all 9 off-grid minute
+  values still highlight a bucket, and **with no `minimumDate` nothing changes at all**.
+  ⚠️ **Honest limit:** the wheel logic is **transcribed, not imported** (TSX + RN imports will not
+  load in bare node), so 11 assertions tie the transcription to the shipped source — all 10 relevant
+  ones go red on the old code, which is what makes the other 38 meaningful.
+  `tsc` user **9** · driver **35**, both at baseline, zero errors in any touched file.
+  🛑 **Only the owner's rebuild of BOTH apps and the commit remain.** ❌ No API change, no deploy.
+
+- [ ] T-070 (P2) 🔴 **[OWNER ⑩] A driver cannot tell their own offers apart without opening each
+  one.** Owner 2026-08-12: *"driver my offers page shows too little data, on first read it was not
+  possible to recognize which own offer, driver must click to own offer to see what exactly"*.
+  **Grounded 2026-08-12 — confirmed by reading the card component end to end.**
+  🔴 `components/offers/OfferCard.tsx` renders exactly three things: the **status badge**, an
+  **`ID: <n>`** in monospace grey, and the **route** (from / stops / to). There is **no departure
+  date or time, no price, and no seat count** anywhere in the file.
+  🔴 **Which makes the common case unusable:** a driver who runs the same route repeatedly sees N
+  identical cards distinguished only by a database id.
+  ✅ **The data is already on the object** — `DriverOffer` carries `start_at`, `price_per_seat`,
+  `front_price_per_seat`, `currency`, `seats_total`, `seats_free`; the card simply never reads them.
+  **No API change, no new endpoint.**
+  ⚠️ `price_per_seat` is a **DECIMAL that pg returns as a STRING** — the 2026-08-02 root cause behind
+  three separate bugs. Format via `formatNumberWithSpaces(Math.round(Number(x)))` as
+  `MyJoinRequestsScreen:185` does; **never compare two of them with `<`/`>`**.
+  ⚠️ Adding rows to a card that already has `minHeight: 48` route items risks the T-050 overflow
+  class on large system fonts. ⚠️ Any new label needs ×3 locales.
+  **DONE 2026-08-12 — code-complete.** The card now carries a facts row under the route: **departure
+  date/time, `seats_free`/`seats_total`, and the price**, separated by a hairline rule.
+  ✅ **No new i18n keys were needed** — the row is icon + value, so it reads identically in all three
+  locales and there is nothing to translate or to leave uz-only (the T-059 trap).
+  ⚠️ **`price_per_seat` is a DECIMAL that pg returns as a STRING** — formatted via
+  `formatNumberWithSpaces(Math.round(Number(x)))`, the same guard `MyJoinRequestsScreen` uses. Not
+  compared with `<`/`>` anywhere, which was the 2026-08-02 root cause behind three bugs.
+  ⚠️ **The T-050 overflow risk was designed for, not ignored:** the row is `flexWrap` with
+  `flexShrink` on each fact, so at a large system font size it wraps instead of pushing the price
+  off the card. `tsc` driver **35 = baseline**, zero errors in `OfferCard`.
+  🛑 **Only the owner's driver-app rebuild and the commit remain.** ⚠️ **A visual card — a check
+  cannot prove it reads well.** ❌ No API change, no migration, no deploy.
+
+- [ ] T-071 (P2) 🎨 **[OWNER ⑪ + ⑫] Two different back buttons ship in both apps, and neither app has
+  a shared component for it.** Owner 2026-08-12: *"both apps back buttons not identical, make
+  identical back button like in passenger app search ride page back button everywhere"* · *"remove
+  icons where titles and back buttons close in both apps"*. **Grounded 2026-08-12 — counted.**
+  ✅ **The owner's reference is `SearchOffersScreen.tsx:642-646`** (user app): a `TouchableOpacity`
+  wrapping `<Ionicons name="arrow-back" size={24} color="#111827" />`.
+  🔴 **24 back buttons, two families, and 14 of them are the wrong one:**
+  **user app** — 6 × `Ionicons arrow-back` (CreatePassengerOffer, MyBookings, MyPassengerOffers,
+  OfferDetails, OfferDrivers, SearchOffers) vs **4 × a text `←`** (EditProfile ×2, Notifications,
+  Profile); **driver app** — 4 × `Ionicons` (MyJoinRequests, OfferPassengers,
+  PassengerOfferDetails, SearchPassengerOffers) vs **10 × a text `←`** (the five registration
+  screens' `backButtonArrow`, EditProfile, Notifications, OfferWizard, OffersList, Profile).
+  ⚠️ **The text arrows are not merely a different glyph** — driver `NotificationsScreen:327` renders
+  it at **24px green `#10B981`**, against the reference's dark `#111827` icon. They also scale with
+  the user's system font (the **T-050** class); an `Ionicons` at `size={24}` does not.
+  ✅ **Neither app has a `BackButton` component** (checked both `components/` trees) — so this is
+  "extract one, then 14 call sites", the same shape as T-036's `AppModal`.
+  🛑 **Item ⑫ needs the owner to point at a screen** — *"remove icons where titles and back buttons
+  close"* has no unambiguous referent in the code; several headers place an icon beside the title.
+  **Ask for one screenshot before touching it.** ❌ No API change, no migration, no deploy.
+  **ITEM ⑪ DONE 2026-08-12 — code-complete. ITEM ⑫ STILL BLOCKED (needs a screenshot).**
+  New shared **`components/BackButton.tsx`**, byte-identical in both apps (the T-036 convention),
+  built to the owner's named reference — the passenger search screen's 40×40 white rounded tile with
+  a soft shadow and a dark `arrow-back` glyph. **9 of the 14 wrong sites converted; 17 call sites now
+  use it.**
+  ✅ **This was not only cosmetic:** the text `←` **scales with the user's system font size** (the
+  T-050 overflow class) while `Ionicons size={24}` does not, several copies rendered **green
+  `#10B981`** against the reference's dark `#111827`, and tap targets ranged from `padding: 8` to a
+  40×40 box. The component adds `hitSlop` and an `accessibilityLabel`, which none of the 14 had.
+  🔴 **FIVE SITES WERE DELIBERATELY NOT CONVERTED, and this is a scope decision to confirm.** The
+  five driver-registration screens do **not** render a bare arrow — they render **`← Orqaga`**, a
+  *labelled* button that is also `disabled` while a save is in flight. Converting them would silently
+  **delete a visible text label** and change a mid-form control, which is more than "make the back
+  buttons identical". `BackButton` now supports `disabled` so they *can* be converted the moment the
+  owner says the label should go. **Say the word and it is a 5-line change.**
+  🟡 **A T-057-class defect found while looking, NOT fixed here:** three of those five hard-code the
+  Uzbek **`Orqaga`** (`DriverPassport`, `DriverPersonalInfo`, `DriverTaxiLicense` uses a key,
+  `DriverLicense` uses `t('common.back')`) — so a Russian or English driver reads Uzbek on those
+  registration screens. Logged rather than absorbed.
+  ⚠️ **`OfferWizardScreen`'s button calls `handleBack`, not `goBack`** — it steps the wizard back and
+  only leaves from step 1. Preserved exactly; a blind swap would have broken the wizard.
+  `tsc` user **9** · driver **35**, both at baseline, zero errors in any touched file.
+  🛑 **Only the owner's rebuild of BOTH apps and the commit remain.** ⚠️ **A visual card.**
+
+- [ ] T-072 (P2) 🎨 **[OWNER ⑬] The "mark all as read" button squeezes the notifications title — in
+  both apps.** Owner 2026-08-12: *"in notification page 'Barcha habarlarni oqilgan deb belgilash'
+  button makes page ugly because do not fit horizontally with other words"*.
+  **Grounded 2026-08-12 — same header, same styles, both apps.**
+  🔴 A `flexDirection: 'row'` header holds a **`flex: 1`, 24px, weight-800** title beside a button
+  whose label is a whole sentence: uz **"Barchasini o'qilgan deb belgilash"** (33 chars), ru
+  **"Отметить все как прочитанные"** (28). At 13px plus 32px of horizontal padding the button claims
+  ~230px, so on a 360dp screen the title is left ~100px and wraps.
+  Driver `NotificationsScreen.tsx:248-258` + styles `:332-361`; user `NotificationsScreen.tsx:253`
+  — the same block, and the same three translation keys in each app.
+  ⚠️ **Two honest options, and it is a design call:** shrink the button to an **icon** (checkmark)
+  with the sentence moved to the confirm dialog that already exists
+  (`notifications.markAllReadConfirm`), or move it to **its own row** under the header. **Ask which.**
+  ⚠️ The button already only renders when `unreadCount > 0`, so an empty list is not affected.
+  ❌ No API change, no migration, no deploy.
+  **DONE 2026-08-12 — code-complete. Owner chose the ICON option.** A 40×40 `checkmark-done` button
+  replaces the ~230px sentence, in **both** apps.
+  ✅ **The sentence is not lost, and this was verified rather than assumed:** `handleMarkAllAsRead`
+  already opens a confirm dialog whose **title is `notifications.markAllRead`** — the exact words —
+  so they appear the moment the icon is tapped. ❌ **No translation keys were touched or orphaned;
+  all four `notifications.markAll*` keys are still used.**
+  ⚠️ `accessibilityLabel` carries the sentence for screen readers, so replacing text with an icon
+  does not make the action unreachable.
+  ⚠️ `headerSpacer` was narrowed 60 → 40 to match, so the title sits in the same place whether or
+  not there are unread notifications. The orphaned `markAllText` style was removed from both apps.
+  ⚠️ **The user app's header is the more crowded of the two** — it also carries `MenuButton`.
+  `tsc` user **9** · driver **35**, both at baseline; the driver file's 9 errors **proven
+  pre-existing via `git stash`** (`showToast` call-signature, untouched lines).
+  🛑 **Only the owner's rebuild of BOTH apps and the commit remain.**
+
+- [ ] T-073 (P2) 🔴 **[OWNER ④] The driver's passenger-offer search shows English inside the Uzbek
+  app.** Owner 2026-08-12: *"driver search passenger offer translation have lacks like now in uzbek
+  shows english texts"*. **PARTIALLY GROUNDED 2026-08-12 — NOT yet measured.**
+  ⚠️ **The screen's keys were listed but the three locales were NOT evaluated** (the probe was not
+  run). **Do not start this card by reading translation files — that is exactly how T-058 passed an
+  app as clean that was not.** Step 1 must *evaluate* the shipped objects.
+  ✅ **~56 `t()` keys** were collected from `SearchPassengerOffersScreen.tsx`, in the
+  `searchPassengerOffers.*`, `common.*`, `offerWizard.select{Country,Province,City}` and
+  `passengerOfferExtras.priceNegotiable` namespaces. ⚠️ `offerWizard.select*` is the exact trio that
+  **had never existed** and was found missing once already (journal 2026-08-08) — check it first.
+  🔴 **Two known traps in this app's translation files:** **T-035** — driver `ru`/`en` declare
+  `errors:` **twice**, so the second block silently overrides the first and five keys resolve in
+  Uzbek only; and the **`t('…')` regex must be word-anchored** or it matches the tail of
+  `getLabelStyle('first_name')` and invents dozens of phantom misses (T-061).
+  ⚠️ The owner reports *English* text, not raw keys — so the suspects are hard-coded English
+  literals and `t(key) || 'English fallback'` patterns, **not only missing keys**. Sweep for both.
+  ❌ No API change, no migration, no deploy.
+  🛑 **MEASURED 2026-08-12 — AND THE SCREEN CAME BACK CLEAN. NO CODE CHANGED.**
+  **66 keys evaluated** against the shipped translation objects (not grepped), in **all three
+  locales**: **0 unresolved**, **0 hard-coded `|| 'fallback'`** patterns, **0 English string
+  literals** in the screen or in `PassengerOfferExtras`.
+  🔴 **The first pass measured only 39 of those 66 and would have reported "clean" wrongly.**
+  `PassengerOfferExtras` builds every key dynamically — ``tx(k) => t(`passengerOfferExtras.${k}`)``
+  — which a static `t('literal')` regex cannot see. **This is T-058's blind spot in a new shape: a
+  sweep only ever measures the call forms it knows about.** The second pass extracts `tx('…')` and
+  prefixes it; all **27** resolve, the namespace holds **28 keys in each locale**, **zero drift**.
+  🔴 **And the reported mechanism cannot happen here:** `useTranslation` returns **the key itself**
+  on a miss (`hooks/useTranslation.ts:22-23`), never an English fallback. So a missing key surfaces
+  as `searchPassengerOffers.foo`, **not** as English text.
+  ⚠️ **Therefore the English the owner saw comes from somewhere this card did not look**, and the
+  likely candidates are **server data rendered verbatim** — `from_text`/`to_text` (built from
+  admin-uploaded geo names), `note`, `currency` — or a *different* screen than the one named.
+  🛑 **BLOCKED: needs a screenshot of the exact English text.** Do **not** start editing translation
+  files on this card — the measurement says there is nothing there to fix, and guessing would mean
+  changing correct code. ⚠️ **T-035 was confirmed present** while measuring (duplicate `errors:`
+  block in driver ru/en, so five keys resolve in Uzbek only) — that is a real defect, already
+  boarded, and is the best standing candidate if the English text turns out to be an error message.
+
+- [ ] T-074 (P3) 🟡 **[OWNER ①] The driver's "sent requests" filter chips do not slide.** Owner
+  2026-08-12: *"driver send reqests tab slide not works"*.
+  🛑 **NOT GROUNDED — no structural cause found, and this card should not be started on a guess.**
+  `MyJoinRequestsScreen:271-291` is a `<View>` wrapping a horizontal `ScrollView` with
+  `showsHorizontalScrollIndicator={false}` and five chips — **structurally identical** to
+  `components/offers/StatusFilterTabs.tsx:32-87`, which serves the driver's own *My offers* screen
+  and is not reported as broken. The only difference found is `gap: 8` in this one's
+  `contentContainerStyle` (the other uses `marginHorizontal: 6` on the chip).
+  ⚠️ **The five Uzbek labels do overflow** (~556px of chips on a ~360dp screen), so sliding is
+  genuinely required here and merely *unnecessary* on the 4-chip screen — which is consistent with
+  only this screen being reported.
+  ⚠️ **"Slide" may not mean the chip strip at all** — it may mean swiping left/right between the
+  filtered lists, which **is not implemented anywhere** (the chips are tap-only; there is no pager in
+  either app). **Those are two different cards.** 🛑 **Ask the owner which, and get a screen
+  recording** — this project has burned two sessions on T-047 by diagnosing a device symptom from the
+  source instead of from evidence.
+
 - [ ] T-035 (P2) **Duplicate `errors:` block in 5 of 6 app translation files.** Found 2026-08-08
   during T-033. Both apps declare `errors: { ... }` **twice** in the same object literal, so the
   **second silently overrides the first** — user `uz`/`ru`/`en` (lines ~21 and ~223) and driver

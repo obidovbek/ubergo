@@ -40,6 +40,61 @@ export default {
   },
 
   // Field names
+  /**
+   * Passenger-offer column names, for the "what changed" push (T-065).
+   *
+   * ⚠️ **Deliberately NOT merged into `fields` below.** That dictionary is the
+   * driver-registration one used by the error handler, and it shares not one
+   * key with these — different entity, different vocabulary. Merging them would
+   * make `category` or `year` ambiguous between a licence and a ride request.
+   *
+   * ⚠️ Must cover every writable column of `PassengerOfferAttributes`, or a
+   * changed field renders to the driver as a raw key like `roof_rack_needed`.
+   */
+  offerFields: {
+    from_text: 'Jo\'nash manzili',
+    from_lat: 'Jo\'nash koordinatasi',
+    from_lng: 'Jo\'nash koordinatasi',
+    from_country_id: 'Jo\'nash mamlakati',
+    from_province_id: 'Jo\'nash viloyati',
+    from_city_id: 'Jo\'nash shahri / tumani',
+    from_settlement_id: 'Jo\'nash aholi punkti',
+    from_landmark: 'Jo\'nash mo\'ljali',
+    to_text: 'Borish manzili',
+    to_lat: 'Borish koordinatasi',
+    to_lng: 'Borish koordinatasi',
+    to_country_id: 'Borish mamlakati',
+    to_province_id: 'Borish viloyati',
+    to_city_id: 'Borish shahri / tumani',
+    to_settlement_id: 'Borish aholi punkti',
+    to_landmark: 'Borish mo\'ljali',
+    start_at: 'Jo\'nash vaqti',
+    depart_until: 'Jo\'nash oxirgi vaqti',
+    arrive_from: 'Yetib borish vaqti',
+    arrive_until: 'Yetib borish oxirgi vaqti',
+    is_urgent: 'Shoshilinch safar',
+    seats_needed: 'O\'rinlar soni',
+    max_price_per_seat: 'Har bir o\'rin uchun narx',
+    currency: 'Valyuta',
+    payment_type: 'To\'lov turi',
+    payer_phone: 'To\'lovchi telefon raqami',
+    seat_counts: 'O\'rinlar taqsimoti',
+    seat_position_any: 'O\'rin joyi farqi yo\'q',
+    salon_scope: 'Salon turi',
+    vehicle_class: 'Transport klassi',
+    vehicle_types: 'Transport turlari',
+    front_seat: 'Oldingi o\'rin',
+    pets: 'Uy hayvonlari',
+    large_baggage: 'Katta yuk',
+    woman_in_car: 'Mashinada ayol bo\'lishi',
+    roof_rack_needed: 'Bagajnik kerak',
+    trailer: 'Pritsep',
+    road_pickup: 'Yo\'lda olish',
+    road_pickup_note: 'Yo\'lda olish izohi',
+    special_order: 'Maxsus buyurtma',
+    note: 'Izoh',
+  },
+
   fields: {
     // User fields
     first_name: 'Ism',
@@ -289,6 +344,10 @@ export default {
     // Offer cancelled by passenger (to driver)
     offerCancelledByPassengerTitle: '❌ Safar bekor qilindi',
     offerCancelledByPassengerBody: 'Yo\'lovchi {from} dan {to} ga safaringizni bekor qildi. Boshqa takliflarni ko\'rib chiqing.',
+
+    // Passenger edited a ride request a driver is committed to or bidding on (T-065)
+    passengerOfferUpdatedTitle: '✏️ Safar so\'rovi o\'zgardi',
+    passengerOfferUpdatedBody: '{from} dan {to} ga safar so\'rovida o\'zgarish: {changed}. Yangi shartlarni tekshiring.',
     
     // Driver arrival notifications (to passenger)
     driver10MinAwayTitle: '⏰ Haydovchi yaqinlashmoqda',

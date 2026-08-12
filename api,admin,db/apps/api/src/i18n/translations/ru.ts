@@ -39,6 +39,52 @@ export default {
   },
 
   // Field names
+  // Passenger-offer column names for the "what changed" push (T-065).
+  // Deliberately separate from `fields` below — see the note in uz.ts.
+  offerFields: {
+    from_text: 'Место отправления',
+    from_lat: 'Координаты отправления',
+    from_lng: 'Координаты отправления',
+    from_country_id: 'Страна отправления',
+    from_province_id: 'Область отправления',
+    from_city_id: 'Город / район отправления',
+    from_settlement_id: 'Населённый пункт отправления',
+    from_landmark: 'Ориентир отправления',
+    to_text: 'Место назначения',
+    to_lat: 'Координаты назначения',
+    to_lng: 'Координаты назначения',
+    to_country_id: 'Страна назначения',
+    to_province_id: 'Область назначения',
+    to_city_id: 'Город / район назначения',
+    to_settlement_id: 'Населённый пункт назначения',
+    to_landmark: 'Ориентир назначения',
+    start_at: 'Время отправления',
+    depart_until: 'Крайнее время отправления',
+    arrive_from: 'Время прибытия',
+    arrive_until: 'Крайнее время прибытия',
+    is_urgent: 'Срочная поездка',
+    seats_needed: 'Количество мест',
+    max_price_per_seat: 'Цена за место',
+    currency: 'Валюта',
+    payment_type: 'Способ оплаты',
+    payer_phone: 'Телефон плательщика',
+    seat_counts: 'Распределение мест',
+    seat_position_any: 'Любое расположение места',
+    salon_scope: 'Тип салона',
+    vehicle_class: 'Класс автомобиля',
+    vehicle_types: 'Типы автомобилей',
+    front_seat: 'Переднее место',
+    pets: 'Домашние животные',
+    large_baggage: 'Крупный багаж',
+    woman_in_car: 'Женщина в машине',
+    roof_rack_needed: 'Нужен багажник',
+    trailer: 'Прицеп',
+    road_pickup: 'Посадка в пути',
+    road_pickup_note: 'Примечание к посадке в пути',
+    special_order: 'Специальный заказ',
+    note: 'Примечание',
+  },
+
   fields: {
     // User fields
     first_name: 'Имя',
@@ -288,6 +334,10 @@ export default {
     // Offer cancelled by passenger (to driver)
     offerCancelledByPassengerTitle: '❌ Поездка отменена',
     offerCancelledByPassengerBody: 'Пассажир отменил поездку из {from} в {to}. Проверьте другие предложения.',
+
+    // Passenger edited a ride request a driver is committed to or bidding on (T-065)
+    passengerOfferUpdatedTitle: '✏️ Заявка на поездку изменена',
+    passengerOfferUpdatedBody: 'В заявке из {from} в {to} изменилось: {changed}. Проверьте новые условия.',
     
     // Driver arrival notifications (to passenger)
     driver10MinAwayTitle: '⏰ Водитель приближается',

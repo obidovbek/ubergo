@@ -25,6 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { BackButton } from '../components/BackButton';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatDateByLanguage, formatTimeByLanguage, formatDateTime, getLocaleFromLanguage } from '../utils/date';
 import * as DriverOffersAPI from '../api/driverOffers';
@@ -35,6 +36,13 @@ import { AppModal } from '../components/AppModal';
 import { GeoPickerModal } from '../components/GeoPickerModal';
 
 const theme = createTheme('light');
+
+/**
+ * Departure minutes step in quarter hours (T-069, owner 2026-08-12).
+ * ⚠️ Must divide 60 — `generateMinutes` rounds the "30 minutes' notice" floor up
+ * to a multiple of this.
+ */
+const MINUTE_STEP = 15;
 
 interface VehicleOption {
   id: string;
@@ -783,7 +791,16 @@ export const OfferWizardScreen: React.FC = () => {
       }
     }
     
-    for (let minute = minMinute; minute < 60; minute++) {
+    // T-069 — quarter-hours only (owner, 2026-08-12): 0 / 15 / 30 / 45.
+    //
+    // ⚠️ `minMinute` is a real floor (the 30-minute notice, when the trip is
+    // today and in the current hour), so the first offered quarter is the floor
+    // ROUNDED UP. Note this can legitimately yield an EMPTY list — e.g. a floor
+    // of 50 leaves no quarter in this hour — which is correct: `generateHours`
+    // has already excluded hours that cannot be used, and the hour column is
+    // what the driver moves next.
+    const firstQuarter = Math.ceil(minMinute / MINUTE_STEP) * MINUTE_STEP;
+    for (let minute = firstQuarter; minute < 60; minute += MINUTE_STEP) {
       minutes.push(minute);
     }
     return minutes;
@@ -2563,9 +2580,10 @@ export const OfferWizardScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
+          {/* T-071 — was a green `←` that scaled with the system font.
+              ⚠️ `handleBack` steps the WIZARD back, and only leaves the screen
+              from step 1. Deliberately not `goBack()`. */}
+          <BackButton onPress={handleBack} style={styles.backButton} />
           <Text style={styles.headerTitle}>
             {offerId ? (t('offerWizard.editTitle') || 'E\'lonni tahrirlash') : t('offerWizard.title')}
           </Text>
@@ -2805,16 +2823,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // T-071 — layout only; the tile itself comes from <BackButton />.
   backButton: {
-    padding: 8,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#10B981',
-    fontWeight: '700',
   },
   headerTitle: {
     fontSize: 20,

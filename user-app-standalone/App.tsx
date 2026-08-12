@@ -24,6 +24,7 @@ import {
   setupNotificationTapHandler,
 } from './services/PushService';
 import { handleNotificationTap } from './utils/notificationRouting';
+import { notifyPushReceived } from './utils/pushEvents';
 
 // Register background message handler at module level (only for native platforms)
 // This must be at module level for background notifications to work
@@ -67,8 +68,13 @@ export default function App() {
       // two tap handlers below — Android posts no system notification in that
       // case, so before T-046 the message was invisible and unreachable. It now
       // shows a toast that routes through the SAME handler when tapped.
+      // T-068 — the first argument used to be `undefined`, so the toast was the
+      // ONLY thing that happened: the screen underneath kept showing pre-push
+      // data until the user pulled to refresh. It now also announces the push so
+      // whichever list is open can re-fetch itself.
+      // ⚠️ Refresh only — navigation still happens exclusively on a TAP.
       unsubscribeForeground = setupForegroundNotificationHandler(
-        undefined,
+        notifyPushReceived,
         handleNotificationTap
       );
 

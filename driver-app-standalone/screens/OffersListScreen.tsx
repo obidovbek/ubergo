@@ -20,6 +20,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { subscribePushReceived } from '../utils/pushEvents';
+import { BackButton } from '../components/BackButton';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import * as DriverOffersAPI from '../api/driverOffers';
@@ -90,6 +92,17 @@ export const OffersListScreen: React.FC = () => {
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     loadOffers(true); // Pass true to indicate this is a refresh
+  }, [loadOffers]);
+
+  // T-068 — a passenger acting on one of these offers while the driver is
+  // looking at the list used to leave the seat counts and statuses stale behind
+  // a toast. Reuses the existing `isRefresh` flag so the list updates in place
+  // rather than being replaced by the full-screen loader.
+  useEffect(() => {
+    return subscribePushReceived(() => loadOffers(true), [
+      'passenger_join_request',
+      'passenger_cancelled',
+    ]);
   }, [loadOffers]);
 
   const handleCreateOffer = () => {
@@ -250,13 +263,8 @@ export const OffersListScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
+        {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
+        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
         <Text style={styles.headerTitle}>{t('driverOffers.title')}</Text>
         <TouchableOpacity
           style={styles.createButton}
@@ -339,16 +347,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // T-071 — layout only; the tile itself comes from <BackButton />.
   backButton: {
-    padding: 8,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#10B981',
-    fontWeight: '700',
   },
   headerTitle: {
     flex: 1,

@@ -17,6 +17,7 @@ import {
 import { createTheme } from '../themes';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from '../hooks/useTranslation';
+import { BackButton } from '../components/BackButton';
 
 const theme = createTheme('light');
 
@@ -67,13 +68,8 @@ export const EditProfileScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.backButtonText}>←</Text>
-                </TouchableOpacity>
+                {/* T-071 — was a green `←` that scaled with the system font. */}
+                <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
                 <Text style={styles.headerTitle}>{t('profile.editProfile')}</Text>
                 <View style={styles.headerSpacer} />
             </View>
@@ -134,16 +130,9 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
+    // T-071 — layout only; the tile itself comes from <BackButton />.
     backButton: {
-        padding: 8,
         marginRight: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    backButtonText: {
-        fontSize: 24,
-        color: '#10B981',
-        fontWeight: '700',
     },
     headerTitle: {
         flex: 1,

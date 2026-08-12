@@ -28,6 +28,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
+import { subscribePushReceived } from '../utils/pushEvents';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
@@ -55,23 +56,43 @@ export default function MyBookingsScreen() {
     }
   }, [token, filter]);
 
-  const loadBookings = async () => {
+  /**
+   * @param silent skip the full-screen spinner and the error toast — used by the
+   *   push refresh (T-068), where the passenger is already reading the list.
+   *   Swapping it for a spinner because a push arrived would be worse than the
+   *   stale data it replaces.
+   */
+  const loadBookings = async (silent = false) => {
     if (!token) return;
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await OffersAPI.getMyBookings(
         token,
         filter === 'all' ? undefined : filter
       );
       setBookings(data);
     } catch (error: any) {
+      if (silent) return;
       const errorMsg = getErrorMessage(error, t, 'errors.loadFailed');
       showToast.error(t('common.error'), errorMsg);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // T-068 — the owner's exact symptom: a driver confirms or rejects the booking,
+  // the push lands while this list is open, and the row kept showing the old
+  // status until a manual pull-to-refresh.
+  useEffect(() => {
+    return subscribePushReceived(() => loadBookings(true), [
+      'join_confirmed',
+      'join_rejected',
+      'driver_arrived',
+      'driver_10min_away',
+      'offer_cancelled_by_driver',
+    ]);
+  }, [token, filter]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

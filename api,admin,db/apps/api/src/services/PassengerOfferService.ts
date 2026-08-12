@@ -350,6 +350,85 @@ export class PassengerOfferService {
    *
    * @param current the stored offer on update; omitted on create
    */
+  /**
+   * Which of the patched fields actually hold a DIFFERENT value than the stored
+   * row (T-065).
+   *
+   * 🔴 **`buildOfferFields` reports what was SENT, not what CHANGED**, and the
+   * passenger's edit screen re-sends the WHOLE form every time
+   * (`CreatePassengerOfferScreen:531-542` PATCHes ~40 fields unconditionally).
+   * So `Object.keys(fields)` would claim the route, the time, the seats and the
+   * payment all changed every time someone fixed a typo in the note. Announcing
+   * that to every driver is worse than the silence this card is fixing.
+   *
+   * ⚠️ Must be called with the offer as loaded BEFORE `offer.update()` — reading
+   * the reloaded copy would compare a row against itself and always return
+   * empty, i.e. a "fix" that silently does nothing.
+   *
+   * Normalisation, each for a reason this codebase has already been bitten by:
+   *   - **DECIMAL columns come back from pg as STRINGS** (`max_price_per_seat`,
+   *     the lat/lng pair). `5000 !== '5000.00'` would report a change on every
+   *     save. This is the same root cause as the 2026-08-02 price bugs.
+   *   - **Dates** are `Date` objects on one side and may be strings on the other;
+   *     compare by timestamp.
+   *   - **JSONB** (`seat_counts`, `special_order`) are objects; compare
+   *     structurally, key order included, via a stable stringify.
+   *   - **null vs undefined vs ''** all mean "not set" here — the form sends
+   *     `|| undefined` liberally — so an absent optional and a cleared one must
+   *     not read as a change.
+   */
+  private static changedFields(
+    fields: PassengerOfferWritableFields,
+    current: PassengerOffer
+  ): string[] {
+    const isEmpty = (v: unknown) => v === null || v === undefined || v === '';
+
+    // Key order must not decide equality: the client builds these objects in its
+    // own order, and JSONB round-trips in Postgres' order.
+    const stable = (v: unknown): unknown => {
+      if (Array.isArray(v)) return v.map(stable);
+      if (v && typeof v === 'object') {
+        return Object.keys(v as Record<string, unknown>)
+          .sort()
+          .reduce<Record<string, unknown>>((acc, k) => {
+            acc[k] = stable((v as Record<string, unknown>)[k]);
+            return acc;
+          }, {});
+      }
+      return v;
+    };
+
+    const same = (next: unknown, prev: unknown): boolean => {
+      if (isEmpty(next) && isEmpty(prev)) return true;
+      if (isEmpty(next) || isEmpty(prev)) return false;
+
+      if (next instanceof Date || prev instanceof Date) {
+        const a = new Date(next as string | Date).getTime();
+        const b = new Date(prev as string | Date).getTime();
+        // An unparseable date is not silently "equal" — fall through to the
+        // string compare below rather than treating NaN === NaN as a match.
+        if (!Number.isNaN(a) && !Number.isNaN(b)) return a === b;
+      }
+
+      if (typeof next === 'object' || typeof prev === 'object') {
+        return JSON.stringify(stable(next)) === JSON.stringify(stable(prev));
+      }
+
+      // Numeric-ish (covers DECIMAL-as-string and id number-vs-string).
+      const na = Number(next);
+      const nb = Number(prev);
+      if (!Number.isNaN(na) && !Number.isNaN(nb)) return na === nb;
+
+      return String(next) === String(prev);
+    };
+
+    return Object.keys(fields).filter((key) => {
+      const next = (fields as Record<string, unknown>)[key];
+      const prev = (current as unknown as Record<string, unknown>)[key];
+      return !same(next, prev);
+    });
+  }
+
   private static buildOfferFields(
     data: CreatePassengerOfferData | UpdatePassengerOfferData,
     current?: PassengerOffer
@@ -901,6 +980,11 @@ export class PassengerOfferService {
     // Whitelist + validate against the stored row (partial patch)
     const fields = this.buildOfferFields(data, offer);
 
+    // T-065 — compute the REAL diff while `offer` still holds the pre-update
+    // values. After `offer.update()` below it is the new row, and comparing it
+    // with itself would always come back empty.
+    const changed = this.changedFields(fields, offer);
+
     // Update offer
     await offer.update(fields);
 
@@ -912,12 +996,97 @@ export class PassengerOfferService {
       await logAudit({
         userId: String(userId),
         action: 'passenger.offer.update',
-        payload: { offer_id: offer.id, changes: Object.keys(fields) },
+        // The real diff, not "what the client sent" — the edit screen re-sends
+        // the whole form, so the old `Object.keys(fields)` logged ~40 fields on
+        // every save and told you nothing about what the passenger did.
+        payload: { offer_id: offer.id, changes: changed },
         req,
       });
     }
 
+    // T-065 — tell the drivers. This used to notify NOBODY, so a passenger could
+    // move the time or the route of a ride a driver had already been confirmed
+    // for, and that driver found out by turning up at the wrong place or hour.
+    //
+    // ⚠️ Deliberately AFTER the update succeeds: nobody may be told about a
+    // change that then failed to save.
+    // ⚠️ Only when something really changed — a no-op save must be silent.
+    if (changed.length > 0) {
+      await this.notifyDriversOfUpdate(offer, changed);
+    }
+
     return offerWithDetails;
+  }
+
+  /**
+   * Push "this ride request changed" to every driver with a live interest in it
+   * (T-065).
+   *
+   * **Who:** the `confirmed` driver *and* every `pending` bidder (owner decision,
+   * 2026-08-12). The confirmed driver committed to specific terms; a pending
+   * bidder priced a trip that just changed under them. `rejected`/`cancelled`
+   * rows are excluded — those people are out of this ride.
+   *
+   * **Language:** resolved PER DRIVER. This is a list of different people, and
+   * writing it in the editing passenger's language is the exact bug fixed
+   * across 11 call sites on 2026-08-02.
+   *
+   * ⚠️ Never throws. A notification must not fail the passenger's save — so the
+   * whole loop is wrapped, and `allSettled` is used rather than `all` so one
+   * driver's failure cannot cancel the rest. (`cancelOffer` uses `Promise.all`;
+   * here the edit has already been committed and must be reported as success.)
+   */
+  private static async notifyDriversOfUpdate(
+    offer: PassengerOffer,
+    changed: string[]
+  ) {
+    try {
+      const interestedDrivers = await OfferDriver.findAll({
+        where: {
+          offer_id: offer.id,
+          status: { [Op.in]: ['pending', 'confirmed'] },
+        },
+      });
+
+      if (interestedDrivers.length === 0) return;
+
+      await Promise.allSettled(
+        interestedDrivers.map(async (driverJoin) => {
+          const driverLanguage = await getUserLanguage(driverJoin.driver_id);
+          // The changed field names are translated into the DRIVER's language,
+          // then joined — so the push says "the departure time, the route
+          // changed" rather than "your ride was updated".
+          const changedText = changed
+            .map((key) => t(`offerFields.${key}`, driverLanguage))
+            .join(', ');
+
+          await this.notifyDriver(
+            driverJoin.driver_id,
+            {
+              type: 'passenger_offer_updated',
+              title: t('push.passengerOfferUpdatedTitle', driverLanguage),
+              body: t('push.passengerOfferUpdatedBody', driverLanguage, {
+                from: offer.from_text,
+                to: offer.to_text,
+                changed: changedText,
+              }),
+              data: {
+                type: 'passenger_offer_updated',
+                // The passenger's OWN PassengerOffer id — which is what the
+                // driver app's `PassengerOfferDetails` screen takes. See the
+                // `offer_id` warning in both apps' notificationRouting.
+                offer_id: String(offer.id),
+                driver_join_id: driverJoin.id,
+              },
+            },
+            driverLanguage
+          );
+        })
+      );
+    } catch (error) {
+      // The edit is already saved and must be reported as a success.
+      console.error('Failed to notify drivers of offer update:', error);
+    }
   }
 
   /**

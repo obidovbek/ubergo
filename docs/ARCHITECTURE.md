@@ -78,16 +78,21 @@ UbexGo/
 │   └── tmp/                   ← ⚠️ STALE duplicates — ignore
 ├── driver-app-standalone/     ← React Native / Expo (driver)
 │   ├── components/AppModal.tsx     ← the ONE modal shell (T-036); look here before styling a modal
+│   ├── components/BackButton.tsx   ← the ONE back button (T-071); 40×40 tile + arrow-back
 │   └── utils/
 │       ├── tokenStore.ts           ← access+refresh tokens, JWT `exp`; storage only, no network
 │       ├── notificationRouting.ts  ← push-tap → screen, with a parked-intent queue
+│       ├── pushEvents.ts           ← FOREGROUND push → screens re-fetch in place (T-068)
+│       ├── driverProfileEvents.ts  ← registration step saved → RootNavigator re-checks (T-017)
 │       ├── imageUrl.ts             ← /uploads/... → absolute URL (strips the /api suffix)
 │       └── dateLimits.ts           ← document date bounds for the hand-rolled pickers
 └── user-app-standalone/       ← React Native / Expo (passenger)
     ├── components/AppModal.tsx     ← byte-identical to the driver app's copy
+    ├── components/BackButton.tsx   ← byte-identical to the driver app's copy
     ├── components/MenuButton.tsx   ← hamburger → Home (the app has no drawer)
     └── utils/
         ├── tokenStore.ts           ← byte-identical to the driver app's copy
+        ├── pushEvents.ts           ← byte-identical to the driver app's copy
         └── notificationRouting.ts  ← same push-tap queue, own route map
 ```
 
@@ -101,15 +106,33 @@ UbexGo/
 > **Shared-by-copy, not by package.** The two apps are standalone, so
 > `notificationRouting.ts` exists in both with the same shape but different route
 > maps. A change to one is not a change to the other — check both.
-> `AppModal.tsx`, `ModalList.tsx`, `DateWheelModal.tsx`, `tokenStore.ts` and
-> `utils/contactPhone.ts` (T-054/T-056) are **byte-identical** across the two apps
-> (`diff -q`, re-verified 2026-08-11) — edit them together.
+> `AppModal.tsx`, `ModalList.tsx`, `DateWheelModal.tsx`, `tokenStore.ts`,
+> `utils/contactPhone.ts` (T-054/T-056) and — since 2026-08-12 —
+> **`utils/pushEvents.ts`** and **`components/BackButton.tsx`** (T-068/T-071) are
+> **byte-identical** across the two apps — edit them together.
+>
+> **Two things worth knowing about the 2026-08-12 pair:**
+> **`pushEvents.ts`** is the missing half of T-046. A push arriving while the app is
+> OPEN reaches `onMessage` and nowhere else; T-046 made it *visible* (a tappable
+> toast) but nothing told the screen underneath its data was stale — both
+> `App.tsx` files passed **`undefined`** for the observer. Seven screens now
+> subscribe. ⚠️ **Filtering lives in the module, not the screens:** `otp` is absent
+> from `RIDE_DATA_PUSH_TYPES` so a code arriving mid-entry can never reload a list.
+> ⚠️ **Refresh only — navigation still happens exclusively on a TAP.**
+> **`BackButton.tsx`** replaced two families across 24 sites (a bare `<Text>←</Text>`
+> and an `Ionicons arrow-back`). It is not only cosmetic: the text arrow **scales
+> with the system font**, which is the T-050 overflow class.
+> ⚠️ **Five sites deliberately still use the old markup** — the driver-registration
+> screens render a *labelled* `← Orqaga` with a `disabled` state, not a bare arrow.
 >
 > **Not identical, and deliberately so:** `TimeWheelModal.tsx` (T-057) exists only
 > in the **user** app — the create-offer screen is the only place that picks a time
 > — and `PhotoSourceModal.tsx` (T-057) only in the **driver** app, where the five
 > registration screens upload documents. Copy them across only when a second
 > caller actually appears.
+> ⚠️ **`DateWheelModal.tsx` gained an opt-in `minimumDate`** (T-069) so the trip
+> picker can stop at today. It is **off by default on purpose**: the same component
+> serves the **birth-date** screens, which must keep offering 1900→today.
 >
 > **`utils/formScroll.ts` (T-061) — driver app only.** `useFieldScroll()` remembers
 > each field's y and scrolls to the topmost one carrying an error; all five

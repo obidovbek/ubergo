@@ -36,6 +36,7 @@ import { formatDateTime } from '../utils/date';
 import { isAuthError, getErrorMessage } from '../utils/errorHandler';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
+import { subscribePushReceived } from '../utils/pushEvents';
 
 type MainStackParamList = {
   Menu: undefined;
@@ -208,6 +209,18 @@ export const MyPassengerOffersScreen: React.FC = () => {
       scrollToTab(currentFilterIndex);
     }
   }, [selectedFilter, currentFilterIndex, scrollToTab]);
+
+  // T-068 — drivers bidding on, or backing out of, the passenger's own ride
+  // requests. The driver-count row on each card is exactly what goes stale, and
+  // it is also what the passenger taps to answer them (T-024).
+  // ⚠️ `loadOffers(true)` uses the existing refresh path, so the list updates
+  // under the pull-to-refresh spinner rather than the full-screen loader.
+  useEffect(() => {
+    return subscribePushReceived(() => loadOffers(true), [
+      'driver_join_request',
+      'driver_request_cancelled',
+    ]);
+  }, []);
 
   const handleRefresh = () => {
     loadOffers(true);

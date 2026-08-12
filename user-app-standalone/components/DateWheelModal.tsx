@@ -31,6 +31,20 @@ interface DateWheelModalProps {
   title?: string;
   earliestYear?: number;
   latestYear?: number;
+  /**
+   * Earliest selectable DAY (T-069). Opt-in and `undefined` by default.
+   *
+   * 🔴 **Deliberately opt-in.** This component's original callers are birth-date
+   * pickers (`UserDetailsScreen`, `EditProfileScreen`) which must keep offering
+   * 1900→today. The 2026-08-08 journal records the matching trap from the other
+   * direction: moving a picker onto a shared wheel silently dropped a
+   * past-date guard, "no compile error, no visible symptom until a driver posted
+   * a trip in the past". Defaulting this on would be that mistake mirrored.
+   *
+   * Only the day/month/year rows that are actually in the past are hidden — the
+   * comparison is date-only, so *today* always remains selectable.
+   */
+  minimumDate?: Date;
 }
 
 export const DateWheelModal: React.FC<DateWheelModalProps> = ({
@@ -42,17 +56,27 @@ export const DateWheelModal: React.FC<DateWheelModalProps> = ({
   title,
   earliestYear = EARLIEST_YEAR,
   latestYear,
+  minimumDate,
 }) => {
   const { t } = useTranslation();
 
+  /** `minimumDate` normalised to midnight — the floor is a DAY, not an instant. */
+  const floor = useMemo(() => {
+    if (!minimumDate) return null;
+    const d = new Date(minimumDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [minimumDate]);
+
   const years = useMemo(() => {
     const last = latestYear ?? new Date().getFullYear();
+    const first = floor ? Math.max(earliestYear, floor.getFullYear()) : earliestYear;
     const list: number[] = [];
-    for (let year = last; year >= earliestYear; year--) list.push(year);
+    for (let year = last; year >= first; year--) list.push(year);
     return list;
-  }, [earliestYear, latestYear]);
+  }, [earliestYear, latestYear, floor]);
 
-  const months = useMemo(
+  const allMonths = useMemo(
     () => [
       { value: 1, label: t('months.january') },
       { value: 2, label: t('months.february') },
@@ -70,10 +94,25 @@ export const DateWheelModal: React.FC<DateWheelModalProps> = ({
     [t]
   );
 
+  // T-069 — hide months already gone, but ONLY within the floor's own year.
+  const months = useMemo(() => {
+    if (!floor || value.getFullYear() !== floor.getFullYear()) return allMonths;
+    return allMonths.filter((month) => month.value >= floor.getMonth() + 1);
+  }, [allMonths, floor, value]);
+
   const days = useMemo(() => {
     const daysInMonth = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  }, [value]);
+    const all = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    // T-069 — and hide past days only within the floor's own month.
+    if (
+      !floor ||
+      value.getFullYear() !== floor.getFullYear() ||
+      value.getMonth() !== floor.getMonth()
+    ) {
+      return all;
+    }
+    return all.filter((day) => day >= floor.getDate());
+  }, [value, floor]);
 
   // Changing month or year can strip a day off the end (31 Jan -> Feb); clamp rather
   // than let Date roll the selection into the following month.
