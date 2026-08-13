@@ -283,7 +283,19 @@
       "Bash(node extract.js)",
       "Bash(node suite.js)",
       "Bash(node red.js)",
-      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1; $errs = $out | Select-String -Pattern \"error TS\"; Write-Output \"TOTAL: $\\($errs.Count\\)\"; Write-Output \"--- in touched files ---\"; $errs | Select-String -Pattern \"TimeWheelModal|TimeWindowCard|CreatePassengerOfferScreen\")"
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\user-app-standalone\"; $out = npx tsc --noEmit 2>&1; $errs = $out | Select-String -Pattern \"error TS\"; Write-Output \"TOTAL: $\\($errs.Count\\)\"; Write-Output \"--- in touched files ---\"; $errs | Select-String -Pattern \"TimeWheelModal|TimeWindowCard|CreatePassengerOfferScreen\")",
+      "Bash(node probe.js)",
+      "Bash(xargs grep -ln \"getErrorMessage\")",
+      "PowerShell(foreach \\($app in @\\('user-app-standalone','driver-app-standalone'\\)\\) { cd \"d:\\\\projects\\\\UbexGo\\\\$app\"; $o = npx tsc --noEmit 2>&1; $e = $o | Select-String \"error TS\"; Write-Output \"$app TOTAL: $\\($e.Count\\)\"; $e | Select-String \"TS1117|translations/\" | ForEach-Object { Write-Output \"   $_\" } })",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(node -e \"const f=require\\('./user-app-standalone/node_modules/eslint-config-expo/flat.js'\\);console.log\\(Array.isArray\\(f\\)?'array of '+f.length+' config objects':typeof f\\)\")",
+      "Bash(cp user-app-standalone/eslint.config.js driver-app-standalone/eslint.config.js)",
+      "PowerShell(foreach \\($app in @\\('user-app-standalone','driver-app-standalone'\\)\\) { cd \"d:\\\\projects\\\\UbexGo\\\\$app\"; $e = \\(npx tsc --noEmit 2>&1 | Select-String \"error TS\"\\); Write-Output \"$app tsc: $\\($e.Count\\)\" })",
+      "Bash(node -e \"const p=require\\('./driver-app-standalone/package.json'\\);for\\(const[k,v]of Object.entries\\({...p.dependencies}\\)\\) if\\(/google|apple|facebook|auth-session/i.test\\(k\\)\\) console.log\\('  ',k,v\\)\")",
+      "PowerShell(cd \"d:\\\\projects\\\\UbexGo\\\\driver-app-standalone\"; $e = \\(npx tsc --noEmit 2>&1 | Select-String \"error TS\"\\); Write-Output \"driver tsc: $\\($e.Count\\)\"; $e | Select-String \"AuthContext|auth\\\\.ts\" | ForEach-Object { Write-Output \"   $_\" }; Write-Output \"--- lint ---\"; npm run lint 2>&1 | Select-String \"problems\")",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('google-signin:',\\(p.dependencies||{}\\)['@react-native-google-signin/google-signin']||'GONE'\\);console.log\\('expo-auth-session:',\\(p.dependencies||{}\\)['expo-auth-session']||'GONE'\\);\")",
+      "PowerShell(foreach \\($app in @\\('driver-app-standalone','user-app-standalone'\\)\\) { cd \"d:\\\\projects\\\\UbexGo\\\\$app\"; $e = \\(npx tsc --noEmit 2>&1 | Select-String \"error TS\"\\); Write-Output \"$app tsc: $\\($e.Count\\)\"; $e | Select-String \"config/|GoogleSign|AuthContext\" | ForEach-Object { Write-Output \"   $_\" } })"
     ],
     "additionalDirectories": [
       "d:\\projects\\UbexGo\\docs"

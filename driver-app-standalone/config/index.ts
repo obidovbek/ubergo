@@ -3,8 +3,9 @@
  * Application-wide settings and feature flags
  */
 
-export { default as GOOGLE_CONFIG, validateGoogleConfig } from './google';
-
+// T-076: `./google` (Google Sign-In client ids) was deleted 2026-08-13 — the
+// driver app signs in by phone + OTP only. The Maps key below is unrelated and
+// stays.
 export const APP_CONFIG = {
   // App Information
   appName: 'UbexGo',

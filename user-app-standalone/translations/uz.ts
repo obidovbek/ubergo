@@ -38,27 +38,6 @@ export default {
     minute: "Daqiqa",
   },
 
-  errors: {
-    unknown: "Noma'lum xatolik yuz berdi",
-    network:
-      "Internet aloqasi bilan muammo. Iltimos, internet aloqangizni tekshiring.",
-    timeout: "So'rov vaqti tugadi. Iltimos, qayta urinib ko'ring.",
-    badRequest: "Noto'g'ri so'rov",
-    unauthorized: "Autentifikatsiya kerak. Iltimos, qayta kirish qiling.",
-    forbidden: "Sizda bu amalni bajarish uchun ruxsat yo'q",
-    notFound: "Ma'lumot topilmadi",
-    conflict: "Bu ma'lumot allaqachon mavjud",
-    validation: "Ma'lumotlarni to'g'ri kiriting",
-    serverError: "Server xatosi",
-    tryAgain: "Iltimos, keyinroq qayta urinib ko'ring",
-    loadFailed: "Ma'lumotlarni yuklab bo'lmadi",
-    saveFailed: "Ma'lumotlarni saqlab bo'lmadi",
-    deleteFailed: "O'chirib bo'lmadi",
-    updateFailed: "Yangilab bo'lmadi",
-    createFailed: "Yaratib bo'lmadi",
-    tooManyRequests:
-      "Juda ko'p so'rov yuborildi. Iltimos, keyinroq urinib ko'ring",
-  },
 
   splash: {
     appName: "UbexGo",
@@ -255,7 +234,20 @@ export default {
     december: "Dekabr",
   },
 
-  // Backend Error Messages
+  /*
+   * Backend error messages — T-035.
+   *
+   * 🔴 There used to be a SECOND `errors:` block earlier in this file. A
+   * duplicate key in an object literal is an override, not a merge, so this
+   * block silently won and the five `*Failed` keys below — which the earlier
+   * block defined and 9 screens call — resolved to nothing. `t()` then rendered
+   * the raw key, so users saw the literal text "errors.loadFailed".
+   *
+   * ⚠️ The wording here is deliberately the one that SHIPPED (this block was the
+   * winner). The other block's phrasing was fuller but had never been seen by a
+   * user; adopting it would have silently rewritten 52 live messages while
+   * claiming to fix a missing-key bug.
+   */
   errors: {
     network: "Internet bilan aloqa yo'q",
     timeout: "Kutish vaqti tugadi",
@@ -270,6 +262,12 @@ export default {
     tryAgain: "Iltimos qaytadan urinib ko'ring",
     tooManyRequests:
       "Juda ko'p so'rov yuborildi. Iltimos, keyinroq urinib ko'ring",
+    // Recovered from the overridden block — 9 call sites across the two apps.
+    loadFailed: "Ma'lumotlarni yuklab bo'lmadi",
+    saveFailed: "Ma'lumotlarni saqlab bo'lmadi",
+    deleteFailed: "O'chirib bo'lmadi",
+    updateFailed: "Yangilab bo'lmadi",
+    createFailed: "Yaratib bo'lmadi",
   },
 
   // Network Status

@@ -27,10 +27,7 @@ import { TOKEN_KEYS, onAuthLost } from '../utils/tokenStore';
 interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   updateUser: (user: User) => Promise<void>;
-  // Social auth methods
-  googleSignIn: (idToken: string) => Promise<void>;
-  appleSignIn: (idToken: string) => Promise<void>;
-  facebookSignIn: (accessToken: string) => Promise<void>;
+  // T-076: social sign-in removed — the driver signs in by phone + OTP only.
   // OTP methods
   sendOtp: (
     phone?: string,
@@ -378,68 +375,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const googleSignIn = useCallback(async (idToken: string) => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
-      const response = await AuthAPI.googleSignIn(idToken);
-      const { user, access, refresh } = response.data;
-
-      // T-038: `refresh` used to be destructured here and dropped on the floor.
-      await persistSession(user, access, refresh);
-
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN,
-        payload: { user: user as any, token: access },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Google sign-in failed';
-      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-      throw error;
-    }
-  }, []);
-
-  const appleSignIn = useCallback(async (idToken: string) => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
-      const response = await AuthAPI.appleSignIn(idToken);
-      const { user, access, refresh } = response.data;
-
-      // T-038: `refresh` used to be destructured here and dropped on the floor.
-      await persistSession(user, access, refresh);
-
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN,
-        payload: { user: user as any, token: access },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Apple sign-in failed';
-      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-      throw error;
-    }
-  }, []);
-
-  const facebookSignIn = useCallback(async (accessToken: string) => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
-      const response = await AuthAPI.facebookSignIn(accessToken);
-      const { user, access, refresh } = response.data;
-
-      // T-038: `refresh` used to be destructured here and dropped on the floor.
-      await persistSession(user, access, refresh);
-
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN,
-        payload: { user: user as any, token: access },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Facebook sign-in failed';
-      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-      throw error;
-    }
-  }, []);
+  /*
+   * T-076 — Google / Apple / Facebook sign-in removed 2026-08-13 (owner: "we
+   * don't need them"). The driver signs in with a phone number and OTP.
+   *
+   * 🔴 These three methods were BROKEN, not merely unused: they called
+   * `AuthAPI.googleSignIn` / `appleSignIn` / `facebookSignIn`, which this app's
+   * `api/auth.ts` has never exported. `import * as AuthAPI` made it namespace
+   * member access, so `tsc` never complained; the first ESLint run this project
+   * has ever managed (T-060) is what found them. Wiring a Google button to any
+   * of them would have failed instantly with "not a function".
+   *
+   * ⚠️ The USER app is different and is deliberately untouched: its Google
+   * sign-in is real, wired to a visible button on `PhoneRegistrationScreen`,
+   * and backed by functions that actually exist.
+   */
 
   // LOAD-BEARING (T-017), not cosmetic. Every method above is memoized with no state
   // deps so that `value` changes only when `state` does. Consumers memoize their own
@@ -453,22 +403,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ...state,
       logout,
       updateUser,
-      googleSignIn,
-      appleSignIn,
-      facebookSignIn,
       sendOtp,
       verifyOtp,
     }),
-    [
-      state,
-      logout,
-      updateUser,
-      googleSignIn,
-      appleSignIn,
-      facebookSignIn,
-      sendOtp,
-      verifyOtp,
-    ]
+    [state, logout, updateUser, sendOtp, verifyOtp]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -5,6 +5,73 @@
 
 ---
 
+## 2026-08-13 (2) — turned the lint back on, and it found two defects in its first run
+
+- **Task:** owner — *"lets finish all one by one"*, with **payment (T-031) left parked** and the
+  pending migrations already applied by the owner. So: the two genuinely unblocked non-payment
+  cards, **T-035** and **T-032/T-060**. Both done.
+- **T-035 — the duplicate `errors:` blocks.** Five of six translation files declared `errors:`
+  twice; a duplicate literal key is an **override, not a merge**, so the second block won and five
+  keys vanished. **Measured by evaluating the six bundles, not by reading them:** 12 keys in five
+  files, 17 in driver `uz`, and `loadFailed`/`saveFailed`/`deleteFailed`/`updateFailed`/
+  `createFailed` missing from 5 of 6 — with **9 live call sites** rendering the raw key, so users
+  saw the literal string **"errors.loadFailed"**.
+  🔴 **The card's own prescribed fix was wrong, and following it would have caused a bigger bug.**
+  T-035 said "keep the union". But the block that *wins* is the one that has been **shipping**, and
+  **52 call sites** depend on its 12 keys — adopting the dead block's (fuller, never-seen) wording
+  would have silently rewritten 52 live user-facing messages while claiming to fix missing keys.
+  **Kept the shipping wording; added back only the 5 lost keys.** *A card written weeks ago is a
+  hypothesis, not an instruction.*
+- **T-060/T-032 — neither RN app could be linted at all.** ESLint 9, no flat config, and the script
+  still passing the **removed `--ext` flag**. `eslint-config-expo` was **already installed** in both
+  apps, so the fix was a thin config, not a house style invented on the spot.
+- 🔴 **The first lint run immediately earned its keep — two real defects `tsc` cannot see:**
+  - `screens/index.ts` exported **`OffersListScreen` twice**. Fixed; driver `tsc` **33 → 31**.
+  - **`AuthAPI.googleSignIn`/`appleSignIn`/`facebookSignIn` do not exist** in the driver app.
+    `import * as AuthAPI` makes it namespace member access, which the compiler does not check like a
+    named import — which is exactly why it survived. **Split as T-076, not fixed here**, because it
+    is dead code today and the real question ("is social sign-in wanted?") is the owner's.
+  - ✅ **And the user app turned out NOT to be affected** — it genuinely exports all three. So the
+    driver's copy was simply never given them: **the same "one app swept, the other not" shape** as
+    T-042/T-066/T-067 and T-065. Checking the sibling app before writing the card changed what the
+    card says.
+- **Two false-positive sources were switched OFF with the reason written down**, rather than left to
+  make the run useless: `react/no-unescaped-entities` is a **web** rule and all 15 hits are **Uzbek
+  apostrophes in real copy** (`ro'yxatdan`) inside `<Text>` — `&apos;` would render literally and
+  corrupt the UI in the product's main language; and `scripts/*.js` are Node, not RN.
+  **Formatting is deliberately not linted** — T-032 recorded ~28,000 CRLF findings drowning the real
+  ones in the API, and reproducing that here would kill the command on day one. **The API half of
+  T-032 stays open.**
+- **Problems — my suite was wrong once before the code was.** A bare `/errors\.(\w+)/` also matched
+  local form-state objects (`errors.push`, `errors.forEach`, `errors.seats`) and produced **27 false
+  failures blaming the translation files** for `errors.forEach` being missing. Only **quoted**
+  `'errors.x'` counts now. Same trap as T-061's `getLabelStyle('first_name')` match.
+- **Verification:** **122/122** with the bundles **evaluated** across both apps × 3 locales,
+  **27 red** against pre-change files (including a locale-parity check). Lint: **user 235/0 errors ·
+  driver 321/3**, the 3 being T-076 and meant to stay red.
+- **T-076 — social sign-in deleted the same day.** Owner: *"Google/Apple/Facebook sign-in remove, we
+  dont neeed them."* The driver signs in by phone + OTP only now. Gone: the three context methods,
+  the dead service and config files, the **Expo plugin entry in `app.json`** (leaving that while
+  removing the package would have broken the build), and both npm deps.
+  🔴 **And I had to correct myself.** I told the owner `tsc` could not see this bug because of
+  `import * as AuthAPI`. **Wrong** — the `git stash` comparison showed all three reported as
+  **TS2339**, part of the 31-error baseline all along. ESLint stated it more legibly; the compiler
+  was never silent. *Check the claim before repeating it as the reason a card exists.*
+  ⚠️ **The user app's Google sign-in is LIVE and was deliberately left alone** — visible button,
+  real functions, and `expo-auth-session` is load-bearing there. "Remove them" meant the broken
+  driver-side code, not a working passenger feature; **removing a working sign-in flow is not
+  something to infer.**
+- 🔴 **`tsc` BASELINES MOVED DOWN — all three cards deleted real errors:** **user 9 → 6**, **driver
+  35 → 31 → 28**. API **281** and admin **0** untouched. **Both RN apps now lint at 0 errors.**
+  *Update these everywhere; the old numbers are now wrong.*
+- **Next:** 🛑 owner. All three cards join the **rebuild already queued** — no API change, no
+  migration, no deploy. ⚠️ **T-076 removed a native dep + an Expo plugin, so the driver rebuild is
+  now mandatory rather than JS-only.** Open: the **API half of T-032** (line-ending decision) and
+  everything from 2026-08-12.
+- **Commit:** not committed — awaiting approval.
+
+---
+
 ## 2026-08-13 — T-069 was only half done, and the half it missed was the one the owner hit twice
 
 - **Task:** owner — *"user app remove possibility to select time before creating offer"*. Boarded as

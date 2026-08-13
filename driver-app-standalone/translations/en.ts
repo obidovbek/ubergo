@@ -64,25 +64,6 @@ export default {
     info: 'Info',
   },
 
-  errors: {
-    unknown: 'An unknown error occurred',
-    network: 'Network connection problem. Please check your internet connection.',
-    timeout: 'Request timed out. Please try again.',
-    badRequest: 'Bad Request',
-    unauthorized: 'Authentication required. Please login again.',
-    forbidden: 'You do not have permission to perform this action',
-    notFound: 'Data not found',
-    conflict: 'This data already exists',
-    validation: 'Please enter data correctly',
-    serverError: 'Server error',
-    tryAgain: 'Please try again later',
-    loadFailed: 'Failed to load data',
-    saveFailed: 'Failed to save data',
-    deleteFailed: 'Failed to delete',
-    updateFailed: 'Failed to update',
-    createFailed: 'Failed to create',
-    tooManyRequests: 'Too many requests. Please try again later',
-  },
 
   splash: {
     appName: 'UbexGo',
@@ -405,6 +386,12 @@ export default {
     unknown: 'Unknown error occurred',
     tryAgain: 'Please try again',
     tooManyRequests: 'Too many requests. Please try again later',
+    // T-035 — recovered from the overridden block; 9 call sites across both apps.
+    loadFailed: 'Failed to load data',
+    saveFailed: 'Failed to save data',
+    deleteFailed: 'Failed to delete',
+    updateFailed: 'Failed to update',
+    createFailed: 'Failed to create',
   },
 
   // Network Status

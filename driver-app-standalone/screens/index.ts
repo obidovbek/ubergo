@@ -18,6 +18,7 @@ export { DriverPassportScreen } from './DriverPassportScreen';
 export { DriverLicenseScreen } from './DriverLicenseScreen';
 export { DriverVehicleScreen } from './DriverVehicleScreen';
 export { DriverTaxiLicenseScreen } from './DriverTaxiLicenseScreen';
-export { OffersListScreen } from './OffersListScreen';
+// T-060: `OffersListScreen` was exported twice from this file (also on line 13,
+// with the other non-registration screens, which is where it belongs).
 export { OfferWizardScreen } from './OfferWizardScreen';
 

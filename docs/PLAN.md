@@ -202,6 +202,19 @@ instead — and the suite proves a no-op edit is silent.
 **Verification:** 51/51 with `changedFields` **executed**, **39 red** against pre-change code.
 `tsc` API **281** · driver **35**, both at baseline, zero errors in any touched file.
 
+> 🔴 **2026-08-13 — `tsc` BASELINES CHANGED: user 9 → 6, driver 35 → 28.** API **281** · admin **0**
+> are unchanged. **T-035** removed the three TS1117 duplicate-key errors, **T-060** a duplicate
+> export, and **T-076** the three broken social-sign-in calls (35→31→28). **Every "user 9 / driver
+> 35" below and in `docs/TODO.md` is now STALE** — compare against **6 / 28**, and do not "restore"
+> the old numbers. ✅ **Both RN apps now lint at 0 errors.**
+>
+> 📥 **2026-08-13 — T-035 and T-032/T-060 are DONE** (write-ups on their cards in `docs/TODO.md`).
+> Both join the queued rebuild: no API change, no migration, no deploy. **`npm run lint` now works in
+> both RN apps for the first time** — its first run found two real defects, one fixed and one boarded
+> as **T-076** (driver app calls three `AuthAPI` social-sign-in functions that do not exist; the user
+> app has them, the driver's copy was never given them). ⚠️ **T-076 is the reason the driver lint run
+> shows 3 errors — that is deliberate.**
+>
 > 📥 **2026-08-13 — T-075 was built after this plan was written and is NOT part of T-065.**
 > Owner: *"user app remove possibility to select time before creating offer"*. The user app's **time**
 > wheels offered hours already past on today's date; T-069 had floored only the **date** wheel. Now
