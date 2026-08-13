@@ -22,7 +22,10 @@ import {
   OfferPassenger,
   PushToken
 } from '../database/models/index.js';
-import type { DriverOfferStatus } from '../database/models/DriverOffer.js';
+import type {
+  DriverOfferStatus,
+  DriverOfferVehicleClass
+} from '../database/models/DriverOffer.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
@@ -52,6 +55,32 @@ interface CreateOfferData {
   seats_total: number;
   price_per_seat: number;
   front_price_per_seat?: number;
+  // T-078 — the rest of the mockup's `Narxlar` list, plus payment and class.
+  price_back_salon?: number;
+  price_whole_salon?: number;
+  /** A rate to DISPLAY. Nothing charges it — see the model. */
+  waiting_fee_per_min?: number;
+  free_waiting_min?: number;
+  pickup_fee?: number;
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  vehicle_class?: DriverOfferVehicleClass;
+  // T-079 — what the car offers, and what it will carry.
+  air_conditioner?: boolean;
+  wifi?: boolean;
+  roof_rack_needed?: boolean;
+  trailer?: boolean;
+  parcel_accepted?: boolean;
+  parcel_price?: number;
+  parcel_max_kg?: number;
+  road_pickup?: boolean;
+  road_pickup_note?: string;
+  // T-080 — `start_at` is the window's start; these are the rest.
+  depart_until?: string | Date;
+  arrive_from?: string | Date;
+  arrive_until?: string | Date;
+  /** 🔴 "leave when full" — NOT the passenger's `is_urgent` ("leave now"). */
+  departs_when_full?: boolean;
   currency?: string;
   note?: string;
   stops?: OfferStopData[];
@@ -124,6 +153,79 @@ export class DriverOfferService {
       }
       if (price !== undefined && frontPrice < price) {
         throw new AppError('front_price_per_seat must be greater than or equal to price_per_seat', 400);
+      }
+    }
+
+    /*
+     * ── T-078: salon prices, waiting and pickup ────────────────────────────
+     *
+     * ⚠️ Every one goes through `parsePrice` for the same reason the two above
+     * do: pg returns DECIMAL as a STRING, so an offer loaded for edit sends
+     * "320000.00" straight back, and `<` between two strings is lexicographic.
+     */
+    const backSalon = this.parsePrice(data.price_back_salon, 'price_back_salon');
+    const wholeSalon = this.parsePrice(data.price_whole_salon, 'price_whole_salon');
+
+    for (const [value, field] of [
+      [backSalon, 'price_back_salon'],
+      [wholeSalon, 'price_whole_salon']
+    ] as const) {
+      if (value !== undefined && value <= 0) {
+        throw new AppError(`${field} must be greater than 0`, 400);
+      }
+    }
+
+    /*
+     * The only ordering rule worth enforcing: the WHOLE car contains the back
+     * of it, so it cannot cost less.
+     *
+     * 🔴 Deliberately NOT enforced: that a salon must be cheaper than buying its
+     * seats one by one. It usually is (the mockup's 320 000 beats 3 × 120 000),
+     * but a driver may legitimately charge a premium for exclusivity, and
+     * refusing that would be this service inventing a pricing policy.
+     */
+    if (backSalon !== undefined && wholeSalon !== undefined && wholeSalon < backSalon) {
+      throw new AppError(
+        'price_whole_salon must be greater than or equal to price_back_salon',
+        400
+      );
+    }
+
+    /*
+     * ⚠️ Waiting and pickup allow **0**, unlike a seat price.
+     * "Joyidan olish + 0 so'm" is exactly what the mockup draws — free door
+     * pickup — and 0 free waiting minutes is a real answer too. Only a NEGATIVE
+     * value is nonsense here.
+     */
+    const waitingFee = this.parsePrice(data.waiting_fee_per_min, 'waiting_fee_per_min');
+    const pickupFee = this.parsePrice(data.pickup_fee, 'pickup_fee');
+
+    for (const [value, field] of [
+      [waitingFee, 'waiting_fee_per_min'],
+      [pickupFee, 'pickup_fee']
+    ] as const) {
+      if (value !== undefined && value < 0) {
+        throw new AppError(`${field} cannot be negative`, 400);
+      }
+    }
+
+    if (data.free_waiting_min !== undefined && data.free_waiting_min !== null) {
+      const freeMin = Number(data.free_waiting_min);
+      if (!Number.isFinite(freeMin) || freeMin < 0 || !Number.isInteger(freeMin)) {
+        throw new AppError('free_waiting_min must be a whole number of minutes', 400);
+      }
+    }
+
+    if (data.vehicle_class !== undefined && data.vehicle_class !== null) {
+      const classes: DriverOfferVehicleClass[] = [
+        'standard',
+        'comfort',
+        'business',
+        'econom',
+        'tourist'
+      ];
+      if (!classes.includes(data.vehicle_class)) {
+        throw new AppError('vehicle_class is not a valid class', 400);
       }
     }
   }
@@ -358,6 +460,32 @@ export class DriverOfferService {
       seats_free: data.seats_total, // MVP: seats_free = seats_total
       price_per_seat: data.price_per_seat,
       front_price_per_seat: data.front_price_per_seat ?? null,
+      // T-078. `?? null` throughout: an omitted field means "not stated", which
+      // for the payment flags is a THIRD state, distinct from `false`.
+      price_back_salon: data.price_back_salon ?? null,
+      price_whole_salon: data.price_whole_salon ?? null,
+      waiting_fee_per_min: data.waiting_fee_per_min ?? null,
+      free_waiting_min: data.free_waiting_min ?? null,
+      pickup_fee: data.pickup_fee ?? null,
+      payment_cash: data.payment_cash ?? null,
+      payment_card: data.payment_card ?? null,
+      vehicle_class: data.vehicle_class ?? null,
+      // T-079 — booleans default to false, so `?? false` rather than `?? null`.
+      air_conditioner: data.air_conditioner ?? false,
+      wifi: data.wifi ?? false,
+      roof_rack_needed: data.roof_rack_needed ?? false,
+      trailer: data.trailer ?? false,
+      parcel_accepted: data.parcel_accepted ?? false,
+      parcel_price: data.parcel_price ?? null,
+      parcel_max_kg: data.parcel_max_kg ?? null,
+      road_pickup: data.road_pickup ?? false,
+      road_pickup_note: data.road_pickup_note ?? null,
+      // T-080. ⚠️ Dates arrive as ISO strings; `new Date(undefined)` is Invalid
+      // Date, which Sequelize would happily try to store — hence the guard.
+      depart_until: data.depart_until ? new Date(data.depart_until) : null,
+      arrive_from: data.arrive_from ? new Date(data.arrive_from) : null,
+      arrive_until: data.arrive_until ? new Date(data.arrive_until) : null,
+      departs_when_full: data.departs_when_full ?? false,
       currency: data.currency || 'UZS',
       note: data.note,
       status: 'published'
@@ -439,9 +567,41 @@ export class DriverOfferService {
     // (seats_free and start_at are safe — the explicit keys below the spread win.)
     // Whitelisting is T-026 — the same mass-assignment fix already applied to
     // PassengerOfferService.
+    /*
+     * T-080 — the three window dates are pulled OUT of the spread.
+     *
+     * They arrive as ISO strings but the columns are DATE, and `...data` would
+     * carry the raw strings straight into `update()` — which is exactly what
+     * `start_at` is converted separately to avoid. Taking them out here means
+     * the only path into those columns is the conversion below.
+     */
+    const {
+      depart_until: departUntilRaw,
+      arrive_from: arriveFromRaw,
+      arrive_until: arriveUntilRaw,
+      ...restOfData
+    } = data;
+
     await offer.update({
-      ...data,
+      ...restOfData,
       start_at: data.start_at ? new Date(data.start_at) : offer.start_at,
+      /*
+       * T-080 — the spread above would put the raw ISO STRINGS into three DATE
+       * columns. `start_at` is converted for exactly this reason; the new
+       * windows need the same treatment.
+       * ⚠️ `undefined` (field not sent) must leave the stored value alone,
+       * which is why this is a spread of conditionals rather than three
+       * `?? offer.x` fallbacks — the latter would rewrite them on every save.
+       */
+      ...(departUntilRaw !== undefined
+        ? { depart_until: departUntilRaw ? new Date(departUntilRaw) : null }
+        : {}),
+      ...(arriveFromRaw !== undefined
+        ? { arrive_from: arriveFromRaw ? new Date(arriveFromRaw) : null }
+        : {}),
+      ...(arriveUntilRaw !== undefined
+        ? { arrive_until: arriveUntilRaw ? new Date(arriveUntilRaw) : null }
+        : {}),
       seats_free: seatsFree
     });
 
@@ -817,11 +977,73 @@ export class DriverOfferService {
       });
     }
 
+    /*
+     * T-083 — which seats are actually free, front vs back.
+     *
+     * 🔴 `seats_free` is ONE pool number, so the app could not tell a free front
+     * seat from a free back one and T-077's card greyed a price for the wrong
+     * reason ("no price set" instead of "taken").
+     *
+     * ⚠️ **`confirmed` only.** `OfferPassengerService` says so explicitly —
+     * *"pending requests do not reserve it; whoever the driver confirms first
+     * gets it"*. Counting pending rows here would hide a seat that is still
+     * winnable and lose the driver a booking.
+     *
+     * ⚠️ One grouped query, not one per offer — the same shape as `ratingsMap`
+     * above, because this runs on every search.
+     */
+    const seatsTakenMap = new Map<number, { frontTaken: boolean; backTaken: number }>();
+    const offerIds = offers.map((offer: any) => offer.id);
+    if (offerIds.length > 0) {
+      const takenRows = await OfferPassenger.findAll({
+        where: { offer_id: { [Op.in]: offerIds }, status: 'confirmed' },
+        attributes: [
+          'offer_id',
+          'is_front_seat',
+          [fn('SUM', col('seats_requested')), 'seats']
+        ],
+        group: ['offer_id', 'is_front_seat'],
+        raw: true
+      });
+
+      takenRows.forEach((row: any) => {
+        const current = seatsTakenMap.get(row.offer_id) ?? {
+          frontTaken: false,
+          backTaken: 0
+        };
+        if (row.is_front_seat) {
+          current.frontTaken = true;
+        } else {
+          // pg returns SUM() as a string.
+          current.backTaken += parseInt(row.seats, 10) || 0;
+        }
+        seatsTakenMap.set(row.offer_id, current);
+      });
+    }
+
     // Map offers with ratings
     let mappedOffers = offers.map((offer) => {
       const offerWithIncludes = offer as any;
       const driverRating = ratingsMap.get(offer.user_id) || { average: 0, count: 0 };
-      
+
+      /*
+       * T-083 — front/back availability.
+       *
+       * ⚠️ "There is only one front seat in the car" is the system's existing
+       * rule (`OfferPassengerService:315`), so the front is 1 seat and the rest
+       * are back seats.
+       * ⚠️ A driver who set NO `front_price_per_seat` is not selling the front
+       * seat at all — then every seat is a back seat, and `front_seat_available`
+       * is false for a different reason than "taken". The app keeps the two
+       * apart; see `frontOffered`.
+       */
+      const taken = seatsTakenMap.get(offer.id) ?? { frontTaken: false, backTaken: 0 };
+      const frontOffered =
+        offer.front_price_per_seat !== null && offer.front_price_per_seat !== undefined;
+      const backTotal = frontOffered
+        ? Math.max(0, offer.seats_total - 1)
+        : offer.seats_total;
+
       return {
         id: offer.id,
         from_text: offer.from_text,
@@ -829,9 +1051,37 @@ export class DriverOfferService {
         start_at: offer.start_at,
         price_per_seat: offer.price_per_seat,
         front_price_per_seat: offer.front_price_per_seat,
+        // T-078 — the rest of the Narxlar list, plus payment and class. The
+        // passenger's selection window (T-081) is built out of these.
+        price_back_salon: offer.price_back_salon,
+        price_whole_salon: offer.price_whole_salon,
+        waiting_fee_per_min: offer.waiting_fee_per_min,
+        free_waiting_min: offer.free_waiting_min,
+        pickup_fee: offer.pickup_fee,
+        payment_cash: offer.payment_cash,
+        payment_card: offer.payment_card,
+        vehicle_class: offer.vehicle_class,
+        // T-079 / T-080 — the passenger's card and detail screen read these.
+        air_conditioner: offer.air_conditioner,
+        wifi: offer.wifi,
+        roof_rack_needed: offer.roof_rack_needed,
+        trailer: offer.trailer,
+        parcel_accepted: offer.parcel_accepted,
+        parcel_price: offer.parcel_price,
+        parcel_max_kg: offer.parcel_max_kg,
+        road_pickup: offer.road_pickup,
+        road_pickup_note: offer.road_pickup_note,
+        depart_until: offer.depart_until,
+        arrive_from: offer.arrive_from,
+        arrive_until: offer.arrive_until,
+        departs_when_full: offer.departs_when_full,
         currency: offer.currency,
         seats_free: offer.seats_free,
         seats_total: offer.seats_total,
+        // T-083 — so the card can grey a price that is TAKEN, not merely unset.
+        front_offered: frontOffered,
+        front_seat_available: frontOffered && !taken.frontTaken,
+        back_seats_free: Math.max(0, backTotal - taken.backTaken),
         note: offer.note,
         driver: {
           id: offerWithIncludes.user?.id,

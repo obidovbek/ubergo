@@ -8,6 +8,15 @@ import { DataTypes, Model, type Optional, type Sequelize } from 'sequelize';
 // Offer Passenger status enum
 export type OfferPassengerStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
+/**
+ * T-081 — what the passenger actually bought.
+ *
+ * ⚠️ Same vocabulary as `PassengerOfferSalonScope` on purpose, so the two
+ * halves of one concept stay comparable. `null` means a plain per-seat
+ * booking, which is every booking made before this card.
+ */
+export type OfferPassengerSalonScope = 'whole_salon' | 'back_salon_full';
+
 // Offer Passenger attributes
 export interface OfferPassengerAttributes {
   id: string;
@@ -15,6 +24,8 @@ export interface OfferPassengerAttributes {
   passenger_id: number;
   seats_requested: number;
   is_front_seat: boolean;
+  /** T-081 — null for a normal per-seat booking. */
+  salon_scope?: OfferPassengerSalonScope | null;
   agreed_price_per_seat: number; // Price agreed at time of booking
   total_agreed_price: number; // Total price for all seats
   currency: string; // Currency of the agreed price
@@ -37,6 +48,7 @@ export interface OfferPassengerCreationAttributes
     | 'id'
     | 'seats_requested'
     | 'is_front_seat'
+    | 'salon_scope'
     | 'status'
     | 'message'
     | 'rejection_reason'
@@ -59,6 +71,7 @@ export class OfferPassenger
   declare passenger_id: number;
   declare seats_requested: number;
   declare is_front_seat: boolean;
+  declare salon_scope?: OfferPassengerSalonScope | null;
   declare agreed_price_per_seat: number;
   declare total_agreed_price: number;
   declare currency: string;
@@ -115,6 +128,11 @@ export function initOfferPassenger(sequelize: Sequelize) {
           min: 1,
           max: 8
         }
+      },
+      // T-081 — what was bought. The seat maths lives in the columns above.
+      salon_scope: {
+        type: DataTypes.STRING(20),
+        allowNull: true
       },
       is_front_seat: {
         type: DataTypes.BOOLEAN,

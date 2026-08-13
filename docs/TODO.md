@@ -63,6 +63,402 @@
 
 ## 🔥 Now (working on it)
 
+> 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
+> what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
+> 🔴 **`DriverOffer` carries ~20 columns; `PassengerOffer` carries 51.** Nearly everything the mockup
+> asks for **already exists on the passenger side** — the driver half was never built to match. This
+> is the *"one app swept, the other not"* pattern again, but at schema scale.
+> ✅ **The names are already decided:** `PassengerOfferSpecialOrder` is literally
+> `price_front · price_back · price_back_salon · price_whole_salon · waiting_fee_per_min ·
+> free_waiting_min`, and `PassengerOfferVehicleClass` is the mockup's five radios. **Mirror, don't
+> invent.**
+> **Owner decisions 2026-08-13:** the **driver** enters the waiting fee (🔴 this **REVERSES**
+> 2026-08-02's "it becomes an admin setting" — **T-031 steps 8-9 are CANCELLED**), and the work is
+> **split into 5 cards**, prices first because the passenger's selection window is built out of them.
+
+- [ ] T-078 (P1) ✅ **APPROVED and STEPS 1-5 DONE 2026-08-13, code-complete and untested.**
+  🔴 **[OWNER mockup `D_Elon berish`] A driver cannot say what a salon, a wait or a door pickup
+  costs.** **Card 1 of 5** → `docs/PLAN.md`.
+  ✅ The driver can now price **Orqa salon** / **Butun salon**, set **kutish** (so'm/minut + bepul
+  minut) and **joyidan olish**, pick **Naqd** and/or **Click/Payme** *independently*, and state the
+  **avto sinfi**.
+  🔴 **TWO DELIBERATE DEPARTURES FROM THE PLAN:** ① the payment flags are **NULLABLE**, not
+  `DEFAULT false` — `null` = never asked, `false` = refuses it; defaulting to false would make every
+  existing offer claim it takes neither (**T-083's three-states lesson, at schema level**).
+  ② the salon prices are **real columns**, not a JSONB blob like the passenger side's — there they
+  are an optional extra, here they are the core product.
+  ⚠️ **`price_whole_salon >= price_back_salon` enforced**; a salon undercutting its own seats is
+  **not** enforced — a premium for exclusivity is the driver's call, not the service's.
+  🔴 **`0` is a real answer** (`pickup_fee` = free pickup, `free_waiting_min` = none), so the wizard
+  reads with `numOrUndef`, not `|| undefined` — which destroys a legitimate zero. Same for the
+  payment flags: `?? undefined`, never `||`, or a driver's *"I don't take card"* becomes *"not
+  stated"*.
+  🔴 **The waiting fee is SHOWN, NEVER CHARGED** — the helper text says so in all three locales.
+  **88/88 with `numOrUndef` EXECUTED, 20 red** against pre-change behaviour (the lost `0` and the
+  lost `false` among them). `tsc` API **281** · admin **0** · user **6** · driver **28**, all at
+  baseline. Lint driver **304 = baseline, 0 errors**.
+  🔴 **THIRD UNRUN MIGRATION** — `20260813000002-add-driver-offer-prices-payment-class.cjs`.
+  🛑 **Only step 6 (owner: run the migration, deploy, rebuild the DRIVER app, then create an offer
+  with a salon price and a waiting fee, re-open it for EDIT and confirm nothing was lost) and step 7
+  (commit) remain.**
+  ⚠️ **The edit round trip is the test that matters** — a field that saves but never loads back is
+  how this card fails without anything erroring.
+
+<details><summary>Original card (kept for history)</summary>
+
+- [ ] ~~T-078~~ **Card 1 of 5. PLAN WRITTEN AND AWAITING APPROVAL → `docs/PLAN.md`.**
+  Eight columns on `driver_offers`: `price_back_salon`, `price_whole_salon`, `waiting_fee_per_min`,
+  `free_waiting_min`, `pickup_fee`, `payment_cash`, `payment_card`, `vehicle_class`.
+  ✅ **Four of the eight names come straight from `PassengerOfferSpecialOrder`**; the payment pair is
+  a straight mirror of **T-031** (done the same day); the class values already exist as
+  `PassengerOfferVehicleClass`.
+  ✅ **The two per-seat prices already work** — `front_price_per_seat` = *Old o'rindiq*,
+  `price_per_seat` = *Orqa o'rindiq*, both already rendered by T-077's card. ⚠️ **Do NOT rename
+  them** to match the mockup's wording; they are live and read by the passenger app.
+  ✅ **`vehicle_class` will make T-077's dropped chips buildable** — a later card, not a reason to
+  widen this one.
+  🔴 **Needs a THIRD unrun migration** (T-031's and T-046's are already waiting).
+  🔴 **`OfferWizardScreen` is 3517 lines and serves BOTH create and edit** — the commonest silent
+  failure here is a field that saves but never loads back, so the next edit wipes it.
+  ❌ The passenger's selection window is **not** in this card (T-081).
+
+</details>
+
+- [ ] T-083 (P1) ✅ **DONE 2026-08-13, code-complete and untested. CORRECTS T-077 — the grey price
+  meant the wrong thing.** Found in a meaning review the owner asked for (*"hammasi mano jihatdan
+  joyidami"*), **before** the device test.
+  🔴 **T-077 greys a price when NO PRICE IS SET. The mockup greys it when THE SEAT IS TAKEN.** Its
+  own cards prove it: Nexia `[1 free]` → *Oldi* green, *Orqa* grey; Malibu `[2 free]` → *Oldi* grey,
+  *Orqa* green; Gentra `[3 free]` → both green. **Owner confirmed: grey = taken.**
+  ✅ **The data EXISTS and the rule is already enforced server-side.** `OfferPassenger.is_front_seat`
+  is a real column, and `OfferPassengerService:319-331` already refuses a second front-seat booking
+  (*"there is only one front seat in the car"*, counting `confirmed` rows).
+  ❌ **But the search endpoint returns none of it** — the mapper sends `seats_free` as one number and
+  nothing about which seats those are. So the app cannot tell front from back.
+  **Scope:** return front-seat availability (and back seats free) from the search/detail mappers,
+  then make the card's grey mean "taken". ⚠️ **Keep the "no price set" case distinct** — a driver who
+  set no front price is not the same as a full front seat, and rendering them identically would tell
+  the passenger a seat is taken when it never existed.
+  ⚠️ **Pending bookings do NOT reserve the front seat** (the service comment says so explicitly) —
+  availability must count `confirmed` only, or the card would hide a seat that is still winnable.
+  🟡 **AND A CORRECTION TO T-077's OWN CARD:** it claimed the mockup's seat-position squares "have no
+  backing data". **Partly wrong** — the *count* of taken back seats is derivable from the same rows;
+  only the exact position (left/middle/right) is not stored. Decide per-card whether the squares show
+  a count or a true position.
+  **DONE 2026-08-13.** The API now returns `front_offered`, `front_seat_available` and
+  `back_seats_free` from one **grouped** query (the same shape as the existing `ratingsMap`, not one
+  query per offer — this runs on every search), and the card's grey means *taken*.
+  ✅ **Three states kept apart, not two:** *no price* (never for sale) · *priced but taken* ·
+  *priced and free*. Telling a passenger a seat is "taken" when it was never offered would be a
+  worse lie than the bug being fixed.
+  🔴 **An older API sends none of the new fields, and `undefined` reads as AVAILABLE** — greying
+  every seat on a stale response would empty the whole screen. The deploy and the app rebuild are
+  therefore independent, in either order.
+  ⚠️ **`confirmed` only**, per `OfferPassengerService`'s own comment — counting pending rows would
+  hide a seat that is still winnable and cost the driver a booking.
+  ⚠️ `seats_total - 1` is the back-seat count **only when a front price exists**; a driver selling no
+  front seat is selling `seats_total` back seats.
+  **32/32 with the logic EXECUTED — and the MOCKUP'S OWN CARDS are the test** (Nexia `[1]` → Oldi
+  green / Orqa grey; Malibu `[2]` → the reverse; Gentra `[3]` → both green). **14 red against T-077's
+  behaviour**, the mockup cards among them. T-077's own 80/80 re-run green — no regression.
+  `tsc` API **281** · user **6**, both at baseline. Lint **235 = baseline, 0 errors**.
+  ⚠️ Needs an API deploy — joins the queued one. ❌ No migration.
+
+- [ ] T-079 + T-080 (P2) ✅ **DONE 2026-08-13, code-complete and untested. Cards 2 and 3 of 5, built
+  together.** Amenities (Konditsioner · Internet/WiFi · Tom bagajnik · Pritsep), *Jo'natma (pochta)*
+  with its price and **kg limit**, the *"Faqat pitakdan yoki yo'lga chiqib tursa olaman"* option with
+  its note, the **departure/arrival windows**, and *"to'lishi bilan yuraman"*. **13 columns.**
+  ⚠️ **TWO CARDS, ONE MIGRATION, deliberately** — same table, same screen, same rebuild, and the
+  owner already had three unrun ones. Splitting would have made five for no benefit.
+  ✅ Names mirrored from `PassengerOffer` where the concept exists there (`roof_rack_needed`,
+  `trailer`, `road_pickup`, `road_pickup_note`, `depart_until`, `arrive_from`, `arrive_until`).
+  🔴 **`departs_when_full` is NOT `is_urgent`, and that is the whole point.** The passenger's flag
+  means *"leave now"* and literally sets `start_at = now`; the driver's means *"leave when the car
+  fills"*. **Mirroring the name would have equated two different facts** — caught in the 2026-08-13
+  meaning review. It therefore does **not** give T-077 its ⚡ flash either.
+  🔴 **These booleans default to `false`, unlike T-078's payment flags** — "no air conditioner" is a
+  safe, honest default for an old offer; "refuses cash" was not.
+  🔴 **The three window dates are pulled OUT of the update spread** — `...data` would have written
+  raw ISO strings into DATE columns, which is exactly why `start_at` was already converted
+  separately. `tsc` caught it (282 vs 281) before it could ship.
+  **70/70, 25 red.** `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline.
+  Lint driver **304 = baseline, 0 errors**.
+  🔴 **FIFTH unrun migration** — `20260813000004-add-driver-offer-amenities-windows.cjs`.
+  🛑 **Only the owner's migration + deploy + driver rebuild, then the commit, remain.**
+  ⚠️ **Test the EDIT round trip**, as with T-078 — that is where this silently fails.
+  ✅ **The passenger side now shows them → T-084, done the same day.**
+
+> ✅ **T-080 was built together with T-079 above** — same table, same screen, one migration.
+# ✅ TODO — task board
+
+> **Rules:** max **2** tasks in *Now*. New ideas always land in *Later* — they
+> never interrupt the current task. Claude moves cards here during
+> `/new-task` and `/end-day`. Humans can edit this file any time.
+>
+> **Format:** `T-###  (P1|P2|P3)  short name — detail`. P1 = most important.
+
+> 📥 **2026-08-12 — A NEW OWNER BATCH OF 13 FINDINGS IS BOARDED AS T-064…T-074** (bottom of
+> *Later*), grounded the same day.
+> ✅ **EIGHT OF THE THIRTEEN ARE CODE-COMPLETE 2026-08-12** — T-065 · T-066 · T-067 · T-068 ·
+> T-069 · T-070 · T-071 (item ⑪) · T-072. **All ride runs already queued: one API deploy (T-065
+> only) and one rebuild of both apps.** No extra deploy, no extra rebuild, no migration anywhere.
+> 🛑 **THREE REMAIN, ALL BLOCKED ON THE OWNER, NOT ON CODE:**
+> • **T-064** — unblocked in principle (a confirmed driver may withdraw; the offer reopens to
+>   `published`) but **not started**, and it still carries one unanswered sub-question: do the
+>   auto-rejected drivers reopen? *(recommendation on the card: no)*.
+> • **T-073** — **measured and the screen came back CLEAN** (66 keys evaluated, 3 locales, 0
+>   unresolved). The reported mechanism cannot happen: a missing key renders the **key**, never
+>   English. **Needs a screenshot of the actual English text.**
+> • **T-074** — no structural cause found; needs a screen recording, and "slide" may mean a pager
+>   that exists nowhere in either app.
+> ⚠️ **Two smaller owner questions are open inside finished cards:** **T-071 item ⑫** needs a
+> screenshot, and its five *labelled* registration back buttons were deliberately left alone (see
+> the card); **T-069** turned out to have a wrong premise — the passenger side already refused past
+> departures at submit.
+> 🔴 **Three of the thirteen are defects already fixed ONCE in the other app** — T-066 = T-042②,
+> T-067 = T-042③, T-065 = the rule `cancelOffer` follows and `updateOffer` does not.
+> ⚠️ **This batch does NOT change the state below:** the eleven code-complete cards are still
+> waiting on the same two runs (one API deploy, one app rebuild).
+
+> 🛑 **STATE AT END OF 2026-08-11: the board is waiting on the owner's device again. No Claude work
+> remains anywhere.**
+>
+> The owner's device test reopened the board with six findings; five became **T-061 — code-complete
+> the same day**. The other two are **T-062** (🛑 blocked: which table owns a driver's email?) and
+> **T-063** (four validators still deliberately unmounted).
+>
+> **ELEVEN code-complete, untested cards, still in exactly two runs:**
+> 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055 · T-061** (no migration in any).
+> 2. **App rebuild** → **T-024 · T-046 · T-056 · T-057 · T-058 · T-059** (+ the driver rebuild T-061 needs).
+> ⚠️ **T-046 additionally needs its migration run.**
+>
+> 🔴 **Two places the risk is concentrated:** the phone gate (`gatePhones`) exists **twice** (T-054 ·
+> T-055) and has never been seen on a device — **walk T-054 first**; and **T-061 mounted a validator
+> on a live route**, so if the passport step starts refusing a real driver, that is the first suspect.
+>
+> 🛑 **Everything else is still waiting on the owner's device, not on code.**
+> All 18 plan files were swept — **no Claude coding work remains in any of them.** Every unchecked
+> step is the owner's, blocked on an owner answer (**T-030** step 7 · **T-031** steps 4-9 ·
+> **T-047**), or needs a running device and API (**T-018** step 9).
+>
+> **TEN code-complete, untested cards, in exactly two runs:**
+> 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055** (no migration in any).
+> 2. **App rebuild only** → **T-024 · T-046 · T-056 · T-057 · T-058 · T-059**.
+> ⚠️ **T-046 additionally needs its migration run** — it repairs stranded rows and prints the count.
+>
+> 🔴 **Where the risk is concentrated:** the phone gate (`gatePhones`) now exists **twice**, in
+> `OfferDriverService` (T-054) and `OfferPassengerService` (T-055), and neither has been seen on a
+> device. If it is wrong it is wrong in both services and both apps — **walk T-054 first.**
+>
+> ⚠️ Cards below sit in *Now* only because they are awaiting that test; none needs Claude work.
+
+## 🔥 Now (working on it)
+
+> 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
+> what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
+> 🔴 **`DriverOffer` carries ~20 columns; `PassengerOffer` carries 51.** Nearly everything the mockup
+> asks for **already exists on the passenger side** — the driver half was never built to match. This
+> is the *"one app swept, the other not"* pattern again, but at schema scale.
+> ✅ **The names are already decided:** `PassengerOfferSpecialOrder` is literally
+> `price_front · price_back · price_back_salon · price_whole_salon · waiting_fee_per_min ·
+> free_waiting_min`, and `PassengerOfferVehicleClass` is the mockup's five radios. **Mirror, don't
+> invent.**
+> **Owner decisions 2026-08-13:** the **driver** enters the waiting fee (🔴 this **REVERSES**
+> 2026-08-02's "it becomes an admin setting" — **T-031 steps 8-9 are CANCELLED**), and the work is
+> **split into 5 cards**, prices first because the passenger's selection window is built out of them.
+
+- [ ] T-078 (P1) ✅ **APPROVED and STEPS 1-5 DONE 2026-08-13, code-complete and untested.**
+  🔴 **[OWNER mockup `D_Elon berish`] A driver cannot say what a salon, a wait or a door pickup
+  costs.** **Card 1 of 5** → `docs/PLAN.md`.
+  ✅ The driver can now price **Orqa salon** / **Butun salon**, set **kutish** (so'm/minut + bepul
+  minut) and **joyidan olish**, pick **Naqd** and/or **Click/Payme** *independently*, and state the
+  **avto sinfi**.
+  🔴 **TWO DELIBERATE DEPARTURES FROM THE PLAN:** ① the payment flags are **NULLABLE**, not
+  `DEFAULT false` — `null` = never asked, `false` = refuses it; defaulting to false would make every
+  existing offer claim it takes neither (**T-083's three-states lesson, at schema level**).
+  ② the salon prices are **real columns**, not a JSONB blob like the passenger side's — there they
+  are an optional extra, here they are the core product.
+  ⚠️ **`price_whole_salon >= price_back_salon` enforced**; a salon undercutting its own seats is
+  **not** enforced — a premium for exclusivity is the driver's call, not the service's.
+  🔴 **`0` is a real answer** (`pickup_fee` = free pickup, `free_waiting_min` = none), so the wizard
+  reads with `numOrUndef`, not `|| undefined` — which destroys a legitimate zero. Same for the
+  payment flags: `?? undefined`, never `||`, or a driver's *"I don't take card"* becomes *"not
+  stated"*.
+  🔴 **The waiting fee is SHOWN, NEVER CHARGED** — the helper text says so in all three locales.
+  **88/88 with `numOrUndef` EXECUTED, 20 red** against pre-change behaviour (the lost `0` and the
+  lost `false` among them). `tsc` API **281** · admin **0** · user **6** · driver **28**, all at
+  baseline. Lint driver **304 = baseline, 0 errors**.
+  🔴 **THIRD UNRUN MIGRATION** — `20260813000002-add-driver-offer-prices-payment-class.cjs`.
+  🛑 **Only step 6 (owner: run the migration, deploy, rebuild the DRIVER app, then create an offer
+  with a salon price and a waiting fee, re-open it for EDIT and confirm nothing was lost) and step 7
+  (commit) remain.**
+  ⚠️ **The edit round trip is the test that matters** — a field that saves but never loads back is
+  how this card fails without anything erroring.
+
+<details><summary>Original card (kept for history)</summary>
+
+- [ ] ~~T-078~~ **Card 1 of 5. PLAN WRITTEN AND AWAITING APPROVAL → `docs/PLAN.md`.**
+  Eight columns on `driver_offers`: `price_back_salon`, `price_whole_salon`, `waiting_fee_per_min`,
+  `free_waiting_min`, `pickup_fee`, `payment_cash`, `payment_card`, `vehicle_class`.
+  ✅ **Four of the eight names come straight from `PassengerOfferSpecialOrder`**; the payment pair is
+  a straight mirror of **T-031** (done the same day); the class values already exist as
+  `PassengerOfferVehicleClass`.
+  ✅ **The two per-seat prices already work** — `front_price_per_seat` = *Old o'rindiq*,
+  `price_per_seat` = *Orqa o'rindiq*, both already rendered by T-077's card. ⚠️ **Do NOT rename
+  them** to match the mockup's wording; they are live and read by the passenger app.
+  ✅ **`vehicle_class` will make T-077's dropped chips buildable** — a later card, not a reason to
+  widen this one.
+  🔴 **Needs a THIRD unrun migration** (T-031's and T-046's are already waiting).
+  🔴 **`OfferWizardScreen` is 3517 lines and serves BOTH create and edit** — the commonest silent
+  failure here is a field that saves but never loads back, so the next edit wipes it.
+  ❌ The passenger's selection window is **not** in this card (T-081).
+
+</details>
+
+- [ ] T-083 (P1) ✅ **DONE 2026-08-13, code-complete and untested. CORRECTS T-077 — the grey price
+  meant the wrong thing.** Found in a meaning review the owner asked for (*"hammasi mano jihatdan
+  joyidami"*), **before** the device test.
+  🔴 **T-077 greys a price when NO PRICE IS SET. The mockup greys it when THE SEAT IS TAKEN.** Its
+  own cards prove it: Nexia `[1 free]` → *Oldi* green, *Orqa* grey; Malibu `[2 free]` → *Oldi* grey,
+  *Orqa* green; Gentra `[3 free]` → both green. **Owner confirmed: grey = taken.**
+  ✅ **The data EXISTS and the rule is already enforced server-side.** `OfferPassenger.is_front_seat`
+  is a real column, and `OfferPassengerService:319-331` already refuses a second front-seat booking
+  (*"there is only one front seat in the car"*, counting `confirmed` rows).
+  ❌ **But the search endpoint returns none of it** — the mapper sends `seats_free` as one number and
+  nothing about which seats those are. So the app cannot tell front from back.
+  **Scope:** return front-seat availability (and back seats free) from the search/detail mappers,
+  then make the card's grey mean "taken". ⚠️ **Keep the "no price set" case distinct** — a driver who
+  set no front price is not the same as a full front seat, and rendering them identically would tell
+  the passenger a seat is taken when it never existed.
+  ⚠️ **Pending bookings do NOT reserve the front seat** (the service comment says so explicitly) —
+  availability must count `confirmed` only, or the card would hide a seat that is still winnable.
+  🟡 **AND A CORRECTION TO T-077's OWN CARD:** it claimed the mockup's seat-position squares "have no
+  backing data". **Partly wrong** — the *count* of taken back seats is derivable from the same rows;
+  only the exact position (left/middle/right) is not stored. Decide per-card whether the squares show
+  a count or a true position.
+  **DONE 2026-08-13.** The API now returns `front_offered`, `front_seat_available` and
+  `back_seats_free` from one **grouped** query (the same shape as the existing `ratingsMap`, not one
+  query per offer — this runs on every search), and the card's grey means *taken*.
+  ✅ **Three states kept apart, not two:** *no price* (never for sale) · *priced but taken* ·
+  *priced and free*. Telling a passenger a seat is "taken" when it was never offered would be a
+  worse lie than the bug being fixed.
+  🔴 **An older API sends none of the new fields, and `undefined` reads as AVAILABLE** — greying
+  every seat on a stale response would empty the whole screen. The deploy and the app rebuild are
+  therefore independent, in either order.
+  ⚠️ **`confirmed` only**, per `OfferPassengerService`'s own comment — counting pending rows would
+  hide a seat that is still winnable and cost the driver a booking.
+  ⚠️ `seats_total - 1` is the back-seat count **only when a front price exists**; a driver selling no
+  front seat is selling `seats_total` back seats.
+  **32/32 with the logic EXECUTED — and the MOCKUP'S OWN CARDS are the test** (Nexia `[1]` → Oldi
+  green / Orqa grey; Malibu `[2]` → the reverse; Gentra `[3]` → both green). **14 red against T-077's
+  behaviour**, the mockup cards among them. T-077's own 80/80 re-run green — no regression.
+  `tsc` API **281** · user **6**, both at baseline. Lint **235 = baseline, 0 errors**.
+  ⚠️ Needs an API deploy — joins the queued one. ❌ No migration.
+
+- [ ] T-079 + T-080 (P2) ✅ **DONE 2026-08-13, code-complete and untested. Cards 2 and 3 of 5, built
+  together.** Amenities (Konditsioner · Internet/WiFi · Tom bagajnik · Pritsep), *Jo'natma (pochta)*
+  with its price and **kg limit**, the *"Faqat pitakdan yoki yo'lga chiqib tursa olaman"* option with
+  its note, the **departure/arrival windows**, and *"to'lishi bilan yuraman"*. **13 columns.**
+  ⚠️ **TWO CARDS, ONE MIGRATION, deliberately** — same table, same screen, same rebuild, and the
+  owner already had three unrun ones. Splitting would have made five for no benefit.
+  ✅ Names mirrored from `PassengerOffer` where the concept exists there (`roof_rack_needed`,
+  `trailer`, `road_pickup`, `road_pickup_note`, `depart_until`, `arrive_from`, `arrive_until`).
+  🔴 **`departs_when_full` is NOT `is_urgent`, and that is the whole point.** The passenger's flag
+  means *"leave now"* and literally sets `start_at = now`; the driver's means *"leave when the car
+  fills"*. **Mirroring the name would have equated two different facts** — caught in the 2026-08-13
+  meaning review. It therefore does **not** give T-077 its ⚡ flash either.
+  🔴 **These booleans default to `false`, unlike T-078's payment flags** — "no air conditioner" is a
+  safe, honest default for an old offer; "refuses cash" was not.
+  🔴 **The three window dates are pulled OUT of the update spread** — `...data` would have written
+  raw ISO strings into DATE columns, which is exactly why `start_at` was already converted
+  separately. `tsc` caught it (282 vs 281) before it could ship.
+  **70/70, 25 red.** `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline.
+  Lint driver **304 = baseline, 0 errors**.
+  🔴 **FIFTH unrun migration** — `20260813000004-add-driver-offer-amenities-windows.cjs`.
+  🛑 **Only the owner's migration + deploy + driver rebuild, then the commit, remain.**
+  ⚠️ **Test the EDIT round trip**, as with T-078 — that is where this silently fails.
+  ✅ **The passenger side now shows them → T-084, done the same day.**
+
+- [ ] T-080 (P2) **[mockup `D_Elon berish`] Driver offer: departure/arrival windows + srochno.**
+  *21:00-23:00 da yurish vaqti*, *07:00-09:00 yetib borish vaqti* with its own date, and
+  *hozioq (to'lishi bilan yuraman)*. **NOT STARTED.** ⚠️ `PassengerOffer` already has
+  `depart_until`, `arrive_from`, `arrive_until` — mirror those three.
+  🔴 **BUT DO NOT MIRROR `is_urgent` — it would be a LIE.** Owner confirmed 2026-08-13 that the
+  driver's *"hozioq (to'lishi bilan yuraman)"* means **"I leave when the car fills up"**, which is
+  **not** the passenger's `is_urgent` (*"I want to leave now"*, and on that side it literally sets
+  `start_at = now`). **Give it its own name — `departs_when_full`** — and note that the two are
+  different concepts, or a future join will silently equate them. *Found in the 2026-08-13 meaning
+  review; the mirror was one step from being wrong.*
+  ⚠️ **This therefore does NOT give T-077 its ⚡ flash** — the flash meant "urgent", and this column
+  means "when full". They are separate questions. Card 3 of 5.
+
+- [ ] T-081 (P1) ✅ **STEPS 1-4 DONE 2026-08-13, code-complete and untested.**
+  **[mockup `004 Shaharlar aro K3 Tanlov oynasi`] The passenger can now book a SALON.**
+  🔴 **T-078's salon prices were WRITE-ONLY** — a driver could enter *Butun salon 450 000* and no
+  passenger could see or buy it. Half-built schema is the worst state to leave, so this was taken
+  next (owner delegated the choice).
+  ✅ **ONE column, not a table** (`offer_passengers.salon_scope`). The seat arithmetic maps onto
+  columns that already exist — `back_salon_full` → back seats, `whole_salon` → every seat + the
+  front — so **`seats_free` accounting, the "only one front seat" rule and cancel/restore were not
+  touched at all.**
+  🔴 **Danger ① — two price calculators.** The app previews, the server decides, and they already
+  duplicated the front-seat formula. Both now take the salon total from the **same column, whole**.
+  *Pre-change the app would have shown 120 000 × 3 = **360 000** for a salon priced at **320 000**.*
+  🔴 **Danger ② — buying a salon at one seat's price.** The server **derives** the seat count and
+  the front-seat flag and **discards the client's**. The controller also allow-lists the two known
+  scopes, so an unknown string cannot be stored in the STRING(20) column.
+  ⚠️ **`whole_salon` claims the front seat** — otherwise it stays "available" and could be sold on
+  top of a booking that already includes it.
+  ⚠️ **A salon the driver never priced is not shown and is refused server-side**
+  (`salonNotOffered`), never re-priced per seat behind the passenger's back.
+  ❌ **The driver info header (photo, age, experience, trip count) is NOT in this card** — experience
+  and trip count do not exist (**T-082**), and the screen already shows name, rating, vehicle, plate.
+  Building half a header on invented data is what T-077 was corrected for.
+  **49/49 with the price lookup EXECUTED, 20 red.** `tsc` API **281** · admin **0** · user **6** ·
+  driver **28**, all at baseline. Lint user **235 = baseline, 0 errors**.
+  🔴 **FOURTH unrun migration** — `20260813000003-add-salon-scope-to-offer-passengers.cjs`.
+  🛑 **Only step 5 (owner: migrations, deploy, rebuild the USER app, book a salon and check the seat
+  count drops correctly) and step 6 (commit) remain.** Card 4 of 5.
+
+- [ ] T-084 (P2) ✅ **DONE 2026-08-13, code-complete and untested. The passenger finally SEES what
+  T-079/T-080 let the driver say.** Those cards left the fields **write-only** — the API returned
+  them and no passenger screen rendered them, the same half-built state T-081 fixed for the salon
+  prices.
+  ✅ A **"Haydovchi nima taklif qiladi"** block on `OfferDetailsScreen`: Konditsioner · WiFi · Tom
+  bagajnik · Pritsep · *To'lishi bilan yuradi*, plus **Jo'natma** with the driver's own kg limit and
+  price, and the road-pickup line with its note.
+  🔴 **Only a TRUE flag is drawn, and that is the whole rule.** An absent flag means *"not stated"* —
+  every offer created before T-079 has none of them — so rendering `false`/absent as *"no air
+  conditioning"* would put a claim in front of the passenger that **the driver never made**. When
+  nothing is stated the block does not appear at all.
+  ⚠️ The kg limit and the parcel price are shown **only when the driver set them**, never defaulted.
+  **43/43 with the three states EXECUTED, 33 red.** `tsc` user **6** · lint **235**, both at
+  baseline. ❌ No migration. ❌ No API change (T-079/T-080 already return the data).
+  🛑 **Ships with the user-app rebuild already queued.**
+
+- [ ] T-082 (P3) 🛑 **[mockup, both screens] Driver experience and trip count — GROUNDED 2026-08-13,
+  NOT BUILT, and it needs an owner answer first.**
+  *"2015-yildan beri shu yo'nalishda faoliyat yuritaman"*, *"Tajriba 7 yil"*, *"qatnovlash soni
+  100+"*, *"35 yosh"*.
+  ✅ **AGE needs NO migration** — `DriverProfile.birth_date` already exists, so *"35 yosh"* is
+  derivable today.
+  ✅ **RATING already exists and is computed** (`DriverRating`, averaged in the search mapper).
+  🔴 **EXPERIENCE has no data at all** — nothing anywhere records *"since 2015"*. It needs one
+  column, and it is **the driver's own claim**, not something the system can verify.
+  🛑 **TRIP COUNT is BLOCKED ON A DEFINITION, not on code.** There is **no `completed` status** —
+  `DriverOfferStatus` is only `published | archived | cancelled`, so nothing marks a trip as having
+  happened. The closest real signal is `OfferPassenger.driver_arrived_at`. So *"qatnovlash soni
+  100+"* could mean at least three different numbers:
+  ① **trips** — distinct offers where the driver arrived;
+  ② **passengers carried** — confirmed bookings with `driver_arrived_at` (a full car counts 4);
+  ③ **offers posted** — cheapest, but flattering and close to meaningless.
+  **These differ by ~4× and would each be shown to passengers as trust.** Do not pick one by guess.
+  ⚠️ **Whatever is chosen, `driver_arrived_at` is set by the DRIVER's own app** — so the number is
+  self-reported either way, and should not be presented as verified.
+  ❌ **Deliberately left out of T-081's selection window** for exactly this reason — building half a
+  driver header on invented numbers is what T-077 was corrected for. Card 5 of 5.
+
+
 - [ ] T-077 (P1) 🎨 **[OWNER, mockup `K_RegShablon` 2026-08-13] So'rov yuborilgandan keyin yo'lovchi
   hech nima ko'rmaydi.** Owner: *"so'rov yuborganidan keyin sunaqa oyna chiqish kergidi"* — after
   sending a ride request the passenger should land on the matching driver offers.
@@ -89,6 +485,13 @@
   🛑 **Only step 7 (owner: deploy the API, rebuild the USER app, walk it) and step 8 (commit)
   remain.** ⚠️ **The screen is reached from the MENU too**, so this changes what menu users see —
   intended, but it cannot be walked only through the new path.
+  🔴 **DEFECT FOUND 2026-08-13 IN A MEANING REVIEW, BEFORE THE DEVICE TEST — see T-083.**
+  I made the grey price block mean **"no price was set"**. In the mockup it means **"that seat is
+  already taken"** — read off its own cards: Nexia `[1 free]` has *Oldi* green and *Orqa* grey;
+  Malibu `[2 free]` has *Oldi* grey and *Orqa* green. **The card is showing the wrong thing**, and
+  fixing it needs data the search endpoint does not return.
+  ✅ **FIXED THE SAME DAY IN T-083** — before the device walk, so this screen is now worth testing.
+  ⚠️ **The two ship together:** T-077 + T-083 are one API deploy and one user-app rebuild.
   🔴 **The defect is one line:** `CreatePassengerOfferScreen:613` calls `navigation.goBack()` on
   success, so the passenger is returned to the menu with no idea whether anyone is already driving
   that route — the product's whole value is invisible at the one moment it matters.

@@ -83,6 +83,11 @@ export default function OfferDetailsScreen() {
   
   // Additional booking options
   const [wantFrontSeat, setWantFrontSeat] = useState(false);
+  /**
+   * T-081 — booking a whole salon instead of counting seats.
+   * `null` is the normal per-seat booking.
+   */
+  const [salonScope, setSalonScope] = useState<'whole_salon' | 'back_salon_full' | null>(null);
   const [haveLargeBaggage, setHaveLargeBaggage] = useState(false);
   const [havePets, setHavePets] = useState(false);
 
@@ -170,6 +175,22 @@ export default function OfferDetailsScreen() {
     }
   };
 
+  /**
+   * T-081 — the driver's price for a salon, or `null` when they did not set one.
+   *
+   * ⚠️ `null` means **not for sale**, and the tile is then not rendered at all.
+   * Offering a salon the driver never priced would 400 at the server
+   * (`salonNotOffered`) after the passenger had already committed to it.
+   * 🔴 pg sends DECIMAL as a string, so this must not assume a number.
+   */
+  const salonPriceOf = (scope: 'whole_salon' | 'back_salon_full'): number | null => {
+    const raw =
+      scope === 'whole_salon' ? offer?.price_whole_salon : offer?.price_back_salon;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
   const handleJoin = async () => {
     if (!token) {
       showToast.error(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
@@ -178,7 +199,12 @@ export default function OfferDetailsScreen() {
 
     if (!offer) return;
 
-    if (seatsRequested > offer.seats_free) {
+    /*
+     * T-081 — a salon takes seats the server derives, so the per-seat guard
+     * below would compare the wrong number. The server checks salon capacity
+     * itself (and is the authority); skip only this client-side pre-check.
+     */
+    if (!salonScope && seatsRequested > offer.seats_free) {
       const message = t('offerDetails.onlySeatsAvailable').replace('{count}', offer.seats_free.toString());
       showToast.error(t('common.error'), message);
       return;
@@ -201,7 +227,16 @@ export default function OfferDetailsScreen() {
     // Calculate price for confirmation
     // Front seat premium only applies to 1 seat (there's only one front seat)
     let confirmTotalPrice: number;
-    if (wantFrontSeat && offer.front_price_per_seat) {
+    if (salonScope) {
+      /*
+        🔴 T-081 — mirrors `OfferPassengerService.joinOffer` EXACTLY. The server
+        is authoritative; this is only the number the passenger is shown before
+        confirming. If the two ever disagree, the passenger agrees to one price
+        and is charged another — which is why the salon seat count is derived
+        the same way here as there, rather than reusing `seatsRequested`.
+      */
+      confirmTotalPrice = salonPriceOf(salonScope) ?? 0;
+    } else if (wantFrontSeat && offer.front_price_per_seat) {
       // Front seat selected: 1 front seat + (seatsRequested - 1) regular seats
       const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
       confirmTotalPrice = (offer.price_per_seat * seatsRequested) + frontSeatPremium;
@@ -209,9 +244,11 @@ export default function OfferDetailsScreen() {
       // No front seat: regular price for all seats
       confirmTotalPrice = offer.price_per_seat * seatsRequested;
     }
-    
+
     let priceInfo: string;
-    if (wantFrontSeat && offer.front_price_per_seat) {
+    if (salonScope) {
+      priceInfo = `${formatNumberWithSpaces(confirmTotalPrice)} ${offer.currency}`;
+    } else if (wantFrontSeat && offer.front_price_per_seat) {
       const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
       if (seatsRequested === 1) {
         priceInfo = `${formatNumberWithSpaces(offer.front_price_per_seat)} ${offer.currency} ${t('offerDetails.frontSeatPerSeat') || 'oldingi o\'rin uchun'}`;
@@ -240,6 +277,10 @@ export default function OfferDetailsScreen() {
           await OffersAPI.joinOffer(token, offerId, {
             seats_requested: seatsRequested,
             is_front_seat: wantFrontSeat, // Front seat can be selected with multiple seats
+            // T-081. ⚠️ The server DERIVES the seats and the front-seat flag
+            // from this and ignores the two above — deliberately, so a client
+            // cannot buy a salon at one seat's price.
+            ...(salonScope ? { salon_scope: salonScope } : {}),
             message: fullMessage || undefined,
           });
           showToast.success(
@@ -462,6 +503,68 @@ export default function OfferDetailsScreen() {
           )}
         </View>
 
+        {/*
+          T-084 — what the driver actually offers (T-079/T-080 built these;
+          until now the API returned them and no passenger screen showed them).
+
+          ⚠️ Only TRUE flags are drawn. A `false` is not rendered as "no air
+          conditioning": on an offer created before those cards every flag is
+          absent, and an absent flag means "not stated", not "no".
+        */}
+        {(() => {
+          // `as const` keeps the icon names as literals, which is what
+          // Ionicons' `name` prop requires — a widened `string` does not fit.
+          const badges = ([
+            { key: 'air_conditioner', icon: 'snow-outline', label: t('offerDetails.amenityAirCon') },
+            { key: 'wifi', icon: 'wifi-outline', label: t('offerDetails.amenityWifi') },
+            { key: 'roof_rack_needed', icon: 'browsers-outline', label: t('offerDetails.amenityRoofRack') },
+            { key: 'trailer', icon: 'trail-sign-outline', label: t('offerDetails.amenityTrailer') },
+            { key: 'departs_when_full', icon: 'flash-outline', label: t('offerDetails.departsWhenFull') },
+          ] as const).filter((b) => offer[b.key as keyof typeof offer] === true);
+
+          const parcel = offer.parcel_accepted === true;
+          if (badges.length === 0 && !parcel && offer.road_pickup !== true) return null;
+
+          return (
+            <View style={styles.noteCard}>
+              <View style={styles.noteHeader}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.noteTitle}>{t('offerDetails.whatDriverOffers')}</Text>
+              </View>
+
+              <View style={styles.amenityRow}>
+                {badges.map((b) => (
+                  <View key={b.key} style={styles.amenityBadge}>
+                    <Ionicons name={b.icon} size={14} color="#166534" />
+                    <Text style={styles.amenityText}>{b.label}</Text>
+                  </View>
+                ))}
+                {parcel && (
+                  <View style={styles.amenityBadge}>
+                    <Ionicons name="cube-outline" size={14} color="#166534" />
+                    <Text style={styles.amenityText}>
+                      {t('offerDetails.parcelAccepted')}
+                      {/* The kg limit and price are the driver's own numbers —
+                          shown only when they set them. */}
+                      {offer.parcel_max_kg ? ` · ${offer.parcel_max_kg} kg` : ''}
+                      {offer.parcel_price
+                        ? ` · ${formatNumberWithSpaces(Number(offer.parcel_price))} ${offer.currency}`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {offer.road_pickup === true && (
+                <Text style={styles.amenityNote}>
+                  {t('offerDetails.roadPickup')}
+                  {offer.road_pickup_note ? `: ${offer.road_pickup_note}` : ''}
+                </Text>
+              )}
+            </View>
+          );
+        })()}
+
         {/* Note from Driver */}
         {offer.note && (
           <View style={styles.noteCard}>
@@ -473,10 +576,64 @@ export default function OfferDetailsScreen() {
           </View>
         )}
 
+        {/*
+          T-081 — "O'zingizga maqul bolgan joyni tanlang" (the `004 Tanlov
+          oynasi` mockup). Only rendered when the driver actually priced a
+          salon; otherwise the screen is exactly as it was.
+        */}
+        {(!!salonPriceOf('back_salon_full') || !!salonPriceOf('whole_salon')) && (
+          <View style={styles.seatCard}>
+            <Text style={styles.cardTitle}>{t('offerDetails.chooseSpot')}</Text>
+            <View style={styles.salonTiles}>
+              {/* Per-seat is always available — it is the normal booking. */}
+              <TouchableOpacity
+                style={[styles.salonTile, !salonScope && styles.salonTileOn]}
+                onPress={() => setSalonScope(null)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.salonTileLabel, !salonScope && styles.salonTileLabelOn]}>
+                  {t('offerDetails.bySeat')}
+                </Text>
+              </TouchableOpacity>
+
+              {(['back_salon_full', 'whole_salon'] as const).map((scope) => {
+                const price = salonPriceOf(scope);
+                // A salon the driver never priced is NOT offered — booking it
+                // would 400 after the passenger had already committed.
+                if (price === null) return null;
+                const on = salonScope === scope;
+                return (
+                  <TouchableOpacity
+                    key={scope}
+                    style={[styles.salonTile, on && styles.salonTileOn]}
+                    onPress={() => setSalonScope(on ? null : scope)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.salonTileLabel, on && styles.salonTileLabelOn]}>
+                      {scope === 'whole_salon'
+                        ? t('offerDetails.wholeSalon')
+                        : t('offerDetails.backSalon')}
+                    </Text>
+                    <Text style={[styles.salonTilePrice, on && styles.salonTileLabelOn]}>
+                      {formatNumberWithSpaces(price)} {offer.currency}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Seat Selection Card */}
         <View style={styles.seatCard}>
+          {/* T-081 — the seat stepper is hidden while a salon is chosen: the
+              server derives the count then, so a stepper would be a lie. The
+              options and the message below stay available either way. */}
+          {!salonScope && (
           <Text style={styles.cardTitle}>{t('offerDetails.selectSeats')}</Text>
-          
+          )}
+
+          {!salonScope && (
           <View style={styles.seatSelector}>
             <TouchableOpacity
               style={[styles.seatButton, seatsRequested <= 1 && styles.seatButtonDisabled]}
@@ -514,6 +671,7 @@ export default function OfferDetailsScreen() {
               />
             </TouchableOpacity>
           </View>
+          )}
 
           {/* Booking Options */}
           <View style={styles.optionsContainer}>
@@ -1014,6 +1172,71 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 22,
     fontWeight: '500',
+  },
+  /* ── T-084: what the driver offers ────────────────────────────────── */
+  amenityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  amenityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7',
+  },
+  amenityText: {
+    fontSize: 13,
+    color: '#166534',
+    fontWeight: '600',
+  },
+  amenityNote: {
+    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#374151',
+  },
+
+  /* ── T-081: the salon tiles ("O'zingizga maqul bolgan joyni tanlang") ── */
+  salonTiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  salonTile: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  salonTileOn: {
+    borderColor: '#22C55E',
+    backgroundColor: '#DCFCE7',
+  },
+  salonTileLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  salonTileLabelOn: {
+    color: '#166534',
+  },
+  salonTilePrice: {
+    marginTop: 4,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
   },
   seatCard: {
     backgroundColor: '#FFFFFF',

@@ -17,7 +17,10 @@ import {
   VehicleModel,
   VehicleColor,
 } from '../database/models/index.js';
-import type { OfferPassengerStatus } from '../database/models/OfferPassenger.js';
+import type {
+  OfferPassengerStatus,
+  OfferPassengerSalonScope
+} from '../database/models/OfferPassenger.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
@@ -33,6 +36,14 @@ interface JoinOfferData {
   offer_id: number;
   seats_requested?: number;
   is_front_seat?: boolean;
+  /**
+   * T-081 — booking a whole salon instead of counting seats.
+   *
+   * ⚠️ When set, it OVERRIDES `seats_requested` and `is_front_seat`: both are
+   * derived server-side from the offer. A client that could choose its own
+   * seat count for a salon price would buy the whole car for one seat's money.
+   */
+  salon_scope?: OfferPassengerSalonScope;
   message?: string;
 }
 
@@ -41,7 +52,17 @@ export class OfferPassengerService {
    * Passenger joins an offer (creates pending request)
    */
   static async joinOffer(passengerId: number, data: JoinOfferData, req?: Request) {
-    const { offer_id, seats_requested = 1, is_front_seat = false, message } = data;
+    const {
+      offer_id,
+      seats_requested: requestedSeats = 1,
+      is_front_seat: requestedFront = false,
+      salon_scope: salonScope,
+      message
+    } = data;
+    // Reassigned below when a salon is booked — the client's values are not
+    // trusted in that case.
+    let seats_requested = requestedSeats;
+    let is_front_seat = requestedFront;
     const language = req ? getLanguageFromHeaders(req.headers['accept-language']) : 'uz';
 
     // Get offer with driver info
@@ -134,8 +155,65 @@ export class OfferPassengerService {
     // If multiple seats with front seat: (regular_price × seats) + (front_seat_premium × 1)
     let agreedPricePerSeat: number;
     let totalAgreedPrice: number;
-    
-    if (is_front_seat && offer.front_price_per_seat) {
+
+    if (salonScope) {
+      /*
+       * ── T-081: a salon is bought whole ────────────────────────────────
+       *
+       * 🔴 The seat count and the front-seat flag are DERIVED HERE, and the
+       * client's own values are discarded. Trusting them would let a passenger
+       * buy the whole car at one seat's price.
+       *
+       * 🔴 A salon the driver never priced is REFUSED, not quietly re-priced
+       * per seat — the passenger would be charged a number nobody agreed to.
+       *
+       * ⚠️ `whole_salon` sets `is_front_seat` too: without it the front seat
+       * stays "available" and could be sold a second time on top of a booking
+       * that already includes it.
+       */
+      const salonPrice =
+        salonScope === 'whole_salon'
+          ? offer.price_whole_salon
+          : offer.price_back_salon;
+
+      if (salonPrice === null || salonPrice === undefined) {
+        throw new AppError(t('offers.salonNotOffered', language), 400);
+      }
+
+      // pg returns DECIMAL as a string.
+      const price = Number(salonPrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        throw new AppError(t('offers.salonNotOffered', language), 400);
+      }
+
+      // The front seat is one of `seats_total`, and only when it is on sale —
+      // the same rule T-083 established for availability.
+      const frontOffered =
+        offer.front_price_per_seat !== null && offer.front_price_per_seat !== undefined;
+
+      if (salonScope === 'whole_salon') {
+        seats_requested = offer.seats_total;
+        is_front_seat = frontOffered;
+      } else {
+        seats_requested = frontOffered
+          ? Math.max(0, offer.seats_total - 1)
+          : offer.seats_total;
+        is_front_seat = false;
+      }
+
+      if (seats_requested < 1) {
+        throw new AppError(t('offers.salonNotOffered', language), 400);
+      }
+      if (seats_requested > offer.seats_free) {
+        throw new AppError(
+          t('offers.onlySeatsAvailable', language, { count: offer.seats_free }),
+          400
+        );
+      }
+
+      totalAgreedPrice = price;
+      agreedPricePerSeat = price / seats_requested;
+    } else if (is_front_seat && offer.front_price_per_seat) {
       // Front seat selected: calculate as (regular_price × seats) + (front_seat_premium × 1)
       const frontSeatPremium = offer.front_price_per_seat - offer.price_per_seat;
       totalAgreedPrice = (offer.price_per_seat * seats_requested) + frontSeatPremium;
@@ -153,6 +231,7 @@ export class OfferPassengerService {
       passenger_id: passengerId,
       seats_requested,
       is_front_seat,
+      salon_scope: salonScope ?? null,
       agreed_price_per_seat: agreedPricePerSeat,
       total_agreed_price: totalAgreedPrice,
       currency: offer.currency,

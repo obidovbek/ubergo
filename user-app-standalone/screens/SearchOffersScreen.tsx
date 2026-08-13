@@ -623,6 +623,30 @@ export default function SearchOffersScreen() {
   };
 
   /**
+   * T-083 — is this seat actually bookable?
+   *
+   * 🔴 T-077 greyed a price when NO PRICE WAS SET. The mockup greys it when
+   * THE SEAT IS TAKEN — provable from its own cards: Nexia `[1 free]` shows
+   * *Oldi* green and *Orqa* grey; Malibu `[2 free]` shows the reverse.
+   *
+   * ⚠️ Three states, not two, and they must not be collapsed:
+   *   - no price      → the seat was never for sale        → hidden price, dead
+   *   - price, taken  → someone holds it                   → dead
+   *   - price, free   → bookable                           → live
+   * Telling a passenger a seat is "taken" when it was never offered is a
+   * different (and worse) lie than the bug being fixed.
+   *
+   * ⚠️ An API older than T-083 sends none of these fields. `undefined` then
+   * means "unknown", and unknown must read as AVAILABLE — greying every seat on
+   * a stale response would empty the whole screen.
+   */
+  const seatOpen = (available: boolean | undefined, freeCount?: number): boolean => {
+    if (available !== undefined) return available;
+    if (freeCount !== undefined) return freeCount > 0;
+    return true;
+  };
+
+  /**
    * The offer card, to the `K_RegShablon` mockup (T-077).
    *
    * ⚠️ The route (from → to) is deliberately NOT drawn per card any more. The
@@ -637,6 +661,12 @@ export default function SearchOffersScreen() {
   const renderOffer = ({ item }: { item: OffersAPI.DriverOffer }) => {
     const front = priceOf(item.front_price_per_seat);
     const back = priceOf(item.price_per_seat);
+    /*
+      T-083 — a block is LIVE only when the seat has a price AND is still free.
+      `front`/`back` alone answer "is it for sale", not "can I have it".
+    */
+    const frontLive = !!front && seatOpen(item.front_seat_available);
+    const backLive = !!back && seatOpen(undefined, item.back_seats_free);
     const fuel = fuelLabel(item.vehicle?.fuel_types);
     const carName =
       [item.vehicle?.make, item.vehicle?.model].filter(Boolean).join(' ') ||
@@ -681,11 +711,11 @@ export default function SearchOffersScreen() {
           would leave the driver's two prices silently misaligned.
         */}
         <View style={styles.cardPrices}>
-          <View style={[styles.priceBlock, !front && styles.priceBlockDead]}>
+          <View style={[styles.priceBlock, !frontLive && styles.priceBlockDead]}>
             <Text
               style={[
                 styles.priceBlockLabel,
-                !front && styles.priceBlockTextDead,
+                !frontLive && styles.priceBlockTextDead,
               ]}
             >
               {t('searchOffers.priceFront')}
@@ -693,7 +723,7 @@ export default function SearchOffersScreen() {
             <Text
               style={[
                 styles.priceBlockValue,
-                !front && styles.priceBlockTextDead,
+                !frontLive && styles.priceBlockTextDead,
               ]}
               numberOfLines={1}
             >
@@ -703,11 +733,11 @@ export default function SearchOffersScreen() {
             </Text>
           </View>
 
-          <View style={[styles.priceBlock, !back && styles.priceBlockDead]}>
+          <View style={[styles.priceBlock, !backLive && styles.priceBlockDead]}>
             <Text
               style={[
                 styles.priceBlockLabel,
-                !back && styles.priceBlockTextDead,
+                !backLive && styles.priceBlockTextDead,
               ]}
             >
               {t('searchOffers.priceBack')}
@@ -715,7 +745,7 @@ export default function SearchOffersScreen() {
             <Text
               style={[
                 styles.priceBlockValue,
-                !back && styles.priceBlockTextDead,
+                !backLive && styles.priceBlockTextDead,
               ]}
               numberOfLines={1}
             >

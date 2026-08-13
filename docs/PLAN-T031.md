@@ -113,12 +113,16 @@ without it.
   `PassengerOfferExtras` rendered ONE payment chip from `payment_type`, so a passenger choosing
   **Naqd + Click,Payme** would have shown the driver only "Naqd". It renders the full list now, with
   the same pre-split fallback.
-- [ ] 8. **Item 4 — admin setting.** A settings row/endpoint for `waiting_fee_per_min` +
-  `free_waiting_min`, and an admin page to edit them. ⚠️ Scope this properly before coding — it is
-  the only item here that adds a new capability rather than changing one.
-- [ ] 9. **Item 4 — user app.** Remove the waiting-fee input; show the admin value read-only.
-  Waiting time stays visible and stored but is **not** counted — the owner was explicit that it
-  exists only to keep passengers punctual.
+- [x] ~~8. **Item 4 — admin setting.**~~ 🛑 **CANCELLED 2026-08-13 BY THE OWNER — do not build this.**
+  The 2026-08-02 decision was *"the waiting fee becomes an **admin** setting… not a passenger
+  input"*. The `D_Elon berish` mockup of 2026-08-13 has the **driver** enter it
+  (*"Kutish 1 000 so'm/minut, bepul kutish 10 minut"*), and the owner confirmed the mockup wins.
+  ➡️ **The waiting fee now lives on the DRIVER'S OFFER** — `waiting_fee_per_min` / `free_waiting_min`
+  columns, built in **T-078**. No settings table, no admin page, no endpoint.
+- [x] ~~9. **Item 4 — user app.**~~ 🛑 **CANCELLED with step 8.** There is no admin value to show
+  read-only. ⚠️ `SpecialOrderPanel`'s existing `waitingFeePerMin` input is the **passenger's** side
+  of a special order and is untouched by this reversal — do not delete it on the strength of this
+  note.
 - [ ] 10. **Static verification.** `tsc` in all four projects against baselines (API **282**,
   admin **0**, user **12**, driver **36**); i18n key check for any new strings.
 - [ ] 11. **Owner: migrate, deploy, rebuild admin + user app, smoke test.** (a) keyboard no longer
@@ -173,8 +177,11 @@ without it.
 > the old enum, so **Do'stimga + Naqd would have skipped the phone check entirely**; and the driver
 > app showed only ONE payment chip, so cash+card would have displayed as "Naqd" alone.
 > ⚠️ **BASELINES CHANGED 2026-08-13: user 12 → 6, driver 36 → 28.** The numbers below are stale.
-> 🛑 **Remaining: steps 4 (blocked — see below), 8-9 (the waiting-fee ADMIN setting, still a separate
-> capability), 10-12.** ⚠️ **Step 11 now needs the migration run first.**
+> 🛑 **Remaining: step 4 (blocked — see below) and steps 10-12.** ⚠️ **Step 11 now needs the
+> migration run first.**
+> 🛑 **STEPS 8-9 ARE CANCELLED (owner, 2026-08-13).** The waiting fee is **not** an admin setting
+> after all — the driver enters it on their own offer, built in **T-078**. The 2026-08-02 decision
+> is reversed; do not resurrect it from the "Owner decisions" block above.
 
 **Steps 1-3 are DONE and committed (`9ab9b2c`). Working tree clean.**
 

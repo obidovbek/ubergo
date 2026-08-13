@@ -44,6 +44,29 @@ const theme = createTheme('light');
  */
 const MINUTE_STEP = 15;
 
+/**
+ * T-078 — read a number the API may send as a DECIMAL **string**.
+ *
+ * 🔴 The point of this over `Number(x) || undefined` is that it KEEPS a
+ * legitimate `0`. "Joyidan olish + 0 so'm" (free door pickup) and
+ * "bepul kutish 0 minut" are real answers the driver typed; `||` would silently
+ * turn both into "not set" and the next save would blank them.
+ */
+/** T-078 — the mockup's five radios, in its own order. */
+const VEHICLE_CLASSES = [
+  'standard',
+  'comfort',
+  'business',
+  'econom',
+  'tourist',
+] as const;
+
+const numOrUndef = (raw: unknown): number | undefined => {
+  if (raw === null || raw === undefined || raw === '') return undefined;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 interface VehicleOption {
   id: string;
   label: string;
@@ -269,6 +292,42 @@ export const OfferWizardScreen: React.FC = () => {
           seats_total: offer.seats_total,
           price_per_seat: offer.price_per_seat,
           front_price_per_seat: (offer as any).front_price_per_seat || undefined,
+          /*
+            T-078 — these MUST load back, or the next save silently blanks them.
+            A field that writes but never reads is how this card fails without
+            anything erroring.
+
+            🔴 `numOrUndef`, not `|| undefined`: pg sends DECIMAL as a STRING,
+            and `||` would also throw away a legitimate **0** — and 0 is a real
+            answer for `pickup_fee` ("Joyidan olish + 0 so'm", exactly as the
+            mockup draws it) and for `free_waiting_min`.
+            🔴 `?? undefined` for the payment flags, never `||`: `false` is a
+            real answer ("I do not take card") and `||` would erase it into
+            "not stated".
+          */
+          price_back_salon: numOrUndef(offer.price_back_salon),
+          price_whole_salon: numOrUndef(offer.price_whole_salon),
+          waiting_fee_per_min: numOrUndef(offer.waiting_fee_per_min),
+          free_waiting_min: numOrUndef(offer.free_waiting_min),
+          pickup_fee: numOrUndef(offer.pickup_fee),
+          payment_cash: offer.payment_cash ?? undefined,
+          payment_card: offer.payment_card ?? undefined,
+          vehicle_class: offer.vehicle_class ?? undefined,
+          // T-079/T-080 — same rule as above: `?? undefined`, never `||`, or a
+          // deliberate `false` ("no air conditioner") reads as "not stated".
+          air_conditioner: offer.air_conditioner ?? undefined,
+          wifi: offer.wifi ?? undefined,
+          roof_rack_needed: offer.roof_rack_needed ?? undefined,
+          trailer: offer.trailer ?? undefined,
+          parcel_accepted: offer.parcel_accepted ?? undefined,
+          parcel_price: numOrUndef(offer.parcel_price),
+          parcel_max_kg: numOrUndef(offer.parcel_max_kg),
+          road_pickup: offer.road_pickup ?? undefined,
+          road_pickup_note: offer.road_pickup_note ?? undefined,
+          depart_until: offer.depart_until ?? undefined,
+          arrive_from: offer.arrive_from ?? undefined,
+          arrive_until: offer.arrive_until ?? undefined,
+          departs_when_full: offer.departs_when_full ?? undefined,
           currency: offer.currency,
           note: offer.note || '',
         });
@@ -824,6 +883,65 @@ export const OfferWizardScreen: React.FC = () => {
     const str = Math.floor(value).toString();
     return str.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
+
+  /**
+   * T-078 — one numeric field, reused for the five new `Narxlar` rows.
+   *
+   * ⚠️ Written as a helper rather than five more copies of the existing
+   * 25-line price block: this screen is already 3500+ lines, and five more
+   * hand-rolled copies is five more places for the "saves but never loads"
+   * bug to hide.
+   *
+   * @param allowZero `pickup_fee` and `free_waiting_min` accept **0** as a real
+   *   answer (free pickup / no free minutes). Without this, clearing them to 0
+   *   would read as "unset" and the value would not round-trip.
+   */
+  const numberField = (
+    key: 'price_back_salon' | 'price_whole_salon' | 'waiting_fee_per_min'
+      | 'free_waiting_min' | 'pickup_fee' | 'parcel_price' | 'parcel_max_kg',
+    label: string,
+    helper?: string,
+    opts?: { allowZero?: boolean }
+  ) => (
+    <View style={styles.inputGroup} key={key}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="0"
+        keyboardType="numeric"
+        value={formatPrice(formData[key])}
+        onChangeText={(text) => {
+          const digits = text.replace(/[^\d]/g, '');
+          if (digits === '') {
+            setFormData(prev => ({ ...prev, [key]: undefined }));
+            return;
+          }
+          const num = parseInt(digits, 10);
+          if (!isNaN(num)) {
+            setFormData(prev => ({ ...prev, [key]: num }));
+            setErrors(prev => ({ ...prev, [key]: '' }));
+          }
+        }}
+        onBlur={() => {
+          setFormData(prev => {
+            const value = prev[key];
+            if (value === undefined || value === null || isNaN(value)) {
+              return { ...prev, [key]: undefined };
+            }
+            if (value < 0) return { ...prev, [key]: 0 };
+            if (value === 0 && !opts?.allowZero) {
+              // A salon or a waiting RATE of zero is not a price — treat it as
+              // "not offered" rather than storing a free salon by accident.
+              return { ...prev, [key]: undefined };
+            }
+            return prev;
+          });
+        }}
+      />
+      {!!helper && <Text style={styles.helperText}>{helper}</Text>}
+      {!!errors[key] && <Text style={styles.errorText}>{errors[key]}</Text>}
+    </View>
+  );
 
   const buildLocationText = (
     country: GeoOption | null,
@@ -2479,6 +2597,228 @@ export const OfferWizardScreen: React.FC = () => {
         </Text>
       </View>
 
+      {/* ── T-078: the rest of the mockup's `Narxlar` list ─────────────── */}
+      {numberField(
+        'price_back_salon',
+        t('offerWizard.priceBackSalonLabel'),
+        t('offerWizard.priceBackSalonHelper')
+      )}
+      {numberField(
+        'price_whole_salon',
+        t('offerWizard.priceWholeSalonLabel'),
+        t('offerWizard.priceWholeSalonHelper')
+      )}
+
+      {/*
+        Kutish. 🔴 A rate the passenger is SHOWN — nothing charges it (owner,
+        2026-08-13). The helper text says so, so a driver does not expect the
+        app to collect it for them.
+      */}
+      {numberField(
+        'waiting_fee_per_min',
+        t('offerWizard.waitingFeeLabel'),
+        t('offerWizard.waitingFeeHelper')
+      )}
+      {numberField(
+        'free_waiting_min',
+        t('offerWizard.freeWaitingLabel'),
+        t('offerWizard.freeWaitingHelper'),
+        { allowZero: true }
+      )}
+      {numberField(
+        'pickup_fee',
+        t('offerWizard.pickupFeeLabel'),
+        t('offerWizard.pickupFeeHelper'),
+        { allowZero: true }
+      )}
+
+      {/* ── To'lov turi ─────────────────────────────────────────────────
+          Two INDEPENDENT checkboxes. T-031's lesson on the passenger side:
+          one shared value makes them behave as a radio group, so picking
+          card silently cleared cash. */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{t('offerWizard.paymentLabel')}</Text>
+        <View style={styles.wizardChipRow}>
+          {([
+            ['payment_cash', t('offerWizard.paymentCash')],
+            ['payment_card', t('offerWizard.paymentCard')],
+          ] as const).map(([key, label]) => {
+            const on = formData[key] === true;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.wizardChip, on && styles.wizardChipOn]}
+                onPress={() =>
+                  setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
+                }
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── Avto sinfi — one radio, deselectable ───────────────────────── */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{t('offerWizard.vehicleClassLabel')}</Text>
+        <View style={styles.wizardChipRow}>
+          {VEHICLE_CLASSES.map((cls) => {
+            const on = formData.vehicle_class === cls;
+            return (
+              <TouchableOpacity
+                key={cls}
+                style={[styles.wizardChip, on && styles.wizardChipOn]}
+                onPress={() =>
+                  setFormData(prev => ({
+                    ...prev,
+                    // Deselectable: tapping the active one clears it, matching
+                    // the passenger screen's radio behaviour.
+                    vehicle_class: prev.vehicle_class === cls ? undefined : cls,
+                  }))
+                }
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
+                  {t(`offerWizard.vehicleClass_${cls}`)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── T-079: what the car offers ─────────────────────────────────── */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{t('offerWizard.amenitiesLabel')}</Text>
+        <View style={styles.wizardChipRow}>
+          {([
+            ['air_conditioner', t('offerWizard.amenityAirCon')],
+            ['wifi', t('offerWizard.amenityWifi')],
+            ['roof_rack_needed', t('offerWizard.amenityRoofRack')],
+            ['trailer', t('offerWizard.amenityTrailer')],
+          ] as const).map(([key, label]) => {
+            const on = formData[key] === true;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.wizardChip, on && styles.wizardChipOn]}
+                onPress={() =>
+                  setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
+                }
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── T-079: Jo'natma (pochta) ────────────────────────────────────── */}
+      <View style={styles.inputGroup}>
+        <TouchableOpacity
+          style={[
+            styles.wizardChip,
+            formData.parcel_accepted === true && styles.wizardChipOn,
+          ]}
+          onPress={() =>
+            setFormData(prev => ({
+              ...prev,
+              parcel_accepted: !(prev.parcel_accepted === true),
+            }))
+          }
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.wizardChipText,
+              formData.parcel_accepted === true && styles.wizardChipTextOn,
+            ]}
+          >
+            {t('offerWizard.parcelAccepted')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {/* The price and weight only make sense once parcels are accepted. */}
+      {formData.parcel_accepted === true && (
+        <>
+          {numberField('parcel_price', t('offerWizard.parcelPriceLabel'))}
+          {numberField(
+            'parcel_max_kg',
+            t('offerWizard.parcelMaxKgLabel'),
+            t('offerWizard.parcelMaxKgHelper')
+          )}
+        </>
+      )}
+
+      {/* ── T-079: "Faqat pitakdan yoki yo'lga chiqib tursa olaman" ─────── */}
+      <View style={styles.inputGroup}>
+        <TouchableOpacity
+          style={[
+            styles.wizardChip,
+            formData.road_pickup === true && styles.wizardChipOn,
+          ]}
+          onPress={() =>
+            setFormData(prev => ({ ...prev, road_pickup: !(prev.road_pickup === true) }))
+          }
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.wizardChipText,
+              formData.road_pickup === true && styles.wizardChipTextOn,
+            ]}
+          >
+            {t('offerWizard.roadPickupLabel')}
+          </Text>
+        </TouchableOpacity>
+        {formData.road_pickup === true && (
+          <TextInput
+            style={[styles.input, styles.textArea, { marginTop: 8 }]}
+            placeholder={t('offerWizard.roadPickupPlaceholder')}
+            multiline
+            numberOfLines={3}
+            value={formData.road_pickup_note || ''}
+            onChangeText={(text) =>
+              setFormData(prev => ({ ...prev, road_pickup_note: text }))
+            }
+          />
+        )}
+      </View>
+
+      {/* ── T-080: "hozioq (to'lishi bilan yuraman)" ────────────────────── */}
+      <View style={styles.inputGroup}>
+        <TouchableOpacity
+          style={[
+            styles.wizardChip,
+            formData.departs_when_full === true && styles.wizardChipOn,
+          ]}
+          onPress={() =>
+            setFormData(prev => ({
+              ...prev,
+              departs_when_full: !(prev.departs_when_full === true),
+            }))
+          }
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.wizardChipText,
+              formData.departs_when_full === true && styles.wizardChipTextOn,
+            ]}
+          >
+            {t('offerWizard.departsWhenFullLabel')}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.helperText}>{t('offerWizard.departsWhenFullHelper')}</Text>
+      </View>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t('offerWizard.noteLabel')}</Text>
         <TextInput
@@ -2979,6 +3319,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     fontWeight: '500',
+  },
+  /* ── T-078: payment + class chips ──────────────────────────────────── */
+  wizardChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  wizardChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  wizardChipOn: {
+    borderColor: '#22C55E',
+    backgroundColor: '#DCFCE7',
+  },
+  wizardChipText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  wizardChipTextOn: {
+    fontWeight: '700',
+    color: '#166534',
   },
   helperText: {
     fontSize: 13,

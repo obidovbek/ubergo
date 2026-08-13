@@ -240,6 +240,8 @@ export default {
     noPermissionCancel: 'You do not have permission to cancel this request',
     alreadyProcessed: 'This request has already been processed',
     frontSeatTaken: 'The front seat is already taken',
+    // T-081 — the driver did not price this salon, so it is not for sale.
+    salonNotOffered: 'This driver does not offer that salon booking',
     cannotCancel: 'This request cannot be cancelled',
     offerNotFoundOrNoPermission: 'Offer not found or you do not have permission',
     vehicleNotFound: 'Vehicle not found or does not belong to you',

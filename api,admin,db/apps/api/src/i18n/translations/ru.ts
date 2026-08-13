@@ -240,6 +240,8 @@ export default {
     noPermissionCancel: 'У вас нет разрешения на отмену этого запроса',
     alreadyProcessed: 'Этот запрос уже обработан',
     frontSeatTaken: 'Переднее место уже занято',
+    // T-081 — the driver did not price this salon, so it is not for sale.
+    salonNotOffered: 'Водитель не предлагает такое бронирование салона',
     cannotCancel: 'Этот запрос нельзя отменить',
     offerNotFoundOrNoPermission: 'Объявление не найдено или у вас нет разрешения',
     vehicleNotFound: 'Транспортное средство не найдено или вам не принадлежит',

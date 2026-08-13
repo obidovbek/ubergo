@@ -31,6 +31,38 @@ export interface DriverOffer {
   seats_free: number;
   price_per_seat: number;
   front_price_per_seat?: number;
+  /**
+   * T-078 — read back when the wizard opens an offer for EDIT.
+   *
+   * 🔴 Every one of these must load into the form. A field that saves but never
+   * loads back means the next edit silently blanks it — the way this card is
+   * most likely to fail without anything erroring.
+   * ⚠️ DECIMAL arrives from pg as a **string** (`'320000.00'`), so parse before
+   * comparing or displaying.
+   */
+  price_back_salon?: number | string | null;
+  price_whole_salon?: number | string | null;
+  waiting_fee_per_min?: number | string | null;
+  free_waiting_min?: number | null;
+  pickup_fee?: number | string | null;
+  /** `null`/absent = never stated; `false` = the driver refuses it. */
+  payment_cash?: boolean | null;
+  payment_card?: boolean | null;
+  vehicle_class?: DriverOfferVehicleClass | null;
+  /** T-079/T-080 — must load back into the wizard on EDIT, like everything else. */
+  air_conditioner?: boolean | null;
+  wifi?: boolean | null;
+  roof_rack_needed?: boolean | null;
+  trailer?: boolean | null;
+  parcel_accepted?: boolean | null;
+  parcel_price?: number | string | null;
+  parcel_max_kg?: number | null;
+  road_pickup?: boolean | null;
+  road_pickup_note?: string | null;
+  depart_until?: string | null;
+  arrive_from?: string | null;
+  arrive_until?: string | null;
+  departs_when_full?: boolean | null;
   currency: string;
   note?: string;
   status: OfferStatus;
@@ -69,10 +101,64 @@ export interface CreateOfferData {
   seats_total: number;
   price_per_seat: number;
   front_price_per_seat?: number;
+  /**
+   * T-078 — the rest of the mockup's `Narxlar` list.
+   *
+   * ⚠️ `price_per_seat` is *Orqa o'rindiq* and `front_price_per_seat` is *Old
+   * o'rindiq*. They are NOT renamed to match the mockup's wording: both are
+   * live and already read by the passenger app.
+   */
+  price_back_salon?: number;
+  price_whole_salon?: number;
+  /**
+   * 🔴 A rate the passenger is SHOWN, not money anything charges (owner,
+   * 2026-08-13). Nothing meters a real wait, so this must never reach a total.
+   */
+  waiting_fee_per_min?: number;
+  /** Whole minutes. `0` is a real answer, not "unset". */
+  free_waiting_min?: number;
+  /** "Joyidan olish". `0` means free door pickup, exactly as the mockup draws. */
+  pickup_fee?: number;
+  /**
+   * ⚠️ `undefined` means "not stated" and is NOT the same as `false`. Old
+   * offers carry neither flag; sending `false` would claim the driver refuses
+   * a payment method they were never asked about.
+   */
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  vehicle_class?: DriverOfferVehicleClass;
+  // T-079 — what the car offers, and what it will carry.
+  air_conditioner?: boolean;
+  wifi?: boolean;
+  roof_rack_needed?: boolean;
+  trailer?: boolean;
+  parcel_accepted?: boolean;
+  parcel_price?: number;
+  /** The mockup's "(20kgacha)" — the driver's own limit, not a constant. */
+  parcel_max_kg?: number;
+  road_pickup?: boolean;
+  road_pickup_note?: string;
+  // T-080 — `start_at` is the window's start; these are the rest.
+  depart_until?: string;
+  arrive_from?: string;
+  arrive_until?: string;
+  /**
+   * 🔴 "to'lishi bilan yuraman" — the driver leaves when the car FILLS.
+   * NOT the passenger's `is_urgent`, which means "leave now".
+   */
+  departs_when_full?: boolean;
   currency?: string;
   note?: string;
   stops?: CreateOfferStopData[];
 }
+
+/** T-078 — the mockup's five radios. */
+export type DriverOfferVehicleClass =
+  | 'standard'
+  | 'comfort'
+  | 'business'
+  | 'econom'
+  | 'tourist';
 
 export interface UpdateOfferData extends Partial<CreateOfferData> {}
 

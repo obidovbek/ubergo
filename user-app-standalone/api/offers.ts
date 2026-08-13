@@ -16,6 +16,51 @@ export interface DriverOffer {
   currency: string;
   seats_free: number;
   seats_total: number;
+  /**
+   * T-083 — which seats are free, front vs back. `seats_free` is one pool
+   * number and cannot answer that.
+   *
+   * - `front_offered`  — the driver put a price on the front seat at all
+   * - `front_seat_available` — offered AND not held by a confirmed booking
+   * - `back_seats_free` — back seats still open
+   *
+   * ⚠️ All three are optional: an offer fetched from an API older than T-083
+   * carries none of them, and the card must not then claim every seat is taken.
+   * ⚠️ `front_offered === false` is NOT the same as "taken" — the first means
+   * the seat was never for sale. Rendering them identically would tell a
+   * passenger a seat is gone when it never existed.
+   */
+  front_offered?: boolean;
+  front_seat_available?: boolean;
+  back_seats_free?: number;
+  /**
+   * T-078/T-081 — the salon prices the driver set. `null`/absent means that
+   * salon is **not for sale**, and no tile is offered for it.
+   * ⚠️ DECIMAL arrives from pg as a string.
+   */
+  price_back_salon?: number | string | null;
+  price_whole_salon?: number | string | null;
+  /**
+   * T-079/T-080 — what the driver said the car offers and when it runs.
+   *
+   * ⚠️ All optional: an offer fetched from an API older than these cards
+   * carries none of them, so the UI must render nothing rather than claim the
+   * car has no air conditioning.
+   */
+  air_conditioner?: boolean | null;
+  wifi?: boolean | null;
+  roof_rack_needed?: boolean | null;
+  trailer?: boolean | null;
+  parcel_accepted?: boolean | null;
+  parcel_price?: number | string | null;
+  parcel_max_kg?: number | null;
+  road_pickup?: boolean | null;
+  road_pickup_note?: string | null;
+  depart_until?: string | null;
+  arrive_from?: string | null;
+  arrive_until?: string | null;
+  /** 🔴 "leaves when the car fills" — NOT the passenger's `is_urgent`. */
+  departs_when_full?: boolean | null;
   note?: string;
   /**
    * The hand-mapped shape, built by the browse and detail endpoints.
@@ -131,6 +176,15 @@ export interface SearchOffersParams {
 export interface JoinOfferData {
   seats_requested?: number;
   is_front_seat?: boolean;
+  /**
+   * T-081 — booking a whole salon.
+   *
+   * ⚠️ When sent, the server DERIVES `seats_requested` and `is_front_seat` from
+   * the offer and ignores the two above. That is deliberate: a client choosing
+   * its own seat count for a salon price could buy the whole car for one
+   * seat's money.
+   */
+  salon_scope?: 'whole_salon' | 'back_salon_full';
   message?: string;
 }
 

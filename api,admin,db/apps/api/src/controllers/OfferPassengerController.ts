@@ -22,7 +22,17 @@ export class OfferPassengerController {
       }
 
       const { offerId } = req.params;
-      const { seats_requested, is_front_seat, message } = req.body;
+      const { seats_requested, is_front_seat, salon_scope, message } = req.body;
+
+      /*
+       * T-081 — only the two known scopes reach the service. An unknown string
+       * would otherwise be stored verbatim in a STRING(20) column and read back
+       * later as a salon nobody can price.
+       */
+      const salonScope =
+        salon_scope === 'whole_salon' || salon_scope === 'back_salon_full'
+          ? salon_scope
+          : undefined;
 
       const passengerJoin = await OfferPassengerService.joinOffer(
         userId,
@@ -30,6 +40,7 @@ export class OfferPassengerController {
           offer_id: parseInt(offerId),
           seats_requested,
           is_front_seat,
+          ...(salonScope ? { salon_scope: salonScope } : {}),
           message
         },
         req

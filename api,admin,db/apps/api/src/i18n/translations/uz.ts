@@ -250,6 +250,8 @@ export default {
     noPermissionCancel: 'Sizda bu so\'rovni bekor qilish uchun ruxsat yo\'q',
     alreadyProcessed: 'Bu so\'rov allaqachon qayta ishlangan',
     frontSeatTaken: 'Oldingi o\'rin allaqachon band qilingan',
+    // T-081 — the driver did not price this salon, so it is not for sale.
+    salonNotOffered: 'Bu haydovchi salonni bunday band qilishni taklif qilmagan',
     cannotCancel: 'Bu so\'rovni bekor qilish mumkin emas',
     offerNotFoundOrNoPermission: 'E\'lon topilmadi yoki sizda ruxsat yo\'q',
     vehicleNotFound: 'Transport vositasi topilmadi yoki sizga tegishli emas',

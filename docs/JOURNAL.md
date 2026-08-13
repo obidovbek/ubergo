@@ -49,6 +49,123 @@
 - **Verification:** **122/122** with the bundles **evaluated** across both apps × 3 locales,
   **27 red** against pre-change files (including a locale-parity check). Lint: **user 235/0 errors ·
   driver 321/3**, the 3 being T-076 and meant to stay red.
+- **T-084 — the passenger finally sees what T-079/T-080 let the driver say.** Those cards had left
+  the fields **write-only**: the API returned them and no passenger screen rendered them — the same
+  half-built state T-081 had just fixed for the salon prices. *Recognising the pattern the second
+  time took minutes instead of a card.*
+  🔴 **Only a TRUE flag is drawn.** Absent means *"not stated"* — every pre-T-079 offer has none of
+  them — so rendering absent/`false` as *"no air conditioning"* would put a claim in front of the
+  passenger that **the driver never made**. This is the same three-states discipline as T-078's
+  nullable payment flags and T-083's grey price. It is becoming the project's default question:
+  *does "no data" mean "no"?* Almost never.
+  🔴 **Escaping bit me for the TENTH time — and this time it was the suite, not the code.** A
+  heredoc collapsed `\\n\\s` to `\n\s`, so the i18n pattern silently asked for four literal `s`
+  characters and reported 26 false failures against correct copy. Fixed by dropping regexes for
+  whitespace entirely and matching trimmed lines. **The rule I should have already internalised: do
+  not build patterns out of escaped whitespace inside a heredoc — use the editor.**
+  **43/43, 33 red.** `tsc` user **6** · lint **235**, both at baseline. ❌ No migration.
+- **T-079 + T-080 — built together, one migration.** Amenities, jo'natma (with a kg limit), road
+  pickup, the departure/arrival windows and *"to'lishi bilan yuraman"*: **13 columns**. Two cards but
+  one migration on purpose — same table, same screen, same rebuild, and the owner already had three
+  unrun ones; splitting would have made five for no benefit.
+  🔴 **`departs_when_full` is the one place mirroring the passenger side would have been a LIE**, and
+  the meaning review earlier the same day is why it wasn't. `is_urgent` means *"leave now"* and sets
+  `start_at = now`; this means *"leave when the car fills"*. Two different facts behind one
+  plausible name.
+  🔴 **These booleans default to `false` while T-078's payment flags are NULLABLE** — deliberately
+  inconsistent, and the migration says why: "no air conditioner" is a safe default for an old offer,
+  "refuses cash" was not. *Consistency with a rule that produces a false claim is not a virtue.*
+  🔴 **`tsc` caught a real defect before it shipped:** `...data` in the update path would have
+  written raw ISO **strings** into three DATE columns. 282 vs a baseline of 281 — one error, and it
+  was mine. The three dates are now pulled out of the spread entirely, so the only path into those
+  columns is the conversion.
+  **70/70, 25 red.** All four baselines held.
+- 🛑 **T-082 was NOT built, and that is the right answer for now.** Grounding it changed the card:
+  **age needs no migration** (`DriverProfile.birth_date` exists) and **rating already works** — but
+  **"qatnovlash soni 100+" has no definition.** There is *no `completed` status anywhere*
+  (`published | archived | cancelled`), so the number could mean trips, passengers carried, or
+  offers posted — figures that differ by roughly 4× and would each be shown to passengers as trust.
+  Worse, the only real signal (`driver_arrived_at`) is **set by the driver's own app**, so whichever
+  is chosen it is self-reported and must not be presented as verified. **Picking one by guess would
+  have put an invented number under a stranger's photo.**
+- **T-081 — chosen myself when the owner said "ozing tanlab davom et", because T-078 had left the
+  schema half-built:** a driver could price *Butun salon 450 000* and **no passenger could buy it.**
+  ✅ **Grounding changed the design before a line was written.** A salon booking needs **one column**,
+  not a table: `back_salon_full` and `whole_salon` map onto `seats_requested` / `is_front_seat`,
+  which already exist — so `seats_free` accounting, the "only one front seat" rule and the
+  cancel/restore path were **not touched at all.**
+  🔴 **Two real dangers, both closed and both worth naming:**
+  - **The price is computed twice** — the app previews it, the server decides — and they already
+    duplicated the front-seat formula. Both now read the **same column, whole**. Pre-change the app
+    would have previewed **360 000** (120 000 × 3) for a salon the driver priced at **320 000**: the
+    passenger agrees to one number and is charged another.
+  - **A client could have bought a salon at one seat's price.** The server derives the seat count
+    and discards whatever was sent; the controller allow-lists the two known scopes so an unknown
+    string cannot reach a STRING(20) column.
+  ⚠️ **`whole_salon` had to claim the front seat as well**, or it stays "available" and gets sold on
+  top of a booking that already includes it.
+  ⚠️ **I did NOT build the mockup's driver info header** — experience and trip count exist nowhere
+  (T-082). Building half a header on invented data is exactly what T-077 was corrected for.
+  **49/49, 20 red.** All four baselines held. 🔴 **Fourth unrun migration.**
+- **T-078 — card 1 of 5 from the `D_Elon berish` mockup: the driver's prices, payment and class.**
+  Eight columns on `driver_offers`, plus the wizard blocks. **Four of the eight names came straight
+  from `PassengerOfferSpecialOrder`** — mirroring, not designing.
+  🔴 **Two places I deliberately did NOT mirror the passenger side, and said why:**
+  - **The payment flags are NULLABLE**, not `DEFAULT false`. T-031 could default to false because it
+    had `payment_type` to backfill from; here there is nothing, so `false` would make every existing
+    offer claim it takes neither cash nor card. **Three states, not two — T-083's lesson from four
+    hours earlier, applied at schema level.**
+  - **The salon prices are real columns**, not a JSONB blob. On the passenger side they live inside
+    `special_order` because they are an optional extra; on the driver's offer they are the core
+    product, filtered and shown to every passenger.
+  🔴 **`0` had to survive.** "Joyidan olish + 0 so'm" is free door pickup — a real answer the driver
+  typed. The wizard's existing idiom is `Number(x) || undefined`, which destroys it, so the new reads
+  go through `numOrUndef`. Same trap for the flags: `?? undefined`, never `||`, or *"I don't take
+  card"* silently becomes *"not stated"*.
+  ⚠️ **One ordering rule enforced, one refused:** the whole car cannot cost less than its own back
+  salon; but a salon undercutting its seats bought singly is **not** enforced — usually true, yet a
+  premium for exclusivity is the driver's pricing call, not this service's.
+  🔴 **I broke a translation file and had to restore it.** Generating the Uzbek strings through a
+  shell → node → file chain mangled every `o'rindiq` apostrophe; `tsc` went 28 → 62 and said exactly
+  where. Restored with `git checkout` and redone with the editor instead. **Ninth time this project
+  has been bitten by escaping/regex-vs-apostrophe** — and the suite hit the same trap immediately
+  after, with a `'([^']*)'` capture that stopped at the first `\'` and failed against correct copy.
+  ✅ **Lint caught 8 needless `as any` casts** I had written out of habit — the type already had the
+  fields. Removed; back to baseline.
+  **88/88 with `numOrUndef` executed, 20 red.** `tsc` API **281** · admin **0** · user **6** ·
+  driver **28**. 🔴 **Third unrun migration.**
+- 🔴 **The owner asked "hammasi mano jihatdan joyidami" — and the answer was NO, three times.**
+  A meaning review, not a code review, and it caught what `tsc`, 80 passing checks and a clean lint
+  all missed, **before** the device test:
+  - **T-077's grey price block means the wrong thing.** I made grey = *"no price was set"*; the
+    mockup means *"that seat is already taken"* — provable from its own cards (Nexia `[1 free]`:
+    Oldi green, Orqa grey; Malibu `[2 free]`: the reverse). **The data exists** —
+    `OfferPassenger.is_front_seat`, and the server already refuses a second front-seat booking —
+    **but the search endpoint returns none of it.** → **T-083**, to fix before the owner walks it.
+  - **`is_urgent` was one step from being mirrored into a lie.** The driver's *"hozioq (to'lishi
+    bilan yuraman)"* means *"I leave when the car fills"*; the passenger's `is_urgent` means *"I
+    leave now"* and literally sets `start_at = now`. Same-looking flag, different fact. T-080 gets
+    **`departs_when_full`**. *Mirroring the passenger side has been the right instinct all day —
+    this is where it would have been wrong.*
+  - **The waiting fee is a rate to show, not money to charge** — confirmed and written into T-078's
+    decisions so no later card quietly sums it into a total.
+  🟡 **And I corrected myself:** I had told the owner the mockup's seat squares "have no backing
+  data". Partly wrong — the *count* of taken seats is derivable; only the exact position is not.
+  **The lesson: "it compiles, it's tested, it's lint-clean" says nothing about whether it means the
+  right thing.** Every one of these would have shipped.
+  ✅ **T-083 built the same day, before the device test** (owner: *"ozing bilib boshlor"*). The API
+  now returns `front_offered` / `front_seat_available` / `back_seats_free` from **one grouped
+  query** — the `ratingsMap` shape, not one query per offer, because this runs on every search.
+  🔴 **Three states, not two:** *never for sale* · *priced but taken* · *priced and free*. Collapsing
+  the first two would tell a passenger a seat is gone when it never existed — a worse lie than the
+  bug being fixed.
+  🔴 **`undefined` had to read as AVAILABLE.** An app talking to an older API gets none of the new
+  fields; treating that as "taken" would grey every seat and empty the screen. So the deploy and the
+  rebuild are independent, in either order.
+  ⚠️ **`confirmed` only** — the service's own comment says pending requests do not reserve the front
+  seat, so counting them would hide a seat that is still winnable.
+  **32/32, with THE MOCKUP'S OWN CARDS as the test** (Nexia `[1]` → Oldi green / Orqa grey; Malibu
+  `[2]` → the reverse), **14 red** against T-077's behaviour. T-077's 80/80 re-ran green.
 - **T-077 — "so'rov yuborganidan keyin sunaqa oyna chiqish kergidi" (owner, with the `K_RegShablon`
   mockup).** Posting a ride request ended at `goBack()`: the passenger landed on the menu with no
   idea whether anyone was already driving their route — the product's whole value invisible at the
