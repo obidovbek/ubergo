@@ -49,6 +49,54 @@
 - **Verification:** **122/122** with the bundles **evaluated** across both apps × 3 locales,
   **27 red** against pre-change files (including a locale-parity check). Lint: **user 235/0 errors ·
   driver 321/3**, the 3 being T-076 and meant to stay red.
+- **T-077 — "so'rov yuborganidan keyin sunaqa oyna chiqish kergidi" (owner, with the `K_RegShablon`
+  mockup).** Posting a ride request ended at `goBack()`: the passenger landed on the menu with no
+  idea whether anyone was already driving their route — the product's whole value invisible at the
+  one moment it matters. Now they land on those drivers, and the card reads like the mockup.
+  ✅ **Grounding paid for itself before a line was written:** the screen, **both** prices
+  (`front_price_per_seat` was already on the model, in the API and in the app type) and the route
+  filter all already existed. The real work was the card's layout plus one `goBack()`.
+  🔴 **THREE mockup elements were refused rather than faked**, because nothing backs them: the class
+  chips (**the driver's vehicle has no class field at all** — those five values live only on
+  `PassengerOffer.vehicle_class`, i.e. what the *passenger wants*), the **⚡ flash** (`DriverOffer`
+  has no `is_urgent`), and the seat-position squares. All three became owner decisions.
+  ⚠️ **So the result is deliberately not a pixel match, and I said so up front** rather than letting
+  a device test discover it.
+  🔴 **I re-created T-035's defect three hours after fixing it.** Step 4 (the result-count strip)
+  needed **no work** — T-066 had already built the seam — but I added the key without checking, and
+  produced a **TS1117 duplicate** in all three locales. `tsc` caught it. *The lesson isn't "add
+  carefully", it's **look before adding**; the card I'd just closed existed because of exactly this.*
+  ✅ **The new lint run earned its keep twice more:** it found `formatDate` and `currentLanguage`
+  orphaned by my own edit — invisible to `tsc`.
+  ⚠️ Fuel is returned as the **whole array**, not a chosen one: a car here commonly runs on two
+  (benzine + propan), and picking `[0]` server-side would assert something the driver never said.
+  ⚠️ Both the include's `attributes` **and** the mapper needed the column — mapping alone would have
+  shipped `undefined` for ever.
+  **80/80 with the helpers executed, 21 red.** `tsc` API **281** · user **6** · driver **28**, all
+  at baseline; the 3 in the touched API file **proven pre-existing via `git stash`**.
+- **T-031 items 5-6 — the payment split, unparked by the owner and done the same day.**
+  Owner: *"Do'stimga degani alohida punkt. Do'stimgani tanlasa naqd payme deganni tanlab bo'lmayapdi.
+  Naqd, click payme ikkalasini ham tanlasa bo'ladi degani."* Three checkboxes shared one
+  `payment_type` value, so they behaved as a radio group. Now three independent booleans, with
+  **at least one of cash/card still required** (owner's choice — a friend still pays somehow).
+  ✅ **Cheaper than the plan assumed:** `payment_type` is a plain `STRING(20)`, not a Postgres enum,
+  and no admin page reads it. **Migration written, not run** — the owner applies it.
+  🔴 **Two defects found on the way that the card never mentioned:**
+  - The `payer_phone` requirement keyed off `payment_type === 'friend_pays'`. Now that
+    **Do'stimga + Naqd** is legal, `payment_type` records `'cash'` — so the old check would have let
+    a friend-paid offer through **with no phone number at all.** Keyed off the flag now.
+  - The **driver app rendered ONE payment chip**, so a passenger picking Naqd + Click,Payme would
+    have shown the driver just "Naqd". Swept in the same pass — *the class, not the instance*,
+    which is the lesson from three hours earlier.
+  ⚠️ **Back-compat runs BOTH ways, and the reverse is the half that gets forgotten:** a new app sends
+  flags and the server derives `payment_type`; an **old** app sends `payment_type` and the server
+  derives the flags. Without the second, an un-rebuilt install's offers would store all-false and
+  read as "no payment method chosen".
+  ⚠️ The app's validation is **two separate `if`s, not `if/else`** — "Do'stimga ticked, no method, no
+  phone" is now reachable and must report both faults rather than refusing twice in a row.
+  **40/40, 19 red.** `tsc` API **281** · user **6** · driver **28**, all at baseline.
+  ✅ **The new lint run earned its keep again:** it caught an unused `PassengerOfferPaymentType`
+  import (235 → 236 warnings) that `tsc` does not flag.
 - **T-076 — social sign-in deleted the same day.** Owner: *"Google/Apple/Facebook sign-in remove, we
   dont neeed them."* The driver signs in by phone + OTP only now. Gone: the three context methods,
   the dead service and config files, the **Expo plugin entry in `app.json`** (leaving that while
@@ -94,9 +142,18 @@
     value it exists to make unreachable.
   - **The floor is re-based onto the day being edited.** Passing the raw (today) floor would have
     restricted nothing once a later day was picked. Tomorrow keeps the whole clock, on purpose.
-- **Scope held:** the arrival card is deliberately **not** floored (it is bounded by the departure,
-  not the clock), and submit remains the real guard. Saying no to two adjacent "while I'm here"
-  changes.
+- 🔴 **I held scope in the wrong place, and the owner caught it within the hour.** I left the
+  **arrival** card unfloored, reasoning that "must arrive by" is bounded by the departure rather than
+  the clock — so a clock floor would be a rule invented on the way past. The reasoning was sound; the
+  conclusion was wrong. **The bound existed only at submit**, so the wheels happily offered an
+  arrival *before the departure*: the owner's screenshot shows **12.08.2026 06:53 against a departure
+  on 13.08**. The arrival card is now floored at the **departure moment** (not `now` — for a trip
+  next week, arriving tomorrow is equally wrong).
+  **The lesson is the one this project keeps re-learning:** I fixed the control the owner pointed at
+  and left its identical twin alone. That is T-069 → T-075 → *this*, three times in two days, and it
+  is the same "fix the instance, not the class" bill the journal recorded on 2026-08-10 and -12.
+  ⚠️ Also: the owner said **"sana va vaqt"** — the *date* was wrong too, not just the time. Reading
+  only "vaqt" would have produced another half-fix.
 - **Problems — my suite was wrong twice before the code was, and both guards caught it:**
   - Brace-only balancing dropped each `useMemo`'s trailing `, [deps])`, producing a file that would
     not parse. **Sixth time** this project has been bitten by hand-rolled extraction; `tsc` does the

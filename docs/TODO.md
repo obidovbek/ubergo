@@ -62,6 +62,60 @@
 > ⚠️ Cards below sit in *Now* only because they are awaiting that test; none needs Claude work.
 
 ## 🔥 Now (working on it)
+
+- [ ] T-077 (P1) 🎨 **[OWNER, mockup `K_RegShablon` 2026-08-13] So'rov yuborilgandan keyin yo'lovchi
+  hech nima ko'rmaydi.** Owner: *"so'rov yuborganidan keyin sunaqa oyna chiqish kergidi"* — after
+  sending a ride request the passenger should land on the matching driver offers.
+  **APPROVED and STEPS 1-6 DONE 2026-08-13** → `docs/PLAN.md`. Grounded the same day.
+  ✅ **The passenger now lands on the drivers already going that way**, and the card reads like the
+  mockup: car + fuel, *"22:00 da yuramiz"*, *"25.08.2025 Dushanba"*, free seats, and **`Oldi`/`Orqa`
+  as two separate prices** — a price that does not exist renders **visibly dead**, never
+  `undefined so'm`.
+  ⚠️ **EDIT mode still goes back** (the passenger came from their own list), and the hand-off
+  **skips the remembered last search** — otherwise it would overwrite the handed-off route and land
+  them on the wrong pair having done nothing wrong.
+  🔴 **I re-created T-035's defect three hours after fixing it:** `resultsCount` **already existed**
+  (T-066 built the whole seam, so step 4 needed no work), and adding it blindly produced a **TS1117
+  duplicate key** in all three locales. `tsc` caught it. *Check before adding.*
+  ✅ **The new lint run earned its keep again** — it found `formatDate` and `currentLanguage` left
+  orphaned by my own change, which `tsc` does not flag.
+  **80/80 with the card helpers EXECUTED, 21 red** against pre-change behaviour: 10 price cases
+  (DECIMAL-as-string, `undefined`, `0`, garbage → never `NaN`), 11 fuel cases (two fuels joined,
+  absent → line omitted, unknown value shown rather than vanishing), and the mockup's exact date
+  line with all 7 weekdays proven distinct. i18n **evaluated** ×3 locales, `weekdays` asserted to
+  hold **exactly 7** names.
+  `tsc` API **281** · user **6** · driver **28**, all at baseline (the 3 in the touched
+  `DriverOfferService.ts` **proven pre-existing via `git stash`**). Lint **235 = baseline, 0 errors**.
+  🛑 **Only step 7 (owner: deploy the API, rebuild the USER app, walk it) and step 8 (commit)
+  remain.** ⚠️ **The screen is reached from the MENU too**, so this changes what menu users see —
+  intended, but it cannot be walked only through the new path.
+  🔴 **The defect is one line:** `CreatePassengerOfferScreen:613` calls `navigation.goBack()` on
+  success, so the passenger is returned to the menu with no idea whether anyone is already driving
+  that route — the product's whole value is invisible at the one moment it matters.
+  ✅ **Most of the mockup already exists and needs no building:** `SearchOffersScreen` (**1709
+  lines**, route pickers + filters); **both prices** (`price_per_seat` **and**
+  `front_price_per_seat`) are already on the model, returned by the API and declared in the app type,
+  so **`Oldi`/`Orqa` needs zero API work**; `searchOffers()` already takes the four geo ids, so
+  **route filtering needs no new endpoint**; `seats_free` is the `[1][2][3]` badge.
+  🔴 **The class chips (`Standart 10+ · Comfort 5+ · Biznes 1 · Econom 2`) CANNOT be built and were
+  REFUSED on evidence.** Those five values live only on **`PassengerOffer.vehicle_class`** — *what
+  the passenger wants* — and **the driver's vehicle has no class field at all**. There is nothing to
+  filter or count. **Owner chose to ship without them** (result count instead); the class becomes its
+  own later card (migration + driver registration UI + backfill).
+  🔴 **Only ONE API change:** fuel type is **not** in the mapped `vehicle`
+  (`{make, model, color, type, license_plate, year}`), though `DriverVehicle.fuel_types`
+  (`benzine|metan|propan|electric|diesel`) matches the mockup's *Propan/Benzin/Metan/Electro* exactly.
+  🛑 **TWO mockup elements are BLOCKED on an owner answer and must NOT be guessed:** the **⚡ urgent
+  flash** — `DriverOffer` has **no `is_urgent`** column (the passenger's offer does; the driver's does
+  not) — and the **seat-position squares** on two cards, which have no backing data.
+  ⚠️ **The `Qidiruv / Takliflar` tabs at the top of the mockup are deliberately NOT in this card** —
+  they imply a second data source and were not part of the ask.
+  **Owner decisions 2026-08-13:** no class chips · **adapt the existing screen, do not build a
+  second** (this project already pays for duplicated screens — T-042/T-066/T-067) · filter by
+  **route only**, not route + date (other days beat nothing).
+  ❌ No migration. ⚠️ Needs an API deploy (step 1 only) + a **user** app rebuild — both join runs
+  already queued.
+
 > ⚠️ **T-061 is the ONLY card in this section with Claude work left.** Everything below it is
 > code-complete and waiting on the owner's device — the file's own *Parked* rule says those do not
 > count against the 2-task limit.
@@ -1855,11 +1909,23 @@ masofalar'`). **2 of the 6 were on
   full clock, deliberately.**
   ⚠️ **The floor is recomputed every render, not memoised at mount** — a create form can sit open for
   an hour, and a frozen floor would go on offering times now in the past: the same defect, later.
-  ⚠️ **The ARRIVAL card is deliberately NOT floored.** "Must arrive by" is bounded by the departure
-  (`errorArrivalTime`), not by the clock; flooring it would be a new rule invented on the way past.
+  🔴 **CORRECTED 2026-08-13 (owner screenshot) — the arrival card IS floored too.** This card
+  originally exempted it, reasoning that "must arrive by" is bounded by the departure rather than by
+  the clock. **That reasoning was right and the conclusion was wrong:** the bound existed only in
+  `validateForm` (`errorArrivalTime`), while the wheels went on offering moments *before the trip
+  starts*. The owner hit it immediately — **an arrival of 12.08.2026 06:53 against a departure on
+  13.08** — and said so: *"yetib borish vaqti jo'nash vaqtidan keyinga to'g'ri kelishi kerak, sana va
+  vaqtni inobatga olish kerak."* ⚠️ **Note "sana va vaqt" — the DATE was wrong too**, not just the
+  time, which is why the floor is passed to the date wheel as well.
+  ✅ **The arrival floor is the DEPARTURE moment, not `now`** — for a trip next week, arriving
+  tomorrow is as wrong as arriving yesterday, and a floor of `now` would allow it. It follows the
+  chosen departure, and follows `now` when **hoziroq** is ticked.
+  ⚠️ **The mechanism is shared, the meaning is per-variant:** departure = "not in the past",
+  arrival = "not before departure". One code path, two callers.
   ⚠️ **Submit stays the real guard** — this only stops the user choosing something already doomed.
-  **41/41 with the wheel logic EXECUTED** (extracted from the real source, type-stripped by `tsc`,
-  not read), **15 red against pre-change behaviour** including the owner's symptom stated as a check.
+  **48/48 with the wheel logic EXECUTED** (extracted from the real source, type-stripped by `tsc`,
+  not read), **15 + 3 red against pre-change behaviour** including both of the owner's symptoms
+  stated as checks — the past departure hour, and the 12.08-vs-13.08 arrival from the screenshot.
   Covers the `:00` trap, the snap-up, the same-day/next-day split, month- and year-boundary dates
   (the classic `getDate()`-only bug), `minuteStep` 0/negative, and a floor past the last row.
   🔴 **The suite was wrong twice before the code was, and both guards caught it:** brace-only

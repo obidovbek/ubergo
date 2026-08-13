@@ -78,7 +78,17 @@ export interface PassengerOfferAttributes {
   seats_needed: number;
   max_price_per_seat?: number | null;
   currency: string;
+  /**
+   * @deprecated T-031 — superseded by the three flags below, but still written
+   * for one release so un-rebuilt app installs keep working. Do not read it for
+   * new logic.
+   */
   payment_type?: PassengerOfferPaymentType | null;
+  /** T-031: cash and card are independent — both may be true. */
+  payment_cash: boolean;
+  payment_card: boolean;
+  /** T-031: "Do'stimga" is its own choice, not a payment method. */
+  paid_by_friend: boolean;
   payer_phone?: string | null;
   seat_counts?: PassengerOfferSeatCounts | null;
   seat_position_any: boolean;
@@ -125,6 +135,9 @@ export interface PassengerOfferCreationAttributes
     | 'is_urgent'
     | 'max_price_per_seat'
     | 'payment_type'
+    | 'payment_cash'
+    | 'payment_card'
+    | 'paid_by_friend'
     | 'payer_phone'
     | 'seat_counts'
     | 'seat_position_any'
@@ -178,6 +191,9 @@ export class PassengerOffer
   declare max_price_per_seat?: number | null;
   declare currency: string;
   declare payment_type?: PassengerOfferPaymentType | null;
+  declare payment_cash: boolean;
+  declare payment_card: boolean;
+  declare paid_by_friend: boolean;
   declare payer_phone?: string | null;
   declare seat_counts?: PassengerOfferSeatCounts | null;
   declare seat_position_any: boolean;
@@ -377,6 +393,21 @@ export function initPassengerOffer(sequelize: Sequelize) {
       payment_type: {
         type: DataTypes.STRING(20),
         allowNull: true
+      },
+      payment_cash: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      payment_card: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      paid_by_friend: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
       },
       payer_phone: {
         type: DataTypes.STRING(20),

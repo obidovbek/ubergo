@@ -20,7 +20,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { MenuButton } from '../components/MenuButton';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +30,6 @@ import type { GeoOption } from '../api/geo';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
-import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
 import { GeoSelectModal } from '../components/passengerOffer/GeoSelectModal';
@@ -38,10 +37,29 @@ import { AppModal } from '../components/AppModal';
 
 const LAST_SEARCH_KEY = '@ubexgo:last_search';
 
+/**
+ * T-077 — the hand-off from "I just posted a ride request".
+ *
+ * The whole `GeoOption` objects travel, not bare ids: this screen keeps
+ * `{id, name}` for every level and `loadLastSearch` already restores exactly
+ * this shape from AsyncStorage. Passing ids alone would force a re-fetch just
+ * to recover names the caller already had.
+ */
+type SearchOffersParams = {
+  fromProvince?: GeoAPI.GeoOption | null;
+  fromCity?: GeoAPI.GeoOption | null;
+  toProvince?: GeoAPI.GeoOption | null;
+  toCity?: GeoAPI.GeoOption | null;
+};
+
 export default function SearchOffersScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const handoff = (route.params ?? {}) as SearchOffersParams;
   const { token } = useAuth();
-  const { t, currentLanguage } = useTranslation();
+  // T-077: `currentLanguage` went with `formatDateTime` — the card now formats
+  // its own date so the weekday can come from a translation key.
+  const { t } = useTranslation();
   
   const [offers, setOffers] = useState<OffersAPI.DriverOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,9 +98,34 @@ export default function SearchOffersScreen() {
     const initialize = async () => {
       await loadFromCountries();
       await loadToCountries();
+
+      /*
+       * T-077 — a route handed over from the request the passenger just
+       * posted WINS over the remembered last search.
+       *
+       * ⚠️ `loadLastSearch` must not also run: it would overwrite the handed-off
+       * route with whatever was searched previously, and the passenger would
+       * land on the wrong pair having done nothing wrong. The existing
+       * auto-search effect then fires on its own once both provinces are set.
+       */
+      if (handoff.fromProvince && handoff.toProvince) {
+        setSelectedFromProvince(handoff.fromProvince);
+        setSelectedFromCity(handoff.fromCity ?? null);
+        setSelectedToProvince(handoff.toProvince);
+        setSelectedToCity(handoff.toCity ?? null);
+        return;
+      }
+
       await loadLastSearch();
     };
     initialize();
+    /*
+     * Mount-only, deliberately. `handoff` is rebuilt from `route.params` on
+     * every render, so listing it here would re-run this effect for ever.
+     * ESLint's exhaustive-deps warning on this line is expected and is the
+     * reason the file sits one warning above its baseline.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save last search (only if both provinces are selected)
@@ -517,120 +560,190 @@ export default function SearchOffersScreen() {
     (navigation as any).navigate('OfferDetails', { offerId: offer.id });
   };
 
-  const formatDate = (dateString: string) => {
-    return formatDateTime(dateString, currentLanguage);
+  /*
+   * ── T-077: the offer card, to the K_RegShablon mockup ──────────────────
+   *
+   * Dates and times are formatted BY HAND, weekday names coming from a
+   * translation key. `TimeWindowCard` already does it this way for the same
+   * reason: Android/Hermes locale data is not something to rely on.
+   */
+  const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+  /** "22:00" */
+  const cardTime = (iso: string): string => {
+    const d = new Date(iso);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   };
 
-  const renderOffer = ({ item }: { item: OffersAPI.DriverOffer }) => (
-    <TouchableOpacity
-      style={styles.offerCard}
-      onPress={() => handleJoinOffer(item)}
-      activeOpacity={0.95}
-    >
-      {/* Route Section */}
-      <View style={styles.routeSection}>
-        <View style={styles.routeRow}>
-          <View style={styles.routeDot} />
-          <View style={styles.routeContent}>
-            <Text style={styles.routeLabel}>{t('searchOffers.from')}</Text>
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.from_text}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.routeConnector}>
-          <View style={styles.routeLine} />
-          <Ionicons name="arrow-down" size={16} color="#D1D5DB" />
-        </View>
-        
-        <View style={styles.routeRow}>
-          <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
-          <View style={styles.routeContent}>
-            <Text style={styles.routeLabel}>{t('searchOffers.to')}</Text>
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.to_text}
-            </Text>
-          </View>
-        </View>
-      </View>
+  /** "25.08.2025 Dushanba" */
+  const cardDate = (iso: string): string => {
+    const d = new Date(iso);
+    const date = `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+    const weekday = t('searchOffers.weekdays').split(',')[d.getDay()] ?? '';
+    return weekday ? `${date} ${weekday}` : date;
+  };
 
-      {/* Info Section */}
-      <View style={styles.infoSection}>
-        <View style={styles.infoRow}>
-          <View style={styles.infoTag}>
-            <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-            <Text style={styles.infoTagText}>{formatDate(item.start_at)}</Text>
-          </View>
-          
-          <View style={styles.infoTag}>
-            <Ionicons name="person-outline" size={14} color="#6B7280" />
-            <Text style={styles.infoTagText} numberOfLines={1}>
-              {item.driver.name}
+  const FUEL_KEYS: Record<string, string> = {
+    benzine: 'fuelBenzine',
+    metan: 'fuelMetan',
+    propan: 'fuelPropan',
+    electric: 'fuelElectric',
+    diesel: 'fuelDiesel',
+  };
+
+  /**
+   * "Propan", or "Benzin · Propan" when the car runs on two.
+   *
+   * ⚠️ Returns `null` — never '' — so the caller omits the line entirely rather
+   * than drawing an empty row. A driver need not have recorded a fuel, and
+   * offers cached before T-077 shipped carry no such key at all.
+   * ⚠️ An unknown value falls through as itself rather than vanishing, so a new
+   * fuel added server-side is visible instead of silently blank.
+   */
+  const fuelLabel = (fuels?: string[] | null): string | null => {
+    if (!Array.isArray(fuels) || fuels.length === 0) return null;
+    const labels = fuels
+      .filter((f) => typeof f === 'string' && f.length > 0)
+      .map((f) => (FUEL_KEYS[f] ? t(`searchOffers.${FUEL_KEYS[f]}`) : f));
+    return labels.length > 0 ? labels.join(' · ') : null;
+  };
+
+  /**
+   * A usable price, or `null`.
+   *
+   * 🔴 pg returns DECIMAL as a **string** (`'150000.00'`) — the 2026-08-02 root
+   * cause — so this must not assume a number. `front_price_per_seat` is also
+   * genuinely optional: an offer with no front price must render a dead block,
+   * never "undefined so'm".
+   */
+  const priceOf = (raw: unknown): number | null => {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  /**
+   * The offer card, to the `K_RegShablon` mockup (T-077).
+   *
+   * ⚠️ The route (from → to) is deliberately NOT drawn per card any more. The
+   * search requires both provinces before it runs, so every result shares one
+   * route — it belongs in the header once, as the mockup has it, not repeated
+   * on every row.
+   *
+   * ⚠️ Deliberately NOT a pixel match: the mockup's class chips, ⚡ flash and
+   * seat-position squares are all absent because no data backs them (owner
+   * decisions, 2026-08-13).
+   */
+  const renderOffer = ({ item }: { item: OffersAPI.DriverOffer }) => {
+    const front = priceOf(item.front_price_per_seat);
+    const back = priceOf(item.price_per_seat);
+    const fuel = fuelLabel(item.vehicle?.fuel_types);
+    const carName =
+      [item.vehicle?.make, item.vehicle?.model].filter(Boolean).join(' ') ||
+      t('searchOffers.vehicleUnknown');
+
+    return (
+      <TouchableOpacity
+        style={styles.offerCard}
+        onPress={() => handleJoinOffer(item)}
+        activeOpacity={0.95}
+      >
+        {/* Car + fuel · departure · free seats */}
+        <View style={styles.cardTop}>
+          <View style={styles.cardCar}>
+            <Text style={styles.cardCarName} numberOfLines={1}>
+              {carName}
             </Text>
+            {!!fuel && (
+              <Text style={styles.cardFuel} numberOfLines={1}>
+                {fuel}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.cardWhen}>
+            <Text style={styles.cardTimeText} numberOfLines={1}>
+              {cardTime(item.start_at)} {t('searchOffers.departAt')}
+            </Text>
+            <Text style={styles.cardDateText} numberOfLines={1}>
+              {cardDate(item.start_at)}
+            </Text>
+          </View>
+
+          <View style={styles.cardSeats}>
+            <Text style={styles.cardSeatsText}>{item.seats_free}</Text>
           </View>
         </View>
 
-        <View style={styles.infoRow}>
-          <View style={styles.infoTag}>
-            <Ionicons name="car-outline" size={14} color="#6B7280" />
-            <Text style={styles.infoTagText} numberOfLines={1}>
-              {item.vehicle.make} {item.vehicle.model}
+        {/*
+          Oldi / Orqa. A price that does not exist renders as a visibly DEAD
+          grey block — never "undefined so'm", and never simply missing, which
+          would leave the driver's two prices silently misaligned.
+        */}
+        <View style={styles.cardPrices}>
+          <View style={[styles.priceBlock, !front && styles.priceBlockDead]}>
+            <Text
+              style={[
+                styles.priceBlockLabel,
+                !front && styles.priceBlockTextDead,
+              ]}
+            >
+              {t('searchOffers.priceFront')}
+            </Text>
+            <Text
+              style={[
+                styles.priceBlockValue,
+                !front && styles.priceBlockTextDead,
+              ]}
+              numberOfLines={1}
+            >
+              {front
+                ? `${formatNumberWithSpaces(front)} ${item.currency}`
+                : t('searchOffers.priceNone')}
             </Text>
           </View>
-          
-          {/* Driver Rating */}
-          <View style={[styles.infoTag, styles.ratingTag]}>
-            <View style={styles.ratingStars}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Ionicons
-                  key={star}
-                  name={star <= Math.round(item.driver?.rating || 0) ? 'star' : 'star-outline'}
-                  size={12}
-                  color="#F59E0B"
-                  style={styles.ratingStar}
-                />
-              ))}
-            </View>
-            <Text style={styles.ratingText}>
-              {item.driver?.rating ? item.driver.rating.toFixed(1) : '0.0'}
-              {item.driver?.rating_count ? (
-                <Text style={styles.ratingCountText}> ({item.driver.rating_count})</Text>
-              ) : (
-                <Text style={styles.ratingCountText}> ({t('searchOffers.new')})</Text>
-              )}
+
+          <View style={[styles.priceBlock, !back && styles.priceBlockDead]}>
+            <Text
+              style={[
+                styles.priceBlockLabel,
+                !back && styles.priceBlockTextDead,
+              ]}
+            >
+              {t('searchOffers.priceBack')}
+            </Text>
+            <Text
+              style={[
+                styles.priceBlockValue,
+                !back && styles.priceBlockTextDead,
+              ]}
+              numberOfLines={1}
+            >
+              {back
+                ? `${formatNumberWithSpaces(back)} ${item.currency}`
+                : t('searchOffers.priceNone')}
             </Text>
           </View>
-        </View>
-      </View>
 
-      {/* Footer Section */}
-      <View style={styles.offerFooter}>
-        <View style={styles.seatsBadge}>
-          <Ionicons name="people" size={16} color="#10B981" />
-            <Text style={styles.seatsText}>
-              {item.seats_free} {item.seats_free === 1 ? t('searchOffers.seat') : t('searchOffers.seats')}
+          <Ionicons
+            name="information-circle-outline"
+            size={24}
+            color="#9CA3AF"
+            style={styles.cardInfoIcon}
+          />
+        </View>
+
+        {!!item.note && (
+          <View style={styles.noteContainer}>
+            <Ionicons name="chatbubble-outline" size={12} color="#6B7280" />
+            <Text style={styles.noteText} numberOfLines={2}>
+              {item.note}
             </Text>
-        </View>
-        
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceValue}>
-            {formatNumberWithSpaces(item.price_per_seat)} {item.currency}
-          </Text>
-          <Text style={styles.priceLabel}>{t('searchOffers.perSeat')}</Text>
-        </View>
-      </View>
-
-      {item.note && (
-        <View style={styles.noteContainer}>
-          <Ionicons name="chatbubble-outline" size={12} color="#6B7280" />
-          <Text style={styles.noteText} numberOfLines={2}>
-            {item.note}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   /**
    * The route picker, rendered as the results list's header (T-066).
@@ -1274,6 +1387,97 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+
+  /* ── T-077: the offer card, to the K_RegShablon mockup ────────────────── */
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  cardCar: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardCarName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  cardFuel: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  cardWhen: {
+    // `flex: 1` on both columns rather than a fixed width: the Russian
+    // weekday names ("Понедельник") are far longer than the Uzbek ones and
+    // would otherwise be clipped.
+    flex: 1.2,
+    minWidth: 0,
+    alignItems: 'flex-end',
+  },
+  cardTimeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  cardDateText: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  cardSeats: {
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardSeatsText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  cardPrices: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  priceBlock: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+  },
+  /** No such price on this offer — present but plainly inactive. */
+  priceBlockDead: {
+    backgroundColor: '#E5E7EB',
+  },
+  priceBlockLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  priceBlockValue: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  priceBlockTextDead: {
+    color: '#9CA3AF',
+  },
+  cardInfoIcon: {
+    marginLeft: 2,
+  },
+
   routeSection: {
     marginBottom: 16,
   },

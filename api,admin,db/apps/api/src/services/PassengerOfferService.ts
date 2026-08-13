@@ -66,6 +66,9 @@ interface CreatePassengerOfferData {
   max_price_per_seat?: number | null;
   currency?: string;
   payment_type?: PassengerOfferPaymentType | null;
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  paid_by_friend?: boolean;
   payer_phone?: string | null;
   seat_counts?: PassengerOfferSeatCounts | null;
   seat_position_any?: boolean;
@@ -512,6 +515,52 @@ export class PassengerOfferService {
         'payment_type'
       );
     }
+    /*
+     * T-031 — cash / card / "Do'stimga" are independent flags.
+     *
+     * `payment_type` could hold only ONE value, so picking "Do'stimga" cleared
+     * "Naqd" and cash+card could never both be on (owner, 2026-08-13).
+     */
+    if (sent('payment_cash')) fields.payment_cash = Boolean(body.payment_cash);
+    if (sent('payment_card')) fields.payment_card = Boolean(body.payment_card);
+    if (sent('paid_by_friend'))
+      fields.paid_by_friend = Boolean(body.paid_by_friend);
+
+    /*
+     * ⚠️ Keep the deprecated `payment_type` in step with the flags for one
+     * release. A NEW app sends only the flags; an OLD install still reads
+     * `payment_type`, so leaving it stale would show the wrong method there.
+     * It cannot express "cash AND card", so it records the primary method —
+     * cash first, then card — and a friend-only choice as `friend_pays`.
+     */
+    const flagsSent =
+      sent('payment_cash') || sent('payment_card') || sent('paid_by_friend');
+
+    /*
+     * ⚠️ And the reverse, which is the easier half to forget: an OLD app build
+     * sends `payment_type` and no flags at all. Without this its offers would
+     * be stored with every flag false and read as "no payment method chosen"
+     * by the new app and by the driver side.
+     */
+    if (sent('payment_type') && !flagsSent) {
+      fields.payment_cash = fields.payment_type === 'cash';
+      fields.payment_card = fields.payment_type === 'click_payme';
+      fields.paid_by_friend = fields.payment_type === 'friend_pays';
+    }
+
+    if (flagsSent && !sent('payment_type')) {
+      const cash = fields.payment_cash ?? current?.payment_cash ?? false;
+      const card = fields.payment_card ?? current?.payment_card ?? false;
+      const friend = fields.paid_by_friend ?? current?.paid_by_friend ?? false;
+      fields.payment_type = cash
+        ? 'cash'
+        : card
+          ? 'click_payme'
+          : friend
+            ? 'friend_pays'
+            : null;
+    }
+
     if (sent('payer_phone')) {
       const phone = this.parseText(body.payer_phone, 'payer_phone', 20);
       if (phone && !this.PAYER_PHONE_REGEX.test(phone)) {
@@ -646,10 +695,38 @@ export class PassengerOfferService {
       payment_type:
         (has('payment_type') ? fields.payment_type : current?.payment_type) ??
         null,
+      payment_cash:
+        (has('payment_cash') ? fields.payment_cash : current?.payment_cash) ??
+        false,
+      payment_card:
+        (has('payment_card') ? fields.payment_card : current?.payment_card) ??
+        false,
+      paid_by_friend:
+        (has('paid_by_friend')
+          ? fields.paid_by_friend
+          : current?.paid_by_friend) ?? false,
       payer_phone:
         (has('payer_phone') ? fields.payer_phone : current?.payer_phone) ??
         null,
     };
+
+    /*
+     * T-031 (owner, 2026-08-13): "Do'stimga" is an independent choice, NOT a
+     * payment method — so at least one real method must still be picked. A
+     * friend paying still pays in cash or by card, and the driver needs to know
+     * which.
+     *
+     * ⚠️ Only enforced when the caller actually touched payment. A PATCH that
+     * edits, say, the seat count must not fail on a field it never sent.
+     */
+    if (has('payment_cash') || has('payment_card') || has('paid_by_friend')) {
+      if (!merged.payment_cash && !merged.payment_card) {
+        throw new AppError(
+          'At least one payment method (cash or card) must be selected',
+          400
+        );
+      }
+    }
 
     // Urgent offers leave now, so the 30-minute rule only guards planned ones.
     if (fields.start_at && !merged.is_urgent) {
@@ -702,9 +779,15 @@ export class PassengerOfferService {
       }
     }
 
-    if (merged.payment_type === 'friend_pays' && !merged.payer_phone) {
+    /*
+     * T-031: keyed off the FLAG, not the deprecated enum. A new app can now
+     * send `paid_by_friend` together with `payment_cash`, in which case
+     * `payment_type` records "cash" — so the old check would have let a
+     * friend-paid offer through with no phone number at all.
+     */
+    if (merged.paid_by_friend && !merged.payer_phone) {
       throw new AppError(
-        'payer_phone is required when payment_type is friend_pays',
+        'payer_phone is required when paid_by_friend is set',
         400
       );
     }
@@ -1488,6 +1571,11 @@ export class PassengerOfferService {
       max_price_per_seat: offer.max_price_per_seat,
       currency: offer.currency,
       payment_type: offer.payment_type,
+      // T-031 — the flags the driver app reads; `payment_type` above is the
+      // deprecated single value, kept for one release.
+      payment_cash: offer.payment_cash,
+      payment_card: offer.payment_card,
+      paid_by_friend: offer.paid_by_friend,
       seats_needed: offer.seats_needed,
       seat_counts: offer.seat_counts,
       seat_position_any: offer.seat_position_any,

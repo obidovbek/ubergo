@@ -51,7 +51,16 @@ export interface PassengerOffer {
   // Nullable since T-018 — the new order form collects no price at all.
   max_price_per_seat: number | null;
   currency: string;
+  /** @deprecated T-031 — use the three flags below. Still sent for one release. */
   payment_type?: PassengerOfferPaymentType | null;
+  /**
+   * T-031 — cash and card are independent (both may be true) and
+   * "Do'stimga" is its own point, not a payment method.
+   * ⚠️ Optional: offers created before the split carry only `payment_type`.
+   */
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  paid_by_friend?: boolean;
   /** Owner view only — the API strips it for everyone else. */
   payer_phone?: string | null;
   seat_counts?: PassengerOfferSeatCounts | null;
@@ -179,7 +188,11 @@ export interface CreatePassengerOfferData {
   /** The new form collects no price — only the special order has prices. */
   max_price_per_seat?: number;
   currency?: string;
+  /** @deprecated T-031 — the server derives this from the flags below. */
   payment_type?: PassengerOfferPaymentType;
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  paid_by_friend?: boolean;
   payer_phone?: string;
   seat_counts?: PassengerOfferSeatCounts;
   seat_position_any?: boolean;

@@ -54,6 +54,15 @@ export interface DriverOffer {
     type?: string;
     license_plate: string;
     year: number;
+    /**
+     * T-077 — `['benzine' | 'metan' | 'propan' | 'electric' | 'diesel']`.
+     *
+     * ⚠️ Optional and possibly empty: a driver need not have recorded it, and
+     * offers fetched before this shipped carry no such key. Render it through
+     * `fuelLabel()`, which returns `null` rather than an empty line.
+     * ⚠️ A car often has TWO (benzine + propan is the normal conversion here).
+     */
+    fuel_types?: string[] | null;
   };
 }
 

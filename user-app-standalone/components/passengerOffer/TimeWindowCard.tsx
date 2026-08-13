@@ -154,12 +154,15 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
    * So: only when the chosen day IS the floor's day does a time floor apply.
    * On any later day the whole clock is legitimately open.
    *
-   * 🔴 Departure only. The arrival card is a "must arrive by" time, bounded by
-   * the departure (`errorArrivalTime`) rather than by the clock; putting a
-   * floor on it would be a new rule invented on the way past.
+   * ⚠️ Applies to BOTH variants. The floor's *meaning* is the caller's: for
+   * departure it is "not in the past", for arrival it is "not before the
+   * departure" — which `validateForm` has always enforced at submit
+   * (`errorArrivalTime`). Restricting only the departure card left the arrival
+   * wheels offering a moment before the trip starts, and the owner hit exactly
+   * that (2026-08-13: an arrival of 12.08 for a departure on 13.08).
    */
   const timeFloor = ((): Date | undefined => {
-    if (!isDeparture || !minimumDate) return undefined;
+    if (!minimumDate) return undefined;
     const day = date ?? minimumDate;
     const sameDay =
       day.getFullYear() === minimumDate.getFullYear() &&

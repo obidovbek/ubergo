@@ -84,15 +84,35 @@ without it.
   steppers are disabled (and/or move the salon options above them, since they override the seats).
   If the owner reports the steppers dead with **no** salon option ticked, it is a different bug and
   the diagnosis restarts with what they see on the device.
-- [ ] 5. **Items 5-6 — migration.** Add `payment_cash`, `payment_card`, `paid_by_friend` booleans to
-  `passenger_offers`; keep `payer_phone`. Backfill from the existing `payment_type` so current rows
-  keep their meaning, and leave the old column in place for one release rather than dropping it.
-  ⚠️ **Ask before running it against test3.**
-- [ ] 6. **Items 5-6 — API.** Accept and return the new fields; keep writing `payment_type` too
-  while the old column survives, so an un-updated app build does not lose data.
-- [ ] 7. **Items 5-6 — user app.** Cash and card become independent toggles; "for my friend" becomes
-  its own checkbox with the phone field, outside the payment group. Update the validation (at least
-  one payment method; a phone only required when the friend box is ticked).
+- [x] 5. **DONE 2026-08-13. Migration written, NOT run** (owner runs it —
+  `20260813000001-split-passenger-offer-payment-flags.cjs`). Adds the three booleans, **backfills
+  from `payment_type`** so existing rows keep their meaning, and **prints the backfilled row count**
+  (the T-046 precedent — test3's DB is not reachable from the dev machine). `down` drops the three
+  columns. ✅ **`payment_type` is KEPT and still written** — old installs read it, and the board
+  carries a long tail of un-rebuilt apps. ✅ **Cheaper than this plan assumed:** the column is a plain
+  **`STRING(20)`**, not a Postgres enum, and **no admin page reads it**.
+- [x] 6. **DONE 2026-08-13. API accepts and returns the flags, and keeps the old column in step BOTH
+  ways.** New app → flags → server derives `payment_type` (cash first, then card, then friend).
+  **Old app → `payment_type` → server derives the flags** — ⚠️ *that reverse direction is the easy
+  half to forget; without it an old install's offers would store all-false and read as "no payment
+  method chosen".* The flags are added to the public list mapper so the driver app receives them.
+  🔴 **A REAL HOLE FOUND AND CLOSED:** the `payer_phone` requirement keyed off
+  `payment_type === 'friend_pays'`. Now that a passenger can pick **Do'stimga + Naqd**,
+  `payment_type` records `'cash'` — so the old check would have let a friend-paid offer through
+  **with no phone number at all**. It is keyed off `paid_by_friend` now.
+  ⚠️ "At least one method" is enforced **only when payment was actually sent**, so a PATCH editing
+  the seat count does not fail on a field it never touched. Field names added ×3 locales, so T-065's
+  edit notifications name these columns instead of showing a raw key.
+- [x] 7. **DONE 2026-08-13. Three independent toggles.** Cash and card both selectable; "Do'stimga"
+  is its own point that no longer clears them, with the phone field under it.
+  ⚠️ **Validation is TWO separate `if`s, not `if/else`** — "Do'stimga ticked, no method, no phone" is
+  now a reachable state and must report both faults; chaining them would make the form refuse twice
+  in a row. ⚠️ **Edit mode falls back to `payment_type`** when the flags are absent, so an order
+  created before the split does not open as "no payment method".
+  ✅ **The driver app was swept in the same pass** (the class, not the instance):
+  `PassengerOfferExtras` rendered ONE payment chip from `payment_type`, so a passenger choosing
+  **Naqd + Click,Payme** would have shown the driver only "Naqd". It renders the full list now, with
+  the same pre-split fallback.
 - [ ] 8. **Item 4 — admin setting.** A settings row/endpoint for `waiting_fee_per_min` +
   `free_waiting_min`, and an admin page to edit them. ⚠️ Scope this properly before coding — it is
   the only item here that adds a new capability rather than changing one.
@@ -141,6 +161,21 @@ without it.
   suspect is a silently disabled control, which needs the owner's repro.
 
 ## Resume point (for the next chat)
+
+> 🟢 **2026-08-13 — STEPS 5, 6 and 7 ARE DONE (items 5-6, the payment split).** Owner:
+> *"Do'stimga degani alohida punkt. Do'stimgani tanlasa naqd payme deganni tanlab bo'lmayapdi. Naqd,
+> click payme ikkalasini ham tanlasa bo'ladi degani."* Owner also chose: **at least one of
+> cash/card is still required** (Do'stimga alone is not enough), and **the migration is written but
+> NOT run — the owner runs it.**
+> **40/40 checks, 19 red against pre-change code.** `tsc` API **281** · user **6** · driver **28**,
+> all at baseline, zero errors in any touched file.
+> 🔴 **Two defects found on the way, neither in the card:** the `payer_phone` requirement keyed off
+> the old enum, so **Do'stimga + Naqd would have skipped the phone check entirely**; and the driver
+> app showed only ONE payment chip, so cash+card would have displayed as "Naqd" alone.
+> ⚠️ **BASELINES CHANGED 2026-08-13: user 12 → 6, driver 36 → 28.** The numbers below are stale.
+> 🛑 **Remaining: steps 4 (blocked — see below), 8-9 (the waiting-fee ADMIN setting, still a separate
+> capability), 10-12.** ⚠️ **Step 11 now needs the migration run first.**
+
 **Steps 1-3 are DONE and committed (`9ab9b2c`). Working tree clean.**
 
 🛑 **Step 4 cannot start until the owner answers one question:** when the gender sheet did not

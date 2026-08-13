@@ -27,7 +27,6 @@ import {
   getPassengerOfferById,
   type CreatePassengerOfferData,
   type PassengerOffer,
-  type PassengerOfferPaymentType,
   type PassengerOfferSalonScope,
   type PassengerOfferVehicleClass,
 } from "../api/passengerOffers";
@@ -114,9 +113,16 @@ export const CreatePassengerOfferScreen: React.FC = () => {
   const [arriveDate, setArriveDate] = useState<Date | null>(null);
   const [arriveUntil, setArriveUntil] = useState<Date | null>(null);
 
-  // Payment — single choice despite the checkbox styling in the Figma
-  const [paymentType, setPaymentType] =
-    useState<PassengerOfferPaymentType | null>(null);
+  /*
+   * Payment — T-031: three independent flags, not one enum.
+   *
+   * Cash and card may BOTH be on; "Do'stimga" is a separate point on top of
+   * them (owner, 2026-08-13). At least one of cash/card is required — a friend
+   * paying still pays somehow, and the driver needs to know which.
+   */
+  const [paymentCash, setPaymentCash] = useState(false);
+  const [paymentCard, setPaymentCard] = useState(false);
+  const [paidByFriend, setPaidByFriend] = useState(false);
   const [payerPhone, setPayerPhone] = useState("+998 ");
 
   // Vehicle class — one deselectable radio group of five
@@ -271,7 +277,19 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         setArriveDate(offer.arrive_until ? new Date(offer.arrive_until) : null);
         setArriveUntil(offer.arrive_until ? new Date(offer.arrive_until) : null);
 
-        setPaymentType(offer.payment_type ?? null);
+        /*
+         * T-031 — prefer the flags, but fall back to the deprecated
+         * `payment_type` for offers created before the split (and for any row
+         * the migration has not touched). Reading the flags alone would show
+         * an older order as having no payment method at all.
+         */
+        setPaymentCash(offer.payment_cash ?? offer.payment_type === "cash");
+        setPaymentCard(
+          offer.payment_card ?? offer.payment_type === "click_payme",
+        );
+        setPaidByFriend(
+          offer.paid_by_friend ?? offer.payment_type === "friend_pays",
+        );
         if (offer.payer_phone) setPayerPhone(offer.payer_phone);
         setVehicleClass(offer.vehicle_class ?? null);
 
@@ -348,6 +366,26 @@ export const CreatePassengerOfferScreen: React.FC = () => {
    */
   const departFloor = new Date(Date.now() + MIN_ADVANCE_MS);
 
+  /**
+   * The earliest arrival the form will accept: the departure itself.
+   *
+   * `validateForm` rejects `arrive_until < start_at`, so this makes the wheels
+   * offer exactly what the form accepts — the same contract the departure card
+   * already has.
+   *
+   * ⚠️ It tracks the CHOSEN departure, not the clock. For a trip next week,
+   * "arrive tomorrow" is as wrong as "arrive yesterday", and a floor of `now`
+   * would happily allow it.
+   *
+   * ⚠️ When "hoziroq" is ticked the departure is `now`, so the arrival floor
+   * follows it rather than sitting at a stale picked time.
+   */
+  const arrivalFloor = isUrgent
+    ? new Date()
+    : departFrom
+      ? combineDateTime(departDate, departFrom)
+      : departFloor;
+
   /** Departure moment: "now" when urgent, otherwise the day + window start. */
   const getStartAtDate = (): Date => {
     if (isUrgent) return new Date();
@@ -403,12 +441,19 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       newErrors.seats = t("passengerOffers.errorSeatsRequired");
     }
 
-    if (!paymentType) {
+    /*
+     * T-031: at least one real payment method. "Do'stimga" alone is not
+     * enough — a friend still pays in cash or by card.
+     *
+     * ⚠️ These are two SEPARATE ifs, not if/else. The flags are independent, so
+     * "Do'stimga ticked, no method, no phone" is a real state and must report
+     * both problems; chaining them would hide the phone error behind the
+     * method error and make the form refuse twice in a row.
+     */
+    if (!paymentCash && !paymentCard) {
       newErrors.payment_type = t("passengerOffers.errorPaymentRequired");
-    } else if (
-      paymentType === "friend_pays" &&
-      payerPhone.replace(/\D/g, "").length < 7
-    ) {
+    }
+    if (paidByFriend && payerPhone.replace(/\D/g, "").length < 7) {
       newErrors.payer_phone = t("passengerOffers.errorPayerPhone");
     }
 
@@ -492,9 +537,12 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         is_urgent: isUrgent,
         // seats_needed and max_price_per_seat are deliberately absent: the API
         // derives the seat count, and this form collects no price at all.
-        payment_type: paymentType ?? undefined,
-        payer_phone:
-          paymentType === "friend_pays" ? payerPhone.trim() : undefined,
+        // T-031 — the flags are the source of truth. The server keeps the
+        // deprecated `payment_type` in step itself, so it is not sent here.
+        payment_cash: paymentCash,
+        payment_card: paymentCard,
+        paid_by_friend: paidByFriend,
+        payer_phone: paidByFriend ? payerPhone.trim() : undefined,
         seat_counts: salonScope
           ? undefined
           : {
@@ -562,7 +610,29 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           ? t("passengerOffers.updateSuccessMessage")
           : t("passengerOffers.successMessage"),
         confirmText: t("common.ok"),
-        onConfirm: () => navigation.goBack(),
+        /*
+          T-077 — a NEW request hands the passenger straight to the drivers
+          already going that way. Until now this was `goBack()`, which dropped
+          them on the menu with no idea whether anyone was driving their route.
+
+          ⚠️ EDIT mode deliberately still goes back: the passenger arrived from
+          their own orders list, and sending them to a search screen instead
+          would lose the place they were editing from.
+          ⚠️ It hangs off the dialog's OK, not a toast — a toast has no button,
+          so the navigation would simply never happen (T-057's rule).
+        */
+        onConfirm: () => {
+          if (isEdit) {
+            navigation.goBack();
+            return;
+          }
+          (navigation as any).navigate("SearchOffers", {
+            fromProvince: fromLocation.province,
+            fromCity: fromLocation.cityDistrict,
+            toProvince: toLocation.province,
+            toCity: toLocation.cityDistrict,
+          });
+        },
         onCancel: () => {},
       });
     } catch (error: any) {
@@ -679,6 +749,17 @@ export const CreatePassengerOfferScreen: React.FC = () => {
               onDateChange={setArriveDate}
               untilTime={arriveUntil}
               onUntilTimeChange={setArriveUntil}
+              /*
+                You cannot arrive before you leave. `validateForm` has always
+                refused it (`errorArrivalTime`), but the wheels still OFFERED
+                those dates and times, so the refusal only arrived at submit —
+                the owner hit this on 2026-08-13 with an arrival of 12.08
+                against a departure on 13.08.
+
+                ⚠️ The floor is the DEPARTURE moment, not "now": for a trip next
+                week, arriving tomorrow is just as wrong as arriving yesterday.
+              */
+              minimumDate={arrivalFloor}
               error={errors.arrive_until}
             />
           </View>
@@ -689,37 +770,38 @@ export const CreatePassengerOfferScreen: React.FC = () => {
               {t("passengerOffers.paymentTitle")}
             </Text>
 
+            {/*
+              T-031 — three INDEPENDENT toggles (owner, 2026-08-13).
+              They used to share one `paymentType` value, so they behaved as a
+              radio group: ticking "Do'stimga" silently cleared "Naqd", and
+              cash + card could never both be on.
+            */}
             <View style={styles.inlineRow}>
               <CheckRow
                 label={t("passengerOffers.paymentCash")}
-                checked={paymentType === "cash"}
-                onPress={() =>
-                  setPaymentType(paymentType === "cash" ? null : "cash")
-                }
+                checked={paymentCash}
+                onPress={() => setPaymentCash(!paymentCash)}
               />
               <CheckRow
                 label={t("passengerOffers.paymentClickPayme")}
-                checked={paymentType === "click_payme"}
-                onPress={() =>
-                  setPaymentType(
-                    paymentType === "click_payme" ? null : "click_payme",
-                  )
-                }
+                checked={paymentCard}
+                onPress={() => setPaymentCard(!paymentCard)}
               />
             </View>
 
+            {/*
+              "Do'stimga" is its own point, not a payment method — a friend
+              still pays in cash or by card, so it sits apart from the two
+              above and does not clear them.
+            */}
             <CheckRow
               label={t("passengerOffers.paymentFriend")}
-              checked={paymentType === "friend_pays"}
-              onPress={() =>
-                setPaymentType(
-                  paymentType === "friend_pays" ? null : "friend_pays",
-                )
-              }
+              checked={paidByFriend}
+              onPress={() => setPaidByFriend(!paidByFriend)}
             />
 
             {/* The friend may well be abroad — the number is typed in full */}
-            {paymentType === "friend_pays" && (
+            {paidByFriend && (
               <TextInput
                 style={[
                   styles.plainInput,

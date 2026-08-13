@@ -50,7 +50,17 @@ export interface PassengerOffer {
   /** Null on offers created by the new form — it collects no price at all. */
   max_price_per_seat: number | null;
   currency: string;
+  /** @deprecated T-031 — use the three flags below; kept for one release. */
   payment_type?: PassengerOfferPaymentType | null;
+  /**
+   * T-031 — cash and card are independent (both may be true); "Do'stimga" is
+   * its own point, not a payment method.
+   * ⚠️ Optional: offers created before the split carry only `payment_type`,
+   * so read them through a fallback rather than assuming they are present.
+   */
+  payment_cash?: boolean;
+  payment_card?: boolean;
+  paid_by_friend?: boolean;
   seats_needed: number;
   seat_counts?: PassengerOfferSeatCounts | null;
   seat_position_any?: boolean;

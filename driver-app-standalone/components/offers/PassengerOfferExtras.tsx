@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import type {
   PassengerOffer,
+  PassengerOfferPaymentType,
   PassengerOfferSeatCounts,
 } from '../../api/passengerOffers';
 
@@ -114,6 +115,27 @@ export const PassengerOfferExtras: React.FC<PassengerOfferExtrasProps> = ({ offe
   const seatCounts = offer.seat_counts;
   const showSeatBreakdown = !!seatCounts && totalSeats(seatCounts) > 0;
 
+  /*
+   * T-031 — a passenger may now choose cash AND card, plus "Do'stimga" on top,
+   * so payment is a LIST of chips rather than one.
+   *
+   * ⚠️ Falls back to the deprecated `payment_type` when the flags are absent:
+   * offers created before the split carry only the single value, and showing
+   * the driver nothing at all would be worse than showing the old one.
+   */
+  const paymentKeys: PassengerOfferPaymentType[] =
+    offer.payment_cash === undefined &&
+    offer.payment_card === undefined &&
+    offer.paid_by_friend === undefined
+      ? offer.payment_type
+        ? [offer.payment_type]
+        : []
+      : [
+          ...(offer.payment_cash ? (['cash'] as const) : []),
+          ...(offer.payment_card ? (['click_payme'] as const) : []),
+          ...(offer.paid_by_friend ? (['friend_pays'] as const) : []),
+        ];
+
   const hasAnything =
     offer.is_urgent ||
     !!departUntil ||
@@ -121,7 +143,7 @@ export const PassengerOfferExtras: React.FC<PassengerOfferExtrasProps> = ({ offe
     showSeatBreakdown ||
     !!offer.salon_scope ||
     !!offer.vehicle_class ||
-    !!offer.payment_type ||
+    paymentKeys.length > 0 ||
     flags.length > 0 ||
     !!offer.road_pickup_note ||
     !!special;
@@ -173,7 +195,7 @@ export const PassengerOfferExtras: React.FC<PassengerOfferExtrasProps> = ({ offe
       )}
 
       {/* Class, payment, flags */}
-      {(offer.vehicle_class || offer.payment_type || flags.length > 0) && (
+      {(offer.vehicle_class || paymentKeys.length > 0 || flags.length > 0) && (
         <View style={styles.row}>
           {!!offer.vehicle_class && (
             <Chip
@@ -182,12 +204,13 @@ export const PassengerOfferExtras: React.FC<PassengerOfferExtrasProps> = ({ offe
               tone="info"
             />
           )}
-          {!!offer.payment_type && (
+          {paymentKeys.map((key) => (
             <Chip
+              key={key}
               icon="wallet-outline"
-              label={paymentLabels[offer.payment_type] ?? offer.payment_type}
+              label={paymentLabels[key] ?? key}
             />
-          )}
+          ))}
           {flags.map((flag) => (
             <Chip key={flag} label={flag} />
           ))}

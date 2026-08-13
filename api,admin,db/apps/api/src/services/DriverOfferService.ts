@@ -708,7 +708,9 @@ export class DriverOfferService {
     const vehicleInclude: any = {
       model: DriverVehicle,
       as: 'vehicle',
-      attributes: ['id', 'license_plate', 'year'],
+      // T-077: `fuel_types` feeds the "Propan" / "Benzin" line on the passenger's
+      // offer card. Without it here the column is simply absent from the row.
+      attributes: ['id', 'license_plate', 'year', 'fuel_types'],
       include: [
         {
           model: VehicleType,
@@ -844,7 +846,16 @@ export class DriverOfferService {
           color: offerWithIncludes.vehicle?.color?.name,
           type: offerWithIncludes.vehicle?.type?.name,
           license_plate: offerWithIncludes.vehicle?.license_plate,
-          year: offerWithIncludes.vehicle?.year
+          year: offerWithIncludes.vehicle?.year,
+          /*
+           * T-077 — the whole ARRAY, not a chosen one.
+           *
+           * ⚠️ A car here commonly runs on two fuels (benzine + propan is the
+           * normal Uzbek conversion). Picking `[0]` server-side would quietly
+           * assert something the driver never said; the app decides how to fit
+           * them in the card.
+           */
+          fuel_types: offerWithIncludes.vehicle?.fuel_types ?? []
         }
       };
     });
