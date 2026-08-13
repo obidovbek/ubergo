@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-13 — T-069 was only half done, and the half it missed was the one the owner hit twice
+
+- **Task:** owner — *"user app remove possibility to select time before creating offer"*. Boarded as
+  **T-075**, code-complete the same day.
+- **The request was ambiguous and I asked instead of guessing.** "Remove possibility to select time"
+  reads equally as *block past times* and as *delete the time pickers*, and those are opposite
+  changes — the second would alter the API payload and what drivers see as the departure window.
+  Owner chose **block past times**, boundary **now + 31 min** (matching `validateForm` exactly, so
+  the wheel can never offer a value the form refuses).
+- 🔴 **This is T-069 finished, not a new card.** Yesterday's T-069 put `minimumDate` on the **date**
+  wheel and stopped there; the **time** wheels kept the full 00:00–23:45. So the passenger could
+  still pick an hour already gone and only learn at submit — *the exact complaint T-069 was raised to
+  fix, one control to the right.* **A fix applied to the observed control instead of the class is a
+  half-fix** — the same sentence as 2026-08-10 and 2026-08-12. Third time.
+- **Three traps, none visible in the request:**
+  - **An hour must survive if ANY minute row clears the floor** — dropping it on its `:00` would
+    have hidden 15:30 under a 15:10 floor. A stricter bug than the one being fixed.
+  - **`withHour` had to snap the minutes up.** Floor 15:10, value 16:00, tap `15` → the naive
+    `setHours(15, 0)` produces **15:00 — below the floor**, i.e. the component re-creating the very
+    value it exists to make unreachable.
+  - **The floor is re-based onto the day being edited.** Passing the raw (today) floor would have
+    restricted nothing once a later day was picked. Tomorrow keeps the whole clock, on purpose.
+- **Scope held:** the arrival card is deliberately **not** floored (it is bounded by the departure,
+  not the clock), and submit remains the real guard. Saying no to two adjacent "while I'm here"
+  changes.
+- **Problems — my suite was wrong twice before the code was, and both guards caught it:**
+  - Brace-only balancing dropped each `useMemo`'s trailing `, [deps])`, producing a file that would
+    not parse. **Sixth time** this project has been bitten by hand-rolled extraction; `tsc` does the
+    type-stripping, and the loader hard-fails rather than skipping.
+  - 🔴 **A stale `subject.js` let the suite report 41/41 against code that had been `git stash`ed
+    away** — a confident green on nothing, which is the failure mode the whole "prove it can fail"
+    rule exists to catch. The suite now deletes and rebuilds its subject in-process. **Without that,
+    the red run would have "passed" and I would have reported a verified fix.**
+  - And "the extractor crashed" is weaker evidence than "the checks went red", so the old behaviour
+    is modelled explicitly in `red.js` and the assertions run over it.
+- **Verification:** **41/41** with the wheel logic **executed**, **15 red** against pre-change
+  behaviour including the owner's symptom as a check. `tsc` user **9 = baseline**, zero errors in any
+  touched file. ⚠️ **Unlinted, not lint-clean** — the RN apps still cannot run ESLint (**T-060/T-032**).
+- **Next:** 🛑 owner. **No API change, no migration, no deploy**; the user-app rebuild **joins the one
+  already queued**, so T-075 costs no extra run. Everything from 2026-08-12 still stands.
+- **Commit:** not committed — awaiting approval.
+
+---
+
 ## 2026-08-12 — thirteen owner findings: eight built, three handed back, and one of my own cards was wrong
 
 - **Task:** the owner's device-test batch of 13 items. All grounded in code the same day and boarded

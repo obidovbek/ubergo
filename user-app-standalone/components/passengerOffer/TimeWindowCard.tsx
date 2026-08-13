@@ -52,6 +52,11 @@ interface TimeWindowCardProps {
   /** Departure only — ⚡ hoziroq (srochno). */
   urgent?: boolean;
   onUrgentChange?: (urgent: boolean) => void;
+  /**
+   * Earliest selectable departure instant. Passed straight to both wheels so
+   * the picker cannot offer a moment the form is going to refuse.
+   */
+  minimumDate?: Date;
   error?: string;
 }
 
@@ -65,6 +70,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
   onUntilTimeChange,
   urgent = false,
   onUrgentChange,
+  minimumDate,
   error,
 }) => {
   const { t } = useTranslation();
@@ -99,10 +105,16 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
     return `${formatFullDate(date)} ${formatTime(untilTime)} ${t("passengerOffers.arrivalSummarySuffix")}`;
   };
 
+  /**
+   * ⚠️ The fallback for an unset time is the FLOOR, not `new Date()`. Opening
+   * the wheel with "now" while the floor sits 31 minutes ahead would highlight
+   * a row that is no longer in the list, so nothing would look selected.
+   */
   const valueFor = (target: PickerTarget): Date => {
-    if (target === "date") return date ?? new Date();
-    if (target === "from") return fromTime ?? new Date();
-    return untilTime ?? new Date();
+    const fallback = minimumDate ?? new Date();
+    if (target === "date") return date ?? fallback;
+    if (target === "from") return fromTime ?? fallback;
+    return untilTime ?? fromTime ?? fallback;
   };
 
   /**
@@ -129,6 +141,32 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
   };
 
   const controlsDisabled = isDeparture && urgent;
+
+  /**
+   * The floor handed to the TIME wheels, re-based onto the day being edited.
+   *
+   * The wheel only restricts rows when its `minimumDate` falls on the same
+   * calendar day as the value being spun. `draft` for a from/until pick sits on
+   * the day chosen in the date control, so the raw `minimumDate` (which is on
+   * *today*) would restrict nothing whenever the passenger picked a later day —
+   * and, worse, would restrict today's clock while they edited tomorrow.
+   *
+   * So: only when the chosen day IS the floor's day does a time floor apply.
+   * On any later day the whole clock is legitimately open.
+   *
+   * 🔴 Departure only. The arrival card is a "must arrive by" time, bounded by
+   * the departure (`errorArrivalTime`) rather than by the clock; putting a
+   * floor on it would be a new rule invented on the way past.
+   */
+  const timeFloor = ((): Date | undefined => {
+    if (!isDeparture || !minimumDate) return undefined;
+    const day = date ?? minimumDate;
+    const sameDay =
+      day.getFullYear() === minimumDate.getFullYear() &&
+      day.getMonth() === minimumDate.getMonth() &&
+      day.getDate() === minimumDate.getDate();
+    return sameDay ? minimumDate : undefined;
+  })();
 
   return (
     <View style={styles.wrapper}>
@@ -227,7 +265,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
           into line. Submit stays the real guard — this only stops the user
           choosing something that is going to be rejected.
         */
-        minimumDate={new Date()}
+        minimumDate={minimumDate ?? new Date()}
         onConfirm={commitDraft}
         onCancel={closePicker}
       />
@@ -244,6 +282,20 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
         // T-069 — quarter-hours only (owner, 2026-08-12). A departure window
         // does not need per-minute precision, and 4 rows beat 12.
         minuteStep={15}
+        /*
+          The time floor, so the hours already gone are not offered on today.
+
+          ⚠️ It is the minimum instant moved onto the DAY BEING EDITED. The
+          wheel compares by calendar day, and `draft` for a from/until pick
+          carries the day the user chose above — so passing the raw minimum
+          would leave today unrestricted whenever `draft` had drifted to
+          another date.
+
+          🔴 Departure only. The arrival card is a "must arrive by" time and is
+          bounded by the departure (`errorArrivalTime`), not by the clock — a
+          floor here would be a different rule invented on the way past.
+        */
+        minimumDate={timeFloor}
         onConfirm={commitDraft}
         onCancel={closePicker}
       />

@@ -202,6 +202,13 @@ instead — and the suite proves a no-op edit is silent.
 **Verification:** 51/51 with `changedFields` **executed**, **39 red** against pre-change code.
 `tsc` API **281** · driver **35**, both at baseline, zero errors in any touched file.
 
+> 📥 **2026-08-13 — T-075 was built after this plan was written and is NOT part of T-065.**
+> Owner: *"user app remove possibility to select time before creating offer"*. The user app's **time**
+> wheels offered hours already past on today's date; T-069 had floored only the **date** wheel. Now
+> floored at **now + 31 min**, matching `validateForm` exactly. **41/41, 15 red**, `tsc` user **9 =
+> baseline**. ❌ No API change, no migration, no deploy — the **user-app rebuild joins the queued
+> one**. Full write-up on its card in `docs/TODO.md`; no separate plan file.
+
 ## 🛑 WHOLE-BOARD STATE AT END OF 2026-08-12 — read this before starting anything
 
 **There is NO Claude work left anywhere.** All 24 plan files were swept: **51 unchecked steps, every

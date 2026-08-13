@@ -339,6 +339,15 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     };
   }, [isEdit, offerId, countryId, loadedOffer]);
 
+  /**
+   * The earliest departure the form will accept — the floor for both wheels.
+   *
+   * ⚠️ Computed on every render rather than memoised on mount. A create form
+   * can sit open for an hour, and a floor frozen at mount would go on offering
+   * times that are now in the past — the exact defect this closes, just later.
+   */
+  const departFloor = new Date(Date.now() + MIN_ADVANCE_MS);
+
   /** Departure moment: "now" when urgent, otherwise the day + window start. */
   const getStartAtDate = (): Date => {
     if (isUrgent) return new Date();
@@ -644,6 +653,14 @@ export const CreatePassengerOfferScreen: React.FC = () => {
               onUntilTimeChange={setDepartUntil}
               urgent={isUrgent}
               onUrgentChange={setIsUrgent}
+              /*
+                The wheels must offer exactly what `validateForm` accepts, so
+                the same MIN_ADVANCE_MS is the floor. Without it the picker
+                offered hours already gone and the refusal only arrived at
+                submit, after the whole form was filled (the T-069 complaint,
+                which fixed the date wheel and left the time wheels open).
+              */
+              minimumDate={departFloor}
               error={errors.start_at}
             />
 

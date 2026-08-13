@@ -36,6 +36,19 @@ interface TimeWheelModalProps {
   title?: string;
   /** Minutes shown in the right-hand column: 0, step, 2×step … Default 5. */
   minuteStep?: number;
+  /**
+   * Earliest selectable INSTANT. Opt-in and `undefined` by default.
+   *
+   * 🔴 **Deliberately opt-in**, for the same reason `DateWheelModal.minimumDate`
+   * is: this wheel is generic, and defaulting a floor on would silently clip
+   * callers that legitimately want the whole clock. That is the 2026-08-08 trap
+   * ("no compile error, no visible symptom") mirrored.
+   *
+   * ⚠️ It is an instant, not a time-of-day. Only rows on the SAME calendar day
+   * as the floor are hidden — `value` on a later day keeps the full 00:00–23:45,
+   * which is what makes "today is restricted, tomorrow is not" work.
+   */
+  minimumDate?: Date;
 }
 
 export const TimeWheelModal: React.FC<TimeWheelModalProps> = ({
@@ -46,12 +59,29 @@ export const TimeWheelModal: React.FC<TimeWheelModalProps> = ({
   onCancel,
   title,
   minuteStep = 5,
+  minimumDate,
 }) => {
   const { t } = useTranslation();
 
-  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  /**
+   * The floor applies only when the value being edited falls on the floor's own
+   * day. Pick tomorrow and the whole clock comes back.
+   *
+   * ⚠️ Compared by calendar day, never by `getTime()` — `value` carries the
+   * hours the user is currently spinning, so an instant comparison would make
+   * the list flip between restricted and unrestricted as they scroll.
+   */
+  const floorMinutes = useMemo(() => {
+    if (!minimumDate) return null;
+    const sameDay =
+      value.getFullYear() === minimumDate.getFullYear() &&
+      value.getMonth() === minimumDate.getMonth() &&
+      value.getDate() === minimumDate.getDate();
+    if (!sameDay) return null;
+    return minimumDate.getHours() * 60 + minimumDate.getMinutes();
+  }, [minimumDate, value]);
 
-  const minutes = useMemo(() => {
+  const allMinutes = useMemo(() => {
     // Guard the prop: a 0 or negative step would loop forever building the list.
     const step = minuteStep > 0 ? Math.min(minuteStep, 60) : 5;
     const list: number[] = [];
@@ -59,9 +89,39 @@ export const TimeWheelModal: React.FC<TimeWheelModalProps> = ({
     return list;
   }, [minuteStep]);
 
+  /**
+   * An hour survives if ANY of its minute rows clears the floor — dropping the
+   * hour on its :00 alone would hide 15:30 when the floor is 15:10.
+   */
+  const hours = useMemo(() => {
+    const all = Array.from({ length: 24 }, (_, i) => i);
+    if (floorMinutes === null) return all;
+    return all.filter((hour) =>
+      allMinutes.some((minute) => hour * 60 + minute >= floorMinutes)
+    );
+  }, [allMinutes, floorMinutes]);
+
+  /** Minute rows are filtered against the hour currently selected. */
+  const minutes = useMemo(() => {
+    if (floorMinutes === null) return allMinutes;
+    const hour = value.getHours();
+    return allMinutes.filter((minute) => hour * 60 + minute >= floorMinutes);
+  }, [allMinutes, floorMinutes, value]);
+
+  /**
+   * ⚠️ Picking an hour must also repair the minutes. Floor 15:10, value 16:00,
+   * user taps 15 → a naive `setHours(15, 0)` yields 15:00, which is BELOW the
+   * floor and is exactly the value this component is meant to make unreachable.
+   * Snap up to the first minute row that clears it.
+   */
   const withHour = (hour: number) => {
     const next = new Date(value);
-    next.setHours(hour, value.getMinutes(), 0, 0);
+    let minute = value.getMinutes();
+    if (floorMinutes !== null && hour * 60 + minute < floorMinutes) {
+      minute =
+        allMinutes.find((m) => hour * 60 + m >= floorMinutes) ?? value.getMinutes();
+    }
+    next.setHours(hour, minute, 0, 0);
     return next;
   };
 

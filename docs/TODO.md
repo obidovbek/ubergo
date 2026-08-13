@@ -1829,6 +1829,49 @@ masofalar'`). **2 of the 6 were on
   recording** — this project has burned two sessions on T-047 by diagnosing a device symptom from the
   source instead of from evidence.
 
+- [ ] T-075 (P2) ✅ **CODE-COMPLETE 2026-08-13, untested.** 🔴 **[OWNER] The user app offered
+  departure times it was going to refuse.** Owner 2026-08-13: *"user app remove possibility to select
+  time before creating offer"*.
+  **This is T-069 finished.** That card put `minimumDate` on the **date** wheel, so past *days* went
+  away — but the **time** wheels kept the full 00:00–23:45. On today's date the passenger could still
+  spin to an hour already gone, and the refusal only arrived at submit
+  (`MIN_ADVANCE_MS = 31 min`, `CreatePassengerOfferScreen:377`), **after the whole form was filled** —
+  which is the same complaint T-069 was raised to fix, one control to the right.
+  **Owner decision 2026-08-13:** block past times, boundary = **now + 31 min**, i.e. the wheel offers
+  exactly what `validateForm` accepts, so a picked value can never be rejected for being too soon.
+  ✅ **`TimeWheelModal.minimumDate` is a deliberate TWIN of `DateWheelModal.minimumDate`** — opt-in and
+  `undefined` by default, for the reason written on that one: the wheel is generic and defaulting a
+  floor on would silently clip other callers (the 2026-08-08 trap, *"no compile error, no visible
+  symptom"*).
+  🔴 **Three traps this card had to handle, none of them obvious from the request:**
+  ① **An hour must survive if ANY of its minute rows clears the floor.** Dropping the hour on its
+  `:00` alone would have hidden 15:30 when the floor is 15:10 — a stricter bug than the one fixed.
+  ② **Picking an hour must repair the minutes.** Floor 15:10, value 16:00, tap `15` → a naive
+  `setHours(15, 0)` yields **15:00, below the floor** — the component would have re-created the exact
+  value it exists to make unreachable. `withHour` now snaps up.
+  ③ **The floor is re-based onto the day being edited.** The wheel restricts only when its
+  `minimumDate` is on the same calendar day as the value; the raw floor is on *today*, so passing it
+  unchanged would have restricted nothing once the passenger picked a later day. **Tomorrow keeps the
+  full clock, deliberately.**
+  ⚠️ **The floor is recomputed every render, not memoised at mount** — a create form can sit open for
+  an hour, and a frozen floor would go on offering times now in the past: the same defect, later.
+  ⚠️ **The ARRIVAL card is deliberately NOT floored.** "Must arrive by" is bounded by the departure
+  (`errorArrivalTime`), not by the clock; flooring it would be a new rule invented on the way past.
+  ⚠️ **Submit stays the real guard** — this only stops the user choosing something already doomed.
+  **41/41 with the wheel logic EXECUTED** (extracted from the real source, type-stripped by `tsc`,
+  not read), **15 red against pre-change behaviour** including the owner's symptom stated as a check.
+  Covers the `:00` trap, the snap-up, the same-day/next-day split, month- and year-boundary dates
+  (the classic `getDate()`-only bug), `minuteStep` 0/negative, and a floor past the last row.
+  🔴 **The suite was wrong twice before the code was, and both guards caught it:** brace-only
+  balancing dropped each `useMemo`'s trailing `, [deps])` and produced a file that would not parse;
+  then a **stale `subject.js` let the suite report 41/41 against code that no longer existed** — a
+  confident green on nothing. It now deletes and rebuilds the subject in-process.
+  `tsc` user **9 = baseline**, **zero errors in any touched file**.
+  🛑 **Only the owner's rebuild + walk remains, then the commit.** ❌ No API change, no migration, no
+  deploy. ❌ Driver app untouched. ⚠️ **The user-app rebuild joins the one already queued**
+  (T-024 · T-046 · T-056-T-059 · T-066 · T-067 · T-068 · T-069 · T-071 · T-072), so it costs no extra
+  run. → no separate plan file; the work is recorded here.
+
 - [ ] T-035 (P2) **Duplicate `errors:` block in 5 of 6 app translation files.** Found 2026-08-08
   during T-033. Both apps declare `errors: { ... }` **twice** in the same object literal, so the
   **second silently overrides the first** — user `uz`/`ru`/`en` (lines ~21 and ~223) and driver
