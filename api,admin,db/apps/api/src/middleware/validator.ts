@@ -136,13 +136,37 @@ export const driverDetailsValidation = validateRequest([
   { field: 'driver_type', type: 'in', params: { values: ['driver', 'dispatcher', 'special_transport', 'logist'] } },
 ]);
 
+/*
+ * ── T-063: the driver-registration validators, reconciled and mounted ─────
+ *
+ * These four existed but were mounted NOWHERE, so the whole driver-registration
+ * API had zero server-side validation (found by T-061). They were left off on
+ * purpose: switching them on as written would have started rejecting payloads
+ * the shipped app sends happily.
+ *
+ * 🔴 **The rule applied here: the server must never refuse what the app
+ * accepted.** Its job at this layer is a backstop against a direct API call —
+ * not to enforce stricter UX than the build drivers are already using. Every
+ * rule below was checked against the real screen before being switched on, and
+ * the ones that contradicted it were relaxed, not mounted and hoped for.
+ *
+ * ✅ Only `required` needed reconciling: `email`, `date`, `minLength` and
+ * friends all guard on `if (value && …)`, so they skip an absent field and are
+ * safe on optional ones.
+ */
 export const personalInfoValidation = validateRequest([
   { field: 'first_name', type: 'required' },
   { field: 'last_name', type: 'required' },
-  { field: 'father_name', type: 'required' },
+  /*
+   * 🔴 `father_name` and `birth_date` are NOT required, deliberately.
+   * `DriverPersonalInfoScreen` has no rule for either — the app lets a driver
+   * submit without them, and requiring them here would have refused people the
+   * app told were finished. Making them mandatory is a product decision that
+   * has to change the app too; it is not a validation fix.
+   */
   { field: 'gender', type: 'required' },
   { field: 'gender', type: 'in', params: { values: ['male', 'female'] } },
-  { field: 'birth_date', type: 'required' },
+  // Format-only: skipped when absent, enforced when sent.
   { field: 'birth_date', type: 'date' },
   { field: 'email', type: 'email' },
 ]);
@@ -157,12 +181,19 @@ export const passportValidation = validateRequest([
 
 export const licenseValidation = validateRequest([
   { field: 'license_number', type: 'required' },
-  { field: 'license_number', type: 'minLength', params: { min: 5 } },
+  /*
+   * 🔴 The `minLength: 5` that used to be here is GONE. `DriverLicenseScreen`
+   * requires the number but sets no minimum, so a 4-character entry passes the
+   * app — and the server would then have refused it, which is the round trip
+   * T-061 was raised to stop. If a minimum is wanted it belongs in both places.
+   */
 ]);
 
 export const vehicleValidation = validateRequest([
   { field: 'license_plate', type: 'required' },
-  { field: 'license_plate', type: 'minLength', params: { min: 5 } },
+  // Matched to `DriverVehicleScreen`, which enforces exactly this minimum.
+  // It used to be 5 here, which would have refused a plate the app accepted.
+  { field: 'license_plate', type: 'minLength', params: { min: 3 } },
 ]);
 
 export const taxiLicenseValidation = validateRequest([

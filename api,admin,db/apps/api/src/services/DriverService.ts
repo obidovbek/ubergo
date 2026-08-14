@@ -275,7 +275,7 @@ export class DriverService {
 
     // Handle license
     if (data.license) {
-      let license = await DriverLicense.findOne({
+      const license = await DriverLicense.findOne({
         where: { driver_profile_id: driverProfile.id }
       });
 

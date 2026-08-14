@@ -152,7 +152,11 @@ export const errorHandler = (
 };
 
 // Async handler wrapper
-export const asyncHandler = (fn: Function) => {
+// T-032 — `Function` accepts anything callable, so it turned off checking on
+// every route handler this wraps. Typed to the real signature instead.
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => unknown
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

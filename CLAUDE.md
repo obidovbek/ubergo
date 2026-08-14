@@ -25,7 +25,12 @@
 | User app | `user-app-standalone` | `npm start` (:8081) | `npm run android` | `npm run lint` |
 
 - **DB migrations** (from `api,admin,db/apps/api`): `npm run db:migrate` · undo: `npm run db:migrate:undo` · reset: `npm run db:reset`
-- **Tests:** none configured yet. "Working" = the flow runs end-to-end (verify manually).
+- **Tests (T-010, 2026-08-13):** the **API** has one — `npm test` in `api,admin,db/apps/api`
+  (`node:test` + `tsx`, **no new dependency**). Tests live next to the code as `*.test.ts`.
+  ⚠️ Only DB-free modules are covered so far (`utils/`): services import Sequelize models, so
+  testing them needs the pure logic pulled out of the class first.
+  ⚠️ **The other three projects still have none.** For anything not covered, "working" still means
+  the flow runs end-to-end — verify manually.
 
 ## 2. Memory files — the real source of truth
 
@@ -82,7 +87,9 @@ If the developer types the words WITHOUT the slash ("start day", "end day"), fol
 
 ## 6. Definition of Done (every task)
 
-- [ ] The flow works end-to-end (run it — no test suite exists yet)
+- [ ] The flow works end-to-end (run it — the API's `npm test` covers `utils/` only)
+- [ ] If the card added pure logic to the API, it has a `*.test.ts` beside it — **and the test was
+      proven able to fail** (break the code on purpose once; a test that cannot go red proves nothing)
 - [ ] All steps in `docs/PLAN.md` checked
 - [ ] `docs/TODO.md` and `docs/JOURNAL.md` updated
 - [ ] `docs/ARCHITECTURE.md` updated if the structure changed

@@ -21,6 +21,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { MainNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModalList } from '../components/ModalList';
@@ -66,7 +67,7 @@ const fuelTypeLabels = {
 };
 
 export const DriverVehicleScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const route = useRoute<any>();
   const isEditing = route.params?.isEditing;
   const { token } = useAuth();
@@ -1708,7 +1709,7 @@ export const DriverVehicleScreen: React.FC = () => {
         navigation.goBack();
       } else {
         // Navigate to next step (Taxi License)
-        (navigation as any).navigate('DriverTaxiLicense');
+        navigation.navigate('DriverTaxiLicense');
       }
     } catch (error: any) {
       console.error('Failed to save vehicle info:', error);
@@ -1749,7 +1750,7 @@ export const DriverVehicleScreen: React.FC = () => {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => (navigation as any).goBack()}
+              onPress={() => navigation.goBack()}
               disabled={isLoading}
             >
               <View style={styles.backButtonContent}>

@@ -6,6 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test:watch": "tsx --test --watch \"src/**/*.test.ts\"",
     "start": "node dist/index.js",
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "dev:poll": "nodemon",

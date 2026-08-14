@@ -15,10 +15,15 @@
 
 **`tsc` BASELINES: API 281 · admin 0 · user 6 · driver 28.** Both RN apps lint at **0 errors**.
 
-🔴 **THREE MIGRATIONS ARE WRITTEN AND UNRUN** — T-046's repair,
-`20260813000001` (passenger payment split), `20260813000002` (driver prices/payment/class).
-**This card adds a FOURTH.** ⚠️ **None can be tested from the dev machine**, so the risk compounds:
-say so plainly, and keep the ordering rule visible — **deploy → migrations → rebuilds.**
+✅ **2026-08-13 — ALL MIGRATIONS RUN AND THE API IS DEPLOYED. The pile is cleared.**
+The owner applied them on test3 against the deployed pod:
+`…0001` (passenger payment split, **backfilled 3 offers** — the printed count worked as designed) ·
+`…0002` (driver prices/payment/class) · `…0003` (salon scope) · `…0004` (amenities/windows).
+**All four migrated clean; nothing errored.** T-046's and the referral migration had already been
+applied earlier. Work is committed as `354a276` · `e0b73a6` · `0e82b1a`; **working tree clean.**
+
+🛑 **WHAT REMAINS IS THE TWO APP REBUILDS** — nothing else is blocking.
+⚠️ **The driver rebuild is mandatory, not JS-only** (T-076 removed a native dep + an Expo plugin).
 
 **Done 2026-08-13, all code-complete and untested:** T-075 · T-035 · T-032/T-060 · T-076 ·
 T-031 items 5-6 · T-077 · **T-083** · **T-078**.
@@ -128,5 +133,5 @@ on top of a booking that already includes it.
 behaviour. `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline. Lint user
 **235 = baseline, 0 errors**.
 
-🔴 **This is the FOURTH unrun migration** (T-046 · `…0001` · `…0002` · `…0003`) — none can be tested
-from the dev machine. **Order: deploy → migrations → rebuilds.**
+✅ **Its migration RAN CLEAN on test3, 2026-08-13** (`…0003`), along with the other three.
+🛑 **Only the USER app rebuild and the device walk remain.**

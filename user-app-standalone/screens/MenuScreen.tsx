@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../navigation/types';
 import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
@@ -30,17 +31,15 @@ interface TaxiOption {
   subtitle?: string;
 }
 
-type MainStackParamList = {
-  Home: undefined;
-  Profile: undefined;
-  SearchOffers: undefined;
-  OfferDetails: { offerId: number };
-  MyBookings: undefined;
-  CreatePassengerOffer: undefined;
-  MyPassengerOffers: undefined;
-  PassengerOfferDetails: { offerId: number };
-};
-
+/*
+ * T-028 — the shared list, not a local copy.
+ *
+ * 🔴 This file used to declare its own `MainStackParamList`, and it was wrong
+ * in two directions at once: it invented a `PassengerOfferDetails` route that
+ * does not exist in this app's navigator (it is a DRIVER-app screen), and it
+ * typed `CreatePassengerOffer` as taking no params when T-040 gave it an
+ * `offerId`. A per-screen copy of the route table is a lie waiting to be told.
+ */
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
 export const MenuScreen: React.FC = () => {
@@ -71,13 +70,13 @@ export const MenuScreen: React.FC = () => {
 
   const handleOptionPress = (optionId: string) => {
     if (optionId === 'driver_offers') {
-      (navigation as any).navigate('SearchOffers');
+      navigation.navigate('SearchOffers');
     } else if (optionId === 'my_bookings') {
-      (navigation as any).navigate('MyBookings');
+      navigation.navigate('MyBookings');
     } else if (optionId === 'create_passenger_offer') {
-      (navigation as any).navigate('CreatePassengerOffer');
+      navigation.navigate('CreatePassengerOffer');
     } else if (optionId === 'my_passenger_offers') {
-      (navigation as any).navigate('MyPassengerOffers');
+      navigation.navigate('MyPassengerOffers');
     } else {
       console.log('Selected option:', optionId);
       // Handle navigation or action based on selected option
@@ -119,7 +118,7 @@ export const MenuScreen: React.FC = () => {
                 // `as any` matches the rest of this file (see the CreatePassengerOffer
                 // call above): MainStackParamList still lists only 3 of the
                 // navigator's 9 routes, so 'Notifications' is not in the type yet.
-                onPress={() => (navigation as any).navigate('Notifications')}
+                onPress={() => navigation.navigate('Notifications')}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={t('notifications.title')}

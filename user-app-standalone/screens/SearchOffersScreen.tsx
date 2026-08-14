@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { MainNavigationProp, SearchOffersParams } from '../navigation/types';
 import { MenuButton } from '../components/MenuButton';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,23 +38,16 @@ import { AppModal } from '../components/AppModal';
 
 const LAST_SEARCH_KEY = '@ubexgo:last_search';
 
-/**
- * T-077 — the hand-off from "I just posted a ride request".
- *
- * The whole `GeoOption` objects travel, not bare ids: this screen keeps
- * `{id, name}` for every level and `loadLastSearch` already restores exactly
- * this shape from AsyncStorage. Passing ids alone would force a re-fetch just
- * to recover names the caller already had.
+/*
+ * T-077/T-028 — the hand-off params (`SearchOffersParams`) live in
+ * `navigation/types.ts`, beside the route that carries them, so the sender and
+ * the receiver cannot drift apart. Whole `GeoOption` objects travel, not bare
+ * ids: this screen keeps {id, name} per level and restores exactly that shape
+ * from storage, so ids alone would force a re-fetch for names the caller had.
  */
-type SearchOffersParams = {
-  fromProvince?: GeoAPI.GeoOption | null;
-  fromCity?: GeoAPI.GeoOption | null;
-  toProvince?: GeoAPI.GeoOption | null;
-  toCity?: GeoAPI.GeoOption | null;
-};
 
 export default function SearchOffersScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const route = useRoute();
   const handoff = (route.params ?? {}) as SearchOffersParams;
   const { token } = useAuth();
@@ -557,7 +551,7 @@ export default function SearchOffersScreen() {
       showToast.error(t('offerDetails.loginRequired'), t('offerDetails.loginRequiredMessage'));
       return;
     }
-    (navigation as any).navigate('OfferDetails', { offerId: offer.id });
+    navigation.navigate('OfferDetails', { offerId: offer.id });
   };
 
   /*

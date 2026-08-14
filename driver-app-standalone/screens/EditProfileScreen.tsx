@@ -16,16 +16,29 @@ import {
 } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation } from '@react-navigation/native';
+import type { MainNavigationProp, EditableStep } from '../navigation/types';
 import { useTranslation } from '../hooks/useTranslation';
 import { BackButton } from '../components/BackButton';
 
 const theme = createTheme('light');
 
 export const EditProfileScreen: React.FC = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<MainNavigationProp>();
     const { t } = useTranslation();
 
-    const menuItems = [
+    /*
+     * T-028 — `navigate` is a route NAME, so it is typed as one.
+     *
+     * ⚠️ Narrowed to the six registration steps because every one of them is
+     * opened here with `{ isEditing: true }` — a route that does not accept
+     * that param now fails to compile instead of being cast away.
+     */
+    const menuItems: {
+        id: string;
+        title: string;
+        icon: string;
+        navigate: EditableStep;
+    }[] = [
         {
             id: 'personal',
             title: t('editProfile.personalInfo'),
@@ -85,7 +98,7 @@ export const EditProfileScreen: React.FC = () => {
                             key={item.id}
                             style={styles.menuItem}
                             onPress={() => {
-                                (navigation as any).navigate(item.navigate, { isEditing: true });
+                                navigation.navigate(item.navigate, { isEditing: true });
                             }}
                             activeOpacity={0.7}
                         >

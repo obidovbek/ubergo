@@ -15,7 +15,9 @@ export const isValidEmail = (email: string): boolean => {
  * Validate phone number
  */
 export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+  // T-032 — same matched set; `+`, `(` and `)` need no escaping inside a
+  // character class. Mirrors the identical fix in the API's `validation.ts`.
+  const phoneRegex = /^[\d\s\-+()]+$/;
   return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
 };
 

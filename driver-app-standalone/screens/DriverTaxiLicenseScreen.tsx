@@ -21,6 +21,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { MainNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
@@ -43,7 +44,7 @@ import { notifyDriverProfileChanged } from '../utils/driverProfileEvents';
 const theme = createTheme('light');
 
 export const DriverTaxiLicenseScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const route = useRoute<any>();
   const isEditing = route.params?.isEditing;
   const { token, updateUser, user } = useAuth();
@@ -1007,7 +1008,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => (navigation as any).goBack()}
+              onPress={() => navigation.goBack()}
               disabled={isLoading}
             >
               <View style={styles.backButtonContent}>

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../navigation/types';
 import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
@@ -33,15 +34,9 @@ interface TaxiOption {
   subtitle?: string;
 }
 
-type MainStackParamList = {
-  Home: undefined;
-  Profile: undefined;
-  OffersList: undefined;
-  OfferWizard: { offerId?: string } | undefined;
-  SearchPassengerOffers: undefined;
-  MyJoinRequests: undefined;
-};
-
+// T-028 — the shared list, not a private copy. A per-screen route table is a
+// lie waiting to be told; in the user app one shipped a tap to a route that
+// did not exist.
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
 export const MenuScreen: React.FC = () => {
@@ -104,11 +99,14 @@ export const MenuScreen: React.FC = () => {
   };
 
   const handleCreateOffer = () => {
-    (navigation as any).navigate('OfferWizard', { offerId: null });
+    // T-028: no params at all means CREATE. It used to pass `offerId: null`,
+    // which the wizard reads as falsy anyway but the route type never allowed —
+    // the kind of thing an `as any` cast was hiding.
+    navigation.navigate('OfferWizard');
   };
 
   const handleViewAllOffers = () => {
-    (navigation as any).navigate('OffersList');
+    navigation.navigate('OffersList');
   };
 
   const handleSearchPassengerOffers = () => {

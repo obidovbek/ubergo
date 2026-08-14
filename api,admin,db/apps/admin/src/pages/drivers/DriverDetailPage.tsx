@@ -29,7 +29,9 @@ const getImageUrl = (imageUrl: string | null | undefined): string | null => {
       imagePath = url.pathname;
     } catch {
       // If URL parsing fails, try to extract path manually
-      const match = imageUrl.match(/^https?:\/\/[^\/]+(\/.*)$/);
+      // T-032 — `/` needs no escaping inside a character class. The two escaped
+      // slashes in `https?:\/\/` still do: they are regex-literal delimiters.
+      const match = imageUrl.match(/^https?:\/\/[^/]+(\/.*)$/);
       if (match) {
         imagePath = match[1];
       }

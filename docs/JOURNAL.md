@@ -49,6 +49,108 @@
 - **Verification:** **122/122** with the bundles **evaluated** across both apps × 3 locales,
   **27 red** against pre-change files (including a locale-parity check). Lint: **user 235/0 errors ·
   driver 321/3**, the 3 being T-076 and meant to stay red.
+- **T-010 — the project has a real test suite for the first time (API only).** Chosen because it is
+  the one thing that addresses *why* 15 cards are sitting untested, and because tests change no
+  runtime behaviour — the right risk profile on top of that stack.
+  ✅ **No new dependency:** `node:test` ships with Node 22 and `tsx` was already there, so the "ask
+  before adding a dependency" rule never had to be invoked.
+  ✅ **28 tests, and proven able to fail** — two mutations injected (`hasArrived`'s 200 m → 5000 m,
+  and a `.` added to the phone character class); each was caught by exactly the right test, then
+  reverted. *Same rule I have applied to every throwaway suite today, now applied to the permanent
+  one.*
+  ✅ **It made an earlier claim checkable:** T-032 asserted "the matched set is unchanged" when it
+  cleaned up the phone regex. That was a comment nobody could verify; it is now a test.
+  🟡 **Found a latent falsy-zero bug and did NOT fix it.** `isWithinMinutes`/`hasArrived` treat a
+  coordinate of exactly `0` as missing. It cannot bite this product (Uzbekistan is ~41°N/69°E), and
+  changing notification code with nothing device-tested was the wrong trade — so the test pins the
+  behaviour and says why. *Documenting beats a fix nobody asked for in code that pushes to real
+  passengers.*
+  🔴 **The honest limit:** only DB-free modules are covered. Every service imports Sequelize, so
+  testing `changedFields` or the salon pricing needs that logic pulled out of the class first — real
+  refactoring. **Today's 15 cards are still verified only by throwaway scripts.**
+  🔴 **A near-miss worth recording:** the mutation run left a deliberate bug in `geo.ts` when a
+  heredoc hung and timed out. Restoring it was the first thing I did on resuming, and `git diff`
+  confirmed the file was clean. *Injecting a mutation means owning the restore — verify it, do not
+  assume it.*
+- **T-032 (the API half) — all four projects now lint at 0 errors.** I picked the lowest-risk card
+  deliberately: the owner wanted to continue after I recommended stopping to test, so tooling-only
+  work was the honest compromise — real value, zero runtime risk on top of 13 untested cards.
+  🔴 **Measured first, and the number told the whole story:** API **29,802 problems, 29,497 of them
+  prettier, 25,764 nothing but the CRLF marker `␍`**. Windows checks out CRLF, `.prettierrc` demanded
+  LF, and `'prettier/prettier': 'error'` made every line of every file an error. **~300 real findings
+  under a 99% noise floor** — which is exactly why nobody ever ran the command.
+  ✅ **Formatting is no longer linted** (`npm run format:check` already exists and is the right
+  place), and `endOfLine: 'auto'` stops prettier fighting the checkout.
+  ✅ **Then I triaged rather than blanket-silencing.** Sequelize's mandatory
+  `CreationAttributes extends Optional<…> {}`, sequelize-cli's `.cjs` signature, and — admin only —
+  `react/no-unescaped-entities` **narrowed to still forbid `>` and `}`** while allowing the Uzbek
+  apostrophes that were 138 of its 142 errors. *Admin is a real web app, so the RN argument did not
+  transfer; the rule needed narrowing on its merits, not switching off by analogy.*
+  ✅ **Seven genuine defects fell out**, the best being `asyncHandler(fn: Function)` — which had been
+  switching off type checking on **every route handler it wraps**.
+  🟡 **`.gitattributes` is the real fix and I deliberately did NOT do it:** renormalising rewrites
+  every file, and with 13 untested cards a 30,000-line diff would bury them and make a bisect
+  useless. → **T-086**, explicitly "do this on a quiet tree".
+  🔴 **Escaping bit me for the TWELFTH time** — a `node -e` string replacement silently did nothing
+  and *reported success*. I had already written the rule to memory this morning. Used the editor.
+  **API 29,802 → 230 · admin ~15,000 → 45 · user 221 · driver 289, all 0 errors.** `tsc` unchanged.
+- **T-028 — the navigation types, and a LIVE dead button found by fixing them.**
+  The card said the shared param list was incomplete. It was worse: **three screens each kept their
+  own private copy of the route table**, all different and all wrong — inventing
+  `PassengerOfferDetails` (a driver-app screen) and `Menu` (this navigator calls it `Home`), and
+  typing `CreatePassengerOffer` as param-less after T-040 gave it an `offerId`. The shared list even
+  carried an `Activity` route that does not exist.
+  🔴 **The payoff was immediate:** `MyPassengerOffersScreen` made the whole ride-request card
+  tappable and sent it to `PassengerOfferDetails` — **a route the user app does not have**. Tapping
+  your own ride request did nothing at all, and had been doing nothing for as long as the private
+  copy existed. *A type that describes what you wish were true is worse than no type: it certifies
+  the bug.*
+  ✅ One shared list matched to the navigator **in both directions**, 14 `as any` casts gone, and
+  `ParamlessRoute` derived rather than hand-listed so it maintains itself.
+  🔴 **The suite was wrong once before the code was — and it was the SAME trap as 2026-08-12:** it
+  matched my own comments documenting the removal and reported the dead route as still live.
+  *"Documenting a defect must not look identical to still having it."* Written down twice now;
+  the fix is to strip comments before scanning, not to write vaguer comments.
+  ⚠️ **Nothing derives the param list from the navigator**, so a route added there without a line in
+  `types.ts` silently undoes this. The suite is the only guard.
+  ✅ **AND I SWEPT THE DRIVER APP IN THE SAME PASS** — the memory note written this morning
+  (*"fix the class, not the instance"*) actually changed what I did, for once, instead of being
+  something I recorded after the fact. It had the identical defect: 6 of 16 routes typed, the **same
+  phantom `Activity`** copied from the same source, a private copy in `MenuScreen`, 15 casts.
+  ✅ **No dead navigation there** — the user app's was unique — but two real things fell out anyway:
+  two call sites passed **`offerId: null`** to a route typed `string | undefined`, and one passed a
+  **string** id where both the route and the API want a **number**.
+  🟡 That last one is a deeper inconsistency: **`DriverOffer.id` is typed `string` while the column
+  is an INTEGER.** It "works" only because JS coerces on URL interpolation. Coerced at the one
+  boundary and logged as **T-085** rather than widened away — fixing the type properly touches every
+  consumer and is not this card's job.
+  **user 17/17 · driver 15/15, 12 and 11 red.** `tsc` user **6** · driver **28**, both at baseline;
+  lint **235 → 221** and **304 → 289** — twenty-nine fewer warnings, zero casts left in either app.
+- **T-063 — the driver-registration API had ZERO server-side validation; all five steps are guarded
+  now.** T-061 had found four validators sitting in `middleware/validator.ts` mounted **nowhere**,
+  and deliberately left them off rather than switch them on blind.
+  🔴 **That caution was right, and the red run proves it in one line:** against the OLD rules, a real
+  driver's minimum payload — `first_name` + `last_name` + `gender`, all `DriverPersonalInfoScreen`
+  actually requires — is **REFUSED**, because the server demanded `father_name` and `birth_date` for
+  which the app has no rule at all. Mounting them unreconciled would have broken registration for
+  every new driver, on an endpoint with no other guard.
+  ✅ **The rule I settled on: the server must never refuse what the app accepted.** At this layer a
+  validator is a backstop against a direct API call, not a second and stricter UX sitting behind the
+  first. So the mismatches were *relaxed to match the screens* — licence `minLength: 5` removed, plate
+  minimum 5 → 3 — rather than mounted and hoped for.
+  ⚠️ **What I did NOT do:** make `father_name` required or invent a licence minimum. Both are product
+  decisions that would have to change the app too; doing them here would have been a validation card
+  quietly rewriting the product.
+  **32/32 — the rule arrays are EXTRACTED from the real source and executed against the exact
+  payloads the screens send, 9 red.**
+- ✅ **END OF DAY: the owner ran all four migrations on test3 and they all applied clean.**
+  `…0001` backfilled **3 passenger offers** — the printed count (added because the DB is unreachable
+  from the dev machine, the T-046 precedent) did its job. `…0002`, `…0003`, `…0004` migrated with no
+  output and no errors. **The pile I had flagged as the day's biggest compounding risk is gone**, and
+  it turned out to be the right call to raise it rather than keep stacking cards on top of it.
+  Everything is committed (`354a276` · `e0b73a6` · `0e82b1a`), working tree clean, API deployed.
+  🛑 **All that remains is the two app rebuilds** — and the driver one is mandatory rather than
+  JS-only, because T-076 removed a native dependency and an Expo plugin.
 - **T-084 — the passenger finally sees what T-079/T-080 let the driver say.** Those cards had left
   the fields **write-only**: the API returned them and no passenger screen rendered them — the same
   half-built state T-081 had just fixed for the salon prices. *Recognising the pattern the second

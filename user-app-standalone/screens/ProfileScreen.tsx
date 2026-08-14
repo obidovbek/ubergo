@@ -20,6 +20,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { useNavigation } from '@react-navigation/native';
+import type { MainNavigationProp, ParamlessRoute } from '../navigation/types';
 import { MenuButton } from '../components/MenuButton';
 import { BackButton } from '../components/BackButton';
 
@@ -28,7 +29,7 @@ const theme = createTheme('light');
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
 
   // Get user display data
   const displayName = (user as any)?.display_name || (user as any)?.name || t('menu.guest');
@@ -66,7 +67,20 @@ export const ProfileScreen: React.FC = () => {
     });
   };
 
-  const menuItems = [
+  /*
+   * T-028 — `navigate` is a route NAME, so it is typed as one.
+   *
+   * ⚠️ This is the payoff of the shared param list: a typo or a renamed screen
+   * now fails to compile here, where before `navigation.navigate(item.navigate)`
+   * on an untyped navigator accepted any string at all — the same hole that let
+   * `MyPassengerOffersScreen` ship a tap to a route this app does not have.
+   */
+  const menuItems: {
+    id: string;
+    title: string;
+    iconType: string;
+    navigate?: ParamlessRoute;
+  }[] = [
     { id: 'notifications', title: t('profile.notifications'), iconType: 'bell', navigate: 'Notifications' },
     { id: 'edit', title: t('profile.editProfile'), iconType: 'edit', navigate: 'EditProfile' },
     { id: 'payment', title: t('profile.paymentMethods'), iconType: 'card' },
@@ -174,7 +188,7 @@ export const ProfileScreen: React.FC = () => {
               ]}
               onPress={() => {
                 if (item.navigate) {
-                  (navigation as any).navigate(item.navigate);
+                  navigation.navigate(item.navigate);
                 } else {
                   console.log(`Navigate to ${item.id}`);
                 }

@@ -34,7 +34,7 @@
 >
 > The owner's device test reopened the board with six findings; five became **T-061 — code-complete
 > the same day**. The other two are **T-062** (🛑 blocked: which table owns a driver's email?) and
-> **T-063** (four validators still deliberately unmounted).
+> ✅ **T-063 DONE 2026-08-13** — all four validators reconciled against their real screens and mounted.
 >
 > **ELEVEN code-complete, untested cards, still in exactly two runs:**
 > 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055 · T-061** (no migration in any).
@@ -183,7 +183,7 @@
   separately. `tsc` caught it (282 vs 281) before it could ship.
   **70/70, 25 red.** `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline.
   Lint driver **304 = baseline, 0 errors**.
-  🔴 **FIFTH unrun migration** — `20260813000004-add-driver-offer-amenities-windows.cjs`.
+  ✅ **Its migration RAN CLEAN on test3 2026-08-13.**
   🛑 **Only the owner's migration + deploy + driver rebuild, then the commit, remain.**
   ⚠️ **Test the EDIT round trip**, as with T-078 — that is where this silently fails.
   ✅ **The passenger side now shows them → T-084, done the same day.**
@@ -225,7 +225,7 @@
 >
 > The owner's device test reopened the board with six findings; five became **T-061 — code-complete
 > the same day**. The other two are **T-062** (🛑 blocked: which table owns a driver's email?) and
-> **T-063** (four validators still deliberately unmounted).
+> ✅ **T-063 DONE 2026-08-13** — all four validators reconciled against their real screens and mounted.
 >
 > **ELEVEN code-complete, untested cards, still in exactly two runs:**
 > 1. **ONE shared API deploy** → **T-034 · T-043 · T-045 · T-054 · T-055 · T-061** (no migration in any).
@@ -374,7 +374,7 @@
   separately. `tsc` caught it (282 vs 281) before it could ship.
   **70/70, 25 red.** `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline.
   Lint driver **304 = baseline, 0 errors**.
-  🔴 **FIFTH unrun migration** — `20260813000004-add-driver-offer-amenities-windows.cjs`.
+  ✅ **Its migration RAN CLEAN on test3 2026-08-13.**
   🛑 **Only the owner's migration + deploy + driver rebuild, then the commit, remain.**
   ⚠️ **Test the EDIT round trip**, as with T-078 — that is where this silently fails.
   ✅ **The passenger side now shows them → T-084, done the same day.**
@@ -416,9 +416,32 @@
   Building half a header on invented data is what T-077 was corrected for.
   **49/49 with the price lookup EXECUTED, 20 red.** `tsc` API **281** · admin **0** · user **6** ·
   driver **28**, all at baseline. Lint user **235 = baseline, 0 errors**.
-  🔴 **FOURTH unrun migration** — `20260813000003-add-salon-scope-to-offer-passengers.cjs`.
+  ✅ **Its migration RAN CLEAN on test3 2026-08-13.**
   🛑 **Only step 5 (owner: migrations, deploy, rebuild the USER app, book a salon and check the seat
   count drops correctly) and step 6 (commit) remain.** Card 4 of 5.
+
+- [ ] T-063 (P1) ✅ **DONE 2026-08-13, code-complete and untested. The driver-registration API had
+  ZERO server-side validation; all five steps are guarded now.**
+  T-061 found that four validators (`personalInfoValidation`, `licenseValidation`,
+  `vehicleValidation`, `taxiLicenseValidation`) existed in `middleware/validator.ts` and were
+  **mounted nowhere**, and deliberately left them off — switching them on as written would have
+  started rejecting payloads the shipped app sends happily.
+  🔴 **That caution was JUSTIFIED, and the suite proves it:** against the OLD rules, a real driver's
+  minimum payload (`first_name` + `last_name` + `gender` — all `DriverPersonalInfoScreen` actually
+  requires) is **REFUSED**, because the server demanded `father_name` and `birth_date` for which the
+  app has no rule at all. Mounting them unreconciled would have broken registration for everyone.
+  ✅ **Rule applied: the server must never refuse what the app accepted.** At this layer it is a
+  backstop against a direct API call, not a second and stricter UX. Each validator was checked
+  against its real screen first: `father_name`/`birth_date` no longer required; the licence
+  `minLength: 5` **removed** (the app sets no minimum); the plate minimum **5 → 3** to match
+  `DriverVehicleScreen` exactly.
+  ✅ Only `required` needed reconciling — `email`, `date` and `minLength` all guard on
+  `if (value && …)`, so they skip absent fields and are safe on optional ones.
+  ⚠️ **Making `father_name` or a licence minimum mandatory is a PRODUCT decision** that has to change
+  the app too; it is not a validation fix and was not done here.
+  **32/32 with the rule arrays EXTRACTED from the real source and EXECUTED against the exact
+  payloads the screens send, 9 red.** `tsc` API **281 = baseline**.
+  ⚠️ **Needs an API deploy** — the app itself is untouched, so no rebuild.
 
 - [ ] T-084 (P2) ✅ **DONE 2026-08-13, code-complete and untested. The passenger finally SEES what
   T-079/T-080 let the driver say.** Those cards left the fields **write-only** — the API returned
@@ -2384,9 +2407,32 @@ masofalar'`). **2 of the 6 were on
   plus `"lint": "eslint ."`. **Both apps now lint: user 235 problems / 0 errors, driver 321 / 3.**
   🔴 **Formatting is deliberately NOT linted.** T-032 recorded the API's ~28,000 `␍` CRLF/prettier
   findings drowning the real ones; adding prettier here would reproduce that noise and make the
-  command useless on day one. **Line endings remain an open, separate decision** (`.gitattributes` /
-  `endOfLine: 'auto'`) — ⚠️ **the API half of T-032 is still open** and is why this card is not
-  simply closed.
+  command useless on day one.
+  ✅ **THE API HALF IS DONE TOO — 2026-08-13. All four projects now lint at 0 errors.**
+  🔴 **Measured before touching anything:** API **29,802 problems, of which 29,497 were prettier and
+  25,764 were nothing but the CRLF marker `␍`** — Windows checks files out with CRLF,
+  `.prettierrc` demanded `endOfLine: 'lf'`, and `'prettier/prettier': 'error'` turned every line of
+  every file into an error. Admin was the same (~15,000). **The ~300 real findings were under a 99%
+  noise floor**, which is why nobody ran it and nothing was ever linted.
+  ✅ **Fix: `prettier/prettier` → `off` and `.prettierrc` `endOfLine` → `auto`.** Formatting is still
+  checked — `npm run format` / `format:check` already existed and are the right place for it. Mixing
+  the two made *neither* usable. Same decision as the RN apps above.
+  ✅ **Then the remaining errors were triaged, not blanket-silenced:** Sequelize's mandatory
+  `CreationAttributes extends Optional<…> {}` idiom (19 models), sequelize-cli's `require`-loaded
+  `.cjs` migrations and their fixed `(queryInterface, Sequelize)` signature, and — in **admin only** —
+  `react/no-unescaped-entities`, **narrowed rather than switched off** to still forbid `>` and `}`
+  while allowing the Uzbek apostrophes (`Ma'lumotlar`, `yo'qmi?`) that were 138 of its 142 errors.
+  ✅ **Seven genuine defects fixed** on the way: two identical phone regexes with useless escapes
+  (API + admin), a `[^\/]` in a URL match, a `let` that was never reassigned, and `asyncHandler`
+  typed `Function` — which had been switching off checking on **every route handler it wraps**.
+  ⚠️ **`no-explicit-any` and unused-vars are WARNINGS**, matching the RN apps: as errors the command
+  was red on a clean checkout, so a 301st finding was invisible. The backlog stays listed; the exit
+  code goes back to meaning *"something new broke"*.
+  🟡 **`.gitattributes` (`* text=auto eol=lf`) is the deeper fix and is deliberately NOT done** —
+  renormalising rewrites every file in the repo, and 13 cards are code-complete and untested; a
+  30,000-line diff would bury them. → **T-086**.
+  **Final: API 29,802 → 230 · admin ~15,000 → 45 · user 221 · driver 289 — all 0 errors.**
+  `tsc` API **281** · admin **0**, both at baseline.
   🔴 **The very first run found TWO REAL DEFECTS `tsc` cannot see:**
   ① **`screens/index.ts` exported `OffersListScreen` TWICE** from the same module — **fixed here**,
   and `tsc` driver dropped **33 → 31** as a result.
@@ -2465,11 +2511,64 @@ masofalar'`). **2 of the 6 were on
   Also worth deciding then: `CreatePassengerOfferScreen:239` picks the geo point as
   `settlement ?? cityDistrict`, ignoring the mahalla, which may have finer coordinates.
   Found 2026-08-02 during T-027 step 4.
-- [ ] T-028 (P3) User app: `MainStackParamList` (`navigation/types.ts:17-21`) lists only **3 of the
-  navigator's 9 routes**, so screens navigate through `(navigation as any)` and lose all route/param
-  checking — `navigate('Typo')` compiles fine. Bring the type in line with `MainNavigator` and drop
-  the casts. Found 2026-08-02 during T-027 step 3; the convention was matched rather than fixed so
-  the card stayed tight.
+- [ ] T-028 (P3) ✅ **DONE 2026-08-13, code-complete and untested — and it found a LIVE dead
+  navigation on the way.** Found 2026-08-02 during T-027 step 3.
+  🔴 **The defect was worse than this card described.** `navigation/types.ts` listed **3 of the
+  navigator's 10** routes *and* carried an **`Activity` route that does not exist** — but the real
+  problem was that **three screens each declared their OWN `MainStackParamList`**, all different and
+  all wrong: `MenuScreen` and `MyPassengerOffersScreen` invented **`PassengerOfferDetails`** (a
+  DRIVER-app screen) and `Menu` (this navigator calls it `Home`), and typed
+  `CreatePassengerOffer` as param-less after T-040 had given it an `offerId`.
+  🔴 **A LIVE BUG, surfaced by fixing the types:** `MyPassengerOffersScreen:412` made the whole
+  ride-request card tappable and sent it to `PassengerOfferDetails` — **a route this app does not
+  have** — so tapping your own ride request did **nothing at all**. The private param-list copy is
+  exactly what let it compile. It now opens **`OfferDrivers`**, the same destination the driver-count
+  row inside that card already uses (T-024). ⚠️ If a passenger-side detail screen is ever built, that
+  is the call site to point at it.
+  ✅ One shared list, **10 routes, checked against `MainNavigator` in BOTH directions**; all **14**
+  `(navigation as any)` casts removed; `SearchOffersParams` moved beside the route that carries it;
+  and `ParamlessRoute` is a **derived** mapped type, so a route that needs an `offerId` stays out of
+  param-less menus automatically instead of by hand.
+  **17/17, 12 red** — the red run names the live bug outright
+  (`bogus destinations: PassengerOfferDetails`).
+  🔴 **The suite was wrong once before the code was:** it matched **my own comments** documenting the
+  removal and reported the dead route as still live — the 2026-08-12 trap (*"documenting a defect
+  must not look identical to still having it"*) repeated. It strips comments before scanning now.
+  ⚠️ **Nothing derives the param list from the navigator** — a route added there without a line in
+  `types.ts` quietly returns this file to the state the card fixed. The suite is the guard.
+  ✅ **THE DRIVER APP WAS SWEPT IN THE SAME PASS** — the lesson written to memory earlier the same
+  day. It had the identical defect: **6 of 16** routes typed, the **same phantom `Activity`** (copied
+  from the same source), a private copy in `MenuScreen`, and **15** casts. ✅ **No dead navigation
+  there** — the user app's was the only one — but two other real things fell out: two call sites
+  passed **`offerId: null`** to a route typed `string | undefined`, and `OffersListScreen` passed a
+  **string** `offer.id` to a route (and an API) expecting a **number**.
+  🟡 **`DriverOffer.id` is typed `string` while the column is an INTEGER** and
+  `getOfferPassengers(token, offerId: number)` expects a number — the app's own type is what is
+  wrong. Fixing it touches every consumer, so it is coerced at the one boundary here and logged as
+  **T-085** rather than widened away.
+  **user 17/17 · driver 15/15, 12 and 11 red.** `tsc` user **6** · driver **28**, both at baseline;
+  lint user **235 → 221**, driver **304 → 289** — **twenty-nine fewer warnings** between them, and
+  **zero** casts left in either app. ❌ No API change, no migration. ⚠️ Ships with the rebuilds
+  already queued.
+
+- [ ] T-086 (P3) 🟡 **The repo has no `.gitattributes`, so the working tree is CRLF on Windows.**
+  Found 2026-08-13 while finishing T-032. `* text=auto eol=lf` is the proper fix and would stop the
+  line-ending problem at its source instead of configuring around it.
+  🔴 **NOT DONE ON PURPOSE, and the timing is the whole reason:** renormalising rewrites **every
+  file in the repo**, and 13 cards are currently code-complete and **untested**. A 30,000-line diff
+  would bury them and make any bisect useless. **Do this on a quiet tree, right after a release —
+  never in the middle of a stack of untested work.**
+  ⚠️ `.prettierrc` now uses `endOfLine: 'auto'`, so nothing is broken meanwhile; this is hygiene,
+  not a defect.
+
+- [ ] T-085 (P3) 🟡 **`DriverOffer.id` is typed `string` but is an INTEGER everywhere else.**
+  Found 2026-08-13 during T-028. `api/driverOffers.ts` declares `id: string`; the DB column is
+  `INTEGER autoIncrement` and `getOfferPassengers(token, offerId: number)` expects a number, so
+  every navigation and API call carrying an offer id has been quietly passing the wrong type. It
+  "works" because JS coerces on URL interpolation. **NOT STARTED** — correcting the type touches
+  every consumer, and T-028 coerced at the single boundary it hit (`OffersListScreen`) instead.
+  ⚠️ Check `OfferPassenger.offer_id` and the push-payload ids in the same pass; T-044 already
+  records that push `data` values arrive as strings.
 - [x] ~~T-021 (P2) Driver app: the passenger-offer detail screen does not exist.~~
   **ABSORBED into T-037 on 2026-08-08** — it is step 3 there. Do not start it separately.
 - [ ] T-004 (P2) Consolidate the ~48 scattered `.md` fix-notes into `docs/` + delete
@@ -2479,7 +2578,33 @@ masofalar'`). **2 of the 6 were on
 - [ ] T-007 (P3) Ratings after trip (driver ↔ passenger)
 - [ ] T-008 (P3) Map + geocoding for offer route selection
 - [ ] T-009 (P3) Real-time updates (WebSocket) for offer/booking status
-- [ ] T-010 (P3) Add a real test suite (none exists today)
+- [ ] T-010 (P3) 🟡 **STARTED 2026-08-13 — the API has a real test suite; the other three projects
+  do not.** `npm test` in `api,admin,db/apps/api`.
+  ✅ **Zero new dependencies** — `node:test` is built into Node 22 and `tsx` was already a
+  devDependency, so CLAUDE.md rule 4 ("ask before adding a dependency") never came into play.
+  ✅ **28 tests over `utils/geo.ts` and `utils/validation.ts`** — the geo helpers decide when a
+  driver is *"10 minutes away"* and when they have *"arrived"*, both of which push to a real
+  passenger, and neither was covered by anything.
+  ✅ **Proven able to fail**, the rule this project has used all along: two mutations injected
+  (`hasArrived`'s 200 m → 5000 m, and a `.` added to the phone character class) and **each was caught
+  by exactly the test that should have caught it**, then reverted. A suite that cannot go red proves
+  nothing.
+  ✅ **The T-032 regex claim is now checkable.** That card asserted "the matched set is unchanged"
+  when it dropped useless escapes from the phone regex; a test now pins the exact allowed set, so a
+  future edit that changes the *meaning* rather than the escaping fails.
+  🟡 **A latent bug was DOCUMENTED, not silently fixed:** `isWithinMinutes`/`hasArrived` guard with
+  `if (!driverLat || …)`, so a coordinate of exactly **0 reads as missing** — the same falsy-zero
+  class as T-078's `pickup_fee`. ⚠️ It cannot bite this product (Uzbekistan is ~41°N, ~69°E), and
+  changing behaviour in code that notifies passengers, with nothing device-tested, was the wrong
+  trade. The test pins the current behaviour and says why.
+  🔴 **The real limit, stated plainly:** only **DB-free modules** are covered. Every service imports
+  Sequelize models, so testing `changedFields`, the salon pricing or `gatePhones` means first pulling
+  that logic out of the class — real refactoring, not test-writing. **Until then the ~15 cards built
+  today remain verified only by throwaway scripts.**
+  ⚠️ **Next steps if resumed:** extract the pure helpers from `PassengerOfferService` /
+  `OfferPassengerService` into `utils/`, then port today's throwaway suites into permanent ones.
+  ❌ No runtime change: tests do not alter app behaviour. ⚠️ CLAUDE.md updated — it claimed no tests
+  existed.
 
 ## ✅ Done (newest on top)
 

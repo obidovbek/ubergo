@@ -18,6 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import type { MainNavigationProp } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as OffersAPI from '../api/offers';
 import { useAuth } from '../hooks/useAuth';
@@ -48,7 +49,7 @@ const REQUEST_STATUS_COLORS: Record<
 };
 
 export default function OfferDetailsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const route = useRoute();
   const { token } = useAuth();
   const { t, currentLanguage } = useTranslation();
@@ -294,7 +295,7 @@ export default function OfferDetailsScreen() {
           loadMyRequest();
           setTimeout(() => {
             navigation.goBack();
-            (navigation as any).navigate('MyBookings');
+            navigation.navigate('MyBookings');
           }, 1500);
         } catch (error: any) {
           const errorMsg = getErrorMessage(error, t, 'errors.unknown');

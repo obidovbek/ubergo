@@ -8,7 +8,13 @@ export const isValidEmail = (email: string): boolean => {
 };
 
 export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+  /*
+   * T-032 — `+`, `(` and `)` need no escaping INSIDE a character class, and the
+   * backslashes were flagged as useless. ⚠️ The matched set is unchanged:
+   * digits, whitespace, `-`, `+`, `(`, `)`. `\-` is kept escaped so it cannot
+   * be read as a range.
+   */
+  const phoneRegex = /^[\d\s\-+()]+$/;
   return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
 };
 

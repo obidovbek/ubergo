@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { createTheme } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { MainNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -26,7 +27,7 @@ const theme = createTheme('light');
 type DriverType = 'driver' | 'dispatcher' | 'special_transport' | 'logist';
 
 export const DriverDetailsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const route = useRoute<any>();
   const isEditing = route.params?.isEditing;
   const { user, token, updateUser } = useAuth();
@@ -102,7 +103,7 @@ export const DriverDetailsScreen: React.FC = () => {
         navigation.goBack();
       } else {
         // Navigate to next step (PersonalInfo)
-        (navigation as any).navigate('DriverPersonalInfo');
+        navigation.navigate('DriverPersonalInfo');
       }
     } catch (error) {
       console.error('Driver profile update error:', error);

@@ -17,6 +17,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { MainNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -31,7 +32,7 @@ import { OfferCard, OfferDetailModal, StatusFilterTabs } from '../components/off
 export const OffersListScreen: React.FC = () => {
   const { token } = useAuth();
   const { t } = useTranslation();
-  const navigation = useNavigation();
+  const navigation = useNavigation<MainNavigationProp>();
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [allOffers, setAllOffers] = useState<DriverOffer[]>([]); // Store all offers for counting
   const [loading, setLoading] = useState(true);
@@ -106,7 +107,10 @@ export const OffersListScreen: React.FC = () => {
   }, [loadOffers]);
 
   const handleCreateOffer = () => {
-    (navigation as any).navigate('OfferWizard', { offerId: null });
+    // T-028: no params at all means CREATE. It used to pass `offerId: null`,
+    // which the wizard reads as falsy anyway but the route type never allowed —
+    // the kind of thing an `as any` cast was hiding.
+    navigation.navigate('OfferWizard');
   };
 
   const handleEditOffer = (offer: DriverOffer) => {
@@ -120,7 +124,7 @@ export const OffersListScreen: React.FC = () => {
       );
       return;
     }
-    (navigation as any).navigate('OfferWizard', { offerId: offer.id });
+    navigation.navigate('OfferWizard', { offerId: offer.id });
   };
 
   const handleOpenDetails = (offer: DriverOffer) => {
@@ -223,7 +227,17 @@ export const OffersListScreen: React.FC = () => {
   };
 
   const handleViewPassengers = (offer: DriverOffer) => {
-    (navigation as any).navigate('OfferPassengers', { offerId: offer.id });
+    /*
+     * 🟡 T-028 — `Number(...)` is a BOUNDARY FIX, not a preference.
+     *
+     * `DriverOffer.id` is typed `string` in `api/driverOffers.ts`, but the
+     * column is an INTEGER and `getOfferPassengers(token, offerId: number)`
+     * expects a number — so the app's own type is the thing that is wrong.
+     * Correcting it touches every consumer, so it is out of this card's scope
+     * and logged as **T-085**; coercing here keeps the route contract honest
+     * in the meantime instead of widening it to `string | number`.
+     */
+    navigation.navigate('OfferPassengers', { offerId: Number(offer.id) });
   };
 
   const formatDate = (dateString: string) => {

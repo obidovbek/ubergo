@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { MainStackParamList } from "../navigation/types";
 import { Ionicons } from "@expo/vector-icons";
 import {
   createPassengerOffer,
@@ -58,13 +59,12 @@ import {
 import { showToast } from "../utils/toast";
 import { showConfirmDialog } from "../utils/confirmDialog";
 
-type MainStackParamList = {
-  Menu: undefined;
-  /** T-040: an id turns this screen into an editor for that order. */
-  CreatePassengerOffer: { offerId?: number } | undefined;
-  MyPassengerOffers: undefined;
-};
-
+/*
+ * T-028 — the shared list, not a local copy. The copy that used to sit here
+ * named a `Menu` route this app does not have (the navigator calls it `Home`)
+ * and omitted `SearchOffers`, which T-077's hand-off navigates to — which is
+ * why that call needed an `as any` cast to compile.
+ */
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 type CreateRouteProp = RouteProp<MainStackParamList, "CreatePassengerOffer">;
 
@@ -626,7 +626,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
             navigation.goBack();
             return;
           }
-          (navigation as any).navigate("SearchOffers", {
+          navigation.navigate("SearchOffers", {
             fromProvince: fromLocation.province,
             fromCity: fromLocation.cityDistrict,
             toProvince: toLocation.province,

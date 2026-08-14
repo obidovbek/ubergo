@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MenuButton } from '../components/MenuButton';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getMyPassengerOffers,
@@ -38,13 +39,15 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { subscribePushReceived } from '../utils/pushEvents';
 
-type MainStackParamList = {
-  Menu: undefined;
-  CreatePassengerOffer: undefined;
-  MyPassengerOffers: undefined;
-  PassengerOfferDetails: { offerId: number };
-};
-
+/*
+ * T-028 — the shared list, not a local copy.
+ *
+ * 🔴 The copy that used to sit here named THREE routes this app does not have
+ * (`Menu` — the navigator calls it `Home` — and `PassengerOfferDetails`, which
+ * is a DRIVER-app screen) and omitted `OfferDrivers`, which this screen
+ * actually uses. It is what let the dead `navigate('PassengerOfferDetails')`
+ * below compile for as long as it did.
+ */
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -238,7 +241,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
   const handleEditOffer = (offer: PassengerOffer) => {
     const pending = offer.drivers?.filter((d) => d.status === 'pending').length || 0;
     const open = () =>
-      (navigation as any).navigate('CreatePassengerOffer', { offerId: offer.id });
+      navigation.navigate('CreatePassengerOffer', { offerId: offer.id });
 
     if (pending > 0) {
       showConfirmDialog({
@@ -409,7 +412,19 @@ export const MyPassengerOffersScreen: React.FC = () => {
     return (
       <TouchableOpacity
         style={styles.offerCard}
-        onPress={() => (navigation as any).navigate('PassengerOfferDetails', { offerId: item.id })}
+        /*
+          🔴 T-028 — this used to navigate to `PassengerOfferDetails`, which
+          DOES NOT EXIST in this app's navigator (it is a driver-app screen).
+          So tapping your own ride request did nothing at all, and the local
+          route-table copy above is what let it compile.
+
+          It now opens `OfferDrivers` — the same destination the driver-count
+          row inside this card already uses (T-024), so the whole card is the
+          hit area rather than one row of it.
+          ⚠️ If a dedicated passenger-side detail screen is ever built, this is
+          the call site to point at it.
+        */
+        onPress={() => navigation.navigate('OfferDrivers', { offerId: item.id })}
         activeOpacity={0.95}
       >
         {/* Status Badge */}
@@ -502,7 +517,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
             style={styles.driverInfo}
             onPress={(e) => {
               e.stopPropagation();
-              (navigation as any).navigate('OfferDrivers', { offerId: item.id });
+              navigation.navigate('OfferDrivers', { offerId: item.id });
             }}
             activeOpacity={0.7}
           >
@@ -560,7 +575,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => (navigation as any).navigate('CreatePassengerOffer')}
+        onPress={() => navigation.navigate('CreatePassengerOffer')}
         activeOpacity={0.7}
       >
         <Ionicons name="add-circle" size={20} color="#FFFFFF" />
@@ -600,7 +615,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
         <Text style={styles.headerTitle}>{t('passengerOffers.title')}</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => (navigation as any).navigate('CreatePassengerOffer')}
+          onPress={() => navigation.navigate('CreatePassengerOffer')}
           activeOpacity={0.7}
         >
           <Ionicons name="add" size={24} color="#10B981" />
