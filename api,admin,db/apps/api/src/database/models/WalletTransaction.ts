@@ -53,7 +53,12 @@ export interface WalletTransactionAttributes {
   balance_after: number;
   reason: WalletReason;
   actor_type: WalletActorType;
-  actor_admin_id?: number | null;
+  /**
+   * 🔴 A UUID, not a number — `admin_users.id` is a UUID while `users.id` is an
+   * INTEGER. This schema genuinely has two id types, and Postgres rejected the
+   * foreign key outright when this column assumed otherwise.
+   */
+  actor_admin_id?: string | null;
   actor_user_id?: number | null;
   /** 'paynet' | 'payme' | 'click' — null for bonuses and referrals. */
   provider?: string | null;
@@ -88,7 +93,7 @@ export class WalletTransaction
   declare balance_after: number;
   declare reason: WalletReason;
   declare actor_type: WalletActorType;
-  declare actor_admin_id?: number | null;
+  declare actor_admin_id?: string | null;
   declare actor_user_id?: number | null;
   declare provider?: string | null;
   declare external_id?: string | null;
@@ -149,7 +154,8 @@ export function initWalletTransaction(sequelize: Sequelize) {
         }
       },
       actor_admin_id: {
-        type: DataTypes.INTEGER,
+        // UUID: admin_users.id is a UUID, users.id is an INTEGER.
+        type: DataTypes.UUID,
         allowNull: true,
         references: { model: 'admin_users', key: 'id' }
       },

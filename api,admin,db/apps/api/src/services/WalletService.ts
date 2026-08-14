@@ -33,7 +33,8 @@ import { logAudit } from '../utils/auditLogger.js';
 /** Who caused a movement, and through what. Recorded on every single entry. */
 export interface WalletActor {
   type: WalletActorType;
-  admin_id?: number | null;
+  /** UUID — `admin_users.id` is a UUID, unlike `users.id` which is an INTEGER. */
+  admin_id?: string | null;
   user_id?: number | null;
 }
 
@@ -112,6 +113,15 @@ export class WalletService {
    */
   static async move(input: MovementInput): Promise<WalletTransaction> {
     const { userId, kind, amount, reason, actor, provider, externalId, meta } = input;
+
+    // An external id with no provider cannot be made unique at the DB level:
+    // Postgres treats NULLs as distinct inside a multi-column unique index, so
+    // the idempotency guarantee would quietly not apply. The table carries the
+    // matching CHECK; this is the readable half, and it fails before the write
+    // rather than after it.
+    if (externalId && !provider) {
+      throw new AppError('An external transaction id must name its provider', 400);
+    }
 
     if (externalId) {
       const existing = await WalletTransaction.findOne({

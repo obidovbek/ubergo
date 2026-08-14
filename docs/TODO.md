@@ -2097,8 +2097,27 @@ masofalar'`). **2 of the 6 were on
   and is there a ceiling.
   🛑 **Depends on T-087.** ❌ No app change.
 
+- [ ] T-095 (P2) 🛡️ **[found when T-087's migration failed 2026-08-14] Migrations are not atomic,
+  and a half-applied one is worse than a failed one.**
+  🔴 **T-087's migration failed halfway on test3** and left `wallet_accounts` created,
+  `wallet_transactions` missing and **nothing in `SequelizeMeta`** — so the retry failed with
+  *"already exists"* rather than the original error, and the schema needed a manual `DROP TABLE`
+  before it could move.
+  ✅ **Postgres has transactional DDL**, so the fix is one wrapper:
+  `queryInterface.sequelize.transaction(async (transaction) => { … })` with `{ transaction }` passed
+  to every call. T-087's migration does this now; **none of the others do.**
+  ⚠️ **Do NOT retrofit every past migration** — they have already run everywhere and rewriting them
+  changes nothing on any live database. **This is a rule for NEW migrations**, and the right home for
+  it is `CLAUDE.md` §4 plus a note in the newest migration as the example to copy.
+  ⚠️ One genuine exception: a migration that must run outside a transaction (`CREATE INDEX
+  CONCURRENTLY`, some `ALTER TYPE`) — those need the wrapper omitted **with a comment saying why**.
+
 - [ ] T-094 (P3) 🧹 **[found while building T-087] The user id is typed `string` in two shared
   places, and it is an INTEGER.**
+  ⚠️ **Related but distinct from the schema fact found on 2026-08-14:** `users.id` is an `INTEGER`
+  and `admin_users.id` is a `UUID`. That is not a defect — the two tables genuinely differ — but any
+  card adding a column that references *either* must check which one it is pointing at. T-087's
+  migration was rejected by Postgres for exactly this.
   🔴 `AuditLogData.userId?: string` (`utils/auditLogger.ts:10`) and `AuthTokenPayload.userId: string`
   (`types/index.ts:75`) — but `users.id` is `DataTypes.INTEGER` and `AuditLog.user_id` is
   `number | null`. **Every caller that passes `user.id` straight through is already a tsc error, and

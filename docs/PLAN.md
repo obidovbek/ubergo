@@ -168,6 +168,25 @@ is an owner step or an owner-approved commit, except T-031 step 4 (blocked on th
   skipped.**
 - [ ] 7. **Owner:** run the migration, deploy, confirm the three balances read as `0` for a real
   account and that nothing else on the API moved.
+  ✅ **PRE-FLIGHTED 2026-08-14 (Claude, no DB needed):** the `.cjs` loads, `up`/`down` are functions,
+  `Sequelize.Op` resolves, and the two riskiest statements were **rendered as SQL offline** and are
+  correct — `CREATE UNIQUE INDEX … WHERE "external_id" IS NOT NULL` and `CHECK ("kind" IN (…))`.
+  🔴 **Rendering them found a real hole, now fixed:** in Postgres **NULL is never equal to NULL
+  inside a multi-column unique index**, so `(NULL, 'TRX-1')` twice would BOTH have inserted and the
+  idempotency guarantee would silently not have held for any entry with no provider. A
+  `CHECK (external_id IS NULL OR provider IS NOT NULL)` closes it, with a matching guard in
+  `WalletService.move`. *Caught before the migration was ever run.*
+  🔴 **FIRST RUN FAILED ON test3, 2026-08-14 — and the pre-flight could not have caught it**, because
+  it is a fact about the live schema, not about the SQL:
+  `Key columns "actor_admin_id" and "id" are of incompatible types: integer and uuid`.
+  **`users.id` is an INTEGER but `admin_users.id` is a UUID** — this schema has two id types, and
+  the column assumed admins were integers like users. Fixed to `UUID`, in the migration, the model
+  and `WalletActor`.
+  🔴 **AND THE FAILURE LEFT DEBRIS**, which is the more useful lesson: `wallet_accounts` had already
+  been created, `wallet_transactions` had not, and **nothing was recorded in `SequelizeMeta`** — so
+  a re-run would have failed with *"already exists"* instead. **The whole migration now runs inside
+  ONE transaction** (Postgres has transactional DDL), so any future failure leaves the database
+  exactly as it was. *Every other migration in this project has the same exposure.*
 - [ ] 8. Commit (only after the owner's approval).
 
 ## Files to touch
@@ -225,6 +244,16 @@ is an owner step or an owner-approved commit, except T-031 step 4 (blocked on th
   ① *"no precedent for row locking"* — **false**, `OfferPassengerService` already does it.
   ② The plan worried about `DECIMAL`-as-string; the real trap turned out to be **`BIGINT`-as-string**,
   which node-postgres returns for the same reason. Same class, different column type.
+- **2026-08-14 (`/next`)** — step 7 is the owner's, so the only thing available was to **de-risk it**:
+  pre-flighted the migration without a database by rendering its generated SQL. **That found a real
+  defect in the idempotency index (Postgres NULL semantics) and fixed it before the migration was
+  ever run.** *A migration that has not been executed is still cheap to correct; the same fix after
+  a double credit is a hand reconciliation of real balances.*
+- **2026-08-14 (migration run 1)** — failed on test3: **`admin_users.id` is a UUID while `users.id`
+  is an INTEGER.** A schema fact no amount of offline SQL rendering would have surfaced — it needed
+  the real database. ⚠️ **The more transferable lesson is the debris**: the failure left a half-built
+  schema and no `SequelizeMeta` row, so the retry would have failed for a different reason. The
+  migration is transactional now; **every other migration in this project still is not.**
 - **Three pre-existing type defects surfaced and were deliberately NOT fixed here** (see Risks):
   `AuditLogData.userId` and `AuthTokenPayload.userId` are typed `string` while `users.id` is an
   `INTEGER`. They already produce baseline errors. Boarded rather than folded into a billing card.
@@ -256,4 +285,22 @@ on the race. It cannot be retrofitted after a double credit.
 any new file. **74/74 tests (46 new), proven able to fail — 4 mutations → 2/4/1/3 red**, each
 restore verified byte-identical. Lint **230 = baseline, 0 errors**.
 
-⚠️ **The migration has NOT been run** — it is the only unrun one on the board.
+⚠️ **The migration has NOT been run** — it is the only unrun one on the board. ✅ **It has been
+pre-flighted without a DB** (loads, `Op` resolves, generated SQL rendered and checked), and that
+pre-flight **caught a NULL-semantics hole in the idempotency index**, now closed by
+`CHECK (external_id IS NULL OR provider IS NOT NULL)`.
+
+🛑 **THE FIRST MIGRATION RUN FAILED ON test3 (2026-08-14) AND LEFT A PARTIAL TABLE BEHIND.**
+`wallet_accounts` was created, `wallet_transactions` was not, and `SequelizeMeta` recorded nothing.
+**Before re-running, the orphaned table must be dropped:**
+
+```sql
+DROP TABLE IF EXISTS wallet_accounts CASCADE;
+```
+
+It is safe: the table was created seconds earlier by the failed run, it is empty, and nothing in
+the schema references it. Then `npx sequelize db:migrate` again — the migration is now atomic, so
+this cannot recur.
+
+**Then, still the owner's:** deploy, and `GET /api/wallet/balances` on a real account → expect
+`{ real: 0, real_som: "0.00", token: 0, bonus: 0 }`. Step 8 is the commit.
