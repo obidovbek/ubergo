@@ -189,6 +189,64 @@
   ✅ **The passenger side now shows them → T-084, done the same day.**
 
 > ✅ **T-080 was built together with T-079 above** — same table, same screen, one migration.
+
+> 🔥 **THE ONE ACTIVE TASK IS T-087 (below).** Every other card in *Now* is code-complete and
+> waiting on the owner's device — the file's own *Parked* rule says those do not count against the
+> 2-task limit. Swept 2026-08-14: **26 plan files, 54 unchecked boxes, none of them Claude's.**
+
+- [ ] T-087 (P1) 🏦 **[OWNER billing batch 2026-08-14] The three accounts and the ledger under
+  them. ✅ APPROVED AND STEPS 1-6 DONE 2026-08-14, code-complete and untested → `docs/PLAN.md`.**
+  ✅ **The first money layer in this project.** `wallet_accounts` (real / token / bonus) +
+  an append-only `wallet_transactions` ledger; `WalletService` is the only way value moves;
+  `utils/ledger.ts` holds the arithmetic **where it can actually be tested**.
+  🔴 **THE MIGRATION HAS NOT BEEN RUN — it is the only unrun one on the board.**
+  🔴 **It ships a ledger and NO WAY TO WRITE TO IT, deliberately.** A balance endpoint returning `0`
+  for everyone is the correct output; the write surfaces are T-088/T-089/T-090.
+  🟡 **The plan claimed "this project has no precedent for row locking" — WRONG.**
+  `OfferPassengerService:352,583` already locks the same way, so this follows a pattern instead of
+  inventing one. *Recorded because the plan asserted it without checking.*
+  🔴 **The predicted trap was DECIMAL-as-string; the real one was BIGINT-as-string** — node-postgres
+  returns both as strings for the same reason. Killed with a getter on every 64-bit column.
+  **74/74 (46 new), PROVEN ABLE TO FAIL — 4 mutations → 2 / 4 / 1 / 3 red**, every restore verified
+  byte-identical. `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline with
+  zero errors in any new file. Lint **230 = baseline, 0 errors**.
+  🛑 **Only step 7 (owner: run the migration, deploy, confirm the three balances read 0) and step 8
+  (commit) remain.** ❌ No app change. Card 1 of 7
+  (T-087…T-093); **the spine — T-088/T-089/T-090 all write into it.**
+  🔴 **REVISED 2026-08-14 by the Paynet contract:** the ledger stores **integer TIYIN (`BIGINT`)**,
+  not `DECIMAL(14,2)` so'm — Paynet types the balance `long` in tiyin (`"amount": 100000` = **1 000
+  so'm**). See `docs/PAYNET.md` §6.
+  **Scope:** `wallet_accounts` (one row per user per kind: `real` / `token` / `bonus`) and an
+  **append-only** `wallet_transactions` ledger recording amount, reason, **who** and **through
+  what** — the owner's *"nima qanday yoki kim orqali o'zgartirilgani"*.
+  ✅ **OWNER DECISIONS 2026-08-14, asked before planning:**
+  ① **Tokens and bonuses are an IN-SERVICE DISCOUNT ONLY — never convertible to cash.** This cuts
+  the heaviest half of the batch: no withdrawal path, no exchange rate, no cash-out fraud surface.
+  ⚠️ It is a **constraint the schema records, not just obeys** — no code path may ever move value
+  from a token account into a real one, and that is written down so a later card cannot add one.
+  ② **The driver's 10 000 fires on the FIRST CONFIRMED BOOKING** — real data (`OfferPassenger`
+  status), **not** `driver_arrived_at`, which the driver's own app sets and could therefore mint.
+  ③ **ONE ledger with three account kinds**, not three parallel tables.
+  🔴 **Append-only is the whole design, and it is what the owner actually asked for.** *"qayta hisob
+  kitob yoki qaytarish"* is **impossible on a mutable balance column** — a correction must be a new
+  **reversing entry** citing the row it reverses, and the balance is the sum.
+  🔴 **The card ships a ledger and NO WAY TO WRITE TO IT.** No top-up, no admin grant, no spend —
+  those are T-088/T-089/T-090. A balance endpoint returning `0` is the correct output. *A ledger
+  that is wrong is worse than no ledger.*
+  🔴 **The pure arithmetic goes in `utils/ledger.ts`, not the service** — every service imports
+  Sequelize and therefore cannot be tested at all (the limit recorded in `CLAUDE.md`). This puts the
+  part that must never be wrong in the DB-free module that **can** have a real test.
+  ⚠️ **Concurrency is the one bug here that costs real money** — without `SELECT … FOR UPDATE` two
+  simultaneous debits both read the old balance and both succeed. **Invisible in single-user
+  testing.** This project has no row-locking precedent, so it is written once, deliberately.
+  ⚠️ **Idempotency cannot be added later** — a partial unique index on `(provider, external_id)`
+  from day one, or a retried provider callback double-credits and has to be unpicked by hand.
+  ⚠️ **`DECIMAL` returns from Sequelize as a STRING** (`'100' + 50 === '10050'`) — the T-077 trap,
+  pinned by the test.
+  🛑 **STILL OPEN (question ⑥): who may hand-enter a REAL top-up, and is there a ceiling?** Does not
+  block T-087 — the actor columns record *who* either way — but **T-088 cannot ship without it.**
+  ❌ Needs a migration (**rule 4 — explicit approval before it is written**). ❌ No app change.
+
 # ✅ TODO — task board
 
 > **Rules:** max **2** tasks in *Now*. New ideas always land in *Later* — they
@@ -419,6 +477,9 @@
   ✅ **Its migration RAN CLEAN on test3 2026-08-13.**
   🛑 **Only step 5 (owner: migrations, deploy, rebuild the USER app, book a salon and check the seat
   count drops correctly) and step 6 (commit) remain.** Card 4 of 5.
+  ✅ **Plan moved intact 2026-08-14 → `docs/PLAN-T081.md`** when T-087 took the active slot.
+  ⚠️ **Its steps 1-4 had never been ticked** despite being done — `/next` would have re-run step 1
+  and written the migration a second time. Ticked there against verified code.
 
 - [ ] T-063 (P1) ✅ **DONE 2026-08-13, code-complete and untested. The driver-registration API had
   ZERO server-side validation; all five steps are guarded now.**
@@ -1908,6 +1969,227 @@ masofalar'`). **2 of the 6 were on
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+
+> 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
+> 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —
+> extracted to **`docs/PAYNET.md`**, which **rewrote T-088 and changed the ledger's money type in
+> T-087 from decimal so'm to integer tiyin.** Payme and Click are **not** covered by those documents
+> and were split out as **T-093**.
+> Owner: three accounts — **REAL** (Paynet/Payme/Click/card, or entered by an admin, mainly for
+> corporate clients), **TOKEN** (earned by referral/promo), **BONUS** (10 000 to a new user for 60
+> days, plus admin grants and campaigns) — *"doim loglari bo'lishi kerak nima qanday yoki kim orqali
+> o'zgartirilgani"*, for financial analysis and for recalculation/refund when the system gets it
+> wrong. Plus: top-up by phone **or** by ID with the phone's last 4 digits shown (`+99890 ***4585`),
+> user IDs starting at **1 100 001**, a self-chosen **5-char promo code**, and a self-chosen
+> **username of at least 6 chars**. **Grounded in code 2026-08-14 — nothing is started.**
+>
+> 🔴 **THERE IS NO MONEY LAYER IN THIS PROJECT AT ALL.** 37 models, not one of them financial: no
+> account, no balance, no transaction, no ledger. `PaymentMethod` / `PaymentStatus`
+> (`constants/index.ts:38-50`) and the `Payment` interface (`types/index.ts:146`) exist and are
+> **referenced by nothing** — no model, no table, no service, no route. They are leftovers from the
+> original TT spec, and **must not be mistaken for a foundation**. This batch is greenfield.
+> 🔴 **AND NO PROVIDER INTEGRATION EXISTS.** `payment_type: 'click_payme'` on `PassengerOffer` is a
+> **label the passenger picks for paying the driver in the car** — it moves no money and talks to
+> nobody. Paynet, Payme and Click appear nowhere in the codebase.
+> 🔴 **THE APP ALREADY PROMISES THE 10 000 BONUS AND THE SYSTEM CANNOT PAY IT.**
+> `UserDetailsScreen` renders `userDetails.infoBoxBonus` = **"10 000"** + *"bonus oling"* at
+> registration, in **all three locales**. So item 3 is a **repair of a promise already being made to
+> every user**, not a new feature. *It has been shipping unpayable since the screen was written.*
+> 🔴 **THE REFERRAL DATA IS WRITE-ONLY, exactly like T-078's salon prices.** `UserController:142-144`
+> stores `promo_code` / `referral_id` / `referral_phone` and **no service anywhere reads them** —
+> `grep -i referral src/services` returns **nothing**. Every referrer named since the feature shipped
+> is sitting in the table, unresolved and unpaid.
+> ✅ **`AuditLog` already exists** (UUID pk, `user_id`, `action`, `ip`, `ua`, JSONB `payload`, three
+> indexes) and is the right home for *who changed what*. ⚠️ **It is NOT a ledger** and must not be
+> used as one — it cannot answer "what is the balance", and a money record that lives only in a
+> generic action log cannot be reconciled or reversed.
+> ✅ **The house money type is `DECIMAL(10,2)`** (`DriverOffer.price_per_seat`). ⚠️ **Never `FLOAT`.**
+> ⚠️ Read them back as **strings** — the journal already records the DECIMAL-as-string trap (T-077).
+>
+> 🛑 **SIX QUESTIONS MUST BE ANSWERED BEFORE ANY PLAN IS WRITTEN.** Each one changes the schema, and
+> guessing on a billing system is how a project ends up paying people twice:
+> ① 🔴 **WHAT IS A TOKEN WORTH, AND WHAT DOES IT BUY?** The batch says how tokens are *earned* and
+>   never what they are *for*. Without that they are a number that does nothing — **the write-only
+>   trap this project has now hit three times** (T-078 salon prices, T-079 amenities, the referral
+>   fields above). ⚠️ Also: can tokens/bonus become real money, or only be spent inside the service?
+>   *Those are different products and different legal exposure.*
+> ② 🔴 **WHEN DOES THE DRIVER'S 10 000 FIRE?** *"shafyor bizi tizimdan klient olsa"* — on the first
+>   confirmed booking, or the first completed trip? **There is no `completed` status anywhere**
+>   (`DriverOfferStatus` = `published | archived | cancelled`), and the closest real signal,
+>   `OfferPassenger.driver_arrived_at`, **is set by the driver's own app**. So "the driver got a
+>   client" is currently **undetectable and self-reported** — the identical blocker as **T-082**.
+>   ⚠️ Paying real value on a self-reported flag is fraud-by-construction: a driver can mint 10 000
+>   by inviting themselves and tapping "arrived".
+> ③ 🔴 **"60 kunda 10 000 bonus" — granted OVER 60 days, or EXPIRES after 60?** Read as *expires*.
+>   Expiry needs its own ledger entry and a scheduled job; there is **no job runner in this project**.
+> ④ 🔴 **User ID 1 100 001 — new users only, or a separate display number?** `users.id` is
+>   `INTEGER autoIncrement` from 1 and is an FK target in `audit_logs`, `offer_passengers`,
+>   `driver_profiles`, `push_tokens` and more. **Renumbering existing users is not on the table.**
+>   *Recommendation: `ALTER SEQUENCE users_id_seq RESTART WITH 1100001` — new users only, existing
+>   IDs untouched.* Say so if you want a separate `account_number` instead.
+> ⑤ 🔴 **One ledger or three?** *Recommendation: ONE `wallet_accounts` table with
+>   `kind: 'real'|'token'|'bonus'` and ONE append-only `wallet_transactions`.* Three tables means
+>   three code paths, three audit trails and three chances to get it wrong.
+> ⑥ 🔴 **Who may enter a REAL top-up by hand, and is there a ceiling?** *"admin tomonidan kiritib
+>   beriladi"* means an admin can create money from nothing. That needs a named role, a per-entry
+>   reason, and a second pair of eyes above some amount — decide now, not after the first dispute.
+>
+> ⚠️ **The ordering is not negotiable: T-087 is the spine.** T-088/T-089/T-090 all write to the
+> ledger it defines; starting any of them first means designing the ledger three times.
+
+- [ ] T-087 (P1) 🏦 **[OWNER 2026-08-14, items 1-3] The three accounts and the ledger under them.**
+  **THE FOUNDATION CARD — everything else in this batch depends on it.**
+  **Scope:** `wallet_accounts` (one row per user per kind: `real` / `token` / `bonus`) and an
+  **append-only** `wallet_transactions` ledger — amount, kind, direction, reason, actor, source,
+  external reference, resulting balance, timestamp.
+  🔴 **APPEND-ONLY IS THE WHOLE DESIGN, and it is what the owner actually asked for.** *"qayta hisob
+  kitob yoki qaytarish"* — recalculation and refund — is **impossible on a mutable balance column**.
+  A correction must be a **new reversing entry** that cites the row it reverses; the balance is the
+  sum. Never `UPDATE balance SET …`. ⚠️ A cached `balance` column is fine as an optimisation **only**
+  if a reconciliation query can prove it equals the sum of the entries.
+  🔴 **Every entry must name WHO and THROUGH WHAT** — the owner said so twice
+  (*"kim orqali o'zgartirilgani"*). Admin id / system / provider callback, and the reason.
+  ⚠️ **Money moves need a DB transaction with row locking**, or two concurrent spends both pass the
+  balance check. This project has **no precedent for `transaction()` + `LOCK`** — it will be the
+  first, so it needs to be right rather than copied from a service that never needed it.
+  ⚠️ **`AuditLog` is complementary, not a substitute** — it records the admin's *action*, the ledger
+  records the *money*. Both, not either.
+  ⚠️ **Idempotency from day one:** a provider that retries a callback must not credit twice. A unique
+  constraint on `(provider, external_id)` is the cheap, boring fix — retrofitting it after a double
+  credit means reconciling real balances by hand.
+  🛑 **BLOCKED on questions ①, ⑤ and ⑥ above.** ❌ Needs a migration (owner approval — rule 4).
+
+- [ ] T-088 (P1) 💳 **[OWNER 2026-08-14, item 1 + the 2:03 PM note] The PAYNET web service.**
+  🔴 **REWRITTEN 2026-08-14 after reading the owner's two documents — the original card was built on
+  the wrong premise.** Full contract extracted to **`docs/PAYNET.md`** (neither file is readable by
+  the normal tools: no `pdftotext`, no `pypdf`, and the PDF's Cyrillic uses a subset font that does
+  not survive naive extraction — **that file is the readable record**).
+  🔴 **PAYNET CALLS US; WE DO NOT CALL PAYNET.** UbexGo is the *Поставщик* and must **stand up a
+  JSON-RPC 2.0 web service** that Paynet's terminals call when a customer hands cash to an agent.
+  There is no outbound "charge a card" API in this contract at all. *The card previously assumed the
+  opposite, which would have been the whole design backwards.*
+  **Six mandatory methods:** `PerformTransaction` · `CheckTransaction` · `CancelTransaction` ·
+  `GetStatement` · `GetInformation` · `ChangePassword`.
+  ✅ **`GetInformation` IS the owner's masked-phone requirement, and it is now properly grounded.**
+  It returns `fio` — what the agent reads back to the customer before taking the cash — so
+  **`+99890 ***4585` belongs in that field**, not in some custom endpoint. ⚠️ Mask **server-side**;
+  returning the full number and masking it in a UI leaks it in the response body.
+  ✅ **The phone-oracle risk I flagged is largely closed by the contract itself:** access is
+  restricted to **`213.230.106.112/28` and `213.230.65.80/28`**, and the provider is **obliged to
+  refuse other IPs and not accept payments that arrive in violation**. ⚠️ Still rate-limit and audit
+  per call — T-092 makes IDs enumerable from a known origin.
+  🔴 **`transactionId` (Paynet's) is the idempotency key**, and error **201 «Транзакция уже
+  существует»** is the mandated answer to a repeat. `providerTrnId` is **ours**, minted by us and
+  quoted back to us — **do not confuse the two.**
+  🔴 **Error `77` = refuse a cancellation when the payer already spent the money.** Answerable from
+  an append-only ledger; **impossible on a mutable balance column.**
+  🔴 **≤ 500 ms or Paynet may disconnect us** (30 s = dropped connection). A hard budget for a
+  row-locked write.
+  ⚠️ **`ChangePassword` must work on day one** — Paynet is obliged to rotate the password on first
+  successful connection, so it cannot live in an image-baked config. **Env only** (rule 5).
+  ⚠️ **Daily reconciliation is contractual** — Paynet compares its own register against our
+  `GetStatement`. The owner's *"finansiviy analiz"* is therefore a hard requirement, not a wish.
+  🛑 **BLOCKED — four things are missing and cannot be guessed:** ① UbexGo's own `serviceId`, URL,
+  username and password (**the sample document is filled in for a different company — "TV Turon
+  Navoi", `navpay.tn.uz` — do not hard-code any of it**); ② our negotiated `fields` set (the annex
+  and the JSON spec disagree, because it is per-provider); ③ the `error.code` **sign convention**
+  (the annex lists `301`, the JSON sample shows `-253`); ④ question ⑥ — who may hand-enter a top-up
+  and is there a ceiling.
+  🛑 **Depends on T-087.** ❌ No app change.
+
+- [ ] T-094 (P3) 🧹 **[found while building T-087] The user id is typed `string` in two shared
+  places, and it is an INTEGER.**
+  🔴 `AuditLogData.userId?: string` (`utils/auditLogger.ts:10`) and `AuthTokenPayload.userId: string`
+  (`types/index.ts:75`) — but `users.id` is `DataTypes.INTEGER` and `AuditLog.user_id` is
+  `number | null`. **Every caller that passes `user.id` straight through is already a tsc error, and
+  those errors are part of the 281 baseline.**
+  ⚠️ **Deliberately NOT fixed inside T-087** — widening a billing card to re-type a shared util is
+  how a money change acquires unrelated blast radius, and it would move the baseline number the
+  board uses as a check. The new wallet code coerces at its own boundary with a comment saying why.
+  ✅ **Likely a small net win:** fixing the two types should REMOVE baseline errors rather than add
+  any. ⚠️ Measure the new baseline and update it everywhere it is written down (`CLAUDE.md`,
+  `PLAN.md`, the cards) in the same commit, or every later card will look like it regressed.
+  ⚠️ Check nothing genuinely passes a string id before changing it — Telegram SSO's `id` is one to
+  look at.
+
+- [ ] T-093 (P2) 💳 **[OWNER 2026-08-14, item 1] Payme and Click top-ups — UNSPECIFIED.**
+  🔴 **Neither of the owner's two documents covers Payme or Click.** They are separate companies with
+  separate contracts and **different integration directions** — Payme's merchant API is typically
+  *they* call *us* (like Paynet), Click has both a Shop-API (we call them) and a callback flow.
+  **Nothing here can be designed until the owner supplies those contracts.**
+  ⚠️ **Do not assume Paynet's shapes transfer.** Writing one "provider" abstraction from a single
+  contract is how the second provider ends up bent to fit the first. **Build Paynet concretely
+  (T-088), then extract what is genuinely common.**
+  ⚠️ `payment_type: 'click_payme'` already exists on `PassengerOffer` and is **unrelated** — it is a
+  label for paying the driver in the car and moves no money.
+  🛑 **Blocked on the owner: the Payme and Click contracts.** 🛑 Depends on T-087.
+
+- [ ] T-089 (P1) 🪙 **[OWNER 2026-08-14, item 2] The TOKEN account — referral and promo earnings.**
+  **1 000 tokens** for inviting a user; **10 000** for inviting a driver *who then gets a client
+  through the system*.
+  ✅ **The referrer is already captured three ways** — `referral_phone`, `referral_id`, `promo_code`
+  (migration `20260802000002` documents exactly this).
+  🔴 **But nothing resolves any of them, so no referral has ever paid out.** Resolution is the real
+  work: phone → user, ID → user, promo code → the user who **owns** that code (**which requires
+  T-091 — the owning column does not exist yet**).
+  🔴 **`users.promo_code` MEANS THE OPPOSITE OF WHAT YOU MIGHT ASSUME** — see T-091. Reading it as
+  "this user's own code" would pay the wrong person.
+  ⚠️ **Self-referral and cycles must be refused** — A invites B invites A. Cheap to block now.
+  ⚠️ **Award exactly once, ever** — a unique constraint on `(referrer, invitee, reason)`, not an
+  application-level check that a retry can slip past.
+  🛑 **BLOCKED on questions ① and ② above** — what a token is worth, and when the driver's 10 000
+  fires. ② is the same blocker as **T-082** and is a fraud question, not a scheduling one.
+  🛑 **Depends on T-087 and T-091.**
+
+- [ ] T-090 (P2) 🎁 **[OWNER 2026-08-14, item 3] The BONUS account — the 10 000 the app already
+  promises, plus admin grants and campaigns.**
+  🔴 **This is a REPAIR, not a new feature** — `userDetails.infoBoxBonus` has been promising every
+  new user **10 000 bonus** in all three locales since the registration screen shipped, and there has
+  never been an account to pay it into.
+  ⚠️ **Expiry is the hard half.** If *"60 kunda"* means it expires (question ③), then an expiry needs
+  a scheduled job — and **this project has no job runner**, so that is a new moving part, not a
+  column. An expiring grant must post its own reversing ledger entry, never vanish silently.
+  ⚠️ **Backfill question:** do users who registered before this exists get their promised 10 000?
+  They were shown the promise. *Recommendation: yes, and say so in the migration's printed count —
+  the T-046/T-031 precedent.*
+  🛑 **BLOCKED on questions ① and ③.** 🛑 **Depends on T-087.**
+
+- [ ] T-091 (P2) 🆔 **[OWNER 2026-08-14, 2:06 PM + 2:07 PM] The user's OWN promo code (5 chars) and
+  username (≥6 chars).** Both digits + latin letters, both chosen by the user.
+  🔴 **`users.promo_code` ALREADY EXISTS AND MEANS THE REFERRER'S CODE — THE OPPOSITE OF THIS.**
+  Migration `20260802000002`'s own comment spells it out: there are three ways to name whoever
+  invited you — phone, user ID, promo code — stored in `referral_phone`, `referral_id` and
+  **`promo_code`**. `UserDetailsScreen:455` posts the code the **new user typed in**, i.e. *somebody
+  else's*.
+  🔴 **So this needs a NEW, UNIQUE column** (`own_promo_code`), never a reuse of `promo_code`.
+  **Reusing it would equate "the code I entered" with "the code I own"** — the exact mistake caught
+  in the 2026-08-13 meaning review when `departs_when_full` was one step from being mirrored onto
+  `is_urgent` (T-080). Here it would be worse than a wrong label: **the referral payout would credit
+  the wrong user.**
+  ✅ **`CITEXT` is already the house type for case-insensitive uniqueness** (`phone_e164`, `email`) —
+  so `ABC12` and `abc12` collide by construction, which is what you want for something people read
+  off a screen and re-type.
+  ⚠️ **No `username` column exists anywhere** (the only hits are the DB config and Telegram SSO's
+  own field). New column, unique, and a **reserved-word list** — `admin`, `support`, `ubexgo` must
+  not be claimable, and that is far cheaper to decide now than to take back later.
+  ⚠️ **5 alphanumeric chars ≈ 60M combinations** — fine for uniqueness, but **guessable**, so a promo
+  code must never be usable as an authentication or lookup key for anything but referral credit.
+  ⚠️ **Both need server-side validation** *and* app validation that agrees with it — T-063's rule:
+  the server must never refuse what the app accepted.
+  ✅ **Independent of the ledger — this card can ship before T-087.** ❌ Needs a migration.
+
+- [ ] T-092 (P2) 🔢 **[OWNER 2026-08-14, 2:05 PM] User IDs start at 1 100 001.**
+  🔴 **`users.id` is `INTEGER autoIncrement` from 1**, and it is an FK target in at least
+  `audit_logs`, `offer_passengers`, `driver_profiles` and `push_tokens`. **Existing users are NOT
+  renumbered** — that would rewrite every foreign key in the database to buy nothing.
+  ✅ *Recommendation: one line — `ALTER SEQUENCE users_id_seq RESTART WITH 1100001`.* New users get
+  the long IDs; the handful of existing low IDs stay as they are.
+  ⚠️ **Decide what happens to today's users** — they will have IDs like `7`, which a Paynet operator
+  cannot distinguish from a typo. If that matters, the answer is a separate display `account_number`
+  (question ④), not a renumbering.
+  ⚠️ **This makes IDs enumerable from a known origin** — which is precisely why T-088's masked-phone
+  lookup has to be rate-limited. The two cards are linked.
+  ❌ Needs a migration. ✅ Tiny, and independent of everything else in the batch.
 
 > 📥 **OWNER DEVICE-TEST BATCH 2026-08-12 — 13 findings, boarded as T-064…T-074.**
 > Grounded in code the same day (all except ④ and ① confirmed by reading; see each card).

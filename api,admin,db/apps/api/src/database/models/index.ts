@@ -105,6 +105,8 @@ import { OfferPassenger, initOfferPassenger } from './OfferPassenger.js';
 import { PassengerOffer, initPassengerOffer } from './PassengerOffer.js';
 import { OfferDriver, initOfferDriver } from './OfferDriver.js';
 import { DriverRating, initDriverRating } from './DriverRating.js';
+import { WalletAccount, initWalletAccount } from './WalletAccount.js';
+import { WalletTransaction, initWalletTransaction } from './WalletTransaction.js';
 
 // Initialize all models
 initUser(sequelize);
@@ -144,6 +146,8 @@ initOfferPassenger(sequelize);
 initPassengerOffer(sequelize);
 initOfferDriver(sequelize);
 initDriverRating(sequelize);
+initWalletAccount(sequelize);
+initWalletTransaction(sequelize);
 
 // Define associations
 User.hasMany(Phone, { foreignKey: 'user_id', as: 'phones' });
@@ -336,6 +340,20 @@ OfferDriver.belongsTo(User, { foreignKey: 'driver_id', as: 'driver' });
 DriverVehicle.hasMany(OfferDriver, { foreignKey: 'vehicle_id', as: 'driverJoinRequests' });
 OfferDriver.belongsTo(DriverVehicle, { foreignKey: 'vehicle_id', as: 'vehicle' });
 
+// Wallet associations (T-087)
+User.hasMany(WalletAccount, { foreignKey: 'user_id', as: 'walletAccounts' });
+WalletAccount.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+WalletAccount.hasMany(WalletTransaction, { foreignKey: 'account_id', as: 'transactions' });
+WalletTransaction.belongsTo(WalletAccount, { foreignKey: 'account_id', as: 'account' });
+
+// A reversal points at the entry it corrects. Self-referential on purpose: the
+// ledger is append-only, so a correction is a new row, never an edit.
+WalletTransaction.belongsTo(WalletTransaction, { foreignKey: 'reverses_id', as: 'reverses' });
+
+WalletTransaction.belongsTo(AdminUser, { foreignKey: 'actor_admin_id', as: 'actorAdmin' });
+WalletTransaction.belongsTo(User, { foreignKey: 'actor_user_id', as: 'actorUser' });
+
 // Admin User associations
 AdminUser.belongsTo(AdminUser, { foreignKey: 'created_by', as: 'creator' });
 
@@ -398,6 +416,8 @@ export {
   PassengerOffer,
   OfferDriver,
   DriverRating,
+  WalletAccount,
+  WalletTransaction,
 };
 
 export default sequelize;

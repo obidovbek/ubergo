@@ -11,6 +11,7 @@ import adminDriverRoutes from './admin-driver.routes.js';
 import adminCountryRoutes from './admin-country.routes.js';
 import userRoutes from './user.routes.js';
 import deviceRoutes from './device.routes.js';
+import walletRoutes from './wallet.routes.js';
 import driverRoutes from './driver.routes.js';
 import uploadRoutes from './upload.routes.js';
 import countryRoutes from './country.routes.js';
@@ -101,6 +102,10 @@ router.use('/support-contacts', supportContactRoutes);
 
 // Device routes (push tokens)
 router.use('/devices', deviceRoutes);
+
+// Wallet routes (T-087) — read-only: balances and statements. Nothing here
+// creates value; the write surfaces are T-088/T-089/T-090.
+router.use('/wallet', walletRoutes);
 
 // Driver routes
 router.use('/driver', driverRoutes);
