@@ -26,7 +26,8 @@ import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
-import { handleBackendError } from '../utils/errorHandler';
+import { ApiError, handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { checkOwnPromoCode, checkUsername, PROMO_CODE_LENGTH, USERNAME_MAX_LENGTH } from '../utils/identifiers';
 import { useCountries } from '../hooks/useCountries';
 import { BackButton } from '../components/BackButton';
 import type { CountryOption } from '../types/country';
@@ -91,6 +92,10 @@ export const EditProfileScreen: React.FC = () => {
   const [birthDate, setBirthDate] = useState((user as any)?.birth_date || '');
   const [email, setEmail] = useState((user as any)?.email || '');
   const [additionalPhones, setAdditionalPhones] = useState<string[]>((user as any)?.additional_phones || []);
+  // T-091 — the user's OWN code and handle. `own_promo_code` is what they hand
+  // out; it is not `promo_code`, which names whoever invited them.
+  const [ownPromoCode, setOwnPromoCode] = useState((user as any)?.own_promo_code || '');
+  const [username, setUsername] = useState((user as any)?.username || '');
   const [currentPhoneInput, setCurrentPhoneInput] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -206,6 +211,12 @@ export const EditProfileScreen: React.FC = () => {
         setGender(userData.gender || '');
         setEmail(userData.email || '');
         setAdditionalPhones(Array.isArray(userData.additional_phones) ? userData.additional_phones : []);
+        // T-091 — loaded back on EVERY path, including the two fallbacks below.
+        // Miss one and the claimed code renders as an empty, editable box: the
+        // user re-types it, the server refuses the "change", and the screen
+        // looks broken (T-078's save-but-never-load failure, with a lock on it).
+        setOwnPromoCode(userData.own_promo_code || '');
+        setUsername(userData.username || '');
         
         // Handle birth_date - convert from ISO format to DD.MM.YYYY if needed
         if (userData.birth_date) {
@@ -260,6 +271,12 @@ export const EditProfileScreen: React.FC = () => {
         setGender(userData.gender || '');
         setEmail(userData.email || '');
         setAdditionalPhones(Array.isArray(userData.additional_phones) ? userData.additional_phones : []);
+        // T-091 — loaded back on EVERY path, including the two fallbacks below.
+        // Miss one and the claimed code renders as an empty, editable box: the
+        // user re-types it, the server refuses the "change", and the screen
+        // looks broken (T-078's save-but-never-load failure, with a lock on it).
+        setOwnPromoCode(userData.own_promo_code || '');
+        setUsername(userData.username || '');
         
         if (userData.birth_date) {
           let formattedBirthDate = userData.birth_date;
@@ -305,6 +322,8 @@ export const EditProfileScreen: React.FC = () => {
           setGender(userData.gender || '');
           setEmail(userData.email || '');
           setAdditionalPhones(Array.isArray(userData.additional_phones) ? userData.additional_phones : []);
+          setOwnPromoCode(userData.own_promo_code || '');
+          setUsername(userData.username || '');
           
           if (userData.birth_date) {
             let formattedBirthDate = userData.birth_date;
@@ -481,11 +500,33 @@ export const EditProfileScreen: React.FC = () => {
     }
   }, [activeCountry?.code, activeCountry?.pattern]);
 
+  /*
+   * T-091 — a promo code is permanent once claimed, so the input is locked
+   * rather than left open to be refused.
+   *
+   * 🔴 Read from the SERVER's copy of the user, never from the local input.
+   * Keying this off `ownPromoCode` would lock the box on the first keystroke.
+   */
+  const isPromoCodeLocked = !!(user as any)?.own_promo_code;
+
   const validate = (): boolean => {
     const newErrors: any = {};
 
     if (!firstName.trim()) {
       newErrors.firstName = t('userDetails.errorFirstName');
+    }
+
+    // Checked here so the user hears about a bad code immediately instead of
+    // after a round trip. The server checks the same rules again — these are a
+    // courtesy, not the guarantee, and uniqueness only the server can answer.
+    const promoIssue = checkOwnPromoCode(ownPromoCode);
+    if (promoIssue) {
+      newErrors.own_promo_code = t(promoIssue);
+    }
+
+    const usernameIssue = checkUsername(username);
+    if (usernameIssue) {
+      newErrors.username = t(usernameIssue);
     }
 
     if (!lastName.trim()) {
@@ -525,6 +566,17 @@ export const EditProfileScreen: React.FC = () => {
         birth_date: birthDate || undefined,
         email: email || undefined,
         additional_phones: additionalPhones,
+        /*
+         * T-091. `undefined` — never `''` — for a field the user left empty:
+         * these two columns are UNIQUE, so an empty string is a value two users
+         * would collide on. The server treats `''` as untouched as well, but
+         * this side should not be relying on that.
+         *
+         * A locked code is not re-sent at all. It cannot change, so sending it
+         * only creates a way to be wrong.
+         */
+        own_promo_code: isPromoCodeLocked ? undefined : ownPromoCode.trim() || undefined,
+        username: username.trim() || undefined,
       };
 
       const headers = await getHeaders(token ?? undefined);
@@ -540,7 +592,15 @@ export const EditProfileScreen: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to update profile');
+        /*
+         * 🔴 This used to be `new Error(data.message)`, which threw the status
+         * and the `errors` array away. `handleBackendError` reads the status to
+         * pick a message, so with none it fell straight through to the generic
+         * "profile update failed" toast — the server's own explanation was
+         * dropped every time. T-091 needs the opposite: "that code is already
+         * taken" has to reach the user, and land on the field it is about.
+         */
+        throw new ApiError(response.status, data, 'Failed to update profile');
       }
 
       if (data.data && data.data.user) {
@@ -551,10 +611,20 @@ export const EditProfileScreen: React.FC = () => {
         t('userDetails.successTitle'),
         t('userDetails.successMessage')
       );
-      
+
       navigation.goBack();
     } catch (error) {
       console.error('Profile update error:', error);
+      // Put field-named errors under their inputs. The server already sends
+      // them translated and keyed by column (`own_promo_code`, `username`),
+      // which is exactly what `errors` here is keyed by.
+      const fieldErrors = parseValidationErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors((previous: Record<string, string | undefined>) => ({
+          ...previous,
+          ...fieldErrors,
+        }));
+      }
       handleBackendError(error, {
         t,
         defaultMessage: t('userDetails.errorUpdate'),
@@ -812,6 +882,79 @@ export const EditProfileScreen: React.FC = () => {
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
+            {/*
+              ── T-091: the user's OWN identifiers ────────────────────────────
+              Given its own heading and note because on the registration screen
+              this sits near a field also labelled PROMO that means the exact
+              opposite — somebody else's code. Two promo inputs on one form is
+              the likeliest way this card confuses a real user, so the section
+              says whose code it is before either box appears.
+            */}
+            <View style={styles.identifierSection}>
+              <Text style={styles.identifierTitle}>{t('userDetails.myIdentifiersTitle')}</Text>
+              <Text style={styles.identifierInfo}>{t('userDetails.myIdentifiersInfo')}</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t('userDetails.ownPromoCode')}</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    isPromoCodeLocked && styles.inputDisabled,
+                    errors.own_promo_code && styles.inputError,
+                  ]}
+                  placeholder={t('userDetails.ownPromoCodePlaceholder')}
+                  placeholderTextColor={placeholderColor}
+                  value={ownPromoCode}
+                  onChangeText={(text) => {
+                    setOwnPromoCode(text);
+                    if (errors.own_promo_code) {
+                      setErrors({ ...errors, own_promo_code: undefined });
+                    }
+                  }}
+                  // Stops the length rule being broken by typing rather than
+                  // reporting it afterwards. The server still enforces it.
+                  maxLength={PROMO_CODE_LENGTH}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  // Locked once claimed: the server refuses a change, and an
+                  // input that accepts what will always be rejected is a trap.
+                  editable={!isLoading && !isPromoCodeLocked}
+                  onFocus={scrollToEnd}
+                />
+                <Text style={styles.helperText}>
+                  {isPromoCodeLocked
+                    ? t('userDetails.ownPromoCodeLocked')
+                    : t('userDetails.ownPromoCodeHelper')}
+                </Text>
+                {!!errors.own_promo_code && (
+                  <Text style={styles.errorText}>{errors.own_promo_code}</Text>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t('userDetails.username')}</Text>
+                <TextInput
+                  style={[styles.input, errors.username && styles.inputError]}
+                  placeholder={t('userDetails.usernamePlaceholder')}
+                  placeholderTextColor={placeholderColor}
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    if (errors.username) {
+                      setErrors({ ...errors, username: undefined });
+                    }
+                  }}
+                  maxLength={USERNAME_MAX_LENGTH}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                  onFocus={scrollToEnd}
+                />
+                <Text style={styles.helperText}>{t('userDetails.usernameHelper')}</Text>
+                {!!errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+              </View>
+            </View>
+
             {/* Additional Contact */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
@@ -998,6 +1141,37 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#EF4444',
     borderWidth: 2,
+  },
+  // T-091 — a claimed promo code cannot be changed, so its input reads as
+  // locked rather than editable. Matches UserDetailsScreen's disabled style.
+  inputDisabled: {
+    backgroundColor: '#F3F4F6',
+    color: '#9CA3AF',
+  },
+  /*
+   * T-091 — the user's own code and handle, boxed off from everything else.
+   * The visual separation is the point: on the registration screen these sit
+   * near a PROMO field that means the opposite thing.
+   */
+  identifierSection: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2.5),
+  },
+  identifierTitle: {
+    ...theme.typography.body1,
+    color: theme.palette.text.primary,
+    fontWeight: '700',
+    marginBottom: theme.spacing(0.5),
+  },
+  identifierInfo: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
+    lineHeight: 18,
+    marginBottom: theme.spacing(2),
   },
   helperText: {
     ...theme.typography.caption,

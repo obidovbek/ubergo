@@ -36,6 +36,12 @@ export default {
     pastDate: "Date must be in the past",
     futureDate: "Date must be in the future",
     invalidChoice: "Invalid choice",
+    // T-091 — the user's own promo code / username.
+    exactLength: "{field} must be exactly {length} characters",
+    lengthRange: "{field} must be between {min} and {max} characters",
+    alphanumeric: "{field} may contain only latin letters and digits",
+    reserved: "{field} is not available, choose another one",
+    immutable: "{field} is chosen once and cannot be changed",
   },
 
   // Field names
@@ -98,7 +104,10 @@ export default {
     password: 'Password',
     birth_date: 'Date of Birth',
     gender: 'Gender',
-    
+    // T-091 — see the uz file: this is the user's OWN code, not their referrer's.
+    own_promo_code: 'Your promo code',
+    username: 'Username',
+
     // Driver fields
     driver_type: 'Driver Type',
     role: 'Role',

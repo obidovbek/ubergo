@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/UserController';
 import { authenticate, authorize } from '../middleware/auth';
-import { validatePagination } from '../middleware/validator';
+import { validatePagination, profileIdentifiersValidation } from '../middleware/validator';
 import { UserRole } from '../constants';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
@@ -14,8 +14,15 @@ const router = Router();
 // All user routes require authentication
 router.use(authenticate);
 
-// Update current user profile (any authenticated user)
-router.put('/profile', asyncHandler(UserController.updateProfile));
+// Update current user profile (any authenticated user).
+// T-091: `profileIdentifiersValidation` validates AND trims `own_promo_code` /
+// `username` before the controller reads them. It touches no other field, so a
+// profile save that never mentions them is unaffected.
+router.put(
+  '/profile',
+  profileIdentifiersValidation,
+  asyncHandler(UserController.updateProfile)
+);
 
 // Get all users (admin only)
 router.get(

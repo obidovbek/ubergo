@@ -4,10 +4,11 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> ✅ **T-081 moved intact → `docs/PLAN-T081.md`** (steps 1-4 done; the owner's user-app rebuild,
-> the salon booking walk and the commit remain). ✅ **T-078** → `docs/PLAN-T078.md`.
-> ✅ **T-077** → `docs/PLAN-T077.md`. ✅ **T-065** → `PLAN-T065.md`. ✅ **T-066+T-067** →
-> `PLAN-T066-T067.md`. ✅ **T-061** → `PLAN-T061.md`.
+> ✅ **T-087 COMPLETE — moved intact → `docs/PLAN-T087.md`** (all 8 steps; migrated, deployed,
+> verified on test3 and committed 2026-08-14).
+> ✅ **T-081** → `docs/PLAN-T081.md` (steps 1-4 done; owner's user-app rebuild + walk remain).
+> ✅ **T-078** → `PLAN-T078.md`. ✅ **T-077** → `PLAN-T077.md`. ✅ **T-065** → `PLAN-T065.md`.
+> ✅ **T-066+T-067** → `PLAN-T066-T067.md`. ✅ **T-061** → `PLAN-T061.md`.
 > ✅ **T-059 · T-055 · T-057 · T-054 · T-045 · T-024** → their own files.
 > 🔴 **T-047 PARKED.** 🟡 **T-031** — items 5-6 done, item 4 **cancelled** → `PLAN-T031.md`.
 > ⏸️ **T-040 · T-039 · T-037 · T-033 · T-030 · T-027 · T-018 · T-026A · T-025** → their own files.
@@ -16,291 +17,264 @@
 
 **`tsc` BASELINES: API 281 · admin 0 · user 6 · driver 28.** All four projects lint at **0 errors**.
 
-✅ **All four pending migrations ran clean on test3 (2026-08-13) and the API is deployed.**
-🛑 **WHAT REMAINS FROM THE OLD BOARD IS THE TWO APP REBUILDS** — nothing else blocks it.
-⚠️ **The driver rebuild is mandatory, not JS-only** (T-076 removed a native dep + an Expo plugin).
-🔴 **33 files are uncommitted** (T-010 tests, T-028 nav types, T-032 lint config, T-061/T-063,
-T-081's `OfferDetailsScreen`). The driver wizard work is safely in `0e82b1a`; the rest is not
-committed anywhere. **`/end-day` is overdue** — `JOURNAL.md` stops at `2026-08-13 (2)`.
-
-**Swept 2026-08-14: 26 plan files, 54 unchecked boxes, and NONE of them are Claude's** — every one
-is an owner step or an owner-approved commit, except T-031 step 4 (blocked on the owner's repro).
+✅ **The uncommitted backlog is CLEARED** — `be0c445` and `e22e51a` swept up T-010, T-028, T-032,
+T-061/T-063, T-081 and all of T-087. The tree is clean apart from the docs.
+✅ **test3 is migrated and deployed**, and `db:migrate:status` shows **every migration `up`**.
+🛑 **THE TWO APP REBUILDS ARE STILL OUTSTANDING** — user (T-077 · T-081 · T-083 · T-084) and driver
+(T-078 · T-079/T-080 · T-061; **mandatory native rebuild**, T-076 removed a native dep).
+🔴 **`JOURNAL.md` STOPS AT `2026-08-13 (2)`** and is missing eleven cards. `/end-day` is overdue.
 
 ---
 
 ## Task
-- **ID / name:** T-087 — the three accounts and the ledger under them
+- **ID / name:** T-091 — the user's OWN promo code (5 chars) and username (≥6 chars)
 - **Goal (definition of "done"):**
-  1. Every user can have three accounts — **`real`** (money), **`token`**, **`bonus`** — and a
-     balance can be read for each.
-  2. **Every movement of value is an append-only ledger entry** that records the amount, the
-     account, the reason, **who** caused it and **through what** — the owner's *"nima qanday yoki kim
-     orqali o'zgartirilgani"*. No entry is ever updated or deleted.
-  3. **A mistake is corrected by a reversing entry that cites the row it reverses**, and the balance
-     follows automatically — the owner's *"qayta hisob kitob yoki qaytarish"*.
-  4. **Two concurrent spends cannot both pass the balance check**, and a provider callback delivered
-     twice credits **once**.
-  5. A reconciliation query proves every cached balance equals the sum of its own entries.
-  6. `tsc` at baselines: API **281** · admin **0** · user **6** · driver **28**.
-  7. The pure ledger logic has a `*.test.ts` beside it, **proven able to fail**.
-- **Why now:** the owner's billing batch of 2026-08-14, and **this is its spine**. T-088 (top-ups),
-  T-089 (token earnings) and T-090 (the bonus) all write into this ledger — building any of them
-  first means designing the ledger three times and reconciling it never.
+  1. A user can choose their **own promo code** — exactly **5 characters**, digits + latin letters —
+     and it is **unique across all users**.
+  2. A user can choose a **username** — **at least 6 characters**, digits + latin letters — also
+     unique.
+  3. 🔴 **Neither one touches the existing `promo_code` column**, which means something else
+     entirely (see below).
+  4. The rules are enforced **on the server as well as in the app**, and the server never refuses
+     what the app accepted (T-063's rule).
+  5. `tsc` at baselines: API **281** · admin **0** · user **6** · driver **28**.
+  6. The pure validation logic has a `*.test.ts` beside it, **proven able to fail**.
+- **Why now:** it is the only unblocked card in the billing batch that something else depends on —
+  **T-089 cannot resolve a referral by promo code until the column that OWNS one exists.** T-092 is
+  smaller but leads nowhere; T-088/T-090/T-093 are blocked on the owner.
 
-## Owner decisions (2026-08-14 — asked and answered before planning)
-1. 🔴 **Tokens and bonuses are an IN-SERVICE DISCOUNT ONLY — never convertible to cash.**
-   ✅ **This removes the heaviest half of the card:** no withdrawal path, no exchange-rate table, no
-   cash-out fraud surface. ⚠️ It is also a **constraint the schema must record, not just obey** —
-   `real` and `token`/`bonus` are therefore **not interchangeable**, and no code path may ever move
-   value from a token account into a real one. *Stated here so a later card cannot quietly add one.*
-2. **The driver's 10 000 fires on the FIRST CONFIRMED BOOKING** — detectable from real data
-   (`OfferPassenger` status), **not** from `driver_arrived_at`, which the driver's own app sets.
-   *(T-089's business, recorded here because it is what the ledger's `reason` vocabulary must name.)*
-3. **ONE ledger, three account kinds** — not three parallel tables. *(My recommendation ⑤ on the
-   card; no objection raised.)* One code path, one audit trail, one reconciliation query.
+## 🔴 What is already there (verified 2026-08-14 — do NOT re-derive)
+🔴 **`users.promo_code` ALREADY EXISTS AND MEANS THE OPPOSITE OF THIS CARD.**
+Migration `20260802000002` says it outright: there are **three alternative ways to name whoever
+invited you** — phone, user id, promo code — stored in `referral_phone`, `referral_id` and
+**`promo_code`**. `UserDetailsScreen:455` posts `promo_code: promoCode`, and `promoCode` is what the
+**new user typed into the "who invited you" box**. It is *somebody else's* code.
+✅ **The app already enforces "exactly one of the three"** (`UserDetailsScreen:348-360`) by disabling
+the other two as soon as one is filled — a rule that is *visible* rather than a surprise at submit.
+🔴 **There is NO `username` column anywhere.** The only hits are the DB connection config and
+Telegram SSO's own field.
+🔴 **There is NO server-side validation of any of these fields** — `validator.ts` does not mention
+`promo_code` or `referral_id`, and `UserController:142-144` writes whatever arrives.
+🔴 **The referral data is entirely write-only** — no service reads any of the three columns, so no
+referral has ever paid out. (T-089's problem, not this card's.)
+✅ **`CITEXT` is the house type for case-insensitive uniqueness** — `phone_e164` and `email` both use
+it, and the extension is created by `20250118000001`.
+✅ **The admin panel does not show or edit these fields**, so nothing there needs updating.
 
 ## Approach
-**Two tables, one service, and the pure arithmetic pulled out so it can actually be tested.**
+**Two new columns, never a reuse.**
 
-- **`wallet_accounts`** — one row per `(user_id, kind)`, unique. Holds a **cached** balance.
-- **`wallet_transactions`** — the append-only ledger. **Signed `amount`** (negative = debit), so
-  **the sum of the entries IS the balance** and reconciliation is one `GROUP BY`. A reversal is a
-  new row with the negated amount and `reverses_id` pointing at the row it corrects.
-  *The alternative — a `direction` column with positive amounts — is more conventional in accounting
-  software, but it makes every balance query a `CASE` expression and gives two ways to write the
-  same fact. Boring wins (rule 6).*
-- **`balance_after` is stored on every row.** It makes each entry self-verifying and reconciliation
-  trivial. It is only correct if writes are serialised — which they are, see below.
-- **All money operations run inside `sequelize.transaction()` with `SELECT … FOR UPDATE`** on the
-  account row. 🔴 **This project has no precedent for row locking**, so it is written here once,
-  deliberately, rather than copied from a service that never needed it.
-- 🔴 **The pure logic goes in `utils/ledger.ts`, NOT in the service** — `foldBalance`,
-  `reverseOf`, `assertSufficient`, `idempotencyKey`. **This is the direct answer to the limit
-  recorded in `CLAUDE.md` and the journal:** every service imports Sequelize, so service logic
-  cannot be tested at all today. Putting the arithmetic in a DB-free module means the part that must
-  never be wrong is the part that gets a real, runnable test.
+- **`own_promo_code CITEXT UNIQUE NULL`** — the code this user OWNS and gives to others.
+- **`username CITEXT UNIQUE NULL`** — the handle this user chooses.
+- 🔴 **`promo_code` is left exactly as it is.** Reusing it would equate *"the code I typed in"* with
+  *"the code I own"*. That is the `departs_when_full` / `is_urgent` mistake from the 2026-08-13
+  meaning review — but with money attached: **T-089 would credit the wrong user on every payout.**
+- **`CITEXT`, so `ABC12` and `abc12` collide** by construction. These are things people read off a
+  screen and re-type; case-sensitive uniqueness would hand out two codes that look identical.
+- **Both nullable** — every existing user has neither, and `null` honestly says "not chosen".
+- The character rules go in **`utils/identifiers.ts`** with a real test, for the same reason T-087's
+  arithmetic did: services import Sequelize and cannot be tested.
 
 ## Steps
-- [x] 1. **DONE 2026-08-14. Migration — `wallet_accounts` + `wallet_transactions`**
-  (`20260814000001-create-wallet-tables.cjs`). Approved by the owner; **written, NOT run** — the
-  owner runs it on test3.
-  ✅ **`uuid_generate_v4()`, not `gen_random_uuid()`** — the `uuid-ossp` extension is created by
-  `20250118000001` and every UUID pk in this schema uses it. *Checked rather than assumed.*
-  ✅ **`wallet_transactions.id` is BIGSERIAL, not UUID, on purpose** — Paynet's `providerTrnId` is
-  the id we mint and they quote back, and their sample shows a **number** (`2323`). Reusing the
-  primary key means T-088 needs no second identity column.
-  ✅ **Three CHECK constraints** — `balance >= 0` (the last line of defence under a double spend,
-  so it fails loudly instead of going quietly negative), `amount <> 0`, and allow-lists for `kind`
-  and `actor_type`.
-  🔴 **`BIGINT` in integer TIYIN — REVISED 2026-08-14 from `DECIMAL(14,2)` on the evidence of the
-  Paynet documents** (`docs/PAYNET.md` §6). The annex types the balance as **`long`** and labels it
-  **тийин**; the sample `"amount": 100000` is **1 000 so'm**. A decimal-so'm ledger facing an
-  integer-tiyin counterparty turns every call into a ×100 conversion, and a conversion bug inside a
-  payment endpoint is silent and expensive. **Integer tiyin also removes the rounding question
-  entirely** — and `DECIMAL` is what Sequelize hands back as a *string*, the T-077 trap.
-  🔴 **never `FLOAT`.**
-  ⚠️ **Ride prices stay `DECIMAL(10,2)` so'm** — different concern, different counterparty (a human
-  paying a driver in a car). **The two conventions must meet in exactly ONE converter**, or they
-  will leak into each other.
-  **A partial unique index on `(provider, external_id) WHERE external_id IS NOT NULL`** — this is
-  the idempotency guarantee and it must exist from the first day, not be retrofitted after a double
-  credit has to be unpicked by hand. ✅ **The Paynet contract confirms this design:** their
-  `transactionId` is the key, and error **201 «Транзакция уже существует»** is the mandated answer
-  to a repeat.
-- [x] 2. **DONE 2026-08-14. Models** — `WalletAccount`, `WalletTransaction`, associations (including
-  the self-referential `reverses`), registered in `models/index.ts`. `tsc` **281 = baseline**, zero
-  new errors.
-  🔴 **A trap found while writing them: `BIGINT` arrives from node-postgres as a STRING**, exactly
-  like `DECIMAL` — so an un-normalised balance would do `'100' + 50 === '10050'`, the T-077 bug in a
-  new place. **Killed at the source with a getter on every 64-bit column** rather than at each call
-  site.
-- [x] 3. **DONE 2026-08-14. `utils/ledger.ts` + `utils/ledger.test.ts`** — the pure arithmetic:
-  `toAmount` · `assertMovement` · `foldBalance` · `applyEntry` · `canDebit` · `reverseOf` ·
-  `reconcile` · `somToTiyin` · `tiyinToSom`, plus a `LedgerError` carrying a stable code (which
-  T-088 maps to Paynet's numbers — `insufficient_funds` **is** their 77).
-  🔴 **`somToTiyin` parses through BigInt and NEVER multiplies as a float** — `19.99 * 100` is
-  `1998.9999999999998` in JavaScript, which truncates to 1998 and steals a tiyin on every single
-  conversion. The test pins `19.99`, `0.29` and `8.87`.
-  🔴 **It refuses precision finer than a tiyin rather than rounding it away.** Rounding money is a
-  policy nobody has decided here, and a silent half-tiyin loss repeated across a million rides is a
-  real number.
-  ✅ **`tiyinToSom` returns a STRING**, so no caller can re-introduce the float error it exists to
-  prevent.
-  **74/74 (46 new), and PROVEN ABLE TO FAIL — four mutations, each caught by the right tests:**
-  float conversion → **2 red** · overdraft allowed → **4 red** · fractional tiyin accepted →
-  **1 red** · zero-amount entries allowed → **3 red**.
-  ⚠️ **Each restore was verified byte-identical against a backup** — the journal records a near-miss
-  where a mutation was left in the tree after a command timed out. *Injecting a mutation means
-  owning the restore.*
-- [x] 4. **DONE 2026-08-14. `WalletService`** — `move` (the single entry point for every credit and
-  debit), `reverse`, `getBalances`, `getStatement`, `reconcileAccount`, `logMovement`. Every write
-  runs in `sequelize.transaction()` holding `lock: tx.LOCK.UPDATE` on the account row.
-  🟡 **A CLAIM IN THIS PLAN WAS WRONG:** it said *"this project has no precedent for row locking"*.
-  **It does** — `OfferPassengerService:352,583` already locks the offer row the same way. So this
-  follows an existing pattern rather than inventing one. *Better outcome than the plan assumed, but
-  worth recording that the plan asserted something unchecked.*
-  ✅ **Idempotency is answered twice**: a pre-check on `(provider, external_id)`, and — for the
-  request that races it — a catch on `SequelizeUniqueConstraintError` that returns the ORIGINAL
-  entry. So a retrying provider gets the first entry back, never a second credit, and T-088 can
-  answer Paynet's 201 rather than a 500.
-  ✅ **`reverse` refuses to reverse the same entry twice**, and refuses when the payer has already
-  spent the money — Paynet's error 77.
-  ⚠️ **`AuditLog` is complementary, never a substitute.** `logAudit` deliberately swallows its own
-  failures, and that is correct here: the ledger entry is the money record and is already committed
-  in the transaction. Losing an audit row must not roll back a payment.
-- [x] 5. **DONE 2026-08-14. Read-only endpoints** — `GET /api/wallet/balances` and
-  `GET /api/wallet/:kind/statement`, both behind `authenticate`.
-  🔴 **NOTHING that creates value is exposed.** No top-up route, no admin grant, no spend — the
-  write surfaces are T-088/T-089/T-090. *A balance endpoint that returns 0 for everyone is the
-  correct output of this card.*
-  ✅ Balances are returned **both** as raw integer tiyin and as a formatted so'm string, so a client
-  that computes uses the integer and a client that displays never re-derives the decimal itself.
-- [x] 6. **DONE 2026-08-14. Verified.**
-  `tsc` **API 281 · admin 0 · user 6 · driver 28 — all four at baseline**, and **zero errors in any
-  new file** (checked by name, not just by total).
-  **74/74 tests pass (46 new), proven able to fail with four mutations → 2 / 4 / 1 / 3 red.**
-  Lint **230 problems, 0 errors = baseline**, with **no finding in any new file**.
-  ✅ **Reconciliation is covered by the suite** — `reconcile` folds the entries and compares them to
-  the cached balance, including the drift case and a cache that arrived as a string.
-  ✅ **i18n needed nothing:** this card ships no UI and no user-facing string. Only 3 of 32
-  controllers use `t()`; the other 29 use plain English messages, and the new controller matches its
-  neighbours. **No new key in any locale — so there is nothing to evaluate, rather than something
-  skipped.**
-- [ ] 7. **Owner:** run the migration, deploy, confirm the three balances read as `0` for a real
-  account and that nothing else on the API moved.
-  ✅ **PRE-FLIGHTED 2026-08-14 (Claude, no DB needed):** the `.cjs` loads, `up`/`down` are functions,
-  `Sequelize.Op` resolves, and the two riskiest statements were **rendered as SQL offline** and are
-  correct — `CREATE UNIQUE INDEX … WHERE "external_id" IS NOT NULL` and `CHECK ("kind" IN (…))`.
-  🔴 **Rendering them found a real hole, now fixed:** in Postgres **NULL is never equal to NULL
-  inside a multi-column unique index**, so `(NULL, 'TRX-1')` twice would BOTH have inserted and the
-  idempotency guarantee would silently not have held for any entry with no provider. A
-  `CHECK (external_id IS NULL OR provider IS NOT NULL)` closes it, with a matching guard in
-  `WalletService.move`. *Caught before the migration was ever run.*
-  🔴 **FIRST RUN FAILED ON test3, 2026-08-14 — and the pre-flight could not have caught it**, because
-  it is a fact about the live schema, not about the SQL:
-  `Key columns "actor_admin_id" and "id" are of incompatible types: integer and uuid`.
-  **`users.id` is an INTEGER but `admin_users.id` is a UUID** — this schema has two id types, and
-  the column assumed admins were integers like users. Fixed to `UUID`, in the migration, the model
-  and `WalletActor`.
-  🔴 **AND THE FAILURE LEFT DEBRIS**, which is the more useful lesson: `wallet_accounts` had already
-  been created, `wallet_transactions` had not, and **nothing was recorded in `SequelizeMeta`** — so
-  a re-run would have failed with *"already exists"* instead. **The whole migration now runs inside
-  ONE transaction** (Postgres has transactional DDL), so any future failure leaves the database
-  exactly as it was. *Every other migration in this project has the same exposure.*
-- [ ] 8. Commit (only after the owner's approval).
+- [x] 1. **DONE 2026-08-14. Migration** — `20260815000001-add-own-promo-code-username.cjs`. Approved
+  by the owner; **written, NOT run.** `own_promo_code` and `username`, both `CITEXT`, nullable, with
+  partial unique indexes. Model updated, and **both `promo_code` and `own_promo_code` now carry
+  comments saying which is which.**
+  ✅ **The FIRST migration written under T-095's rule — it is atomic** (`sequelize.transaction`), and
+  re-runnable via `describeTable` (20260802000002's precedent).
+  ✅ `type: 'CITEXT'` as a raw string, matching every other CITEXT column in this schema.
+- [x] 2. **DONE 2026-08-14. `utils/identifiers.ts` + `identifiers.test.ts`** — `normalisePromoCode`,
+  `normaliseUsername`, `identifiersMatch`, a `RESERVED_NAMES` policy list, and an `IdentifierError`
+  carrying both a stable code and the **field it is about**, so the API can name it (T-061's rule:
+  an error with its subject deleted is useless).
+  🔴 **Length is measured AFTER trimming** — otherwise `'AB1  '` claims a 3-character code.
+  🔴 **The reserved check folds case**, or the block is bypassed by pressing shift — CITEXT makes
+  `SUPPORT` and `support` the same row.
+  🔴 **`identifiersMatch` folds case to agree with CITEXT.** If it did not, a "is this code free?"
+  check would say yes and the insert would then fail on the unique index.
+  ⚠️ **Matching is EXACT, not substring** — `admin1` and `supporter` are claimable, deliberately.
+  🟡 **A test was wrong before the code was** (again): I asserted `admin1` would be refused as too
+  short. It is **6 characters**, so it is valid and correctly accepted. The assertion is now inverted
+  and kept, with a comment, because it documents a real policy edge rather than a bug.
+  **102/102 (28 new), PROVEN ABLE TO FAIL — five mutations, each caught:** no-trim → **2 red** ·
+  case-sensitive reserved check → **1** · length-as-minimum → **2** · `identifiersMatch` not folding
+  case → **2** · character class widened to allow `_` → **1**. Restore verified byte-identical.
+- [x] 3. **DONE 2026-08-15. API** — `profileIdentifiersValidation` mounted on `PUT /user/profile`,
+  the two DB-dependent rules in `UserController`, and both fields returned by `/auth/me` **and** the
+  update reply.
+  ✅ **Four outcomes kept apart, not two:** *wrong format* (422, naming the rule broken — exact
+  length / range / alphanumeric / reserved) · *already taken* (422 `unique`, from a pre-check) ·
+  *cannot be changed* (422 `immutable`) · *taken in the race* (409, the unique index, via the
+  existing `SequelizeUniqueConstraintError` branch of `errorHandler`).
+  🔴 **The pre-check is NOT the guarantee and says so in the code** — two users can claim the same
+  code between the SELECT and the UPDATE. It exists so the ordinary case gets a **field-named 422**,
+  which is the status the apps read field errors from (T-061); only the index can refuse the loser.
+  🔴 **`isIdentifierProvided`, not `!== undefined`** — the pattern every other field on this
+  endpoint uses would write `''` into a **UNIQUE** column, and the *second* user to save an
+  untouched profile would collide with the first on a field neither ever filled in. Both screens PUT
+  the whole profile, so this is the normal path, not an edge case.
+  🔴 **The middleware TRIMS into `req.body`** — length is measured after trimming (`'AB1  '` is a
+  3-character code), so a controller storing the raw value would store what the validator never
+  approved. One place trims.
+  ✅ **`wrong_length` is answered with a RANGE for a username and an EXACT count for a code**, rather
+  than re-deriving which end was hit — that second copy of the length rule would be free to drift.
+  ⚠️ **A 5-char code can never collide with a 6-char username**, so the two namespaces need no
+  cross-check. Falls out of the rules; noted so nobody adds one.
+  **128/128 (26 new), PROVEN ABLE TO FAIL — five mutations, each caught:** `''` counted as provided
+  → **2 red** · trim not written back → **1** · exact/range templates swapped → **4** · one locale
+  key removed → **1** · only the first field reported → **1**. All three files restored
+  **byte-identical** (md5 verified).
+  ⚠️ **The immutability and taken checks need a database and are therefore NOT unit-tested** — they
+  are step 6's job on test3. Everything testable without one is covered.
+- [x] 4. **DONE 2026-08-15. User app** — fields on **`EditProfileScreen` first**, then
+  `UserDetailsScreen`, with the same rules as the server.
+  ✅ **A boxed "Sizning identifikatorlaringiz" section on BOTH screens**, with its own heading and a
+  note saying *this is your code — the PROMO field above is the one who invited you*. On the
+  registration screen it also sits far below the referral block: separated by distance **and** by
+  wording, because nothing else keeps two promo inputs apart.
+  ✅ **`utils/identifiers.ts` (app copy)** returns a translation KEY, not a message — the app's `t()`
+  takes no parameters, so the numbers are baked into each locale string.
+  🔴 **THE REAL DEFECT THIS STEP HAD TO FIX FIRST: both screens threw away every server error.**
+  `throw new Error(data.message)` loses the status, and `handleBackendError` switches on the status —
+  so with none it fell through to the generic "profile update failed" toast **and the server's own
+  explanation was dropped every time**. Now `throw new ApiError(response.status, data)`, and
+  `parseValidationErrors` (which already existed, unused) puts each field error under its input.
+  Without this the entire step-3 API would have been invisible.
+  🔴 **`EditProfileScreen` re-populates the form in THREE places** (fresh fetch · API-failure
+  fallback · <5s cache path). All three had to load the new fields — miss one and a claimed code
+  renders as an empty editable box, the user re-types it, the server refuses the "change", and the
+  screen looks broken. *T-078's save-but-never-load failure with a lock on top.*
+  🔴 **The lock reads the SERVER's user, never the local input** — keying it off `ownPromoCode`
+  would lock the box on the first keystroke.
+  ✅ **The registration draft carries both fields**, so a half-finished registration does not lose
+  them; `hasContent` counts them too, or a draft of only these two would be discarded as empty.
+  ⚠️ **`undefined`, never `''`, on submit** — and a locked code is not re-sent at all: it cannot
+  change, so sending it only creates a way to be wrong.
+  🟡 **`tsc` caught me making it worse.** I removed two `: any` annotations to save two lint
+  warnings; they were load-bearing (**TS7006, 6 → 8**). Typed properly instead, so both checks pass.
+  *The cheap fix was not free, and only re-running the other check found it.*
+  🔴 **Keep them visually SEPARATE from the referral block** or the screen will have two "promo
+  code" inputs meaning opposite things — the single most likely way this card confuses a real user.
+  ✅ **`EditProfileScreen` is the edit surface** and already PUTs to the same `user.updateProfile`
+  endpoint (`:532`), so the API side of editing needs nothing further.
+  🔴 **The promo input must LOCK once `own_promo_code` comes back non-null** — the server refuses a
+  change with `immutable`, and a field that accepts input the server will always reject is a trap.
+  ⚠️ **Send nothing rather than `''`** for an untouched field. The server treats `''` as untouched
+  too, so this is belt-and-braces — but an app that sends `''` for a *claimed* code depends entirely
+  on that server-side rule to avoid a unique-collision on an unrelated save.
+- [x] 5. **DONE 2026-08-15. Verify.**
+  ✅ **`tsc` ×4 all at baseline: API 281 · admin 0 · user 6 · driver 28.** Lint: API **230** (pulled
+  back to baseline), user **225 vs a measured 221**.
+  ⚠️ **THE +4 IS A STATED TRADE-OFF, NOT DRIFT.** All four are `(user as any)?.own_promo_code`-style
+  casts — the idiom the two screens already use ~15 times. A hoisted alias would have saved three
+  warnings by making these four lines the odd ones out. **The 221 was measured with `git stash`, not
+  taken from the card, which said 235** — the recorded number was stale.
+  ✅ **API suite 128/128, PROVEN ABLE TO FAIL** (five mutations → 2/1/4/1/1 red).
+  ✅ **i18n EVALUATED, not grepped — 13 keys × 3 locales = 39 renders, 0 problems**, and the checker
+  itself was **proven able to fail** twice: a renamed ru key → `MISSING`, uz text pasted into ru →
+  `UNTRANSLATED`. Both restored byte-identical.
+  🔴 **Evaluating was not optional here: `translations/index.ts` ALREADY carries a pre-existing
+  TS2322 about locale shape mismatch**, so a key missing from ru or en would not have moved the tsc
+  count at all. The compiler could not have caught it.
+  ❌ **The app copy of the rules has NO test** — this project has no RN test runner. Only the API's
+  copy is tested, so if the two ever disagree the tested one is right. Written on both files.
+- [ ] 6. **Owner:** run the migration, deploy, rebuild the **user** app, claim a code and a username,
+  then try to claim the same ones from a second account.
+- [ ] 7. Commit (only after the owner's approval).
 
 ## Files to touch
-- `api,admin,db/apps/api/src/database/migrations/2026081400000?-create-wallet-tables.cjs` **(new)**
-- `api,admin,db/apps/api/src/database/models/WalletAccount.ts` **(new)**
-- `api,admin,db/apps/api/src/database/models/WalletTransaction.ts` **(new)**
-- `api,admin,db/apps/api/src/database/models/index.ts` — register + associate
-- `api,admin,db/apps/api/src/utils/ledger.ts` **(new)** · `utils/ledger.test.ts` **(new)**
-- `api,admin,db/apps/api/src/services/WalletService.ts` **(new)**
-- `api,admin,db/apps/api/src/controllers/WalletController.ts` **(new)** · `routes/wallet.routes.ts` **(new)** · `routes/index.ts`
-- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts` — error keys
-- ❌ **No app changes.** ❌ No admin page (a later card) — this card ships no UI at all.
+- `api,admin,db/apps/api/src/database/migrations/202608150000xx-add-own-promo-code-username.cjs` **(new)**
+- `api,admin,db/apps/api/src/database/models/User.ts`
+- `api,admin,db/apps/api/src/utils/identifiers.ts` **(new)** · `identifiers.test.ts` **(new)**
+- `api,admin,db/apps/api/src/controllers/UserController.ts` · `middleware/validator.ts`
+- `api,admin,db/apps/api/src/i18n/translations/{uz,ru,en}.ts`
+- `user-app-standalone/screens/UserDetailsScreen.tsx` · `translations/{uz,ru,en}.ts`
+- ❌ No driver-app change. ❌ No admin change.
 
 ## Risks / open questions (READ before coding)
-- 🔴 **Concurrency is the whole risk.** Without `FOR UPDATE`, two simultaneous debits both read the
-  old balance and both succeed — the classic double-spend, and the one bug in this card that costs
-  real money. It is also **invisible in single-user testing**, so the lock has to be right by
-  construction rather than by observation.
-- 🔴 **The tiyin ↔ so'm boundary is the new sharp edge.** The ledger is integer tiyin; ride prices
-  are `DECIMAL(10,2)` so'm, which **Sequelize returns as a STRING** (`'100' + 50 === '10050'` —
-  T-077 was bitten by exactly this). **One converter, tested at the boundary, used everywhere.** Two
-  conversion sites is how a balance ends up 100× wrong in one screen and right in another.
-- 🔴 **Idempotency cannot be added later.** A provider that retries — and they all retry — double
-  credits without the unique index. Retrofitting it means reconciling real balances by hand.
-- ⚠️ **A cached balance is a denormalisation and can drift.** It is worth it (every screen reads it),
-  but only with the reconciliation query in step 6 proving it. If they ever disagree, **the entries
-  win** — that is what append-only buys.
-- ✅ **The "half a token" question is now closed by the type change** — `BIGINT` makes tokens and
-  bonuses whole by construction, so nothing has to be enforced at the service boundary. *One of the
-  two open questions on this plan was dissolved by reading the Paynet spec rather than answered.*
-- 🔴 **Paynet's contract lands ON this ledger, and three of its rules are ledger rules:**
-  **①** `GetStatement` must return every transaction in an arbitrary date range, and Paynet
-  reconciles against it **daily, contractually** — the append-only ledger answers this for free.
-  **②** error **77** requires refusing a cancellation when the payer already spent the money —
-  answerable from entries, **impossible on a mutable balance column**.
-  **③** the whole path must answer in **≤ 500 ms** or Paynet may disconnect us, which is a real
-  budget for a row-locked transaction. *See `docs/PAYNET.md`.*
-- ⚠️ **Bonus expiry (T-090) must be expressible without a schema change** — an expiring grant is just
-  a reversing entry with reason `bonus_expired`. Noted now so this card does not paint T-090 into a
-  corner. **But there is no job runner in this project**, which is T-090's problem, not this one's.
-- 🛑 **STILL OPEN, question ⑥ on the card — who may hand-enter a REAL top-up, and is there a
-  ceiling?** *"admin tomonidan kiritib beriladi"* means an admin can create money from nothing.
-  **This does not block T-087** — the `actor_type` / `actor_admin_id` columns record *who* either
-  way — but **T-088 cannot ship without the answer**, so it is worth deciding while this is built.
-- ⚠️ **`users.promo_code` means the REFERRER's code, not the user's own** (T-091). Not touched by
-  this card, but the next one in the batch trips on it.
+- 🔴 **The naming collision is the whole risk of this card.** `promo_code` (theirs) vs
+  `own_promo_code` (mine) will sit side by side in the same model. **Anyone reading `promo_code` and
+  assuming it is the user's own code will pay the wrong person.** Both columns get a comment saying
+  which is which, and T-089 must be pointed at the right one.
+- 🔴 **5 alphanumeric characters ≈ 60 million combinations — guessable.** A promo code must never
+  become an authentication or lookup key for anything but referral credit. ⚠️ And with **T-092**
+  making user IDs start at a known 1 100 001, do not let these become an enumeration pair.
+- ⚠️ **A reserved-word list is far cheaper now than later** — `admin`, `support`, `ubexgo`, `help`
+  must not be claimable. Taking a username back from a real user is a support problem.
+- ⚠️ **Case-insensitive uniqueness needs CITEXT, not `LOWER()` in application code** — the latter
+  loses the race between check and insert.
+- ✅ **ANSWERED 2026-08-15 — can a code or username be CHANGED once chosen?** Owner delegated the
+  decision (*"answer you for best performance and continue"*). **The promo code is PERMANENT once
+  set; the username stays editable.** By the time a code is worth changing it has been given out —
+  freeing it would break every copy in circulation *and* hand the string to whoever claims it next,
+  who would then collect **T-089 referral credit from people who meant to name the first user**. A
+  username carries none of that: nobody is paid against it and it is not handed out to be re-typed.
+  ⚠️ **Re-sending the SAME code is not a change** (`identifiersMatch`, case-folded to agree with
+  CITEXT) — otherwise every profile save after the first would be refused.
+- ✅ **ANSWERED 2026-08-15 BY THE CODE — is `UserDetailsScreen` reachable for EDIT?** **No, and it
+  does not matter: `EditProfileScreen` is the edit surface and already exists.** `UserDetailsScreen`
+  is mounted only in `AuthNavigator` and `ProfileCompletionNavigator` (registration / completion),
+  but `EditProfileScreen:532` PUTs to the **same** `user.updateProfile` endpoint. So a user who
+  skips these fields at sign-up **can** set them later, and this card needs no new surface — step 4
+  simply has to put the fields on **both** screens rather than only the one the plan named.
 - Environment: Avast breaks npm/Gradle/git TLS. `.claude/settings.json` stays out of commits.
 
 ## Session notes
-- **2026-08-14** — planned, approved and steps 1-6 built the same day. The **Paynet documents
-  arrived between the plan and the approval** and changed the money type before a line was written:
-  `DECIMAL(14,2)` so'm → **`BIGINT` integer tiyin**. *Reading the counterparty's spec first is what
-  made that a design decision instead of a migration later.*
-- **Two things the plan asserted without checking, both found while building:**
-  ① *"no precedent for row locking"* — **false**, `OfferPassengerService` already does it.
-  ② The plan worried about `DECIMAL`-as-string; the real trap turned out to be **`BIGINT`-as-string**,
-  which node-postgres returns for the same reason. Same class, different column type.
-- **2026-08-14 (`/next`)** — step 7 is the owner's, so the only thing available was to **de-risk it**:
-  pre-flighted the migration without a database by rendering its generated SQL. **That found a real
-  defect in the idempotency index (Postgres NULL semantics) and fixed it before the migration was
-  ever run.** *A migration that has not been executed is still cheap to correct; the same fix after
-  a double credit is a hand reconciliation of real balances.*
-- **2026-08-14 (migration run 1)** — failed on test3: **`admin_users.id` is a UUID while `users.id`
-  is an INTEGER.** A schema fact no amount of offline SQL rendering would have surfaced — it needed
-  the real database. ⚠️ **The more transferable lesson is the debris**: the failure left a half-built
-  schema and no `SequelizeMeta` row, so the retry would have failed for a different reason. The
-  migration is transactional now; **every other migration in this project still is not.**
-- **Three pre-existing type defects surfaced and were deliberately NOT fixed here** (see Risks):
-  `AuditLogData.userId` and `AuthTokenPayload.userId` are typed `string` while `users.id` is an
-  `INTEGER`. They already produce baseline errors. Boarded rather than folded into a billing card.
+- **2026-08-14** — planned, approved, steps 1-2 done. Grounding confirmed the trap is worse than
+  assumed: the app **enforces "exactly one of phone / id / promo"** for the referrer, so
+  `promo_code` unambiguously holds *somebody else's* code.
+- **A test was wrong before the code was, for the fourth time in this project's journal.** Recorded
+  because the pattern is the point, not the individual slip.
+- **Two things the grounding settled that the plan had listed as unknowns:** there is **no**
+  server-side validation of these fields today, and the **admin panel does not touch them** — so
+  neither needs work.
+- **2026-08-15** — step 3 done. Owner delegated both open answers (*"answer you for best performance
+  and continue"*), and **one of the two turned out not to be an owner question at all**: whether
+  there is an edit surface is a fact about the code, and `EditProfileScreen` — posting to the same
+  endpoint — has been there all along. *The plan had escalated a question it could have read.*
+- **The dangerous line was the one that looked like every other line.** `if (x !== undefined)` is
+  the pattern the other nine fields on this endpoint use, and copying it here would have written
+  `''` into a UNIQUE column — where the failure lands on the **second** user to save an untouched
+  profile, not on whoever typed something wrong. Caught by asking what an empty box means, not by a
+  test.
+- **Lint drifted +4 and was pulled back rather than rebaselined** — all four were my own `any`s
+  (two in a test helper, two mirroring the file's existing `Record<string, any>`). `Record<string,
+  unknown>` and a typed fake `Request` cost nothing and kept the number honest at **230**.
+- **2026-08-15** — steps 4 and 5 done. The card is **code-complete**; only the owner's run and the
+  commit remain.
+- **The step could not be done as written until an unrelated defect was fixed.** Both screens threw
+  the server's status and `errors` array away, so *every* API message on this endpoint was already
+  being replaced by a generic toast. Step 3's four carefully distinguished answers would have
+  arrived as one indistinguishable "profile update failed". *Building the field was the small half.*
+- **`parseValidationErrors` already existed and had never been called** — the seam for exactly this
+  was there all along, like `resultsCount` in T-077. **Check before building.**
+- **A "free" cleanup cost two `tsc` errors.** Dropping two `: any` annotations to save two lint
+  warnings produced TS7006 (6 → 8). Caught only because the other check was re-run afterwards —
+  *one green check is not evidence when a change was made to satisfy a different one.*
 
 ## Resume point (for the next chat)
-**STEPS 1-6 DONE 2026-08-14, code-complete and untested on a device. Only step 7 (owner: run the
-migration, deploy, check the balances read 0) and step 8 (commit) remain.**
+**STEPS 1-5 DONE (1-2 on 2026-08-14, 3-5 on 2026-08-15). THE CARD IS CODE-COMPLETE AND UNTESTED.**
+`tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline. Lint API **230** ·
+user **225** (vs a `git stash`-measured **221**; the +4 are the file's own `(user as any)` idiom).
+**128/128 tests, proven able to fail → 2/1/4/1/1 red.** i18n **evaluated** 13 keys × 3 locales,
+0 problems, checker proven able to fail twice.
 
-**What exists now:** the first money layer in this project — `wallet_accounts` (real / token /
-bonus) and an **append-only** `wallet_transactions` ledger, with `WalletService` as the only way
-value moves and `utils/ledger.ts` holding the arithmetic where it can actually be tested.
+🔴 **THE MIGRATION HAS NOT BEEN RUN** (`20260815000001`). The API now reads and writes two columns
+that **do not exist on test3 yet** — a profile save including either field will fail until it is.
+It is the only unrun migration on the board.
 
-🔴 **The card ships a ledger and NO WAY TO WRITE TO IT, on purpose.** No top-up, no grant, no spend.
-**A balance endpoint that returns 0 for everyone is the correct output.** The write surfaces are
-T-088 (Paynet) / T-089 (referral tokens) / T-090 (the bonus).
+**Only steps 6 (the owner's run) and 7 (commit) remain.** Step 6 in order:
+1. `npm run db:migrate` in `api,admin,db/apps/api`, 2. deploy the API, 3. **rebuild the USER app**,
+4. claim a code and a username, 5. **try to claim the same pair from a second account** (expect a
+message under the field, not a generic toast), 6. **re-open the profile and confirm both loaded
+back** — and that the promo input is now **locked**.
+⚠️ **The edit round trip is the test that matters**, as it was for T-078: a field that saves but
+never loads back is how this fails with nothing erroring.
 
-🔴 **The four decisions that matter, and why each is the way it is:**
-① **Integer tiyin, not decimal so'm** — Paynet types the balance `long` in tiyin. `somToTiyin`
-parses through **BigInt and never multiplies as a float**, because `19.99 * 100` is
-`1998.9999999999998` and would steal a tiyin on every conversion.
-② **Append-only with reversing entries** — the only way "qayta hisob kitob yoki qaytarish" works,
-and the only way Paynet's error 77 can be answered at all.
-③ **Row lock on every write** — without it two simultaneous debits both pass, and that is
-**invisible in single-user testing**. `CHECK (balance >= 0)` is the last line of defence.
-④ **Idempotency from day one** — a partial unique index on `(provider, external_id)`, plus a catch
-on the race. It cannot be retrofitted after a double credit.
+✅ **BOTH BLOCKING QUESTIONS ARE ANSWERED** (see Risks): the promo code is **permanent once set**,
+the username stays editable; and `EditProfileScreen` is the edit surface that already exists.
 
-**Verification:** `tsc` **API 281 · admin 0 · user 6 · driver 28**, all at baseline, zero errors in
-any new file. **74/74 tests (46 new), proven able to fail — 4 mutations → 2/4/1/3 red**, each
-restore verified byte-identical. Lint **230 = baseline, 0 errors**.
-
-⚠️ **The migration has NOT been run** — it is the only unrun one on the board. ✅ **It has been
-pre-flighted without a DB** (loads, `Op` resolves, generated SQL rendered and checked), and that
-pre-flight **caught a NULL-semantics hole in the idempotency index**, now closed by
-`CHECK (external_id IS NULL OR provider IS NOT NULL)`.
-
-🛑 **THE FIRST MIGRATION RUN FAILED ON test3 (2026-08-14) AND LEFT A PARTIAL TABLE BEHIND.**
-`wallet_accounts` was created, `wallet_transactions` was not, and `SequelizeMeta` recorded nothing.
-**Before re-running, the orphaned table must be dropped:**
-
-```sql
-DROP TABLE IF EXISTS wallet_accounts CASCADE;
-```
-
-It is safe: the table was created seconds earlier by the failed run, it is empty, and nothing in
-the schema references it. Then `npx sequelize db:migrate` again — the migration is now atomic, so
-this cannot recur.
-
-**Then, still the owner's:** deploy, and `GET /api/wallet/balances` on a real account → expect
-`{ real: 0, real_som: "0.00", token: 0, bonus: 0 }`. Step 8 is the commit.
+🔴 **The one thing to understand before touching this card:** `users.promo_code` is **the referrer's
+code the user typed in at registration**, not their own. This card adds `own_promo_code` beside it
+and must never merge the two — T-089's payout reads one of them, and picking the wrong one credits
+the wrong person.

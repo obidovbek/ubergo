@@ -36,6 +36,12 @@ export default {
     pastDate: "Дата должна быть в прошлом",
     futureDate: "Дата должна быть в будущем",
     invalidChoice: "Неверный выбор",
+    // T-091 — the user's own promo code / username.
+    exactLength: "{field} должен состоять ровно из {length} символов",
+    lengthRange: "{field} должен содержать от {min} до {max} символов",
+    alphanumeric: "{field} может содержать только латинские буквы и цифры",
+    reserved: "{field} недоступен, выберите другой",
+    immutable: "{field} выбирается один раз и не может быть изменён",
   },
 
   // Field names
@@ -98,7 +104,10 @@ export default {
     password: 'Пароль',
     birth_date: 'Дата рождения',
     gender: 'Пол',
-    
+    // T-091 — see the uz file: this is the user's OWN code, not their referrer's.
+    own_promo_code: 'Ваш промокод',
+    username: 'Имя пользователя',
+
     // Driver fields
     driver_type: 'Тип водителя',
     role: 'Роль',

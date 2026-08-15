@@ -161,6 +161,22 @@ export default {
     successTitle: 'Success!',
     successMessage: 'Registration completed successfully',
     errorUpdate: 'Error updating profile',
+    // T-091 — see the uz file: this is the user's OWN code, not their referrer's.
+    myIdentifiersTitle: 'Your identifiers',
+    myIdentifiersInfo:
+      "This is your own code, the one you give to others. The PROMO field above is the code of whoever invited you.",
+    ownPromoCode: 'My promo code',
+    ownPromoCodePlaceholder: 'AB12X',
+    ownPromoCodeHelper:
+      '5 characters: latin letters and digits. Chosen once and cannot be changed afterwards.',
+    ownPromoCodeLocked: 'Code chosen — it cannot be changed',
+    username: 'Username',
+    usernamePlaceholder: 'bekzod94',
+    usernameHelper: '6 to 30 characters: latin letters and digits. Can be changed later.',
+    errorOwnPromoLength: 'A promo code must be exactly 5 characters',
+    errorUsernameLength: 'A username must be between 6 and 30 characters',
+    errorIdentifierChars: 'Use latin letters and digits only',
+    errorIdentifierReserved: 'That name is not available, choose another one',
     errorIncompleteSaved: 'Your details were saved, but registration is not finished yet. Please check the required fields',
   },
 

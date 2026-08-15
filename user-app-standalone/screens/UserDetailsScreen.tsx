@@ -26,7 +26,8 @@ import { useAuth } from '../hooks/useAuth';
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '../config/api';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
-import { handleBackendError } from '../utils/errorHandler';
+import { ApiError, handleBackendError, parseValidationErrors } from '../utils/errorHandler';
+import { checkOwnPromoCode, checkUsername, PROMO_CODE_LENGTH, USERNAME_MAX_LENGTH } from '../utils/identifiers';
 import { useCountries } from '../hooks/useCountries';
 import type { CountryOption } from '../types/country';
 import { CountryPickerModal } from '../components/CountryPickerModal';
@@ -104,6 +105,14 @@ export const UserDetailsScreen: React.FC = () => {
   // Referrer's phone — NOT the user's own. This field used to display the user's
   // own (locked) number, which told them nothing and blocked the bonus flow.
   const [referralPhone, setReferralPhone] = useState('');
+  /*
+   * T-091 — the user's OWN code and handle.
+   * 🔴 NOT `promoCode` above. That one is the REFERRER's code, typed in to name
+   * whoever invited them; these are the ones this user hands out. Both appear on
+   * this screen, which is why the section below has its own heading and note.
+   */
+  const [ownPromoCode, setOwnPromoCode] = useState('');
+  const [username, setUsername] = useState('');
   const [additionalPhones, setAdditionalPhones] = useState<string[]>([]);
   const [currentPhoneInput, setCurrentPhoneInput] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
@@ -133,6 +142,8 @@ export const UserDetailsScreen: React.FC = () => {
           setUserId(draft.userId || '');
           setPromoCode(draft.promoCode || '');
           setReferralPhone(draft.referralPhone || '');
+          setOwnPromoCode(draft.ownPromoCode || '');
+          setUsername(draft.username || '');
           setAdditionalPhones(draft.additionalPhones || []);
           const parsed = draft.birthDate ? parseDate(draft.birthDate) : null;
           if (parsed) {
@@ -164,6 +175,8 @@ export const UserDetailsScreen: React.FC = () => {
         userId,
         promoCode,
         referralPhone,
+        ownPromoCode,
+        username,
         additionalPhones,
       });
     }, 400);
@@ -180,6 +193,8 @@ export const UserDetailsScreen: React.FC = () => {
     userId,
     promoCode,
     referralPhone,
+    ownPromoCode,
+    username,
     additionalPhones,
   ]);
 
@@ -358,6 +373,17 @@ export const UserDetailsScreen: React.FC = () => {
   const isReferralFieldDisabled = (field: 'phone' | 'id' | 'promo') =>
     referralChoice !== null && referralChoice !== field;
 
+  /*
+   * T-091 — a promo code is permanent once claimed, so the input locks.
+   *
+   * ⚠️ Normally false here: this screen is registration, and a new user has no
+   * code yet. But it is also mounted by `ProfileCompletionNavigator` for someone
+   * who already has an account, and that user may well have claimed one.
+   * 🔴 Read from the server's user, never from the local input — keying it off
+   * `ownPromoCode` would lock the box on the first keystroke.
+   */
+  const isPromoCodeLocked = !!(user as any)?.own_promo_code;
+
   // Focusing a field used to call scrollToEnd(), which jumped to the bottom of
   // the WHOLE form — so a field in the middle (the birth date especially) ended
   // up above the visible area once the keyboard was up. Instead, remember where
@@ -418,6 +444,18 @@ export const UserDetailsScreen: React.FC = () => {
       newErrors.email = t('userDetails.errorEmailInvalid');
     }
 
+    // T-091 — checked here so a bad code is caught before the round trip. The
+    // server enforces the same rules; uniqueness only it can answer.
+    const promoIssue = checkOwnPromoCode(ownPromoCode);
+    if (promoIssue) {
+      newErrors.own_promo_code = t(promoIssue);
+    }
+
+    const usernameIssue = checkUsername(username);
+    if (usernameIssue) {
+      newErrors.username = t(usernameIssue);
+    }
+
     // The referral phone names whoever invited you, so it cannot be your own —
     // same rule (and same message) as the additional-phones field, T-015.
     if (referralPhone.trim()) {
@@ -455,6 +493,13 @@ export const UserDetailsScreen: React.FC = () => {
         promo_code: promoCode || undefined,
         referral_id: userId || undefined,
         referral_phone: referralPhone || undefined,
+        /*
+         * T-091 — the user's OWN pair, and the three above are the referrer's.
+         * `undefined`, never `''`: both columns are UNIQUE, so an empty string
+         * is a value two users would collide on.
+         */
+        own_promo_code: isPromoCodeLocked ? undefined : ownPromoCode.trim() || undefined,
+        username: username.trim() || undefined,
       };
 
       console.log('Submitting profile data:', JSON.stringify(profileData, null, 2));
@@ -473,7 +518,14 @@ export const UserDetailsScreen: React.FC = () => {
       console.log('Profile update response:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to update profile');
+        /*
+         * 🔴 Was `new Error(data.message)`, which discarded the status and the
+         * `errors` array. `handleBackendError` switches on the status, so with
+         * none it fell through to the generic toast and the server's own
+         * explanation never reached the user. T-091 needs "that code is already
+         * taken" to arrive, and to land on the field it is about.
+         */
+        throw new ApiError(response.status, data, 'Failed to update profile');
       }
 
       // Trust the server's own verdict on completeness. Forcing `profile_complete: true`
@@ -507,6 +559,15 @@ export const UserDetailsScreen: React.FC = () => {
       console.log('Registration complete, navigating to main app...');
     } catch (error) {
       console.error('Profile update error:', error);
+      // Field-named errors go under their inputs. The server sends them already
+      // translated and keyed by column, which is how `errors` is keyed here.
+      const fieldErrors = parseValidationErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors((previous: Record<string, string | undefined>) => ({
+          ...previous,
+          ...fieldErrors,
+        }));
+      }
       handleBackendError(error, {
         t,
         defaultMessage: t('userDetails.errorUpdate'),
@@ -798,6 +859,79 @@ export const UserDetailsScreen: React.FC = () => {
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
+          {/*
+            ── T-091: the user's OWN identifiers ──────────────────────────────
+            🔴 Deliberately placed here, far below the referral block, and given
+            a heading and a note that say whose code this is. The `PROMO:` input
+            up there means the OPPOSITE — the code of whoever invited this user.
+            Two promo boxes on one form is the likeliest way this card confuses
+            somebody, so they are separated by distance AND by wording.
+          */}
+          <View style={styles.identifierSection}>
+            <Text style={styles.identifierTitle}>{t('userDetails.myIdentifiersTitle')}</Text>
+            <Text style={styles.identifierInfo}>{t('userDetails.myIdentifiersInfo')}</Text>
+
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('ownPromoCode')}>
+              <Text style={styles.label}>{t('userDetails.ownPromoCode')}</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  isPromoCodeLocked && styles.inputDisabled,
+                  errors.own_promo_code && styles.inputError,
+                ]}
+                placeholder={t('userDetails.ownPromoCodePlaceholder')}
+                placeholderTextColor={placeholderColor}
+                value={ownPromoCode}
+                onChangeText={(text) => {
+                  setOwnPromoCode(text);
+                  if (errors.own_promo_code) {
+                    setErrors({ ...errors, own_promo_code: undefined });
+                  }
+                }}
+                // Breaks the length rule at the keyboard rather than reporting
+                // it afterwards. The server still enforces it.
+                maxLength={PROMO_CODE_LENGTH}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                // Locked once claimed — the server refuses a change, and an
+                // input that accepts what is always rejected is a trap.
+                editable={!isLoading && !isPromoCodeLocked}
+                onFocus={scrollToField('ownPromoCode')}
+              />
+              <Text style={styles.helperText}>
+                {isPromoCodeLocked
+                  ? t('userDetails.ownPromoCodeLocked')
+                  : t('userDetails.ownPromoCodeHelper')}
+              </Text>
+              {!!errors.own_promo_code && (
+                <Text style={styles.errorText}>{errors.own_promo_code}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup} onLayout={rememberFieldOffset('username')}>
+              <Text style={styles.label}>{t('userDetails.username')}</Text>
+              <TextInput
+                style={[styles.input, errors.username && styles.inputError]}
+                placeholder={t('userDetails.usernamePlaceholder')}
+                placeholderTextColor={placeholderColor}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  if (errors.username) {
+                    setErrors({ ...errors, username: undefined });
+                  }
+                }}
+                maxLength={USERNAME_MAX_LENGTH}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+                onFocus={scrollToField('username')}
+              />
+              <Text style={styles.helperText}>{t('userDetails.usernameHelper')}</Text>
+              {!!errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+            </View>
+          </View>
+
           {/* Additional Contact */}
           <View style={styles.inputGroup} onLayout={rememberFieldOffset('additionalPhone')}>
             <Text style={styles.label}>
@@ -988,6 +1122,31 @@ const styles = StyleSheet.create({
   inputDisabled: {
     backgroundColor: '#F3F4F6',
     color: '#9CA3AF',
+  },
+  /*
+   * T-091 — the user's own code and handle, boxed off from everything else.
+   * The separation is the point: the referral PROMO field above means the
+   * opposite thing, and nothing but layout and wording keeps them apart.
+   */
+  identifierSection: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2.5),
+  },
+  identifierTitle: {
+    ...theme.typography.body1,
+    color: theme.palette.text.primary,
+    fontWeight: '700',
+    marginBottom: theme.spacing(0.5),
+  },
+  identifierInfo: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
+    lineHeight: 18,
+    marginBottom: theme.spacing(2),
   },
   helperText: {
     ...theme.typography.caption,

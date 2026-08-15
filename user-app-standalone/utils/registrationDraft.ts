@@ -31,6 +31,13 @@ export interface RegistrationDraft {
   promoCode?: string;
   /** Referrer's phone (OR-010) — not the registering user's own number. */
   referralPhone?: string;
+  /**
+   * T-091 — the user's OWN code and handle.
+   * ⚠️ `promoCode` above is the REFERRER's code. These two are the user's own,
+   * and the draft has to keep them apart for the same reason the form does.
+   */
+  ownPromoCode?: string;
+  username?: string;
   additionalPhones?: string[];
   at: number;
 }
@@ -50,6 +57,8 @@ const hasContent = (draft: RegistrationDraftInput): boolean =>
     draft.userId?.trim() ||
     draft.promoCode?.trim() ||
     draft.referralPhone?.trim() ||
+    draft.ownPromoCode?.trim() ||
+    draft.username?.trim() ||
     (draft.additionalPhones && draft.additionalPhones.length > 0)
   );
 

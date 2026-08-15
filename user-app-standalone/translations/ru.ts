@@ -161,6 +161,22 @@ export default {
     successTitle: 'Успешно!',
     successMessage: 'Регистрация завершена успешно',
     errorUpdate: 'Ошибка обновления профиля',
+    // T-091 — see the uz file: this is the user's OWN code, not their referrer's.
+    myIdentifiersTitle: 'Ваши идентификаторы',
+    myIdentifiersInfo:
+      'Это ваш собственный код, который вы даёте другим. Поле PROMO выше — код того, кто пригласил вас.',
+    ownPromoCode: 'Мой промокод',
+    ownPromoCodePlaceholder: 'AB12X',
+    ownPromoCodeHelper:
+      '5 символов: латинские буквы и цифры. Выбирается один раз и потом не меняется.',
+    ownPromoCodeLocked: 'Код выбран и не может быть изменён',
+    username: 'Имя пользователя',
+    usernamePlaceholder: 'bekzod94',
+    usernameHelper: 'От 6 до 30 символов: латинские буквы и цифры. Можно изменить позже.',
+    errorOwnPromoLength: 'Промокод должен состоять ровно из 5 символов',
+    errorUsernameLength: 'Имя пользователя должно содержать от 6 до 30 символов',
+    errorIdentifierChars: 'Используйте только латинские буквы и цифры',
+    errorIdentifierReserved: 'Это имя недоступно, выберите другое',
     errorIncompleteSaved: 'Данные сохранены, но регистрация ещё не завершена. Проверьте обязательные поля',
   },
 

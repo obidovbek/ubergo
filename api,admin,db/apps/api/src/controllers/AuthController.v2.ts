@@ -553,6 +553,11 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
         'id', 'phone_e164', 'email', 'display_name', 'is_verified', 'role', 'status',
         'first_name', 'last_name', 'father_name', 'gender', 'birth_date',
         'additional_phones', 'profile_complete', 'created_at', 'updated_at',
+        // T-091 — the user's OWN code and handle. The app locks the promo input
+        // once a code exists, so it has to arrive on the cold-start reply too;
+        // reading it only from the update response would leave the field
+        // editable until the next save (OR-006's shape, on a permanent column).
+        'own_promo_code', 'username',
       ],
     });
 
@@ -578,6 +583,8 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
         gender: user.gender,
         birth_date: user.birth_date,
         additional_phones: user.additional_phones,
+        own_promo_code: user.own_promo_code ?? null,
+        username: user.username ?? null,
         profile_complete: user.profile_complete ?? false,
         created_at: user.created_at,
         updated_at: user.updated_at,

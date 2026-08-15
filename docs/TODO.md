@@ -210,8 +210,14 @@
   **74/74 (46 new), PROVEN ABLE TO FAIL — 4 mutations → 2 / 4 / 1 / 3 red**, every restore verified
   byte-identical. `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline with
   zero errors in any new file. Lint **230 = baseline, 0 errors**.
-  🛑 **Only step 7 (owner: run the migration, deploy, confirm the three balances read 0) and step 8
-  (commit) remain.** ❌ No app change. Card 1 of 7
+  ✅ **MIGRATED, DEPLOYED AND VERIFIED ON test3 2026-08-14** — balances
+  `{"real":0,"real_som":"0.00","token":0,"bonus":0}`, statement `{"count":0,"rows":[]}`, bad kind
+  **400**, unauthenticated **401**. Reading created nothing (accounts open on first *movement*), so
+  the ledger is correctly still empty.
+  🔴 **The migration FAILED on its first run** — `admin_users.id` is a **UUID** while `users.id` is
+  an **INTEGER** — and left a partial schema with no `SequelizeMeta` row. Column retyped, and **the
+  migration made atomic** so a failure can no longer leave debris. → **T-095**.
+  🛑 **Only step 8 (commit) remains.** ❌ No app change. Card 1 of 7
   (T-087…T-093); **the spine — T-088/T-089/T-090 all write into it.**
   🔴 **REVISED 2026-08-14 by the Paynet contract:** the ledger stores **integer TIYIN (`BIGINT`)**,
   not `DECIMAL(14,2)` so'm — Paynet types the balance `long` in tiyin (`"amount": 100000` = **1 000
@@ -2097,6 +2103,17 @@ masofalar'`). **2 of the 6 were on
   and is there a ceiling.
   🛑 **Depends on T-087.** ❌ No app change.
 
+- [ ] T-096 (P3) 🔌 **[noticed during T-087's test3 verification 2026-08-14] The API's port is
+  declared in the manifest but never given to the app.**
+  🔴 `printenv PORT` in the API pod prints **nothing** — so the app listens on `config`'s built-in
+  default, while `api-deployment.yaml` hardcodes **4000** in `containerPort` and in *both* health
+  probes, and `api-service.yaml` targets 4000. **Nothing connects the two.**
+  ⚠️ It works today only because the default happens to equal 4000. If that default is ever changed
+  in code, the pod would report itself healthy on one port while the service routed to another —
+  and the failure would look like a networking problem, not a config one.
+  ✅ Cheap fix: set `PORT` in the ConfigMap next to the other env, or derive the manifest's port
+  from it. ❌ No migration, no app change.
+
 - [ ] T-095 (P2) 🛡️ **[found when T-087's migration failed 2026-08-14] Migrations are not atomic,
   and a half-applied one is worse than a failed one.**
   🔴 **T-087's migration failed halfway on test3** and left `wallet_accounts` created,
@@ -2196,6 +2213,50 @@ masofalar'`). **2 of the 6 were on
   ⚠️ **Both need server-side validation** *and* app validation that agrees with it — T-063's rule:
   the server must never refuse what the app accepted.
   ✅ **Independent of the ledger — this card can ship before T-087.** ❌ Needs a migration.
+  ✅ **APPROVED, AND STEPS 1-5 DONE (1-2 on 2026-08-14, 3-5 on 2026-08-15) → `docs/PLAN.md`.
+  CODE-COMPLETE AND UNTESTED.**
+  ✅ **Two new columns, `own_promo_code` and `username`, both CITEXT and both nullable** — and
+  `promo_code` **untouched**, with a comment on each saying which is which.
+  ✅ **Four outcomes kept apart:** *wrong format* · *already taken* · *cannot be changed* · *taken in
+  the race*. The first three are a field-named **422** (the status the apps read field errors from);
+  the last is the unique index reporting **409** through the existing handler.
+  🔴 **The promo code is PERMANENT once set, the username is not** — owner delegated the decision
+  2026-08-15. A code that has been given out cannot be freed without handing the string to whoever
+  claims it next, **who would then collect T-089's referral credit from people who meant to name the
+  first user.**
+  🔴 **`if (x !== undefined)` — the pattern the other nine fields on this endpoint use — would have
+  been a real bug here.** It writes `''` into a **UNIQUE** column, so the failure lands on the
+  *second* user to save an untouched profile, not on anyone who typed something wrong. Both screens
+  PUT the whole profile, so that is the normal path.
+  ✅ **The second "owner question" was answerable from the code:** `UserDetailsScreen` is
+  registration-only, but **`EditProfileScreen` already posts to the same endpoint**, so the edit
+  surface exists and step 4 covers both screens.
+  ✅ **A boxed "your identifiers" section on BOTH `EditProfileScreen` and `UserDetailsScreen`**,
+  separated from the referral block by distance **and** by wording, with the promo input **locked**
+  once a code exists — the server refuses a change, and an input that accepts what is always
+  rejected is a trap.
+  🔴 **THE APP THREW AWAY EVERY SERVER ERROR ON THIS ENDPOINT, and had to be fixed first.** Both
+  screens did `throw new Error(data.message)`, losing the status that `handleBackendError` switches
+  on — so every message became the same generic toast. Step 3's four distinct answers would have
+  been invisible. Now an `ApiError`, with `parseValidationErrors` (**which already existed and had
+  never been called**) putting each error under its field.
+  🔴 **`EditProfileScreen` re-populates the form in THREE places** and all three had to load the new
+  fields — miss one and a claimed code shows as an empty box the user re-types and the server then
+  refuses. T-078's save-but-never-load failure, with a lock on it.
+  **128/128 (26 new), PROVEN ABLE TO FAIL — 5 mutations → 2/1/4/1/1 red**, every file restored
+  byte-identical. **i18n EVALUATED — 13 keys × 3 locales, 0 problems, the checker itself proven able
+  to fail twice** (a renamed key, and uz text pasted into ru). 🔴 Evaluating was **not optional**:
+  `translations/index.ts` already carries a TS2322 about locale shape, so a missing ru/en key would
+  not have moved the `tsc` count at all.
+  `tsc` API **281** · admin **0** · user **6** · driver **28**, all at baseline. Lint API **230** ·
+  user **225** vs a `git stash`-measured **221** (+4 = the two screens' own `(user as any)` idiom;
+  ⚠️ the card's recorded 235 was stale).
+  ❌ **The app copy of the rules has no test** — no RN test runner exists; only the API copy is
+  tested, and that is written on both files.
+  🛑 **THE MIGRATION HAS NOT BEEN RUN** — the API now reads two columns that do not exist on test3.
+  🛑 **Remaining: step 6 (owner: migrate → deploy → rebuild the USER app → claim a code and a
+  username → try the same pair from a second account → re-open the profile and check both loaded
+  back and the promo input is locked) · step 7 (commit).**
 
 - [ ] T-092 (P2) 🔢 **[OWNER 2026-08-14, 2:05 PM] User IDs start at 1 100 001.**
   🔴 **`users.id` is `INTEGER autoIncrement` from 1**, and it is an FK target in at least

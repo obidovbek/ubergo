@@ -174,6 +174,25 @@ export default {
     successTitle: "Muvaffaqiyatli!",
     successMessage: "Registratsiya muvaffaqiyatli yakunlandi",
     errorUpdate: "Profil yangilashda xatolik yuz berdi",
+    // ── T-091: the user's OWN code and username ─────────────────────────────
+    // 🔴 `ownPromoCode` is the code the user GIVES OUT. The `PROMO:` field in
+    // the referral block above is somebody else's. The wording has to keep them
+    // apart — they are two inputs on one screen meaning opposite things.
+    myIdentifiersTitle: "Sizning identifikatorlaringiz",
+    myIdentifiersInfo:
+      "Bu — boshqalarga beradigan o'z kodingiz. Yuqoridagi PROMO maydoni esa sizni taklif qilgan odamniki.",
+    ownPromoCode: "Mening promo kodim",
+    ownPromoCodePlaceholder: "AB12X",
+    ownPromoCodeHelper:
+      "5 ta belgi: lotin harflari va raqamlar. Bir marta tanlanadi, keyin o'zgartirib bo'lmaydi.",
+    ownPromoCodeLocked: "Kod tanlangan va o'zgartirilmaydi",
+    username: "Foydalanuvchi nomi",
+    usernamePlaceholder: "bekzod94",
+    usernameHelper: "6-30 ta belgi: lotin harflari va raqamlar. Keyinchalik o'zgartirsa bo'ladi.",
+    errorOwnPromoLength: "Promo kod aynan 5 ta belgidan iborat bo'lishi kerak",
+    errorUsernameLength: "Foydalanuvchi nomi 6 tadan 30 tagacha belgidan iborat bo'lishi kerak",
+    errorIdentifierChars: "Faqat lotin harflari va raqamlardan foydalaning",
+    errorIdentifierReserved: "Bu nom band, boshqasini tanlang",
     errorIncompleteSaved:
       "Ma'lumotlar saqlandi, lekin registratsiya hali tugallanmagan. Iltimos, majburiy maydonlarni tekshiring",
   },

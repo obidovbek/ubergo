@@ -37,6 +37,12 @@ export default {
     pastDate: "Sana o'tmishda bo'lishi kerak",
     futureDate: "Sana kelajakda bo'lishi kerak",
     invalidChoice: "Noto'g'ri tanlov",
+    // T-091 — the user's own promo code / username.
+    exactLength: "{field} aynan {length} ta belgidan iborat bo'lishi kerak",
+    lengthRange: "{field} {min} tadan {max} tagacha belgidan iborat bo'lishi kerak",
+    alphanumeric: "{field} faqat lotin harflari va raqamlardan iborat bo'lishi kerak",
+    reserved: "{field} band, boshqasini tanlang",
+    immutable: "{field} bir marta tanlanadi va keyin o'zgartirilmaydi",
   },
 
   // Field names
@@ -108,7 +114,12 @@ export default {
     password: 'Parol',
     birth_date: "Tug'ilgan sana",
     gender: 'Jins',
-    
+    // T-091. `own_promo_code` is the code the user HANDS OUT; `promo_code` is
+    // whoever invited THEM. The label has to say whose code it is, or the two
+    // fields read identically on screen.
+    own_promo_code: 'Sizning promo kodingiz',
+    username: 'Foydalanuvchi nomi',
+
     // Driver fields
     driver_type: 'Haydovchi turi',
     role: 'Rol',

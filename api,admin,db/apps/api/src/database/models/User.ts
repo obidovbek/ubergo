@@ -21,10 +21,25 @@ export interface UserAttributes {
   gender?: 'male' | 'female' | 'other' | null;
   birth_date?: string | null;
   additional_phones?: string[] | null;
+  /**
+   * 🔴 THE REFERRER'S promo code — the one this user TYPED IN at registration to
+   * say who invited them. **NOT their own code.** One of three alternatives
+   * (`promo_code` / `referral_id` / `referral_phone`), exactly one of which the
+   * app allows to be filled. See migration 20260802000002.
+   * ⚠️ The user's OWN code is `own_promo_code`. Reading this one when you mean
+   * that one credits the wrong person (T-089).
+   */
   promo_code?: string | null;
   referral_id?: string | null;
   /** Referrer's phone (OR-010). Not the user's own number. */
   referral_phone?: string | null;
+  /**
+   * 🔴 THE CODE THIS USER OWNS and gives to others (T-091). 5 chars,
+   * alphanumeric, unique, case-insensitive. **The opposite of `promo_code`.**
+   */
+  own_promo_code?: string | null;
+  /** The handle this user chose (T-091). ≥6 chars, alphanumeric, unique. */
+  username?: string | null;
   profile_complete: boolean;
   /** The person's own UI language — what push notifications must be written in. */
   language?: string | null;
@@ -34,7 +49,7 @@ export interface UserAttributes {
 
 // Creation attributes (optional fields during creation)
 export interface UserCreationAttributes
-  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'referral_phone' | 'profile_complete' | 'language' | 'created_at' | 'updated_at'> {}
+  extends Optional<UserAttributes, 'phone_e164' | 'email' | 'password_hash' | 'is_verified' | 'status' | 'display_name' | 'country_code' | 'role' | 'first_name' | 'last_name' | 'father_name' | 'gender' | 'birth_date' | 'additional_phones' | 'promo_code' | 'referral_id' | 'referral_phone' | 'own_promo_code' | 'username' | 'profile_complete' | 'language' | 'created_at' | 'updated_at'> {}
 
 // User model class
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -56,6 +71,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare promo_code?: string | null;
   declare referral_id?: string | null;
   declare referral_phone?: string | null;
+  declare own_promo_code?: string | null;
+  declare username?: string | null;
   declare profile_complete: boolean;
   declare language?: string | null;
   declare readonly created_at: Date;
@@ -172,6 +189,19 @@ export function initUser(sequelize: Sequelize) {
       referral_phone: {
         type: DataTypes.STRING(20),
         allowNull: true
+      },
+      // CITEXT so 'ABC12' and 'abc12' are the same code — these are read off a
+      // screen and re-typed. Case-insensitivity lives in the column because
+      // doing it with LOWER() in code loses the race between check and insert.
+      own_promo_code: {
+        type: DataTypes.CITEXT,
+        allowNull: true,
+        unique: true
+      },
+      username: {
+        type: DataTypes.CITEXT,
+        allowNull: true,
+        unique: true
       },
       profile_complete: {
         type: DataTypes.BOOLEAN,

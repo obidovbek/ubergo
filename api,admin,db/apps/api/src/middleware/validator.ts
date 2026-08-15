@@ -5,7 +5,17 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { getValidationError, formatValidationErrors, type ValidationErrorDetail } from '../i18n/translator.js';
+import type { Language } from '../i18n/types.js';
 import { isValidEmail, isValidPhone } from '../utils/validation.js';
+import {
+  IdentifierError,
+  isIdentifierProvided,
+  normalisePromoCode,
+  normaliseUsername,
+  PROMO_CODE_LENGTH,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+} from '../utils/identifiers.js';
 
 export class ValidationError extends Error {
   public statusCode: number;
@@ -199,6 +209,107 @@ export const vehicleValidation = validateRequest([
 export const taxiLicenseValidation = validateRequest([
   { field: 'license_number', type: 'required' },
 ]);
+
+/*
+ * ── T-091: the user's OWN promo code and username ─────────────────────────
+ *
+ * 🔴 `own_promo_code` is the code this user HANDS OUT. It is not `promo_code`,
+ * which holds the code they typed in to name whoever invited THEM. The two sit
+ * side by side on the same model and mean opposite things; T-089 pays referral
+ * credit against one of them, so confusing them credits the wrong person.
+ *
+ * The rules themselves live in `utils/identifiers.ts` because this file cannot
+ * be reached from a service and the rules must be executable by `npm test`.
+ * What lives HERE is the translation from an `IdentifierError` into the
+ * field-named, localised shape the apps already know how to render — the same
+ * shape every other validator in this file produces.
+ */
+
+/**
+ * Which localised template answers each rule the identifiers can break.
+ *
+ * ⚠️ `wrong_length` is deliberately answered with a RANGE for a username and an
+ * EXACT count for a promo code, rather than "too short" / "too long". The util
+ * throws one code for both ends, and re-deriving which end was hit would put
+ * the length rule in two places — the second copy free to drift from the first.
+ */
+const identifierMessage = (
+  error: IdentifierError
+): { type: string; params?: Record<string, unknown> } => {
+  switch (error.code) {
+    case 'required':
+      return { type: 'required' };
+    case 'invalid_characters':
+      return { type: 'alphanumeric' };
+    case 'reserved':
+      return { type: 'reserved' };
+    case 'wrong_length':
+    default:
+      return error.field === 'own_promo_code'
+        ? { type: 'exactLength', params: { length: PROMO_CODE_LENGTH } }
+        : {
+            type: 'lengthRange',
+            params: { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }
+          };
+  }
+};
+
+/**
+ * Build the standard 422 out of identifier failures.
+ *
+ * Exported because the controller raises the same shape for the two rules it
+ * alone can check — "somebody already has this" and "you cannot change this" —
+ * both of which need a database and therefore cannot live in middleware.
+ */
+export const identifierValidationError = (
+  errors: Array<{ field: string; type: string; params?: Record<string, unknown> }>,
+  language: Language
+): ValidationError => new ValidationError(formatValidationErrors(errors, language));
+
+/**
+ * Validate — and NORMALISE — the two identifiers on the profile PUT.
+ *
+ * 🔴 This middleware writes the trimmed value back into `req.body`, on purpose.
+ * Length is measured after trimming (`'AB1  '` is a 3-character code, not 5), so
+ * if the controller stored the raw value it would store something this validator
+ * never approved. One place trims; everything downstream reads the result.
+ *
+ * ⚠️ Absent / null / '' are skipped — see `isIdentifierProvided`. A profile save
+ * that does not mention these fields must not touch them.
+ */
+export const profileIdentifiersValidation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  const language = getLanguageFromHeaders(req.headers['accept-language']);
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const failures: IdentifierError[] = [];
+
+  const check = (field: 'own_promo_code' | 'username', normalise: (raw: unknown) => string) => {
+    if (!isIdentifierProvided(body[field])) return;
+    try {
+      body[field] = normalise(body[field]);
+    } catch (error) {
+      if (!(error instanceof IdentifierError)) throw error;
+      failures.push(error);
+    }
+  };
+
+  check('own_promo_code', normalisePromoCode);
+  check('username', normaliseUsername);
+
+  // Both are reported at once. Fixing one field, saving, and being told about
+  // the other is the round trip T-061 was raised to stop.
+  if (failures.length > 0) {
+    throw identifierValidationError(
+      failures.map((error) => ({ field: error.field, ...identifierMessage(error) })),
+      language
+    );
+  }
+
+  next();
+};
 
 /**
  * Country validation rules
