@@ -370,6 +370,15 @@ constant rather than a shape baked through the code.**
   conflict). **Extraction is a lossy transform — corroborate across two modes before acting.**
 - ✅ **The re-read still paid: `203 = transaction not found` exists**, and `Check`/`CancelTransaction`
   had been answering `302 "client not found"` for an unknown payment. Two different facts; fixed.
+- ✅ **2026-08-16 (4) — END OF DAY. The money path RAN on test3 and the double-charge guarantee is
+  proven.** 7 of 8 checks passed first time; the failure was a real defect (empty payer name) that
+  **only a real database could expose** — my 19 unit tests fed the masker a number directly and
+  never exercised the lookup. Fixed. **Lint 230/0 · tsc 281 · tests 238/238.**
+- 🔴 **The day's honest summary: I acted on a RENDERING instead of a MEASUREMENT four times** — the
+  "unreadable" documents, the phantom error-code conflict, blaming the owner's nginx, and the hop
+  count. The owner caught three of them. **One diagnostic log line settled in a single deploy what
+  two theories could not.** *Measure the thing before proposing a fix to it; a config file, a PDF
+  rendering and a code comment are all claims, not observations.*
 
 ## Resume point (for the next chat)
 🔴 **READ THIS FIRST: BOTH `paynet/` DOCUMENTS ARE FULLY READABLE.** `pdftotext -enc UTF-8 -layout`
@@ -377,19 +386,52 @@ for the PDF; the `.docx` is a zip of XML. **Write output to a UTF-8 FILE** — t
 and printing Cyrillic throws an error that looks like document corruption. *A claim that they were
 unreadable stood in `PAYNET.md` for two days and sent four unnecessary questions to Paynet.*
 
-**STEPS 1-8 DONE 2026-08-16. FIVE OF SIX METHODS ARE WRITTEN AND THE CODE IS COMPLETE.
-🔴 NEXT IS STEP 8a: THE MONEY PATH HAS NEVER EXECUTED, AND THE OWNER IS DEPLOYING TO TEST3 SO IT
-CAN BE PROVEN THROUGH THE LIVE ENDPOINT.**
+✅ **STEPS 1-8a DONE 2026-08-16. THE CODE IS COMPLETE AND THE MONEY PATH IS VERIFIED ON test3.**
+**Everything committed and pushed (`890878c`); working tree clean. Lint 230/0 · tsc 281 · tests
+238/238.**
 
-**Waiting on the owner to deploy.** Then, against **user `1100001`** on **test3**, prove in order:
-① a top-up credits and returns `providerTrnId` · ② **the same `transactionId` twice credits once**
-(201) · ③ `CheckTransaction` 1 → 2 after cancel · ④ **cancel after spending → 77**.
-⚠️ **`wallet_transactions` is append-only: this leaves two permanent rows on a real account.**
+**What is PROVEN, against the real test3 database (not reasoned):** a credit lands · **the same
+`transactionId` sent twice credits ONCE and returns the same `providerTrnId`** · `CheckTransaction`
+reports 1 then 2 after a cancel · a cancel restores the balance exactly · an unknown transaction
+answers **203** · `GetStatement` lists the payment **exactly once** · net effect zero.
 
-**Env needed on test3 before the probe:** `PAYNET_USERNAME`, `PAYNET_PASSWORD` (any value for the
-test — Paynet's real one is not needed yet), and **`PAYNET_ALLOWED_IPS` set to whatever address the
-probe comes from**, or every call answers 601. ⚠️ **Unset `PAYNET_ALLOWED_IPS` means Paynet's real
-ranges only** — correct for production, useless for testing.
+## 🛑 THREE THINGS BLOCK GO-LIVE — none of them is application code
+
+1. 🔴 **T-100 — THE API CANNOT SEE ANY CALLER'S IP.** Every request arrives as `10.42.0.1`; a forged
+   header vanishes too, so something between the edge nginx and Traefik **overwrites** rather than
+   appends. **No `trust proxy` value can fix this** (`2` was tried and failed) — the fix is at
+   whatever listens on `192.168.10.119:80`. Until then the contractual allow-list can admit
+   **nobody or everybody**, and every OTP/auth rate limiter is broken too. **P1, and it is infra:
+   rule 4 says ask before touching.**
+2. 🛑 **`ChangePassword` is a deliberate stub** (step 6). Paynet rotates the password on first
+   connect; with nothing persisting it, a pod restart reverts to the env value and **locks us out of
+   our own contract.** Needs a store, and it must not be a config file baked into the image.
+3. 🛑 **Paynet's credentials** — requested by the owner 2026-08-16, not yet received. ⚠️ **When they
+   arrive they go into the server env ONLY** — never a commit, a doc, or the chat.
+
+## What to do next, in order
+- **T-100 first** — it blocks the endpoint being usable at all, and it is somebody else's access.
+- Then **step 6** (`ChangePassword` persistence), then the owner's deploy + Paynet hand-off (step 9)
+  and the commit of any remaining work (step 10).
+- ⚠️ **Also still open, unrelated to Paynet:** ask Paynet for the **value** of the maximum payment
+  (code `415` proves a ceiling exists) and confirm `GetInformation` may return a **masked phone**
+  rather than a legal name.
+
+## 🔴 Traps for whoever picks this up
+- **DO NOT write a tiyin converter or a balance guard** — `utils/ledger.ts` has them
+  (`somToTiyin`, `applyEntry`, `canDebit`, `reverseOf`), and `canDebit`'s comment already names
+  Paynet's error 77. **Read that file before writing any arithmetic.**
+- **DO NOT re-implement idempotency** — the DB does it: partial unique index on
+  `(provider, external_id)` + a CHECK. **201 = catch the unique violation.**
+- **The payer's number is `users.phone_e164`, NOT the `phones` table.** `phones` holds *additional*
+  contacts and is empty for most accounts — that mistake shipped a blank agent screen today.
+- **Both `paynet/` documents are fully readable.** `pdftotext -enc UTF-8` (add `-layout` only for
+  prose — it **misaligns tables**); a `.docx` is a zip of XML. **Write output to a UTF-8 FILE**,
+  because this console is cp1252 and printing Cyrillic throws an error that looks like corruption.
+- **The two documents AGREE on every error code.** A "conflict" reported here on 2026-08-16 was a
+  table-extraction artefact and has been retracted.
+- ⚠️ **The deploy script starts with `kubectl delete namespace`.** Fine on test3 (the PVs held
+  through two runs), **catastrophic if ever pointed at production.** Worth its own card.
 
 **Numbers, all at baseline:** `tsc` API **281** · lint **230, 0 errors** · **`npm test` 214/214, up
 from 128.** Every deviation during the session (a 282, a 290, a lint 232) was **mine and was fixed,

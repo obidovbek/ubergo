@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-08-16 (2) — the Paynet service, and four times I trusted a rendering instead of measuring
+
+- **Task:** T-088 — the Paynet web service. Planned, approved, built to five of six methods, and
+  **the money path verified against the real test3 database.**
+- ✅ **THE DOUBLE-CHARGE GUARANTEE IS PROVEN, which was the entire point.** Sending the same
+  `transactionId` twice credits **once** and returns the same `providerTrnId`; cancel restores the
+  balance; an unknown transaction answers 203; `GetStatement` lists it exactly once; net effect on
+  the account is zero. **7 of 8 checks passed on the first run.**
+- ✅ **Most of the card was already built by T-087, and checking first turned a big step into a
+  small one.** `utils/ledger.ts` already had exact tiyin arithmetic, the double-spend guard, and
+  `canDebit` — *with a comment naming Paynet's error 77*. And `wallet_transactions` already enforced
+  idempotency **in the database** (partial unique index + a CHECK closing the NULL hole), so error
+  201 falls out of a caught unique violation rather than application locking. *The inverse of this
+  project's usual failure: the sibling work existed and was better than what I would have written.*
+- 🔴 **THE DEFECT ONLY A REAL DATABASE COULD FIND: `GetInformation` returned an EMPTY payer name.**
+  A Paynet agent would have had a **blank field** and nothing to read back before taking cash.
+  Cause: I read the `phones` table (`label: 'primary'`), but the registration number lives on
+  **`users.phone_e164`** — `phones` holds *additional* contacts and is empty for most accounts.
+  **19 unit tests passed because they fed the masker a number directly; not one asked whether the
+  lookup finds one.** Now reads the right column, falls back, and never returns empty.
+- 🔴 **T-100 — THE BIGGEST FINDING, AND IT IS NOT IN THE CODE. The API cannot see any caller's real
+  IP.** Every request arrives as `10.42.0.1`. That makes T-088's source-IP allow-list — a
+  **contractual** obligation — able to admit **nobody or everybody**, and it silently breaks every
+  OTP/auth rate limiter too, which key on the same value. **Found only by probing the deployed
+  endpoint; nothing failed loudly.** Boarded P1; the fix is at the proxy layer, not in the app.
+- 🔴 **FOUR TIMES TODAY I ACTED ON A RENDERING INSTEAD OF A MEASUREMENT, and the owner corrected me
+  three of those times.** This is the day's real lesson.
+  ① A note claimed the `paynet/` documents were unreadable. **They extract in seconds** — the PDF
+  needs one flag, the `.docx` is a zip of XML. The real obstacle was a cp1252 console throwing
+  `UnicodeEncodeError` on Cyrillic, which *looks* like a corrupt file. **Four questions went to
+  Paynet that the documents already answered.**
+  ② I then reported the two documents "disagreed" on error numbers, called it the most urgent
+  question to ask, and built a switch for it. **It was `pdftotext -layout` shifting a wrapped table
+  row.** The tell was in my own output — `77 = "completed successfully"` — and I passed over it.
+  ③ I blamed the owner's nginx for the IP problem. **Their config was already correct**; asking to
+  see it before recommending an edit is the only thing that prevented a pointless change to a shared
+  edge proxy.
+  ④ I then blamed the hop count and shipped `trust proxy: 2`. **Also wrong** — the address is
+  *absent*, not mis-indexed. One diagnostic log line settled in a single deploy what two theories
+  could not. **It should have been the first move, not the fourth.**
+- **Decisions:** owner chose to verify on **test3** rather than a throwaway local DB, against **user
+  `1100001`**, accepting that the append-only ledger keeps a permanent credit+reversal pair. When
+  the HTTP route proved untestable (T-100), owner chose to **test the service directly** instead of
+  waiting — which is what got the guarantee proven today.
+- **Problems / still open:** 🛑 **T-100 blocks go-live.** 🛑 `ChangePassword` is a stub — a rotated
+  password would be lost on restart, locking us out of the contract. 🛑 Paynet credentials
+  outstanding (requested). ⚠️ **The deploy script runs `kubectl delete namespace`** — survivable on
+  test3, catastrophic if ever pointed at production. Data survived both runs (PVs held).
+- **Verification:** API **lint 230, 0 errors** · **`tsc` 281** · **`npm test` 238/238** (from 128 at
+  the start of the day). Every deviation during the session — a 282, a 290, a lint 232, an 11-error
+  spike — **was mine and was fixed, never rebaselined.**
+- **Next:** T-100 (needs whoever administers `192.168.10.119`), then `ChangePassword` persistence,
+  then Paynet's credentials → go-live. The two app rebuilds are still outstanding.
+- **Commits:** `58a2688` · `c397745` · `0f393f5` · `298da0a` · `890878c`.
+
+---
+
 ## 2026-08-16 — two cards closed on a real server, and one card I should never have opened
 
 - **Task:** `/start-day` into "finish what's open". Two cards closed and **verified on test3**, one

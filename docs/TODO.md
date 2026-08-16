@@ -63,19 +63,32 @@
 
 ## 🔥 Now (working on it)
 
-> 🔴 **2026-08-16 — *Now* HOLDS ONE ACTIVE CARD: T-088, the Paynet web service** (plan written,
-> **awaiting approval**). ✅ T-092 closed and verified the same day. Everything listed under T-088
-> is code-complete and waiting on the owner's device, per the note above — so the "max 2 in *Now*"
-> rule is not really being broken, though the section reads as if it were.
+> 🔴 **END OF 2026-08-16 — *Now* HOLDS TWO CARDS: T-088 (Paynet) and T-100 (the IP problem that
+> blocks it).** T-088's code is **complete and verified against the real test3 database**; what is
+> left is **not application code** — T-100, `ChangePassword` persistence, and Paynet's credentials.
+> ✅ T-092 and T-091 both closed and verified the same day.
+> ⚠️ Everything else listed here is code-complete and waiting on the owner's device, per the note
+> above — so the "max 2 in *Now*" rule is not really being broken, though the section reads as if
+> it were.
 > 🧹 **AND THIS FILE HAS A PROBLEM OF ITS OWN:** lines 9-63 are **duplicated verbatim** further down
 > (the whole 2026-08-11/12 preamble *and* a second `## 🔥 Now` header). Noticed 2026-08-15 while
 > boarding T-092; left alone rather than swept mid-card. → **T-097** in *Later*.
 
-- [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 2, 3, 4 + WIRING DONE 2026-08-16. The endpoint is LIVE at
-  `/api/paynet`, refuses correctly, and does NOT yet move money** → `docs/PLAN.md`.
-  ✅ **Proven reachable over real HTTP**, not merely compiled: no credentials → 412 · wrong password
-  → 412 · valid call → 100 (not implemented) · unknown method → 603 · bad jsonrpc → 603 · **forged
-  `X-Forwarded-For` ignored**. ✅ `tsc` **281** · lint **230/0** · tests **214/214** (from 128).
+- [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 1-8a DONE 2026-08-16. FIVE OF SIX METHODS BUILT AND THE MONEY
+  PATH VERIFIED AGAINST THE REAL test3 DATABASE** → `docs/PLAN.md`.
+  ✅ **PROVEN, not reasoned:** a credit lands · 🔴 **the same `transactionId` twice credits ONCE and
+  returns the same `providerTrnId`** · check reports 1 → 2 after cancel · cancel restores the balance
+  exactly · unknown txn → **203** · `GetStatement` lists it **once** · **net effect zero.**
+  ✅ **Also proven on the live server:** no credentials → 412 · wrong password → 412 · unknown method
+  → 603 · bad jsonrpc → 603 · **a forged `X-Forwarded-For: 213.230.106.112` is ignored.**
+  ✅ `tsc` **281** · lint **230/0 errors** · tests **238/238** (from 128 at the start of the day).
+  🔴 **A DEFECT ONLY A REAL DATABASE COULD FIND: `GetInformation` returned an EMPTY payer name**, so
+  an agent would have had a blank screen and nothing to confirm the payer by before taking cash.
+  I read the `phones` table; **the registration number is `users.phone_e164`** (`phones` holds
+  *additional* contacts and is empty for most accounts). **19 unit tests passed because they fed the
+  masker a number directly and never exercised the lookup.** Fixed + regression test.
+  🛑 **WHAT REMAINS IS NOT APPLICATION CODE:** **T-100** (below) · `ChangePassword` persistence
+  (step 6) · Paynet's credentials (requested 2026-08-16).
   🔴 **Found while building it and boarded as T-099: `auditLogger.ts:59` trusts a forgeable header.**
   Copying that nearby helper — the natural move — **would have made this allow-list decorative.**
   🛑 **STEP 5 IS THE REAL RISK: the six handlers, the first code that moves money.** Both governing
@@ -101,79 +114,12 @@
   ⚠️ **There is no Paynet sandbox in these documents.** The first real exercise of this code is an
   agent taking real cash from a real person.
 
-- [x] T-092 (P1) 🔢 ✅ **DONE AND VERIFIED ON TEST PRODUCTION 2026-08-16. A REAL USER HOLDS ID
-  `1100001`.** [OWNER 2026-08-14, 2:05 PM] New user IDs start at 1 100 001.
-  ✅ **The evidence, read back from inside the API pod:**
-  `{ last_value: '1100001', is_called: true, max_id: 1100001, users: '4' }`. The migration printed
-  `was last_value=22 … → now last_value=1100000`; a registration consumed it; the next gets
-  `1100002`. **`max_id` matching a live row is what makes this proof rather than a reserved number.**
-  ✅ **Both risks the card existed for are closed:** the **off-by-one** (the literal is 1 100 000,
-  because `setval(N,true)` makes the next value N+1 — a real person came back 1100001, so it landed
-  right) and **backwards movement** (`GREATEST`, never `RESTART WITH`).
-  ✅ **Same-database question closed too** — the read used the API's own `DB_*` env, so migration and
-  running app are provably on one database.
-  ⚠️ **`users: '4'` while ids had run to 22** — this database really does delete users, so the
-  `last_value` term of the floor was not theoretical.
-  ✅ **Committed `cc9eba7`.** ⚠️ Carries **both** T-091 and T-092; the history does not separate them.
-  ⚠️ **Still never executed anywhere, and worth saying if this is cited as fully proven:** the second
-  registration (`1100002` is an *inference* from `is_called: true`), the re-run guard, the
-  deleted-user floor, and `down`. 🔴 **Never test `down` on a live database** — after a deletion it
-  can re-issue a departed user's id.
-  ✅ **APPROVED and STEPS 1-3 DONE 2026-08-15** → `docs/PLAN.md`. Owner settled **billing question
-  ④** as *new users only, existing ids untouched*.
-  ✅ **One file, one statement:** `20260815000002-set-users-id-sequence-origin.cjs` →
-  `setval(pg_get_serial_sequence('users','id'), GREATEST(MAX(id), last_value, 1100000), true)`.
-  ✅ **The sweep found NOTHING to change in any of the four projects** — no `maxLength` on an id
-  input, no `padStart` on an id, no length or range rule, no width-constrained id box.
-  🔴 **NO TRANSACTION WRAPPER, AND THAT IS T-095's STATED EXCEPTION, NOT AN OVERSIGHT** — **`setval`
-  is not undone by a rollback in Postgres**, so a wrapper would promise a guarantee it cannot give,
-  and one statement has no half-applied state to protect. Written into the file's header so nobody
-  "fixes" it.
-  ✅ `tsc` API **281** · admin **0** · user **6** · driver **28** — all at baseline. Lint API **230**,
-  0 errors. Tests **128/128**. **Every number unmoved**, which is the check: this card adds one
-  `.cjs` and no TypeScript.
-  ⚠️ **A `.cjs` is invisible to both `tsc` and `eslint . --ext .ts`**, so `node --check` + a
-  `require()` of the exports is the only thing in the toolchain that looks at it at all.
-  ✅ **The run, the registration and the commit are ALL DONE (2026-08-16)** — `npx sequelize
-  db:migrate` on the test production server applied **both** `20260815000001` (T-091) and
-  `20260815000002`, no error, and a real user then registered as `1100001`. **Card closed.**
-  🟡 **The card's own recommendation had to be corrected — see below.**
-  ✅ **Grounded 2026-08-15:** `users.id` is `INTEGER DEFAULT nextval('users_id_seq')` with the
-  sequence **`OWNED BY users.id`** (`20250125000001:298-305`), so `pg_get_serial_sequence` resolves
-  it and the name never has to be hard-coded. **That same migration already ends with the exact
-  `setval` idiom this card needs (line 391) — mirror it, don't invent one.**
-  🔴 **Existing users are NOT renumbered** — `users.id` is an FK target in `phones`,
-  `user_identities`, `deletion_requests`, `audit_logs`, `push_tokens`, `driver_profiles` and more.
-  Only where the *next* id starts changes.
-  🔴 **THE CARD'S OWN RECOMMENDED ONE-LINER WAS WRONG.** `ALTER SEQUENCE … RESTART WITH 1100001`
-  moves the sequence **backwards** if it ever runs again once ids past the origin exist (`db:reset`,
-  undo+redo, a restore) — the next insert then reissues a **live primary key**, or silently reuses a
-  **deleted** user's id, after which every `audit_logs` row naming it points at a different person.
-  The plan uses `setval(seq, GREATEST(MAX(id), last_value, 1100000), true)`, which can only move
-  forwards. *A card written last week is a hypothesis, not an instruction — the T-035 lesson.*
-  🔴 **And the literal is `1 100 000`, not `1 100 001`** — `setval(N, true)` makes the **next** value
-  `N+1`. **That off-by-one is the entire risk of the card**, and nothing catches it but a real
-  registration.
-  ✅ **Nothing in the apps needs changing:** the referral-id input has **no `maxLength`**
-  (`UserDetailsScreen:768-781`) and a user's own id is already rendered (`ProfileScreen:172-175`).
-  ✅ `driver_profiles.id` has its own sequence and is **out of scope**. ✅ No seeder inserts users.
-  ⚠️ **This makes IDs enumerable from a known origin** — which is precisely why T-088's masked-phone
-  lookup has to be rate-limited, and why T-091's 5-char promo code must never become a lookup key.
-  ⚠️ **Today's users keep ids like `7`**, which a Paynet operator cannot tell from a typo — that is
-  **T-088's** problem; a separate display `account_number` is a different card if the owner wants it.
-  ❌ **No `*.test.ts`** — the card adds no pure TypeScript, only SQL, and there is no DB-backed test
-  harness. The owner's read-back plus one real registration is what stands in for it.
-  ❌ Needs a migration. ✅ Tiny, and independent of everything else in the batch.
-
-- [x] T-091 (P2) 🆔 ✅ **DONE AND CLOSED 2026-08-16 — the owner ran the migration, deployed, rebuilt
-  the user app, claimed a code and a username, and committed.** Plan intact → `docs/PLAN-T091.md`.
-  ✅ **Committed `5b97803` + `cc9eba7`; working tree clean.** ✅ **Migration `20260815000001-add-own-
-  promo-code-username` applied on the test production server 2026-08-16** (0.064s, no error), in the
-  same `db:migrate` that carried T-092's.
-  ✅ **This unblocks T-089's promo-code half** — `own_promo_code` now exists, so a referral code can
-  finally be resolved to the user who **owns** it. (T-089 itself stays blocked on questions ① ②.)
-  🔴 **`users.promo_code` still means the REFERRER's code, the opposite of `own_promo_code`.**
-  Reading the wrong one pays the wrong person.
+> ✅ **T-092 and T-091 both CLOSED 2026-08-16 and moved to *Done*** (bottom of this file). Their full
+> detail lives there and in `docs/PLAN-T092.md` / `docs/PLAN-T091.md` — not repeated here.
+> ⚠️ **Carried forward from T-092/T-091 because later cards depend on it:**
+> **Today's users keep ids like `7`**, which a Paynet operator cannot tell from a typo — that is
+> **T-088's** lookup problem. **`users.promo_code` means the REFERRER's code, the OPPOSITE of
+> `own_promo_code`** — reading the wrong one pays the wrong person (T-089).
 
 > 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
 > what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
@@ -3182,6 +3128,17 @@ masofalar'`). **2 of the 6 were on
   existed.
 
 ## ✅ Done (newest on top)
+
+- [x] T-092 **New user IDs start at 1 100 001** — 2026-08-16. ✅ **VERIFIED ON test3: a real user
+  holds id `1100001`** (`max_id: 1100001`, `last_value: 1100001`, `is_called: true`). The card's own
+  proposed one-liner had **two independent defects** — it would have started users at 1100002 *and*
+  moved the sequence backwards on any re-run. Committed `cc9eba7`. → `docs/PLAN-T092.md`
+  ⚠️ Never executed: the re-run guard, the deleted-user floor, and `down` (**never run `down` on a
+  live database** — after a deletion it can re-issue a departed user's id).
+
+- [x] T-091 **The user's own promo code + username** — 2026-08-16. Migration applied on test3,
+  deployed, user app rebuilt, a code and a username claimed. Committed `5b97803` + `cc9eba7`.
+  → `docs/PLAN-T091.md`
 
 > ⚠️ **2026-08-11: the nine cards below are CODE-COMPLETE but NOT device-tested.** The owner batched
 > testing deliberately. They stay listed here so the board is honest about what is built; if a device

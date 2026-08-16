@@ -28,17 +28,28 @@ flowchart TD
     API --> AUTH[Auth<br/>OTP + JWT + SSO]
     API --> PUSH[Push<br/>Firebase FCM]
     API --> SMS[SMS OTP<br/>Eskiz]
-    API --> PAY[Payments<br/>cash / card]
     API --> RATE[Ratings]
+
+    %% Money — T-087 ledger + T-088 Paynet. NOTE THE ARROW DIRECTION:
+    %% Paynet CALLS US. There is no outbound "charge a card" API in the contract.
+    PN([🏧 Paynet terminals<br/>agent takes cash]) -->|JSON-RPC 2.0| API
+    API --> LEDGER[(Wallet ledger<br/>append-only, tiyin)]
+    API -.-> PAYME[Payme / Click<br/>unspecified]
 
     classDef done fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef wip fill:#fff9c4,stroke:#f9a825,color:#5d4037
     classDef planned fill:#eeeeee,stroke:#9e9e9e,color:#616161,stroke-dasharray:5 5
+    classDef blocked fill:#ffcdd2,stroke:#c62828,color:#b71c1c
 
-    class API,DB,ADM,PUSH,SMS done
+    class API,DB,ADM,PUSH,SMS,LEDGER done
     class UA,DA,AUTH wip
-    class PAY,RATE planned
+    class PN blocked
+    class PAYME,RATE planned
 ```
+
+> 🔴 **`PN` is red because of T-100, not because the code is unfinished.** The five implemented
+> methods are verified against the real database; but the caller's IP never survives the proxy
+> chain, so the **contractual** source-IP allow-list cannot work. **That blocks go-live.**
 
 ## 3. Component status (what is going on)
 
@@ -60,7 +71,11 @@ flowchart TD
 | Driver app | Auth, profile, vehicle, offers list | 🔨 in progress | `driver-app-standalone/` |
 | — Offer wizard (4 steps) | Create/edit offer UI | 🔨 **built & wired** (3900 lines, registered in `MainNavigator`), not device-verified — was wrongly marked "planned" until 2026-08-02 | `driver-app-standalone/screens/OfferWizardScreen.tsx` |
 | User app | Auth, browse & join offers | 🔨 in progress | `user-app-standalone/` |
-| Payments | Cash / card | ⬜ planned | — |
+| Wallet ledger | Three accounts per user (`real` money in **integer tiyin**, `token`, `bonus`); every movement is one row | ✅ **built 2026-08-14 (T-087), exercised for the first time 2026-08-16 by T-088.** 🔴 **APPEND-ONLY — nothing is ever updated or deleted; a correction is a new negated row citing the original.** That is what makes Paynet's error 77 answerable at all. `balance` on the account is a **cache**; the entries are the truth. **Idempotency is enforced by the DATABASE** — partial unique index on `(provider, external_id)` plus a CHECK closing the NULL hole | `.../models/Wallet{Account,Transaction}.ts` · `services/WalletService.ts` · `utils/ledger.ts` |
+| Paynet top-ups | A customer hands cash to a Paynet agent; **Paynet's terminal calls us** | 🔨 **five of six methods built and VERIFIED against the real test3 database 2026-08-16 (T-088).** ✅ Proven: a repeated `transactionId` credits **once**; cancel restores the balance; unknown txn → 203; statement lists it once. 🔴 **`PAYNET_CALLS_US` — there is no outbound charge API in this contract.** 🛑 `ChangePassword` is a deliberate stub (nowhere to persist a rotated secret yet). 🛑 Blocked on **T-100** (IP allow-list) and on Paynet's credentials | `.../services/PaynetService.ts` · `controllers/PaynetController.ts` · `routes/paynet.routes.ts` · `middleware/paynet{Access,Auth}.ts` · `utils/paynet/` · **contract in `docs/PAYNET.md`** |
+| — Source-IP gate | Refuses anything not from Paynet's two documented ranges | 🔴 **CODE CORRECT, DEPLOYMENT BROKEN (T-100).** It correctly refused a **forged** `X-Forwarded-For: 213.230.106.112` on the live server. But every request reaches the app as `10.42.0.1` — the caller's address is overwritten between the edge nginx and Traefik — so the list can admit **nobody or everybody**, and no `trust proxy` value can fix it | `middleware/paynetAccess.ts` · `utils/paynet/ipAllowList.ts` |
+| Payme / Click top-ups | Other top-up providers | ⬜ **planned, and NOT covered by the Paynet documents** — different contracts (T-093) | — |
+| Ride payment | Cash / card at the end of a ride | 🔨 **flags, not an enum** — `payment_cash` + `payment_card` (both selectable) + a separate `paid_by_friend` (T-031, migration applied). ⚠️ Ride prices are `DECIMAL(10,2)` **so'm**, while the wallet is integer **tiyin** — the two conventions meet in exactly one place (`utils/ledger.ts`) | `PassengerOffer` model · `CreatePassengerOfferScreen` |
 | Ratings | Rate driver/passenger after trip | ⬜ planned | — |
 
 ## 4. Folder map
