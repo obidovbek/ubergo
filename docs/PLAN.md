@@ -224,7 +224,25 @@ constant rather than a shape baked through the code.**
   to match, the suite passed, and that pass meant nothing. **Caught by checking the file rather than
   trusting the green**, then redone with the editor, where it failed correctly. *This is the T-010
   near-miss exactly: a confident green on unmutated code proves the opposite of what it looks like.*
-- [ ] 8a. 🔴 **THE MONEY PATH HAS NEVER EXECUTED — owner chose to prove it on test3.**
+- [x] 8a. ✅ **DONE 2026-08-16 — THE MONEY PATH EXECUTED ON test3 AND THE DOUBLE-CHARGE GUARANTEE
+  IS PROVEN.** Run via a throwaway script calling `PaynetService` directly inside the pod (the HTTP
+  route is untestable — see T-100), then deleted.
+  ✅ **7 of 8 checks passed first time**, against the real database:
+  ① credit of 100 000 tiyin landed · ② 🔴 **the SAME `transactionId` sent again credited NOTHING and
+  returned the same `providerTrnId`** · ③ `CheckTransaction` 1 → ④ cancel → balance back to 0 →
+  ⑤ state 2 · ⑥ unknown txn answers **203** · ⑦ `GetStatement` lists it **exactly once** ·
+  ⑧ **net effect on the account is zero.**
+  🔴 **ONE REAL DEFECT CAUGHT, AND ONLY A REAL DATABASE COULD HAVE CAUGHT IT: `name` came back
+  EMPTY** — the agent's screen would have been blank, leaving them nothing to confirm the payer by
+  before taking cash.
+  **Cause: I read the wrong table.** `Phone` (`label: 'primary'`) returned nothing; the registration
+  number lives on **`users.phone_e164`**. The `phones` table holds *additional* contacts and is empty
+  for most accounts. **The model's own header — "Manages primary/trusted/extra phone numbers" — is
+  what misled me.** *19 unit tests passed because they fed the masker a number directly; none asked
+  whether the lookup finds one.*
+  ✅ **Fixed:** read `users.phone_e164`, fall back to a `phones` row, and **never return an empty
+  string** — a blank field reads as a broken screen, so a user with no number now yields a marker.
+  Regression test added pinning that the empty result stays falsy so the fallback keeps firing.
   **Owner's decisions 2026-08-16:** run it **on test3** (declining a throwaway local DB), against
   **user `1100001`**, by **deploying first and probing the live endpoint**.
   ⚠️ **STATED BEFORE DOING IT: `wallet_transactions` is APPEND-ONLY.** A successful test leaves

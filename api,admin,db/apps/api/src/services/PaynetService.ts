@@ -39,6 +39,16 @@ const PAYNET_ACTOR = { type: 'provider' as const };
 
 const PROVIDER = 'paynet';
 
+/**
+ * Shown to the agent when the payer has no phone number on file.
+ *
+ * ⚠️ Deliberately NOT an empty string. Blank reads as a broken screen; this
+ * reads as "the account is real, we just have nothing to confirm it by", which
+ * is the true state and lets the agent decide whether to proceed.
+ * ⚠️ Latin, not Cyrillic/Uzbek — the terminal's encoding is not ours to assume.
+ */
+const NO_PHONE_ON_FILE = 'UbexGo';
+
 export class PaynetService {
   /**
    * Resolve the payer named by a request's `fields`, or throw the documented
@@ -72,10 +82,27 @@ export class PaynetService {
   static async getInformation(fields: unknown): Promise<Record<string, unknown>> {
     const user = await PaynetService.resolveUser(fields);
 
-    // The primary number is the one the customer knows themselves by.
-    const phone = await Phone.findOne({
-      where: { user_id: user.id, label: 'primary' }
-    });
+    /*
+     * 🔴 THE NUMBER LIVES ON `users.phone_e164`, NOT IN THE `phones` TABLE.
+     *
+     * This read was originally `Phone.findOne({ label: 'primary' })` and it
+     * returned NOTHING for a real registered user — proven on test3, where the
+     * agent's field came back EMPTY. `phones` holds the *additional* contacts a
+     * user may add (the "up to 5" feature) and is empty for most accounts; the
+     * registration number is a column on `users`.
+     *
+     * The model's own header comment says "Manages primary/trusted/extra phone
+     * numbers", which is what misled me. ⚠️ The `phones` row is still consulted
+     * as a fallback, because a user MAY have a row labelled 'primary' there.
+     */
+    let e164 = user.phone_e164 ?? null;
+
+    if (!e164) {
+      const fallback = await Phone.findOne({
+        where: { user_id: user.id, label: 'primary' }
+      });
+      e164 = fallback?.e164 ?? null;
+    }
 
     const balances = await WalletService.getBalances(user.id);
 
@@ -94,7 +121,13 @@ export class PaynetService {
         // We send a MASKED PHONE instead of a name: it is what the owner asked
         // for, and it is what an agent needs to read back ("is this you?")
         // without disclosing a stranger's identity. Confirm with Paynet.
-        name: maskPhoneForAgent(phone?.e164),
+        //
+        // 🔴 NEVER RETURN AN EMPTY STRING HERE. A blank field on the agent's
+        // screen means they take cash with nothing to confirm the payer by, and
+        // it looks like a display glitch rather than missing data. A user with
+        // no number on file is rare but real (proven on test3), so it gets an
+        // explicit marker instead.
+        name: maskPhoneForAgent(e164) || NO_PHONE_ON_FILE,
         // "остаток текущего депозита Плательщика" — the payer's balance, in
         // tiyin, which is the unit the whole contract uses (§6).
         balance: balances.real

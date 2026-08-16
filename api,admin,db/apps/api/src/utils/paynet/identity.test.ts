@@ -46,10 +46,24 @@ describe('maskPhoneForAgent', () => {
   });
 
   it('returns empty for a missing number rather than the word "null"', () => {
+    // ⚠️ The CALLER must turn this into something an agent can read —
+    // `PaynetService.getInformation` substitutes a marker, because a blank
+    // field on a payment terminal looks like a broken screen rather than
+    // "no number on file". Proven on test3: a real user had no phone row and
+    // the agent's field came back empty.
     assert.equal(maskPhoneForAgent(null), '');
     assert.equal(maskPhoneForAgent(undefined), '');
     assert.equal(maskPhoneForAgent(''), '');
     assert.equal(maskPhoneForAgent('   '), '');
+  });
+
+  it('🔴 an empty result is falsy, so `|| fallback` works at the call site', () => {
+    // Pins the contract getInformation relies on. If this ever returned '   '
+    // or 'null' instead, the fallback would silently stop firing and the blank
+    // would come back.
+    assert.equal(Boolean(maskPhoneForAgent(null)), false);
+    assert.equal(Boolean(maskPhoneForAgent('')), false);
+    assert.ok(Boolean(maskPhoneForAgent('+998901234585')), 'a real number stays truthy');
   });
 
   it('never emits more than four consecutive subscriber digits', () => {
