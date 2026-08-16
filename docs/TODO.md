@@ -2252,9 +2252,24 @@ masofalar'`). **2 of the 6 were on
   `trust proxy: 1`.** Express counts back one position from the end of the chain, landing on
   **Traefik's** address (`10.42.0.1`) instead of the caller's. **The address was arriving all along;
   the app was reading the wrong element.**
-  ✅ **FIXED IN CODE 2026-08-16: `trust proxy` 1 → 2**, with the real chain and the failure mode
-  written into the comment (the old comment asserted "exactly one proxy hop", which is what hid it).
-  `tsc` 281 · tests 237/237. ⚠️ **Needs a redeploy to take effect.**
+  🔴 **`trust proxy` 1 → 2 WAS DEPLOYED AND DID NOT FIX IT. THE HOP-COUNT THEORY WAS WRONG.**
+  ✅ **MEASURED 2026-08-16 (the thing that should have been done first):** a diagnostic log line
+  printing the raw headers gives, for **every** request including one carrying a forged value —
+  `req.ip=10.42.0.1 · socket=::ffff:10.42.0.193 · x-forwarded-for="10.42.0.1" · x-real-ip="10.42.0.1"`
+  🔴 **`X-Forwarded-For` contains ONE entry and it is the cluster gateway.** The caller's address is
+  not truncated or mis-indexed — it is **absent**. **No value of `trust proxy` can recover an
+  address that never arrives**, so this is not an application bug and cannot be fixed in the app.
+  🔴 **A forged `X-Forwarded-For: 203.0.113.99` did NOT appear either** → something between the edge
+  nginx and the pod **overwrites** the header rather than appending. That is why nothing is
+  currently spoofable *and* why nothing is knowable.
+  🟢 **The edge nginx is correct** (`$proxy_add_x_forwarded_for`); `socket` is Traefik's pod IP
+  (`10.42.0.193`). **The loss happens between `proxy_pass http://192.168.10.119` and Traefik.**
+  ⚠️ **NEXT STEP IS INFRA, NOT CODE (rule 4 — ask before touching):** identify what listens on
+  `192.168.10.119:80`. If it is another nginx/LB, it must preserve/append XFF; if it is Traefik
+  behind a k8s Service, `externalTrafficPolicy: Local` and Traefik's own `forwardedHeaders`
+  trustedIPs are the usual causes.
+  ⚠️ **Revert `trust proxy` to a correct value once the chain is known** — it is currently `2` on a
+  chain that delivers one entry, which is simply a different wrong number.
   ⚠️ **NEVER `trust proxy: true`** — trusts any forged header, converting a dead control into a
   defeatable one. ⚠️ **If a proxy is added/removed, this number must change with it; nothing fails
   loudly when it is wrong.**

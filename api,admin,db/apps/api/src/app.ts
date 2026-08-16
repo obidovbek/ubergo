@@ -35,25 +35,29 @@ const app: Application = express();
  * reached the app as `10.42.0.1` — the cluster gateway — so `req.ip` never held
  * a real caller.
  *
- * The real chain is TWO hops:
- *   caller → nginx (fstu.uz edge, terminates TLS, appends X-Forwarded-For)
- *          → Traefik ingress
- *          → this app
+ * 🔴 RAISING THIS NUMBER DOES NOT HELP, AND `2` WAS TRIED AND FAILED. Measured
+ * on test3 2026-08-16, every request arrives as:
+ *   x-forwarded-for="10.42.0.1"   (ONE entry — the cluster gateway)
+ *   socket=::ffff:10.42.0.193     (Traefik's pod)
+ * The caller's address is not mis-indexed, it is ABSENT: something between the
+ * edge nginx (`proxy_pass http://192.168.10.119`) and Traefik OVERWRITES the
+ * header instead of appending to it. A forged value sent by a caller vanishes
+ * the same way. **No value of `trust proxy` can recover an address that never
+ * arrives** — the fix is in that infrastructure layer (T-100), not here.
  *
- * The edge nginx is correct (`X-Forwarded-For $proxy_add_x_forwarded_for`), so
- * the caller's address DOES arrive — `trust proxy: 1` simply counted back one
- * position from the end and landed on Traefik instead of the client.
+ * Left at 1 deliberately: it is the correct value for a single trustworthy hop,
+ * and it is the safe value while the chain is unknown.
  *
  * ⚠️ NEVER SET THIS TO `true`. That trusts any X-Forwarded-For a caller invents,
- * which turns a control that is merely broken into one anybody can defeat —
+ * which would turn a control that is merely broken into one anybody can defeat —
  * and this value gates T-088's Paynet allow-list (a contractual obligation) as
  * well as every OTP/auth rate limiter (middleware/rateLimiter.ts).
  *
- * ⚠️ If a proxy is ever added or removed from the chain, THIS NUMBER MUST CHANGE
- * WITH IT. Nothing fails loudly when it is wrong — that is what hid this for so
- * long. Verify with: send a request, then read the address the T-088 gate logs.
+ * ⚠️ When T-100 fixes the chain, set this to the REAL hop count and verify by
+ * reading the address the T-088 gate logs. Nothing fails loudly when it is
+ * wrong — that is what hid this for months.
  */
-app.set('trust proxy', 2);
+app.set('trust proxy', 1);
 
 // Initialize Firebase Admin SDK
 initializeFirebase();
