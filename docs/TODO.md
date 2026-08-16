@@ -63,6 +63,75 @@
 
 ## 🔥 Now (working on it)
 
+> 🔴 **THE ONLY CARD IN *Now* THAT NEEDS CLAUDE WORK IS T-092.** Everything under it is
+> code-complete and waiting on the owner's device, per the note above — so the "max 2 in *Now*"
+> rule is not really being broken, though the section reads as if it were.
+> 🧹 **AND THIS FILE HAS A PROBLEM OF ITS OWN:** lines 9-63 are **duplicated verbatim** further down
+> (the whole 2026-08-11/12 preamble *and* a second `## 🔥 Now` header). Noticed 2026-08-15 while
+> boarding T-092; left alone rather than swept mid-card. → **T-097** in *Later*.
+
+- [ ] T-092 (P1) 🔢 **[OWNER 2026-08-14, 2:05 PM] New user IDs start at 1 100 001.**
+  ✅ **APPROVED and STEPS 1-3 DONE 2026-08-15 — code-complete, and the SQL has never run** →
+  `docs/PLAN.md`. Owner settled **billing question ④** as *new users only, existing ids untouched*.
+  ✅ **One file, one statement:** `20260815000002-set-users-id-sequence-origin.cjs` →
+  `setval(pg_get_serial_sequence('users','id'), GREATEST(MAX(id), last_value, 1100000), true)`.
+  ✅ **The sweep found NOTHING to change in any of the four projects** — no `maxLength` on an id
+  input, no `padStart` on an id, no length or range rule, no width-constrained id box.
+  🔴 **NO TRANSACTION WRAPPER, AND THAT IS T-095's STATED EXCEPTION, NOT AN OVERSIGHT** — **`setval`
+  is not undone by a rollback in Postgres**, so a wrapper would promise a guarantee it cannot give,
+  and one statement has no half-applied state to protect. Written into the file's header so nobody
+  "fixes" it.
+  ✅ `tsc` API **281** · admin **0** · user **6** · driver **28** — all at baseline. Lint API **230**,
+  0 errors. Tests **128/128**. **Every number unmoved**, which is the check: this card adds one
+  `.cjs` and no TypeScript.
+  ⚠️ **A `.cjs` is invisible to both `tsc` and `eslint . --ext .ts`**, so `node --check` + a
+  `require()` of the exports is the only thing in the toolchain that looks at it at all.
+  🛑 **Only the owner's run and the commit remain:** `npm run db:migrate` (⚠️ **also carries T-091's
+  `20260815000001` if unapplied**), then register a user → expect **1100001**, and a second →
+  **1100002**, which is what proves the *sequence* moved rather than the row.
+  ⚠️ **An offer is open with the owner:** a local PostgreSQL 16 is running on :5432 and could
+  **execute** all four behaviours on a throwaway DB first; it needs a password. Otherwise the
+  owner's run is the first execution.
+  🟡 **The card's own recommendation had to be corrected — see below.**
+  ✅ **Grounded 2026-08-15:** `users.id` is `INTEGER DEFAULT nextval('users_id_seq')` with the
+  sequence **`OWNED BY users.id`** (`20250125000001:298-305`), so `pg_get_serial_sequence` resolves
+  it and the name never has to be hard-coded. **That same migration already ends with the exact
+  `setval` idiom this card needs (line 391) — mirror it, don't invent one.**
+  🔴 **Existing users are NOT renumbered** — `users.id` is an FK target in `phones`,
+  `user_identities`, `deletion_requests`, `audit_logs`, `push_tokens`, `driver_profiles` and more.
+  Only where the *next* id starts changes.
+  🔴 **THE CARD'S OWN RECOMMENDED ONE-LINER WAS WRONG.** `ALTER SEQUENCE … RESTART WITH 1100001`
+  moves the sequence **backwards** if it ever runs again once ids past the origin exist (`db:reset`,
+  undo+redo, a restore) — the next insert then reissues a **live primary key**, or silently reuses a
+  **deleted** user's id, after which every `audit_logs` row naming it points at a different person.
+  The plan uses `setval(seq, GREATEST(MAX(id), last_value, 1100000), true)`, which can only move
+  forwards. *A card written last week is a hypothesis, not an instruction — the T-035 lesson.*
+  🔴 **And the literal is `1 100 000`, not `1 100 001`** — `setval(N, true)` makes the **next** value
+  `N+1`. **That off-by-one is the entire risk of the card**, and nothing catches it but a real
+  registration.
+  ✅ **Nothing in the apps needs changing:** the referral-id input has **no `maxLength`**
+  (`UserDetailsScreen:768-781`) and a user's own id is already rendered (`ProfileScreen:172-175`).
+  ✅ `driver_profiles.id` has its own sequence and is **out of scope**. ✅ No seeder inserts users.
+  ⚠️ **This makes IDs enumerable from a known origin** — which is precisely why T-088's masked-phone
+  lookup has to be rate-limited, and why T-091's 5-char promo code must never become a lookup key.
+  ⚠️ **Today's users keep ids like `7`**, which a Paynet operator cannot tell from a typo — that is
+  **T-088's** problem; a separate display `account_number` is a different card if the owner wants it.
+  ❌ **No `*.test.ts`** — the card adds no pure TypeScript, only SQL, and there is no DB-backed test
+  harness. The owner's read-back plus one real registration is what stands in for it.
+  ❌ Needs a migration. ✅ Tiny, and independent of everything else in the batch.
+
+- [ ] T-091 (P2) 🆔 ✅ **COMPLETE 2026-08-15 — the owner ran the migration, deployed, rebuilt the
+  user app and claimed a code and a username.** Plan intact → `docs/PLAN-T091.md`.
+  🛑 **ONLY THE COMMIT REMAINS**, and its **15 files are still uncommitted** — migration
+  `20260815000001`, `utils/identifiers.ts` + `.test.ts`, `UserController.ts`,
+  `middleware/validator.ts`, `User.ts`, API `{uz,ru,en}.ts`, `EditProfileScreen.tsx`,
+  `UserDetailsScreen.tsx`, app `{uz,ru,en}.ts`, `utils/registrationDraft.ts`, the app's
+  `utils/identifiers.ts`.
+  ✅ **This unblocks T-089's promo-code half** — `own_promo_code` now exists, so a referral code can
+  finally be resolved to the user who **owns** it. (T-089 itself stays blocked on questions ① ②.)
+  🔴 **`users.promo_code` still means the REFERRER's code, the opposite of `own_promo_code`.**
+  Reading the wrong one pays the wrong person.
+
 > 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
 > what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
 > 🔴 **`DriverOffer` carries ~20 columns; `PassengerOffer` carries 51.** Nearly everything the mockup
@@ -2103,6 +2172,31 @@ masofalar'`). **2 of the 6 were on
   and is there a ceiling.
   🛑 **Depends on T-087.** ❌ No app change.
 
+- [ ] T-098 (P2) 🧨 **[found 2026-08-15 during T-092's verification] `schema.sql` is stale, and
+  `npm run db:setup` would build a database that matches nothing.**
+  🔴 `src/database/schema.sql:8-11` declares `users.id` as **`UUID DEFAULT uuid_generate_v4()`** with
+  a **`name`** column — but the real `users` table has an **INTEGER** id (since `20250125000001`) and
+  no `name` column at all. The file is months out of date.
+  ⚠️ **It is still wired to a published script** (`db:setup` in `package.json`), so it is not dead
+  code — it is a trap with a documented command pointing at it. A database built from it would
+  reject every migration and half the API.
+  ✅ **T-092's migration behaves correctly on such a database** — `pg_get_serial_sequence` returns
+  null for a UUID key and it **throws with a named reason** instead of guessing.
+  ✅ Options: regenerate it from the migrations, or **delete it and remove `db:setup`** — the
+  migrations are the real source of truth and a second one that disagrees is worse than none.
+  ⚠️ **Deleting a file needs the owner's OK** (CLAUDE.md §4). ❌ No migration.
+
+- [ ] T-097 (P3) 🧹 **[noticed 2026-08-15 while boarding T-092] `TODO.md` contains a duplicated
+  block — including a SECOND `## 🔥 Now` header.**
+  🔴 Lines **9-63** (the 2026-08-12 batch note, the 2026-08-11 state note, and the `## 🔥 Now`
+  header) reappear **verbatim** further down the file, followed by the same driver-offer preamble.
+  ⚠️ **This is not cosmetic:** a card edited "in *Now*" can land in whichever copy the editor
+  matched, and the two halves then disagree about what the board says. It already forced this card's
+  own edit to be spliced by line number because every text anchor matched twice.
+  ✅ Fix: delete the second copy and keep one *Now*. ⚠️ **Diff the two blocks first** — the earlier
+  one has *"ELEVEN code-complete"* where the later has *"TEN"*, so they are **not** byte-identical
+  and one of them is the stale one. ❌ No code, no migration.
+
 - [ ] T-096 (P3) 🔌 **[noticed during T-087's test3 verification 2026-08-14] The API's port is
   declared in the manifest but never given to the app.**
   🔴 `printenv PORT` in the API pod prints **nothing** — so the app listens on `config`'s built-in
@@ -2258,18 +2352,10 @@ masofalar'`). **2 of the 6 were on
   username → try the same pair from a second account → re-open the profile and check both loaded
   back and the promo input is locked) · step 7 (commit).**
 
-- [ ] T-092 (P2) 🔢 **[OWNER 2026-08-14, 2:05 PM] User IDs start at 1 100 001.**
-  🔴 **`users.id` is `INTEGER autoIncrement` from 1**, and it is an FK target in at least
-  `audit_logs`, `offer_passengers`, `driver_profiles` and `push_tokens`. **Existing users are NOT
-  renumbered** — that would rewrite every foreign key in the database to buy nothing.
-  ✅ *Recommendation: one line — `ALTER SEQUENCE users_id_seq RESTART WITH 1100001`.* New users get
-  the long IDs; the handful of existing low IDs stay as they are.
-  ⚠️ **Decide what happens to today's users** — they will have IDs like `7`, which a Paynet operator
-  cannot distinguish from a typo. If that matters, the answer is a separate display `account_number`
-  (question ④), not a renumbering.
-  ⚠️ **This makes IDs enumerable from a known origin** — which is precisely why T-088's masked-phone
-  lookup has to be rate-limited. The two cards are linked.
-  ❌ Needs a migration. ✅ Tiny, and independent of everything else in the batch.
+- ✅ **T-092 — MOVED TO *Now* 2026-08-15**, grounded and planned → `docs/PLAN.md`.
+  🟡 **One correction to what this card recommended:** `ALTER SEQUENCE … RESTART WITH 1100001` is
+  **not** the right one line — it moves the sequence **backwards** on any re-run and reissues live
+  primary keys. See the plan.
 
 > 📥 **OWNER DEVICE-TEST BATCH 2026-08-12 — 13 findings, boarded as T-064…T-074.**
 > Grounded in code the same day (all except ④ and ① confirmed by reading; see each card).
