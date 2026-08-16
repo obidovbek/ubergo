@@ -2223,6 +2223,51 @@ masofalar'`). **2 of the 6 were on
   and is there a ceiling.
   🛑 **Depends on T-087.** ❌ No app change.
 
+- [ ] T-100 (P1) 🚨 **[found 2026-08-16 by probing the DEPLOYED endpoint] THE API CANNOT SEE ANY
+  CALLER'S REAL IP ON test3 — every request arrives as `10.42.0.1`.**
+  🔴 **This makes T-088's IP allow-list — a CONTRACTUAL obligation to Paynet — non-functional in
+  both directions.** As deployed it would **refuse Paynet in production**; and "fixing" it by adding
+  `10.42.0.1` to the list would **admit the entire internet**, because every caller wears that
+  address. There is no safe value to put in the list until this is resolved.
+  🔴 **It also silently breaks every OTP/auth rate limiter**, which key on `req.ip`
+  (`middleware/rateLimiter.ts:85,105,154`): if all callers share one address, the limiters either
+  throttle everybody together or protect nobody. **Nobody has noticed because nothing failed loudly.**
+  ⚠️ **`app.ts:35` says `trust proxy = 1` and its comment asserts "exactly one proxy hop".** The
+  evidence contradicts the comment — `10.42.0.1` is the cluster's internal gateway, so either there
+  is more than one hop, or the ingress is not forwarding the caller at all.
+  **Two possible causes, and the fix differs — DIAGNOSE BEFORE CHANGING:**
+  ① ingress does not set `X-Forwarded-For` → fix the ingress config, not the app;
+  ② there are 2+ hops → `trust proxy` must match the real count (**never `true`**, which trusts any
+  spoofed header).
+  ✅ **DIAGNOSED 2026-08-16 — CASE ②. NOTHING IS SPOOFABLE; the address is LOST, not forged.**
+  A request carrying `X-Forwarded-For: 203.0.113.77` still logged `10.42.0.1`, so the forged header
+  is being ignored/overwritten. **No security hole is open today** — the control is simply dead.
+  ✅ **ROOT CAUSE CONFIRMED 2026-08-16 FROM THE ACTUAL nginx CONFIG — AND IT IS AN APP-SIDE
+  ONE-LINER, NOT AN INFRA CHANGE.**
+  🟢 **The edge nginx is ALREADY CORRECT** — it sets `X-Forwarded-For $proxy_add_x_forwarded_for`
+  (append, not replace) plus `X-Real-IP`, and terminates TLS via Certbot. **Nothing to change there.**
+  *I had drafted an nginx edit; the owner's config already contained it. Asking to see the file
+  before recommending a change to it is what avoided a pointless edit to a shared edge proxy.*
+  🔴 **The real chain is TWO hops — `nginx → Traefik → app` — while `app.ts:35` said
+  `trust proxy: 1`.** Express counts back one position from the end of the chain, landing on
+  **Traefik's** address (`10.42.0.1`) instead of the caller's. **The address was arriving all along;
+  the app was reading the wrong element.**
+  ✅ **FIXED IN CODE 2026-08-16: `trust proxy` 1 → 2**, with the real chain and the failure mode
+  written into the comment (the old comment asserted "exactly one proxy hop", which is what hid it).
+  `tsc` 281 · tests 237/237. ⚠️ **Needs a redeploy to take effect.**
+  ⚠️ **NEVER `trust proxy: true`** — trusts any forged header, converting a dead control into a
+  defeatable one. ⚠️ **If a proxy is added/removed, this number must change with it; nothing fails
+  loudly when it is wrong.**
+  ✅ **RETRACTED — my "test3 serves plain HTTP" finding was WRONG.** TLS *is* terminated, by
+  **Certbot/Let's Encrypt at the edge nginx** (`listen 443 ssl`), so Paynet's HTTPS requirement is
+  met. The commented-out TLS block in `ingress.yaml` is Traefik-level only and is *correct* for this
+  topology — encryption ends at the edge by design. **I inferred a gap from one file instead of
+  asking to see the layer above it.**
+  ✅ **T-088's matching code is NOT at fault** — `ipAllowList.ts` is correct and tested, and it
+  refused a forged `X-Forwarded-For: 213.230.106.112` on the live server. The gap is deployment.
+  🛑 **Blocks the T-088 money-path test** (no way to allow a tester) **and blocks go-live** (no way
+  to admit Paynet). ⚠️ Touching ingress config = rule 4, **ask the owner first**.
+
 - [ ] T-099 (P2) 🕵️ **[found 2026-08-16 while building T-088's IP gate] Every audit-log IP in the
   system is forgeable by the caller.**
   🔴 **`utils/auditLogger.ts:59` reads `x-forwarded-for.split(',')[0]`** — the **first** entry, which

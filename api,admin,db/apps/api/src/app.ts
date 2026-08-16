@@ -27,12 +27,33 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
 
 const app: Application = express();
 
-// Behind the k8s ingress there is exactly one proxy hop that appends the real
-// client IP to X-Forwarded-For. Trusting just that hop lets express-rate-limit
-// key on the actual caller instead of the ingress IP (and silences its
-// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR validation error). Trusting *all* proxies
-// would let anyone spoof X-Forwarded-For and dodge the OTP/auth limiters.
-app.set('trust proxy', 1);
+/*
+ * T-100 — how many proxies sit in front of us.
+ *
+ * 🔴 THIS WAS `1` AND THE COMMENT CLAIMED "exactly one proxy hop". IT WAS WRONG,
+ * AND IT FAILED SILENTLY FOR MONTHS. Measured on test3 2026-08-16: every request
+ * reached the app as `10.42.0.1` — the cluster gateway — so `req.ip` never held
+ * a real caller.
+ *
+ * The real chain is TWO hops:
+ *   caller → nginx (fstu.uz edge, terminates TLS, appends X-Forwarded-For)
+ *          → Traefik ingress
+ *          → this app
+ *
+ * The edge nginx is correct (`X-Forwarded-For $proxy_add_x_forwarded_for`), so
+ * the caller's address DOES arrive — `trust proxy: 1` simply counted back one
+ * position from the end and landed on Traefik instead of the client.
+ *
+ * ⚠️ NEVER SET THIS TO `true`. That trusts any X-Forwarded-For a caller invents,
+ * which turns a control that is merely broken into one anybody can defeat —
+ * and this value gates T-088's Paynet allow-list (a contractual obligation) as
+ * well as every OTP/auth rate limiter (middleware/rateLimiter.ts).
+ *
+ * ⚠️ If a proxy is ever added or removed from the chain, THIS NUMBER MUST CHANGE
+ * WITH IT. Nothing fails loudly when it is wrong — that is what hid this for so
+ * long. Verify with: send a request, then read the address the T-088 gate logs.
+ */
+app.set('trust proxy', 2);
 
 // Initialize Firebase Admin SDK
 initializeFirebase();
