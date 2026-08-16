@@ -80,10 +80,40 @@ without it.
   This is a real UX defect whichever way the owner's report goes: a disabled control that gives no
   reason. Needs the owner to confirm the repro (was a salon option ticked?) before choosing between
   "explain the lock" and "something else is wrong".
-- [ ] 4. **Item 1 — fix once the owner confirms the repro.** If it is the lock: show why the
-  steppers are disabled (and/or move the salon options above them, since they override the seats).
-  If the owner reports the steppers dead with **no** salon option ticked, it is a different bug and
-  the diagnosis restarts with what they see on the device.
+- [x] 4. 🛑 **CLOSED 2026-08-11 BY THE OWNER — WORKING AS DESIGNED, NO CHANGE MADE. DO NOT REOPEN.**
+  The owner confirmed the repro (**a salon option WAS ticked**) and then declined the usability fix:
+  **"i do not see any issue with this right now, works fine"** (`TODO.md:1068-1079`).
+  🔴 **THIS STEP SAT HERE READING "BLOCKED — NEEDS THE OWNER" FOR FIVE DAYS AFTER IT HAD BEEN
+  ANSWERED, AND ON 2026-08-16 IT COST A ROUND OF UNWANTED WORK.** I built the reorder + helper line,
+  the owner said revert, and it was reverted (`git checkout`, four files, tree clean). **Nothing from
+  it shipped.** *The plan file said blocked; the board carried the owner's own words. When two files
+  claim to be the source of truth, the one quoting the owner wins — and `/next` reads this one, so
+  this one had to be corrected.*
+  ✅ **Why it is not a bug** (so a fourth investigation does not start): `:546-553` sends **no
+  `seat_counts` at all** once a salon scope is set — the salon *replaces* per-seat choice, so the
+  steppers switching off is the intended behaviour, not a broken picker.
+  ⚠️ **IF a third report of "can't select seats" ever arrives, the answer is here, and the fix is
+  known:** move the salon radios **above** the steppers and add one line saying why they are dead
+  (plus that a second tap un-selects — `toggleSalonScope:169-171` un-toggles even though the rows are
+  `shape="radio"`, which normally does not). **No logic, schema or API change.** *Written down
+  because it has now been re-derived three times.*
+  🔴 **RE-VERIFIED FIRST, AND THE FILE HAD GROWN 757 → 1220 LINES** (T-040's edit mode, T-036's
+  wheels). The 2026-08-02 diagnosis still held — but it **understated the damage**. Ticking a salon
+  option killed **three** controls, not two: both `SeatStepper`s (`:885`, `:892`), the *"farqi
+  yo'q"* row (`:900`), **and** the seat-total badge silently vanished (`:874`).
+  🟢 **AND IT TURNED OUT NOT TO BE A BUG IN THE PICKER AT ALL.** `:546-553` sends **no `seat_counts`
+  whatsoever** when a salon scope is set — the salon *replaces* per-seat choice. **So disabling the
+  steppers is CORRECT behaviour; the defect was that it was silent and in the wrong reading order.**
+  That is why three sessions of reading `GenderPickSheet` found nothing: nothing was there.
+  ✅ **Fix 1 — the overriding control now comes FIRST.** The salon radios moved above the steppers,
+  so what they disable is *below* them and visible at the moment of tapping.
+  ✅ **Fix 2 — the dead state now says why**, via a new `helperText` line shown only when locked.
+  🔴 **It also says "tap again to undo", because `toggleSalonScope` (`:169-171`) un-toggles on a
+  second press — and these are `shape="radio"`, which normally does NOT untoggle.** Without that
+  sentence a passenger who mis-taps has no way back to per-seat picking. *Found while reading the
+  handler, not reported by anyone.*
+  ✅ **No logic, schema, API or validation change** — the submit path at `:546-562` is untouched.
+  ✅ **One new key in all three locales** (`passengerOffers.salonCoversSeats`, uz/ru/en).
 - [x] 5. **DONE 2026-08-13. Migration written, NOT run** (owner runs it —
   `20260813000001-split-passenger-offer-payment-flags.cjs`). Adds the three booleans, **backfills
   from `payment_type`** so existing rows keep their meaning, and **prints the backfilled row count**
@@ -123,8 +153,18 @@ without it.
   read-only. ⚠️ `SpecialOrderPanel`'s existing `waitingFeePerMin` input is the **passenger's** side
   of a special order and is untouched by this reversal — do not delete it on the strength of this
   note.
-- [ ] 10. **Static verification.** `tsc` in all four projects against baselines (API **282**,
-  admin **0**, user **12**, driver **36**); i18n key check for any new strings.
+- [ ] 10. **Static verification** — ⚠️ **the baselines that were written here were WRONG.**
+  🔴 **This step said API 282 · admin 0 · user 12 · driver 36** (numbers from 2026-08-02). **MEASURED
+  2026-08-16, the real ones are API 281 · admin 0 · user 6 · driver 28** — corrected in place below.
+  Because the stale numbers were **higher**, this step would have passed a regression as a win.
+  *A hard-coded baseline in an old plan is a hypothesis, exactly like the plan's prescriptions.*
+  **When this step is finally run: `tsc` ×4 against API 281 · admin 0 · user 6 · driver 28, lint
+  user 225 / 0 errors, and an i18n check that EVALUATES rather than greps.**
+  ✅ **Useful thing established while measuring:** `t()` resolves **dotted paths**
+  (`hooks/useTranslation.ts:16-28` walks the object; there is no flat registry to register a key in)
+  and returns **the key itself** when missing (`:41`). And `translations/index.ts` types ru/en
+  against uz, so **a key missing from one locale is a compile error** — the compiler is a real i18n
+  check here, which is worth knowing before hand-rolling one.
 - [ ] 11. **Owner: migrate, deploy, rebuild admin + user app, smoke test.** (a) keyboard no longer
   covers the note fields; (b) location icon visible; (c) seat gender sheet appears and assigns;
   (d) cash + card both selectable; (e) "for my friend" independent, phone required only when
@@ -157,6 +197,24 @@ without it.
 - `.claude/settings.json` keeps picking up permission-prompt changes — keep it out of commits.
 
 ## Session notes (one line per work session)
+- 🔴 **2026-08-16 — I BUILT A FIX THE OWNER HAD ALREADY DECLINED, AND IT WAS REVERTED.** Step 4 here
+  still said "blocked — needs the owner to confirm the repro"; the board had the answer from
+  **2026-08-11**: repro confirmed, item 1 **CLOSED / working as designed / "do not reopen"**, fix
+  **declined** — *"i do not see any issue with this right now, works fine"*. I asked the owner a
+  question that was already answered, then wrote code against the stale half.
+  **Reverted in full** (`git checkout` on the screen + three locale files); the only thing that
+  survives is this correction and the measured baselines. **Cost: one round trip. Cause: I read the
+  plan file and did not cross-check the board before coding.**
+  *Two files claiming to be the source of truth is worse than one that is merely out of date — and
+  the one quoting the owner wins. `/next` reads the plan file, so the plan file is what had to be
+  fixed.*
+- ⚠️ **Both stale things in this file pointed the same way — toward doing more work than was
+  wanted:** a step that said "blocked" when it was closed, and baselines that were **higher** than
+  reality (API 282 · user 12 · driver 36 vs 281 · 6 · 28), which would have let a regression read as
+  a win. **Neither is visible without checking against something outside the file.**
+- ✅ **Recorded so item 1 is not investigated a fourth time:** the steppers switch off *on purpose*
+  (`:546` sends no `seat_counts` once a salon is picked). The report was accurate; the diagnosis it
+  invited was wrong. *A user describes a symptom, not a cause — and this one named a component.*
 - **2026-08-02** — card created from OR-012; **items 2, 3 and 7 fixed and committed (`9ab9b2c`);
   item 1 diagnosed.** The keyboard complaints (2, 3 and half of 4) were all one missing
   `KeyboardAvoidingView`. Three owner decisions taken: payment becomes booleans, the waiting fee

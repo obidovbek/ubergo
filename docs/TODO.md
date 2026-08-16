@@ -63,16 +63,64 @@
 
 ## 🔥 Now (working on it)
 
-> 🔴 **THE ONLY CARD IN *Now* THAT NEEDS CLAUDE WORK IS T-092.** Everything under it is
-> code-complete and waiting on the owner's device, per the note above — so the "max 2 in *Now*"
+> 🔴 **2026-08-16 — *Now* HOLDS ONE ACTIVE CARD: T-088, the Paynet web service** (plan written,
+> **awaiting approval**). ✅ T-092 closed and verified the same day. Everything listed under T-088
+> is code-complete and waiting on the owner's device, per the note above — so the "max 2 in *Now*"
 > rule is not really being broken, though the section reads as if it were.
 > 🧹 **AND THIS FILE HAS A PROBLEM OF ITS OWN:** lines 9-63 are **duplicated verbatim** further down
 > (the whole 2026-08-11/12 preamble *and* a second `## 🔥 Now` header). Noticed 2026-08-15 while
 > boarding T-092; left alone rather than swept mid-card. → **T-097** in *Later*.
 
-- [ ] T-092 (P1) 🔢 **[OWNER 2026-08-14, 2:05 PM] New user IDs start at 1 100 001.**
-  ✅ **APPROVED and STEPS 1-3 DONE 2026-08-15 — code-complete, and the SQL has never run** →
-  `docs/PLAN.md`. Owner settled **billing question ④** as *new users only, existing ids untouched*.
+- [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 2, 3, 4 + WIRING DONE 2026-08-16. The endpoint is LIVE at
+  `/api/paynet`, refuses correctly, and does NOT yet move money** → `docs/PLAN.md`.
+  ✅ **Proven reachable over real HTTP**, not merely compiled: no credentials → 412 · wrong password
+  → 412 · valid call → 100 (not implemented) · unknown method → 603 · bad jsonrpc → 603 · **forged
+  `X-Forwarded-For` ignored**. ✅ `tsc` **281** · lint **230/0** · tests **214/214** (from 128).
+  🔴 **Found while building it and boarded as T-099: `auditLogger.ts:59` trusts a forgeable header.**
+  Copying that nearby helper — the natural move — **would have made this allow-list decorative.**
+  🛑 **STEP 5 IS THE REAL RISK: the six handlers, the first code that moves money.** Both governing
+  rules already have their machinery built (201 = catch the DB's unique violation; 77 = `canDebit`
+  under a row lock).
+  ⚠️ **Step 6 outstanding:** `ChangePassword` has no persistence, so a **pod restart reverts the
+  password** — and Paynet rotates on first connect, which is how we get locked out.
+  ⚠️ **`ACTIVE` since:** plan approved 2026-08-16. Full contract in **`docs/PAYNET.md`**; the card's own detail is in
+  *Later* below (it was rewritten 2026-08-14 after the owner's documents were read).
+  ✅ **The four blockers are all VALUES, not STRUCTURES**, which is why the card can start:
+  credentials are **env**, the `fields` set is **one adapter**, the error-code sign is **one
+  constant**, the ceiling is **one check**. None of them changes the six method handlers.
+  ✅ **T-087's ledger was built FOR this card and has never been used by anything** — append-only,
+  signed BIGINT `amount`, and `wallet_transactions.id` doubles as Paynet's `providerTrnId`.
+  ✅ **Idempotency is already enforced BY THE DATABASE** — a partial unique index on
+  `(provider, external_id)` plus a CHECK closing the NULL-inequality hole. **So error 201 falls out
+  of a caught unique violation**, not application locking.
+  🔴 **Error 77 (refuse a cancellation once the money is spent) needs the balance read under the
+  same row lock as the write**, inside the **≤500 ms** contractual budget.
+  🔴 **`GetInformation` is a lookup oracle on `users.id`, and T-092 just made ids enumerable from a
+  known origin.** Mask server-side, rate-limit, audit — the IP allow-list is the main mitigation and
+  it is contractual.
+  ⚠️ **There is no Paynet sandbox in these documents.** The first real exercise of this code is an
+  agent taking real cash from a real person.
+
+- [x] T-092 (P1) 🔢 ✅ **DONE AND VERIFIED ON TEST PRODUCTION 2026-08-16. A REAL USER HOLDS ID
+  `1100001`.** [OWNER 2026-08-14, 2:05 PM] New user IDs start at 1 100 001.
+  ✅ **The evidence, read back from inside the API pod:**
+  `{ last_value: '1100001', is_called: true, max_id: 1100001, users: '4' }`. The migration printed
+  `was last_value=22 … → now last_value=1100000`; a registration consumed it; the next gets
+  `1100002`. **`max_id` matching a live row is what makes this proof rather than a reserved number.**
+  ✅ **Both risks the card existed for are closed:** the **off-by-one** (the literal is 1 100 000,
+  because `setval(N,true)` makes the next value N+1 — a real person came back 1100001, so it landed
+  right) and **backwards movement** (`GREATEST`, never `RESTART WITH`).
+  ✅ **Same-database question closed too** — the read used the API's own `DB_*` env, so migration and
+  running app are provably on one database.
+  ⚠️ **`users: '4'` while ids had run to 22** — this database really does delete users, so the
+  `last_value` term of the floor was not theoretical.
+  ✅ **Committed `cc9eba7`.** ⚠️ Carries **both** T-091 and T-092; the history does not separate them.
+  ⚠️ **Still never executed anywhere, and worth saying if this is cited as fully proven:** the second
+  registration (`1100002` is an *inference* from `is_called: true`), the re-run guard, the
+  deleted-user floor, and `down`. 🔴 **Never test `down` on a live database** — after a deletion it
+  can re-issue a departed user's id.
+  ✅ **APPROVED and STEPS 1-3 DONE 2026-08-15** → `docs/PLAN.md`. Owner settled **billing question
+  ④** as *new users only, existing ids untouched*.
   ✅ **One file, one statement:** `20260815000002-set-users-id-sequence-origin.cjs` →
   `setval(pg_get_serial_sequence('users','id'), GREATEST(MAX(id), last_value, 1100000), true)`.
   ✅ **The sweep found NOTHING to change in any of the four projects** — no `maxLength` on an id
@@ -86,12 +134,9 @@
   `.cjs` and no TypeScript.
   ⚠️ **A `.cjs` is invisible to both `tsc` and `eslint . --ext .ts`**, so `node --check` + a
   `require()` of the exports is the only thing in the toolchain that looks at it at all.
-  🛑 **Only the owner's run and the commit remain:** `npm run db:migrate` (⚠️ **also carries T-091's
-  `20260815000001` if unapplied**), then register a user → expect **1100001**, and a second →
-  **1100002**, which is what proves the *sequence* moved rather than the row.
-  ⚠️ **An offer is open with the owner:** a local PostgreSQL 16 is running on :5432 and could
-  **execute** all four behaviours on a throwaway DB first; it needs a password. Otherwise the
-  owner's run is the first execution.
+  ✅ **The run, the registration and the commit are ALL DONE (2026-08-16)** — `npx sequelize
+  db:migrate` on the test production server applied **both** `20260815000001` (T-091) and
+  `20260815000002`, no error, and a real user then registered as `1100001`. **Card closed.**
   🟡 **The card's own recommendation had to be corrected — see below.**
   ✅ **Grounded 2026-08-15:** `users.id` is `INTEGER DEFAULT nextval('users_id_seq')` with the
   sequence **`OWNED BY users.id`** (`20250125000001:298-305`), so `pg_get_serial_sequence` resolves
@@ -120,13 +165,11 @@
   harness. The owner's read-back plus one real registration is what stands in for it.
   ❌ Needs a migration. ✅ Tiny, and independent of everything else in the batch.
 
-- [ ] T-091 (P2) 🆔 ✅ **COMPLETE 2026-08-15 — the owner ran the migration, deployed, rebuilt the
-  user app and claimed a code and a username.** Plan intact → `docs/PLAN-T091.md`.
-  🛑 **ONLY THE COMMIT REMAINS**, and its **15 files are still uncommitted** — migration
-  `20260815000001`, `utils/identifiers.ts` + `.test.ts`, `UserController.ts`,
-  `middleware/validator.ts`, `User.ts`, API `{uz,ru,en}.ts`, `EditProfileScreen.tsx`,
-  `UserDetailsScreen.tsx`, app `{uz,ru,en}.ts`, `utils/registrationDraft.ts`, the app's
-  `utils/identifiers.ts`.
+- [x] T-091 (P2) 🆔 ✅ **DONE AND CLOSED 2026-08-16 — the owner ran the migration, deployed, rebuilt
+  the user app, claimed a code and a username, and committed.** Plan intact → `docs/PLAN-T091.md`.
+  ✅ **Committed `5b97803` + `cc9eba7`; working tree clean.** ✅ **Migration `20260815000001-add-own-
+  promo-code-username` applied on the test production server 2026-08-16** (0.064s, no error), in the
+  same `db:migrate` that carried T-092's.
   ✅ **This unblocks T-089's promo-code half** — `own_promo_code` now exists, so a referral code can
   finally be resolved to the user who **owns** it. (T-089 itself stays blocked on questions ① ②.)
   🔴 **`users.promo_code` still means the REFERRER's code, the opposite of `own_promo_code`.**
@@ -1069,13 +1112,21 @@ masofalar'`). **2 of the 6 were on
   off-screen when the user meets the dead controls. It cost two rounds of investigation here, so if
   a *third* report of "can't select seats" ever arrives, **this is the answer** — the fix would be
   reordering (checkboxes above the steppers) plus a one-line explanation, not a logic change.
+  ⚠️ **2026-08-16 — that fix was built and REVERTED at the owner's word, because no third report has
+  arrived.** It is not wanted until one does. Two extra facts banked for that day, both verified:
+  `:546-553` sends **no `seat_counts` at all** when a salon is picked (so the lock is correct, not a
+  bug), and `toggleSalonScope:169-171` **un-toggles on a second press** although the rows are
+  `shape="radio"` — so a mis-tap is escapable, just not discoverably. `PLAN-T031.md` step 4 has been
+  corrected to match this card; it had said "blocked, needs the owner" for five days after closure.
   Reported 2026-08-02. **Items 2, 3 and 7 DONE + committed (`9ab9b2c`)** — items 2, 3 and half of 4
   were all **one** missing `KeyboardAvoidingView` on `CreatePassengerOfferScreen`, and item 7's
   landmark row genuinely had no icon.
-  **Item 1 diagnosed, no defect found** in `SeatStepper`/`GenderPickSheet` (all 8 i18n keys resolve,
-  capacities are 1/3). ⚠️ Strong suspect: `seatsLocked = salonScope !== null` (`:118`) disables both
-  steppers with **no on-screen reason**, and the salon checkboxes that set it are drawn *below* them.
-  🛑 **Needs the owner to confirm the repro** — was a salon option ticked?
+  ~~**Item 1 diagnosed, no defect found**; strong suspect `seatsLocked`; 🛑 needs the owner to
+  confirm the repro.~~ 🔴 **SUPERSEDED 2026-08-02 → 2026-08-11 — struck out 2026-08-16 because it
+  was still being read as live.** The repro *was* confirmed and item 1 *was* closed (top of this
+  card); this paragraph sat eight lines below that closure still saying "needs the owner", and on
+  **2026-08-16 it produced a round of unwanted work** — a fix the owner had declined got built and
+  then reverted. **A card that contradicts itself is worse than a card that is out of date.**
   **Owner decisions 2026-08-02:** payment → `payment_cash` + `payment_card` booleans plus a
   **separate** `paid_by_friend` (migration; keep `payment_type` one release so old installs survive);
   the waiting fee becomes an **admin setting**, not a passenger input; waiting time stays **stored
@@ -2171,6 +2222,22 @@ masofalar'`). **2 of the 6 were on
   (the annex lists `301`, the JSON sample shows `-253`); ④ question ⑥ — who may hand-enter a top-up
   and is there a ceiling.
   🛑 **Depends on T-087.** ❌ No app change.
+
+- [ ] T-099 (P2) 🕵️ **[found 2026-08-16 while building T-088's IP gate] Every audit-log IP in the
+  system is forgeable by the caller.**
+  🔴 **`utils/auditLogger.ts:59` reads `x-forwarded-for.split(',')[0]`** — the **first** entry, which
+  is whatever the client sent. `app.ts:35` sets **`trust proxy = 1`**, so Express already resolves
+  the trustworthy value into **`req.ip`**: the entry the k8s ingress appended, which a caller cannot
+  influence. **The helper reaches past the correct answer to a forgeable one.**
+  ⚠️ **Consequence:** anyone can send `X-Forwarded-For: 1.2.3.4` and have it recorded as the source
+  of any audited action — including admin actions. The logs look precise and are not.
+  ✅ **T-088 is NOT affected** — its gate deliberately does not use this helper and has a test
+  asserting a forged header cannot open it. **This card is about the other callers.**
+  ✅ **The fix is small:** prefer `req.ip`, keeping `x-forwarded-for` only as a last-resort fallback
+  (or dropping it entirely). ⚠️ **Check every caller before changing the shape** — `AdminAuthController:49`
+  already does the right thing (`req.ip || req.socket.remoteAddress`), so the two are inconsistent.
+  ⚠️ **Not fixed inside T-088** — it is not a payment defect, and changing an audit helper mid-card
+  on a money endpoint is the wrong risk.
 
 - [ ] T-098 (P2) 🧨 **[found 2026-08-15 during T-092's verification] `schema.sql` is stale, and
   `npm run db:setup` would build a database that matches nothing.**

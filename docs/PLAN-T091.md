@@ -187,7 +187,9 @@ it, and the extension is created by `20250118000001`.
   copy is tested, so if the two ever disagree the tested one is right. Written on both files.
 - [x] 6. **DONE 2026-08-15 — the owner reported the card COMPLETE.** Migration run, API deployed,
   user app rebuilt, a code and a username claimed. *(Reported by the owner, not observed here.)*
-- [ ] 7. Commit (only after the owner's approval). **STILL OPEN — the T-091 files are uncommitted.**
+- [x] 7. **DONE 2026-08-16 — committed.** Code in `5b97803`, the rest in `cc9eba7`; working tree
+  clean. ⚠️ **`cc9eba7` carries T-092 as well**, so the history does not separate the two cards.
+  **T-091 IS NOW CLOSED — every step checked.**
 
 ## Files to touch
 - `api,admin,db/apps/api/src/database/migrations/202608150000xx-add-own-promo-code-username.cjs` **(new)**

@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-08-16 — two cards closed on a real server, and one card I should never have opened
+
+- **Task:** `/start-day` into "finish what's open". Two cards closed and **verified on test3**, one
+  card wrongly reopened and reverted, and the journal caught up after twelve cards of silence.
+- ✅ **T-091 CLOSED.** Committed (`5b97803` + `cc9eba7`) and its migration
+  `20260815000001-add-own-promo-code-username` applied on the test production server. Its step 7 had
+  been the last thing holding it open.
+- ✅ **T-092 CLOSED AND PROVEN — new users now start at 1 100 001.** The migration printed
+  `was last_value=22 (is_called=true), MAX(id)=22 → now last_value=1100000`, and a later read-back
+  returned **`{ last_value: '1100001', is_called: true, max_id: 1100001, users: '4' }`** — a **real
+  user holds id 1100001**. `max_id` matching a live row is what makes it proof rather than a
+  reserved number.
+  🔴 **The card's own proposed one-liner would have failed twice**, and neither failure is visible by
+  reading it. `ALTER SEQUENCE … RESTART WITH 1100001` starts users at **1100002** (`setval(N,true)`
+  makes the *next* value N+1), and it moves the sequence **backwards** on any re-run — reissuing a
+  live primary key, or silently reusing a deleted user's id. `GREATEST(MAX(id), last_value,
+  1100000)` can only move forwards. **Today was the first execution, and the off-by-one landed on
+  the right side.** *Third time this year a card written earlier turned out to be a hypothesis
+  rather than an instruction (T-035, T-083, now T-092).*
+  ⚠️ **`users: '4'` against ids that had run to 22** — this database really does delete users, so the
+  `last_value` term of the floor was defending against something real, not a hypothetical.
+  ⚠️ **Said plainly:** the second registration was never performed (`1100002` is an inference from
+  `is_called: true`), and the re-run guard, the deleted-user floor and `down` have still never run
+  anywhere. **`down` must never be tested on a live database** — after a deletion it can re-issue a
+  departed user's id.
+- 🔴 **T-031 — I BUILT A FIX THE OWNER HAD DECLINED FIVE DAYS EARLIER, AND IT WAS REVERTED.** The
+  worst thing that happened today, and the only one worth generalising.
+  `PLAN-T031.md` step 4 said *"fix once the owner confirms the repro"*. The owner **had** confirmed
+  it on 2026-08-11, item 1 was marked **CLOSED — working as designed, do not reopen**, and the fix
+  was refused outright: *"i do not see any issue with this right now, works fine."* All of that was
+  in `TODO.md`; none of it had been written back into the plan file. **I asked a question that
+  already had an answer, then wrote code against the stale half.** Reverted in full — the screen and
+  three locale files are back at HEAD, nothing shipped.
+  🔴 **The board's own card contradicted itself**, which is what made the stale reading plausible:
+  it opened with the 2026-08-11 closure and then, eight lines lower, still carried *"🛑 Needs the
+  owner to confirm the repro"*. **A card that disagrees with itself is worse than one that is merely
+  out of date.** Both files corrected in the same session so the next chat cannot repeat it.
+  ⚠️ **Both stale things in that plan file pointed the same way — toward doing more work than was
+  wanted.** Step 10's `tsc` baselines (API **282** · user **12** · driver **36**) were *higher* than
+  reality (**281 · 6 · 28**), so a regression would have read as a win. Neither staleness is visible
+  without checking against something outside the file.
+- **Decisions:** T-092's billing question ④ settled as *new users only, existing ids untouched*.
+  T-031 item 1 stays closed; the known fix (salon radios above the steppers + one line of
+  explanation) is banked on the card **for the day a third report arrives**, not before.
+- **Verification:** `tsc` ×4 **API 281 · admin 0 · user 6 · driver 28**, all at baseline; lint user
+  **225, 0 errors**. Learned while measuring: `translations/index.ts` types ru/en against uz, so
+  **the compiler is already an i18n parity check** in the user app, and `t()` returns the *key* when
+  a lookup misses — never English (the T-073 mechanism, re-confirmed).
+- 🟡 **Handover lesson:** *"read the sequence back"* assumed a `psql` session the API image does not
+  have — the owner got `sh: SELECT: not found`. A Node one-liner using the app's own `pg` worked
+  first time, needed nothing installed on a production pod, and **proved migration and app share one
+  database** by using the API's own `DB_*` env. Better than the check I originally asked for.
+- **Next:** **T-088, the Paynet web service** — planned next, still blocked on four facts only
+  Paynet can supply. The two app rebuilds (user; driver, **native**) remain outstanding.
+
+---
+
 ## 2026-08-13 (2) — turned the lint back on, and it found two defects in its first run
 
 - **Task:** owner — *"lets finish all one by one"*, with **payment (T-031) left parked** and the

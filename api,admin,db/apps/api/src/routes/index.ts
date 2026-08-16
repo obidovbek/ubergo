@@ -12,6 +12,7 @@ import adminCountryRoutes from './admin-country.routes.js';
 import userRoutes from './user.routes.js';
 import deviceRoutes from './device.routes.js';
 import walletRoutes from './wallet.routes.js';
+import paynetRoutes from './paynet.routes.js';
 import driverRoutes from './driver.routes.js';
 import uploadRoutes from './upload.routes.js';
 import countryRoutes from './country.routes.js';
@@ -106,6 +107,12 @@ router.use('/devices', deviceRoutes);
 // Wallet routes (T-087) — read-only: balances and statements. Nothing here
 // creates value; the write surfaces are T-088/T-089/T-090.
 router.use('/wallet', walletRoutes);
+
+// 🔴 Paynet web service (T-088) — INBOUND. Paynet's terminals call this when a
+// customer hands cash to an agent; we never call them. One POST, six JSON-RPC
+// methods, behind an IP allow-list and Basic auth mounted inside the router.
+// ⚠️ NOT under `authenticate` — the caller is Paynet, not a signed-in user.
+router.use('/paynet', paynetRoutes);
 
 // Driver routes
 router.use('/driver', driverRoutes);

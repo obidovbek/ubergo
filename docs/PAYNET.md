@@ -1,13 +1,21 @@
 # 🔌 PAYNET — the integration contract (reference)
 
-> Extracted 2026-08-14 from the owner's two documents in `paynet/`:
-> `universal_tech_doc_v_1_5.docx` (the commercial/technical annex) and `UWS_JSON.pdf`
-> (the JSON-RPC protocol spec).
-> ⚠️ **Neither file can be read by the normal tools on this machine** — there is no `pdftotext` and
-> no `pypdf`, and the PDF's Cyrillic prose uses a subset font whose encoding does not survive naive
-> extraction. The **JSON payloads and identifiers extracted cleanly**; the Russian narrative did not.
-> This file is the readable record. **Re-check anything below against the originals before
-> implementing**, and treat the Russian-language details as summarised, not quoted.
+> Extracted from the owner's two documents in `paynet/`:
+> `universal_tech_doc_v_1_5.docx` (the commercial/technical annex, attached to the signed contract)
+> and `UWS_JSON.pdf` (the JSON-RPC protocol spec).
+>
+> ✅ **REWRITTEN 2026-08-16 FROM COMPLETE EXTRACTIONS OF BOTH FILES.**
+> 🔴 **The 2026-08-14 header of this file claimed neither document could be read. THAT WAS WRONG,
+> and it cost four questions being put to Paynet that the documents already answered.** Both extract
+> completely, in seconds, with tools that are installed:
+> - **PDF:** `pdftotext -enc UTF-8 -layout UWS_JSON.pdf out.txt` → **7 196 Cyrillic characters**,
+>   clean. (The earlier attempt omitted `-enc UTF-8` and blamed the font.)
+> - **DOCX:** it is a **zip of XML** — `zipfile` + strip tags. **No library needed at all.**
+> - ⚠️ On this machine the console is cp1252, so **write extractions to a UTF-8 FILE and read that**;
+>   printing Cyrillic to stdout throws `UnicodeEncodeError` and looks like a corrupt document.
+>
+> **Verify against the originals before implementing anything load-bearing** — the tables below are
+> transcribed, and the PDF's table extraction misaligns rows by one where a cell wraps.
 
 ## 1. The single most important fact
 
@@ -67,9 +75,16 @@ in a config file baked into an image.**
 { "jsonrpc": "2.0", "id": 1, "error": { "code": -253, "message": "Error message!" } }
 ```
 
-⚠️ **Sign convention is unconfirmed.** The annex lists error codes as **positive** (`301`, `413`,
-`601`…); the JSON sample shows **`-253`**. Confirm with Paynet which form the `error.code` takes
-before writing the error mapper — guessing means every failure is misclassified.
+✅ **SIGN RESOLVED 2026-08-16 — POSITIVE, and the two documents were never in conflict.**
+The JSON spec §2.5 lists **two ranges with different jobs**:
+- **Negative** `-32300 · -32700 · -32600 · -32601 · -32602 · -32603` — these are **JSON-RPC 2.0's
+  own standard protocol errors** (not POST, parse error, method not found, bad params, internal).
+  Identical in every JSON-RPC implementation; nothing Paynet-specific about them.
+- **Positive** `0 · 77 · 100 … 603` — **Paynet's business errors.**
+
+The **`-253`** that caused the doubt is a **placeholder inside an illustrative example**, not a real
+code. *A question was sent to Paynet about this before the documents were read properly; it did not
+need asking.*
 
 ## 5. Payloads (verbatim from the JSON spec)
 
@@ -77,7 +92,14 @@ before writing the error mapper — guessing means every failure is misclassifie
 // GetInformation — the agent identifying the payer
 {"jsonrpc":"2.0","method":"GetInformation","id":12350,
  "params":{"serviceId":1,"fields":{"client_id":634247}}}
-{"jsonrpc":"2.0","id":123,"result":{"client_id":"1463398","fio":"…"}}
+// 🔴 THE RESPONSE IS status + timestamp + a NESTED `fields` OBJECT (spec §3.1).
+// The per-service values live INSIDE `fields`; they are NOT top-level.
+{"jsonrpc":"2.0","id":12350,
+ "result":{"status":"0","timestamp":"2021-04-30 08:00:00",
+           "fields":{"balance":420000,"name":"Пушкин А.С."}}}
+// ⚠️ `{"client_id":"1463398","fio":"…"}` appears in the spec's §2.4 NARRATIVE as a
+// generic illustration of "a result object". It is NOT GetInformation's shape —
+// T-088 was first built against it and would have failed on Paynet's first call.
 
 // PerformTransaction — the money
 {"jsonrpc":"2.0","method":"PerformTransaction","id":12345,
@@ -125,7 +147,43 @@ and types it **`long`**. The sample `"amount": 100000` is therefore **1 000 so'm
   counterparty (a human paying a driver in a car). **The boundary between the two must be crossed in
   exactly one place**, or the two conventions will leak into each other.
 
-## 7. Error codes (from the annex)
+## 6a. ✅ THE TWO DOCUMENTS AGREE ON THE ERROR CODES
+
+🔴 **A conflict was reported here on 2026-08-16 and it was FALSE — an artefact of PDF extraction,
+corrected the same day. Recorded because the false version was acted on.**
+
+**What happened:** `pdftotext -layout` renders the spec's error table with the **description column
+shifted down one row**, because the `-32603` description wraps onto three lines and the next code
+(`0`) prints beside its last line. Read naively, every code appears to carry the *following* code's
+meaning. **The tell was the nonsense it produced — `77 = "Проведено успешно"` (77 = "completed
+successfully").** A code table where the success code is 77 and not 0 should stop the reader.
+
+**How it was settled:** re-extract **without `-layout`** (raw reading order). The table emits
+**32 codes, then 32 descriptions**, pairing 1:1 — and the pairing matches the annex **exactly**:
+
+```
+pdftotext -enc UTF-8 UWS_JSON.pdf out.txt     # raw order — trustworthy for tables
+pdftotext -enc UTF-8 -layout UWS_JSON.pdf …   # pretty, but misaligns wrapped rows
+```
+
+`0` success · `77` insufficient funds to cancel · `100` service unsupported · `101` quota ·
+`102` system · `103` unknown · `201` **already exists** · `202` already cancelled · `301` number
+not found · `302` client not found · `304` product · `305` service · `401-410` param 1-10.
+
+**The spec only ADDS codes the annex lacks — it changes none:**
+
+| code | meaning | note |
+|---|---|---|
+| `113` | wallet not identified | ✚ spec only |
+| `140` | monthly limit exceeded | ✚ spec only |
+| `141` | daily limit exceeded | ✚ spec only |
+| `203` | **transaction not found** | ✚ spec only — the right answer for an unknown `transactionId` |
+| `415` | **amount exceeds the maximum limit** | ✚ spec only — proves a ceiling exists (blocker ④) |
+
+⚠️ **Lesson worth keeping: when two sources appear to disagree, suspect the reader before the
+sources — above all when one of them is a table pulled out of a PDF.**
+
+## 7. Error codes (both documents; ✚ marks spec-only additions)
 
 | Code | Meaning |
 |---|---|
@@ -152,12 +210,28 @@ Paynet emails a daily register of accepted payments **and** independently calls 
 compare against our records. **Daily reconciliation is contractual**, which makes the owner's
 *"finansiviy analiz"* requirement a hard requirement rather than a nice-to-have.
 
-## 9. What is still missing before T-088 can be built
+## 9. What is genuinely still missing (revised 2026-08-16)
 
-1. **UbexGo's own `serviceId`, service URL, username and password** — not in these documents.
-2. **The `fields` set for our service.** The annex's Table 3/4 (`account`, `name`, `balance`,
-   `end_date`, `current_tariff`) is the *TV Turon Navoi* definition; the JSON spec uses
-   `client_id` / `fio`. **The field set is negotiated per provider** — ours is not yet agreed.
-3. **The `error.code` sign convention** (§4).
-4. **Whether a Paynet top-up may exceed any ceiling**, and what happens to an over-payment.
-5. **Payme and Click are NOT covered by these documents** and remain unspecified.
+**Only ONE of the original four is truly unanswerable from the documents.**
+
+1. 🛑 **STILL MISSING — UbexGo's own `serviceId`, service URL, username and password.** Not in
+   either document; the annex's Table 1 is filled in for **"TV Turon Navoi"**
+   (`https://navpay.tn.uz/paynet/api/webservice`). ⚠️ **Do not hard-code any of it. Env only.**
+2. 🟡 **PARTLY ANSWERED — the `fields` set.** The **request** side is settled: `client_id` inside
+   `fields` (spec §3.1/§3.2). The **response** side is per-provider; the spec's example returns
+   `balance` + `name`. **We send the masked phone in `name`** — confirm that is acceptable, since
+   the alternative is disclosing a real name to whoever calls.
+3. ✅ **FULLY ANSWERED — the codes.** The sign is **positive** for business errors (negative is
+   JSON-RPC's own protocol range, §4), and **the two documents agree on every number** (§6a).
+   **Neither question needed asking.**
+4. 🟡 **PARTLY ANSWERED — a ceiling exists** (`415`, spec only). **Ask for the value**, and for what
+   should happen to an over-payment.
+5. 🛑 **Payme and Click are NOT covered by these documents** and remain unspecified (T-093).
+
+### The message actually worth sending Paynet
+**Only two things are genuinely unanswerable from the documents:**
+1. 🛑 **Our `serviceId`, URL, username, password.** *(Sent by the owner 2026-08-16.)*
+2. 🟡 **The value of the maximum single payment** (code `415`), and the rule for an over-payment.
+3. 🟡 *Courtesy check, not a blocker:* confirmation that `GetInformation` may return a **masked
+   phone** in `fields.name` rather than a legal name. We can ship either way; masking is the safer
+   default and can be changed in one function.
