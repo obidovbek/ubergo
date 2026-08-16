@@ -68,9 +68,22 @@ export function paynetIpGate(list: Cidr[] = loadAllowList()) {
 
     // 🔴 Logged in full, because a rejected call on this endpoint is either a
     // misconfiguration or somebody probing a payment API. Both are worth seeing.
+    //
+    // 🔴 T-100 — THE RAW HEADERS ARE LOGGED TOO, AND THAT IS DELIBERATE.
+    // `req.ip` alone cannot tell you WHY it is wrong: a missing header, a
+    // truncated chain and a mis-set `trust proxy` all look identical from the
+    // resolved value. Two rounds of guessing at hop counts were spent before
+    // this line existed. It prints the evidence instead.
+    // ⚠️ Safe to log: these are the caller's own claims about routing, on a
+    // request that has ALREADY been refused. No credentials, no payer data.
     console.warn(
       `T-088: refused a Paynet request from ${address ?? 'an unknown address'} ` +
         `(allow-list: ${list.map((cidr) => cidr.source).join(', ')})`
+    );
+    console.warn(
+      `T-100 diag: req.ip=${req.ip ?? 'none'} · socket=${req.socket?.remoteAddress ?? 'none'} · ` +
+        `x-forwarded-for=${JSON.stringify(req.headers?.['x-forwarded-for'] ?? null)} · ` +
+        `x-real-ip=${JSON.stringify(req.headers?.['x-real-ip'] ?? null)}`
     );
 
     // ⚠️ Answered as JSON-RPC, not as a bare HTTP 403. Paynet's terminal speaks
