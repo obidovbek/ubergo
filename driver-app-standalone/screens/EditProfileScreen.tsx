@@ -79,7 +79,7 @@ export const EditProfileScreen: React.FC = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
             <View style={styles.header}>
                 {/* T-071 — was a green `←` that scaled with the system font. */}
                 <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
@@ -116,7 +116,7 @@ export const EditProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: theme.palette.ground,
     },
     scrollView: {
         flex: 1,
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         padding: 20,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.palette.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        shadowColor: '#000',
+        borderBottomColor: theme.palette.borders.strong,
+        shadowColor: theme.palette.text.primary,
         shadowOffset: {
             width: 0,
             height: 2,
@@ -151,17 +151,17 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 24,
         fontWeight: '800',
-        color: '#111827',
+        color: theme.palette.text.primary,
         letterSpacing: -0.5,
     },
     headerSpacer: {
         width: 60,
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.palette.surface,
         borderRadius: 20,
         padding: 4,
-        shadowColor: '#000',
+        shadowColor: theme.palette.text.primary,
         shadowOffset: {
             width: 0,
             height: 4,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 5,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: theme.palette.borders.strong,
     },
     menuItem: {
         flexDirection: 'row',
@@ -179,9 +179,9 @@ const styles = StyleSheet.create({
         marginVertical: 4,
         marginHorizontal: 4,
         borderRadius: 14,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.palette.surface,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: theme.palette.surfaceSunken,
     },
     menuIcon: {
         fontSize: 24,
@@ -190,12 +190,12 @@ const styles = StyleSheet.create({
     menuTitle: {
         flex: 1,
         fontSize: 16,
-        color: '#111827',
+        color: theme.palette.text.primary,
         fontWeight: '600',
     },
     menuArrow: {
         fontSize: 24,
-        color: '#6B7280',
+        color: theme.palette.text.secondary,
         fontWeight: '300',
     },
 });

@@ -707,7 +707,7 @@ of truth — do not edit the owner's artboards).
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
 | user | **6** | **216** | **1** (from 839) |
-| driver | **28** | **285** | **951** (from 964) |
+| driver | **28** | **282** | **837** (from 964) |
 
 🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
 `Profile` 43 · `OfferDrivers` 41, all to **0**. The ceiling is 234 and **the ratchet was re-proven
@@ -737,7 +737,18 @@ and scans `layout/` and `navigation/`.
    🟢 **THE USER APP IS EFFECTIVELY AT ZERO: 1 literal remains and it is deliberate** —
    `FACEBOOK_BRAND_BLUE` in `PhoneRegistrationScreen`, which Meta's guidelines require verbatim.
    The ceiling is 1 and the ratchet holds it there.
-4. **Then the driver app's screens** (951), then steps 15-22.
+4. **The driver app — STARTED 2026-08-31: 951 → 837.** Done: its **splash twin** (redesigned
+   light, mirrored circle layout preserved), `BackButton`, `RideCard`, `themed-text`,
+   `OTPVerification`, `PhoneRegistration`, `RegisterFirst`, `DriverDetails`, `Blocked`,
+   `Notifications`, `EditProfile`.
+   🔵 **`PLAY_STORE_BLACK` + `APP_STORE_BLUE` named, not tokenized** — store-badge brand colours,
+   same category as the user app's `FACEBOOK_BRAND_BLUE`.
+   **What is left is the big screens**, largest first: `OfferWizard` 127 · `SearchPassengerOffers`
+   105 · `OfferPassengers` 78 · `PassengerOfferDetails` 69 · `OfferDetailModal` 62 ·
+   `MyJoinRequests` 50, then the four document screens (48/48/44/33/29) and `Profile` 44.
+   ⚠️ **`SearchPassengerOffers` was already partly converted on 2026-08-30** (the shared geo sheet)
+   and **still needs a device walk** — its three location buttons per direction became one.
+   Then steps 15-22.
 
 🔴 **TOKENIZED IS NOT REBUILT, AND THE BOARD MUST NOT READ OTHERWISE.** All four 2026-08-31 screens
 had their colours converted and their **layouts left alone** — steps 10, 12 and 13 are still open.

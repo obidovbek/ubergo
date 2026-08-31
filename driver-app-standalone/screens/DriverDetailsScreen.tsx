@@ -246,14 +246,14 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   backButtonText: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
   },
   logo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: theme.spacing(2),
   },
   title: {
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(1),
   },
   driverTypeButtonActive: {
-    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    backgroundColor: theme.palette.successTint,
   },
   radio: {
     width: 20,
@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(2),
   },
   radioActive: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#4CAF50',
+    borderColor: theme.palette.action,
+    backgroundColor: theme.palette.action,
   },
   driverTypeText: {
     ...theme.typography.body1,
@@ -321,9 +321,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1.5),
@@ -348,11 +348,11 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   termsLink: {
-    color: '#2196F3',
+    color: theme.palette.action,
     textDecorationLine: 'underline',
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 18,
     fontWeight: '600',
   },

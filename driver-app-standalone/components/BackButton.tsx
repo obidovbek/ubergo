@@ -28,6 +28,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../themes';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -52,7 +53,7 @@ export const BackButton: React.FC<BackButtonProps> = ({
   onPress,
   style,
   plain = false,
-  color = '#111827',
+  color = theme.palette.text.primary,
   disabled = false,
   accessibilityLabel,
 }) => (
@@ -77,10 +78,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,

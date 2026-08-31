@@ -87,10 +87,10 @@ export const BlockedScreen: React.FC = () => {
         icon: '🚫',
         title: t('auth.accountBlocked'),
         description: t('auth.accountBlockedDescription'),
-        primaryColor: '#FF6B6B',
-        secondaryColor: '#EE5A6F',
-        iconBg: '#FF6B6B15',
-        cardBg: '#FFF5F5',
+        primaryColor: theme.palette.danger,
+        secondaryColor: theme.palette.dangerDeep,
+        iconBg: theme.palette.dangerTint,
+        cardBg: theme.palette.dangerTint,
       };
     }
     if (isPendingDelete) {
@@ -98,20 +98,20 @@ export const BlockedScreen: React.FC = () => {
         icon: '⏳',
         title: t('auth.accountPendingDelete'),
         description: t('auth.accountPendingDeleteDescription'),
-        primaryColor: '#FFA726',
-        secondaryColor: '#FB8C00',
-        iconBg: '#FFA72615',
-        cardBg: '#FFF8F0',
+        primaryColor: theme.palette.warnBorder,
+        secondaryColor: theme.palette.warnInk,
+        iconBg: theme.palette.warnTint,
+        cardBg: theme.palette.warnTint,
       };
     }
     return {
       icon: '⚠️',
       title: t('auth.accountSuspended'),
       description: t('auth.accountSuspendedDescription'),
-      primaryColor: '#FFB74D',
-      secondaryColor: '#FFA726',
-      iconBg: '#FFB74D15',
-      cardBg: '#FFFBF0',
+      primaryColor: theme.palette.warnBorder,
+      secondaryColor: theme.palette.warnBorder,
+      iconBg: theme.palette.warnTint,
+      cardBg: theme.palette.warnTint,
     };
   };
 
@@ -245,11 +245,11 @@ export const BlockedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: theme.palette.ground,
   },
   background: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: theme.palette.ground,
   },
   scrollContent: {
     flexGrow: 1,
@@ -298,13 +298,13 @@ const styles = StyleSheet.create({
   },
   description: {
     ...theme.typography.body1,
-    color: '#5A6C7D',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
     lineHeight: 26,
     fontSize: 16,
   },
   supportCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 24,
     marginBottom: 32,
@@ -354,12 +354,12 @@ const styles = StyleSheet.create({
   },
   supportText: {
     ...theme.typography.body2,
-    color: '#5A6C7D',
+    color: theme.palette.text.secondary,
     flex: 1,
     fontSize: 14,
   },
   clickableText: {
-    color: '#4A90E2',
+    color: theme.palette.male,
     textDecorationLine: 'underline',
     fontWeight: '500',
   },
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '700',
     fontSize: 17,
     letterSpacing: 0.5,

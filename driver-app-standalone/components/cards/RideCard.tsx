@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     ...theme.typography.caption,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '600',
   },
   locations: {

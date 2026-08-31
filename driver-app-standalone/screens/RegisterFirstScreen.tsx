@@ -137,7 +137,7 @@ export const RegisterFirstScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <View style={styles.storeButtonIconContainer}>
-                <MaterialIcons name="phone-iphone" size={32} color="#fff" />
+                <MaterialIcons name="phone-iphone" size={32} color={theme.palette.text.onAccent} />
               </View>
               <View style={styles.storeButtonTextContainer}>
                 <Text style={styles.storeButtonText}>
@@ -173,6 +173,15 @@ export const RegisterFirstScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
+
+/**
+ * 🔵 THIRD-PARTY STORE BRAND COLOURS — never UbexGo tokens.
+ * These paint the "get it on Google Play" / "download on the App Store" badges, and both
+ * stores' brand guidelines require their exact values. Same category as the user app's
+ * FACEBOOK_BRAND_BLUE. Deliberately left out of the palette.
+ */
+const PLAY_STORE_BLACK = '#000';
+const APP_STORE_BLUE = '#007AFF';
 
 const styles = StyleSheet.create({
   container: {
@@ -254,10 +263,10 @@ const styles = StyleSheet.create({
     ...theme.shadows.md,
   },
   androidButton: {
-    backgroundColor: '#000',
+    backgroundColor: PLAY_STORE_BLACK,
   },
   iosButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: APP_STORE_BLUE,
   },
   storeButtonIcon: {
     fontSize: 32,
@@ -275,13 +284,13 @@ const styles = StyleSheet.create({
   },
   storeButtonText: {
     ...theme.typography.body1,
-    color: '#fff',
+    color: theme.palette.text.onAccent,
     fontWeight: '600',
     marginBottom: 4,
   },
   storeButtonSubtext: {
     ...theme.typography.body2,
-    color: '#fff',
+    color: theme.palette.text.onAccent,
     opacity: 0.8,
   },
   backButton: {
@@ -297,7 +306,7 @@ const styles = StyleSheet.create({
   },
   noUrlsContainer: {
     padding: 16,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.palette.surfaceSunken,
     borderRadius: 8,
     alignItems: 'center',
   },

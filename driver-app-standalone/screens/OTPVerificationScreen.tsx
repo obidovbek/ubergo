@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: theme.spacing(2),
   },
   title: {
@@ -403,9 +403,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1.5),
@@ -450,10 +450,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   otpIndicatorFilled: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     color: theme.palette.text.secondary,
   },
   resendLink: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   // Deliberately not the link blue — it must not read as tappable while counting down.
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...theme.typography.h3,
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: '700',
     marginBottom: theme.spacing(2),
     textAlign: 'center',

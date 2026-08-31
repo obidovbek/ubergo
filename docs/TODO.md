@@ -85,7 +85,7 @@
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
   ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
-  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 951** (driver screens untouched; only shared
+  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 837** (driver screens untouched; only shared
   components). A counter script fails if either rises, and **was proven able to go red** — re-proven
   at the new 234 ceiling on 2026-08-31.
   ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
@@ -105,6 +105,12 @@
   all now 5.29 / 6.41 / 6.41. 🛑 **The DRIVER app's splash is still dark** — same screen, its twin.
   ✅ **`themes/palettes/dark.ts` DELETED in both apps** (owner approved) + the dead `darkPalette`
   alias. **Goal 4 genuinely met.** 🔵 The 1 remaining literal is Facebook's brand blue, exempt.
+  ✅ **2026-08-31 (5) — DRIVER APP STARTED: 951 → 837.** Its **splash twin redesigned light** to
+  match the user app's (mirrored circle layout preserved as-is), plus `BackButton`, `RideCard`,
+  `themed-text`, the auth pair, `RegisterFirst`, `DriverDetails`, `Blocked`, `Notifications`,
+  `EditProfile`. `tsc` 28 (baseline) · lint 282 (three *below* baseline).
+  🔵 Store-badge brand colours named `PLAY_STORE_BLACK` / `APP_STORE_BLUE`, not tokenized.
+  🛑 **NOT RUN ON A DEVICE** — both splash screens, and everything from 2026-08-31 (3)-(5).
   🛑 **NOT RUN ON A DEVICE:** the passenger-offer flow (the main create path, seat markers on new
   tokens) and everything from 2026-08-31 (3) — notably `BlockedScreen`, whose three account states
   now fold onto two colour families.
