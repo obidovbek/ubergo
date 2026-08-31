@@ -85,7 +85,7 @@
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
   ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
-  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 506** (driver screens untouched; only shared
+  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 235** (driver screens untouched; only shared
   components). A counter script fails if either rises, and **was proven able to go red** — re-proven
   at the new 234 ceiling on 2026-08-31.
   ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
@@ -124,7 +124,13 @@
   countdown in **both** apps. → `DESIGN-TOKENS.md` §2.11.
   🛑 **THIS CHANGES THE LOOK OF EVERY SCREEN** — supporting copy is slightly darker everywhere.
   Nothing else moved; it is a lightness shift within the same warm grey.
-  🛑 **NOT RUN ON A DEVICE** — both splash screens, and everything from 2026-08-31 (3)-(6).
+  ✅ **2026-08-31 (8) — DRIVER: 506 → 235.** The five document/registration screens (48/48/44/33/29)
+  plus `Profile` 44, `Menu` 26, `RegisterFirst` 2. **First conversion written role-aware from the
+  start** (§2.10): `#E53935` appears as both error TEXT (16×) and borders (10×) and split correctly
+  into `dangerText` / `danger` — the text was **4.23:1** and a value-only map would have left it
+  failing. 🚗 `VEHICLE_SWATCH_FALLBACK` named, not tokenized (it is car paint, not UI).
+  `tsc` 28 · lint 280 (two *below* baseline). **Driver contrast failures: 2, both decorative.**
+  🛑 **NOT RUN ON A DEVICE** — both splash screens, and everything from 2026-08-31 (3)-(8).
   🛑 **NOT RUN ON A DEVICE:** the passenger-offer flow (the main create path, seat markers on new
   tokens) and everything from 2026-08-31 (3) — notably `BlockedScreen`, whose three account states
   now fold onto two colour families.

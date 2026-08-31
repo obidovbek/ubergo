@@ -2436,7 +2436,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'tech_passport_front'}
               >
                 {uploadingPhoto === 'tech_passport_front' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : techPassportFrontUri ? (
                   <Image source={{ uri: techPassportFrontUri }} style={styles.photoPreview} />
                 ) : (
@@ -2453,7 +2453,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'tech_passport_back'}
               >
                 {uploadingPhoto === 'tech_passport_back' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : techPassportBackUri ? (
                   <Image source={{ uri: techPassportBackUri }} style={styles.photoPreview} />
                 ) : (
@@ -2470,7 +2470,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_front'}
               >
                 {uploadingPhoto === 'photo_front' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoFrontUri ? (
                   <Image source={{ uri: photoFrontUri }} style={styles.photoPreview} />
                 ) : (
@@ -2487,7 +2487,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_back'}
               >
                 {uploadingPhoto === 'photo_back' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoBackUri ? (
                   <Image source={{ uri: photoBackUri }} style={styles.photoPreview} />
                 ) : (
@@ -2504,7 +2504,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_right'}
               >
                 {uploadingPhoto === 'photo_right' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoRightUri ? (
                   <Image source={{ uri: photoRightUri }} style={styles.photoPreview} />
                 ) : (
@@ -2521,7 +2521,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_left'}
               >
                 {uploadingPhoto === 'photo_left' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoLeftUri ? (
                   <Image source={{ uri: photoLeftUri }} style={styles.photoPreview} />
                 ) : (
@@ -2538,7 +2538,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_angle_45'}
               >
                 {uploadingPhoto === 'photo_angle_45' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoAngle45Uri ? (
                   <Image source={{ uri: photoAngle45Uri }} style={styles.photoPreview} />
                 ) : (
@@ -2555,7 +2555,7 @@ export const DriverVehicleScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'photo_interior'}
               >
                 {uploadingPhoto === 'photo_interior' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoInteriorUri ? (
                   <Image source={{ uri: photoInteriorUri }} style={styles.photoPreview} />
                 ) : (
@@ -2646,6 +2646,9 @@ export const DriverVehicleScreen: React.FC = () => {
   );
 };
 
+/** Fallback swatch shown until a real vehicle colour (`hex_code`) is chosen. */
+const VEHICLE_SWATCH_FALLBACK = '#87CEEB';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -2677,7 +2680,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   backButtonArrow: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -2685,7 +2688,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   backButtonText: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -2694,7 +2697,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: theme.spacing(1),
   },
   title: {
@@ -2732,7 +2735,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2756,7 +2759,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2775,7 +2778,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2784,24 +2787,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vehicleTypeOptionActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   vehicleTypeText: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
   },
   vehicleTypeTextActive: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '600',
   },
   colorIndicator: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#87CEEB',
+    // 🚗 NOT a UI colour and NOT a token — this is the fallback swatch for a
+    // VEHICLE'S PAINT, replaced at runtime by `selectedColor.hex_code` from the
+    // database. Putting car colours in the palette would be a category error.
+    backgroundColor: VEHICLE_SWATCH_FALLBACK,
     marginLeft: theme.spacing(1),
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
   },
   sectionTitle: {
     ...theme.typography.h5,
@@ -2815,7 +2821,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2833,7 +2839,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2855,7 +2861,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2892,11 +2898,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.palette.background.card,
   },
   checkboxChecked: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#4CAF50',
+    borderColor: theme.palette.action,
+    backgroundColor: theme.palette.action,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2911,7 +2917,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2927,7 +2933,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -2940,7 +2946,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -2948,7 +2954,7 @@ const styles = StyleSheet.create({
   selectInput: {
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -2973,7 +2979,7 @@ const styles = StyleSheet.create({
   // Simple Dropdown Styles
   simpleDropdownOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: theme.palette.scrim.sheet,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -2984,7 +2990,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '70%',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -2996,38 +3002,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: theme.palette.borders.strong,
   },
   simpleDropdownTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   simpleDropdownCloseButton: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.palette.ground,
     justifyContent: 'center',
     alignItems: 'center',
   },
   simpleDropdownCloseText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.palette.text.secondary,
     fontWeight: 'bold',
   },
   simpleSearchBox: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: theme.palette.borders.strong,
   },
   simpleSearchInput: {
-    backgroundColor: '#F8F8F8',
+    backgroundColor: theme.palette.ground,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   simpleDropdownList: {
     maxHeight: 300,
@@ -3038,7 +3044,7 @@ const styles = StyleSheet.create({
   },
   simpleDropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: theme.palette.text.tertiary,
   },
   simpleDropdownItem: {
     flexDirection: 'row',
@@ -3047,41 +3053,41 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: theme.palette.ground,
   },
   simpleDropdownItemSelected: {
-    backgroundColor: '#F0F8F0',
+    backgroundColor: theme.palette.successTint,
   },
   simpleDropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: theme.palette.text.primary,
     flex: 1,
   },
   simpleDropdownItemTextSelected: {
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   simpleDropdownCheck: {
     fontSize: 18,
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: 'bold',
     marginLeft: 8,
   },
   requiredMarker: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   labelError: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   errorText: {
     ...theme.typography.caption,
-    color: '#E53935',
+    color: theme.palette.dangerText,
     marginTop: theme.spacing(0.5),
   },
   inputError: {
-    borderBottomColor: '#E53935',
+    borderBottomColor: theme.palette.danger,
   },
   selectInputError: {
-    borderBottomColor: '#E53935',
+    borderBottomColor: theme.palette.danger,
   },
 });

@@ -91,23 +91,23 @@ export const ProfileScreen: React.FC = () => {
       case 'bell':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.warnTint }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.warnBorder }]} />
             </View>
           </View>
         );
       case 'edit':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#DBEAFE' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.maleTint }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.male }]} />
             </View>
           </View>
         );
       case 'list':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#D1FAE5' }]}>
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.successTint }]}>
               <View style={styles.listIcon}>
                 <View style={styles.listIconLine} />
                 <View style={styles.listIconLine} />
@@ -119,32 +119,32 @@ export const ProfileScreen: React.FC = () => {
       case 'card':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#6366F1' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.blueTint }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.paid }]} />
             </View>
           </View>
         );
       case 'history':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#EC4899' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.femaleTint }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.female }]} />
             </View>
           </View>
         );
       case 'help':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#F59E0B' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.warnTint }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.warnBorder }]} />
             </View>
           </View>
         );
       case 'settings':
         return (
           <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: '#E5E7EB' }]}>
-              <View style={[styles.iconDot, { backgroundColor: '#6B7280' }]} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.palette.borders.strong }]}>
+              <View style={[styles.iconDot, { backgroundColor: theme.palette.text.secondary }]} />
             </View>
           </View>
         );
@@ -155,7 +155,7 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
       {/* Header with Back Button */}
       <View style={styles.header}>
         {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
@@ -231,7 +231,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   scrollView: {
     flex: 1,
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -278,9 +278,9 @@ const styles = StyleSheet.create({
     padding: 32,
     paddingTop: 40,
     marginBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -289,19 +289,19 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    borderColor: theme.palette.surface,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -313,24 +313,24 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
   },
   name: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   email: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginBottom: 6,
     fontWeight: '500',
   },
   phone: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginBottom: 16,
     fontWeight: '500',
   },
@@ -340,14 +340,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   idLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginRight: 8,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -355,15 +355,15 @@ const styles = StyleSheet.create({
   },
   idValue: {
     fontSize: 14,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontFamily: 'monospace',
     fontWeight: '600',
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     overflow: 'hidden',
   },
   menuItem: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   menuItemLast: {
     borderBottomWidth: 0,
@@ -408,28 +408,28 @@ const styles = StyleSheet.create({
   listIconLine: {
     width: 18,
     height: 2,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 1,
   },
   menuTitle: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   menuArrow: {
     fontSize: 24,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '300',
   },
   logoutButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.palette.danger,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 14,
     marginBottom: 20,
     alignItems: 'center',
-    shadowColor: '#EF4444',
+    shadowColor: theme.palette.danger,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   },
   appInfoText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
   },
 });

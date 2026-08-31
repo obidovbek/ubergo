@@ -717,7 +717,7 @@ of truth — do not edit the owner's artboards).
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
 | user | **6** | **216** | **1** (from 839) |
-| driver | **28** | **282** | **506** (from 964) |
+| driver | **28** | **280** | **235** (from 964) |
 
 🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
 `Profile` 43 · `OfferDrivers` 41, all to **0**. The ceiling is 234 and **the ratchet was re-proven
@@ -764,8 +764,19 @@ and scans `layout/` and `navigation/`.
    sure the fix kept them distinct** (`cancelled` grey must not collapse into `rejected` red).
    🔴 **THE SAME DEFECT WAS ALREADY LIVE IN THE USER APP** — 3 text uses fixed there too, one of
    them the rating label that 2026-08-30 "fixed" from 2.85:1 **to a worse 1.84:1**.
-   **What is left is the big screens**, largest first: `OfferWizard` 127 ·
-   `SearchPassengerOffers` 105, then the document screens (48/48/44/33/29) and `Profile` 44.
+   ✅ **2026-08-31 (3) — THE FIVE DOCUMENT SCREENS + Menu/Profile/RegisterFirst: 506 → 235.**
+   `DriverPersonalInfo` 48 · `DriverVehicle` 48 · `DriverPassport` 44 · `DriverLicense` 33 ·
+   `DriverTaxiLicense` 29 · `Profile` 44 · `Menu` 26 · `RegisterFirst` 2.
+   ✅ **FIRST CONVERSION DONE ROLE-AWARE FROM THE START** (per §2.10, written the same day):
+   the tokenizer reads the CSS property, so `color:` takes an ink token and
+   `backgroundColor:`/`borderColor:` take the fill. `#E53935` is in these screens as BOTH — 16
+   text uses, 10 borders — and it split correctly: `dangerText` (6.02:1) vs `danger`.
+   **The error text was 4.23:1 before and would have stayed failing under a value-only map.**
+   🚗 **`VEHICLE_SWATCH_FALLBACK` (#87CEEB) named, not tokenized** — it is the placeholder for a
+   car's real paint colour, replaced at runtime by `selectedColor.hex_code` from the DB. Car
+   colours are data, not design tokens.
+   **What is left: `OfferWizard` 127 · `SearchPassengerOffers` 105**, plus the 2 named store
+   constants and 1 vehicle swatch that stay by design.
    ⚠️ **`SearchPassengerOffers` was already partly converted on 2026-08-30** (the shared geo sheet)
    and **still needs a device walk** — its three location buttons per direction became one.
    Then steps 15-22.

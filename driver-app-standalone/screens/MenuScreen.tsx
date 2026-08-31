@@ -267,7 +267,7 @@ export const MenuScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   scrollContent: {
     flexGrow: 1,
@@ -280,16 +280,16 @@ const styles = StyleSheet.create({
   logoSuffix: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
     letterSpacing: 3,
     textTransform: 'uppercase',
     marginTop: -4,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   cardHeader: {
     alignItems: 'center',
@@ -307,27 +307,27 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   cardSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
   },
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
     marginBottom: 24,
     borderWidth: 1.5,
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
+    borderColor: theme.palette.action,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   },
   countryName: {
     fontSize: 17,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
   },
   optionsGrid: {
@@ -354,14 +354,14 @@ const styles = StyleSheet.create({
   optionButton: {
     width: '47%',
     aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     padding: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -372,30 +372,30 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 22,
   },
   offersOptionButton: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
+    backgroundColor: theme.palette.successTint,
+    borderColor: theme.palette.action,
     borderWidth: 2,
     position: 'relative',
   },
   offersOptionText: {
-    color: '#10B981',
+    color: theme.palette.action,
   },
   // T-037 — a second action row, deliberately a different colour from
   // "my offers" so the two are not mistaken for one another.
   passengerOrdersOptionButton: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
+    backgroundColor: theme.palette.blueTint,
+    borderColor: theme.palette.male,
     borderWidth: 2,
     position: 'relative',
   },
   passengerOrdersOptionText: {
-    color: '#2563EB',
+    color: theme.palette.male,
   },
   offersIconContainer: {
     // T-059 — absolutely positioned so the icon does NOT push its label down.
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   offersIcon: {
     width: 32,
     height: 32,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'flex-start',
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   offersIconLine: {
     width: 18,
     height: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     marginBottom: 3,
     borderRadius: 1,
   },
@@ -434,14 +434,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   offersBadgeText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 11,
     fontWeight: '700',
   },

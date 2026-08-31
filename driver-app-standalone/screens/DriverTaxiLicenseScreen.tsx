@@ -986,7 +986,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
@@ -1113,7 +1113,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'license_document'}
               >
                 {uploadingPhoto === 'license_document' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : licenseDocumentUri ? (
                   <Image source={{ uri: licenseDocumentUri }} style={styles.photoPreview} />
                 ) : (
@@ -1216,7 +1216,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'license_sheet_document'}
               >
                 {uploadingPhoto === 'license_sheet_document' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : licenseSheetDocumentUri ? (
                   <Image source={{ uri: licenseSheetDocumentUri }} style={styles.photoPreview} />
                 ) : (
@@ -1256,7 +1256,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'self_employment_document'}
               >
                 {uploadingPhoto === 'self_employment_document' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : selfEmploymentDocumentUri ? (
                   <Image source={{ uri: selfEmploymentDocumentUri }} style={styles.photoPreview} />
                 ) : (
@@ -1274,7 +1274,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'power_of_attorney_document'}
               >
                 {uploadingPhoto === 'power_of_attorney_document' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : powerOfAttorneyDocumentUri ? (
                   <Image source={{ uri: powerOfAttorneyDocumentUri }} style={styles.photoPreview} />
                 ) : (
@@ -1292,7 +1292,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'insurance_document'}
               >
                 {uploadingPhoto === 'insurance_document' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : insuranceDocumentUri ? (
                   <Image source={{ uri: insuranceDocumentUri }} style={styles.photoPreview} />
                 ) : (
@@ -1461,7 +1461,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   backButtonArrow: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -1469,7 +1469,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   backButtonText: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -1478,7 +1478,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: theme.spacing(1),
   },
   title: {
@@ -1525,15 +1525,15 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(1),
   },
   labelError: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   requiredMarker: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   input: {
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1543,11 +1543,11 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
   },
   inputError: {
-    borderBottomColor: '#E53935',
+    borderBottomColor: theme.palette.danger,
   },
   errorText: {
     ...theme.typography.caption,
-    color: '#E53935',
+    color: theme.palette.dangerText,
     marginTop: theme.spacing(0.5),
   },
   dateInputContainer: {
@@ -1555,7 +1555,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1592,7 +1592,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1608,7 +1608,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -1621,14 +1621,14 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
   // Date Picker Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1643,20 +1643,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.palette.borders.strong,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   modalCancelText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.palette.text.secondary,
   },
   modalConfirmText: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   datePickerContainer: {
@@ -1673,11 +1673,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   pickerScroll: {
     flex: 1,
@@ -1688,18 +1688,18 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.palette.ground,
   },
   pickerItemSelected: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   pickerItemText: {
     fontSize: 15,
-    color: '#666',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
   },
   pickerItemTextSelected: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '600',
   },
   loadingContainer: {

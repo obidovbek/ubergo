@@ -881,7 +881,7 @@ export const DriverLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'front'}
               >
                 {uploadingPhoto === 'front' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoFrontUri ? (
                   <Image source={{ uri: photoFrontUri }} style={styles.photoPreview} />
                 ) : (
@@ -899,7 +899,7 @@ export const DriverLicenseScreen: React.FC = () => {
                 disabled={isLoading || uploadingPhoto === 'back'}
               >
                 {uploadingPhoto === 'back' ? (
-                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <ActivityIndicator size="large" color={theme.palette.action} />
                 ) : photoBackUri ? (
                   <Image source={{ uri: photoBackUri }} style={styles.photoPreview} />
                 ) : (
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   backButtonArrow: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -1209,7 +1209,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   backButtonText: {
-    color: '#2196F3',
+    color: theme.palette.action,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
@@ -1218,7 +1218,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: theme.spacing(1),
   },
   title: {
@@ -1254,10 +1254,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(1),
   },
   labelError: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   requiredMarker: {
-    color: '#E53935',
+    color: theme.palette.dangerText,
   },
   readOnlySection: {
     backgroundColor: theme.palette.grey[100],
@@ -1273,7 +1273,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1283,11 +1283,11 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
   },
   inputError: {
-    borderBottomColor: '#E53935',
+    borderBottomColor: theme.palette.danger,
   },
   errorText: {
     ...theme.typography.caption,
-    color: '#E53935',
+    color: theme.palette.dangerText,
     marginTop: theme.spacing(0.5),
   },
   // T-061: sits under a category ROW, which is a flex line rather than an
@@ -1295,7 +1295,7 @@ const styles = StyleSheet.create({
   // the gap between rows and the message would otherwise touch the next one.
   categoryErrorText: {
     ...theme.typography.caption,
-    color: '#E53935',
+    color: theme.palette.dangerText,
     marginTop: theme.spacing(0.5),
     marginBottom: theme.spacing(1),
   },
@@ -1304,7 +1304,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1347,7 +1347,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1366,7 +1366,7 @@ const styles = StyleSheet.create({
     width: 50,
     minHeight: 48,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1386,7 +1386,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1417,7 +1417,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1441,7 +1441,7 @@ const styles = StyleSheet.create({
     flex: 2,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1473,7 +1473,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1490,7 +1490,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1505,20 +1505,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.palette.borders.strong,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   modalCancelText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.palette.text.secondary,
   },
   modalConfirmText: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   datePickerContainer: {
@@ -1535,11 +1535,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   pickerScroll: {
     flex: 1,
@@ -1550,22 +1550,22 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.palette.ground,
   },
   pickerItemSelected: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   pickerItemText: {
     fontSize: 15,
-    color: '#666',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
   },
   pickerItemTextSelected: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '600',
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -1578,14 +1578,14 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
   // Country Picker Styles
   countryPickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: theme.palette.scrim.light,
     justifyContent: 'center',
     padding: theme.spacing(3),
   },
