@@ -36,7 +36,7 @@ import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
-import { GeoPickerModal } from '../components/GeoPickerModal';
+import { GeoSheet, type GeoPath } from '../components/geo/GeoSheet';
 import type { MainStackParamList } from '../navigation/types';
 
 const LAST_SEARCH_KEY = '@ubexgo_driver:last_passenger_search';
@@ -51,26 +51,30 @@ export default function SearchPassengerOffersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Geo selection states - From
-  const [fromCountries, setFromCountries] = useState<GeoOption[]>([]);
-  const [fromProvinces, setFromProvinces] = useState<GeoOption[]>([]);
-  const [fromCities, setFromCities] = useState<GeoOption[]>([]);
-  const [selectedFromCountry, setSelectedFromCountry] = useState<GeoOption | null>(null);
-  const [selectedFromProvince, setSelectedFromProvince] = useState<GeoOption | null>(null);
-  const [selectedFromCity, setSelectedFromCity] = useState<GeoOption | null>(null);
+  /*
+   * T-101 — the geo cascade moved into `GeoSheet`, exactly as in the user app's
+   * `SearchOffersScreen`.
+   *
+   * 🔴 THIS SCREEN IS THAT ONE'S TWIN: the same 12 state hooks, the same seven
+   * helpers (`openGeoModal`, `getGeoOptions`, `isGeoSelected`, `clearGeoSelection`,
+   * `swapLocations`, `handleGeoSelection`, `loadLastSearch`), the same duplicated
+   * "clear the child when the parent changes" rule written twice. Fixing one twin
+   * and walking past the other is this project's most repeated defect.
+   *
+   * ⚠️ The two are NOT identical underneath: this search sends `from_text`/`to_text`
+   * STRINGS while the passenger app sends `*_province_id`/`*_city_id`. The derived
+   * names below keep that difference invisible to the rest of the file.
+   */
+  const [fromPath, setFromPath] = useState<GeoPath>({});
+  const [toPath, setToPath] = useState<GeoPath>({});
+  const [geoSheet, setGeoSheet] = useState<'from' | 'to' | null>(null);
 
-  // Geo selection states - To
-  const [toCountries, setToCountries] = useState<GeoOption[]>([]);
-  const [toProvinces, setToProvinces] = useState<GeoOption[]>([]);
-  const [toCities, setToCities] = useState<GeoOption[]>([]);
-  const [selectedToCountry, setSelectedToCountry] = useState<GeoOption | null>(null);
-  const [selectedToProvince, setSelectedToProvince] = useState<GeoOption | null>(null);
-  const [selectedToCity, setSelectedToCity] = useState<GeoOption | null>(null);
-  
-  // Modal states
-  const [geoModalVisible, setGeoModalVisible] = useState(false);
-  const [geoModalType, setGeoModalType] = useState<'from' | 'to'>('from');
-  const [geoModalLevel, setGeoModalLevel] = useState<'country' | 'province' | 'city'>('country');
-  const [geoLoading, setGeoLoading] = useState(false);
+  const selectedFromCountry = fromPath.country ?? null;
+  const selectedFromProvince = fromPath.province ?? null;
+  const selectedFromCity = fromPath.district ?? null;
+  const selectedToCountry = toPath.country ?? null;
+  const selectedToProvince = toPath.province ?? null;
+  const selectedToCity = toPath.district ?? null;
   
   // Filter states
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -80,8 +84,7 @@ export default function SearchPassengerOffersScreen() {
 
   useEffect(() => {
     const initialize = async () => {
-      await loadFromCountries();
-      await loadToCountries();
+      // T-101 — no pre-loading; `GeoSheet` fetches each level when it opens.
       await loadLastSearch();
     };
     initialize();
@@ -117,83 +120,33 @@ export default function SearchPassengerOffersScreen() {
   const loadLastSearch = async () => {
     try {
       const savedData = await AsyncStorage.getItem(LAST_SEARCH_KEY);
-      if (savedData) {
-        const searchData = JSON.parse(savedData);
-        
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        if (searchData.fromCountry) {
-          setSelectedFromCountry(searchData.fromCountry);
-          if (searchData.fromProvince) {
-            await loadFromProvinces(searchData.fromCountry.id);
-            setSelectedFromProvince(searchData.fromProvince);
-            if (searchData.fromCity) {
-              await loadFromCities(searchData.fromProvince.id);
-              setSelectedFromCity(searchData.fromCity);
-            }
-          }
-        }
-        
-        if (searchData.toCountry) {
-          setSelectedToCountry(searchData.toCountry);
-          if (searchData.toProvince) {
-            await loadToProvinces(searchData.toCountry.id);
-            setSelectedToProvince(searchData.toProvince);
-            if (searchData.toCity) {
-              await loadToCities(searchData.toProvince.id);
-              setSelectedToCity(searchData.toCity);
-            }
-          }
-        }
-      }
+      if (!savedData) return;
+      const searchData = JSON.parse(savedData);
+
+      /*
+       * T-101 — was six loader calls behind a 300 ms sleep, because the old picker
+       * could only show a list it had already fetched. A restored path is a value now.
+       */
+      setFromPath({
+        ...(searchData.fromCountry ? { country: searchData.fromCountry } : {}),
+        ...(searchData.fromProvince ? { province: searchData.fromProvince } : {}),
+        ...(searchData.fromCity ? { district: searchData.fromCity } : {}),
+      });
+      setToPath({
+        ...(searchData.toCountry ? { country: searchData.toCountry } : {}),
+        ...(searchData.toProvince ? { province: searchData.toProvince } : {}),
+        ...(searchData.toCity ? { district: searchData.toCity } : {}),
+      });
     } catch (error) {
       console.error('Failed to load last search:', error);
     }
   };
 
   // Swap From and To
-  const swapLocations = async () => {
-    const tempFromCountry = selectedFromCountry;
-    const tempFromProvince = selectedFromProvince;
-    const tempFromCity = selectedFromCity;
-    const tempToCountry = selectedToCountry;
-    const tempToProvince = selectedToProvince;
-    const tempToCity = selectedToCity;
-    
-    setSelectedFromCountry(tempToCountry);
-    setSelectedFromProvince(tempToProvince);
-    setSelectedFromCity(tempToCity);
-    
-    setSelectedToCountry(tempFromCountry);
-    setSelectedToProvince(tempFromProvince);
-    setSelectedToCity(tempFromCity);
-    
-    if (tempToCountry) {
-      setFromProvinces([]);
-      setFromCities([]);
-      await loadFromProvinces(tempToCountry.id);
-      if (tempToProvince) {
-        await loadFromCities(tempToProvince.id);
-      }
-    }
-    
-    if (tempFromCountry) {
-      setToProvinces([]);
-      setToCities([]);
-      await loadToProvinces(tempFromCountry.id);
-      if (tempFromProvince) {
-        await loadToCities(tempFromProvince.id);
-      }
-    }
-    
-    await saveLastSearch({
-      fromCountry: tempToCountry,
-      fromProvince: tempToProvince,
-      fromCity: tempToCity,
-      toCountry: tempFromCountry,
-      toProvince: tempFromProvince,
-      toCity: tempFromCity,
-    });
+  /** T-101 — swapping two paths is one exchange (see the user app's twin). */
+  const swapLocations = () => {
+    setFromPath(toPath);
+    setToPath(fromPath);
   };
 
   // Auto-save search when both provinces are selected
@@ -213,95 +166,6 @@ export default function SearchPassengerOffersScreen() {
       loadOffers();
     }
   }, [selectedFromProvince, selectedFromCity, selectedToProvince, selectedToCity, maxPrice, minSeats, sortBy]);
-
-  const loadFromCountries = async () => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCountries();
-      setFromCountries(data);
-      
-      const uzbekistan = data.find(country => 
-        country.name.toLowerCase().includes('zbekistan')
-      );
-      if (uzbekistan && !selectedFromCountry) {
-        setSelectedFromCountry(uzbekistan);
-        loadFromProvinces(uzbekistan.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to load countries:', error);
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCountries = async () => {
-    try {
-      const data = await GeoAPI.fetchGeoCountries();
-      setToCountries(data);
-      
-      const uzbekistan = data.find(country => 
-        country.name.toLowerCase().includes('zbekistan')
-      );
-      if (uzbekistan && !selectedToCountry) {
-        setSelectedToCountry(uzbekistan);
-        loadToProvinces(uzbekistan.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to load countries:', error);
-    }
-  };
-
-  const loadFromProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoProvinces(countryId);
-      setFromProvinces(data);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      showToast.error(t('common.error'), t('searchPassengerOffers.loadProvincesFailed'));
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadFromCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setFromCities(data);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error(t('common.error'), t('searchPassengerOffers.loadCitiesFailed'));
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoProvinces(countryId);
-      setToProvinces(data);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      showToast.error(t('common.error'), t('searchPassengerOffers.loadProvincesFailed'));
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setToCities(data);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error(t('common.error'), t('searchPassengerOffers.loadCitiesFailed'));
-    } finally {
-      setGeoLoading(false);
-    }
-  };
 
   const loadOffers = async () => {
     if (!selectedFromProvince || !selectedToProvince) {
@@ -339,154 +203,10 @@ export default function SearchPassengerOffersScreen() {
     setRefreshing(false);
   };
 
-  const openGeoModal = async (type: 'from' | 'to', level: 'country' | 'province' | 'city') => {
-    setGeoModalType(type);
-    setGeoModalLevel(level);
-    
-    if (type === 'from') {
-      if (level === 'province' && !selectedFromCountry) {
-        showToast.error(t('common.error'), t('searchPassengerOffers.selectCountryFirst'));
-        return;
-      }
-      if (level === 'city' && !selectedFromProvince) {
-        showToast.error(t('common.error'), t('searchPassengerOffers.selectProvinceFirst'));
-        return;
-      }
-      
-      if (level === 'province' && selectedFromCountry) {
-        await loadFromProvinces(selectedFromCountry.id);
-      } else if (level === 'city' && selectedFromProvince) {
-        await loadFromCities(selectedFromProvince.id);
-      }
-    } else {
-      if (level === 'province' && !selectedToCountry) {
-        showToast.error(t('common.error'), t('searchPassengerOffers.selectCountryFirst'));
-        return;
-      }
-      if (level === 'city' && !selectedToProvince) {
-        showToast.error(t('common.error'), t('searchPassengerOffers.selectProvinceFirst'));
-        return;
-      }
-      
-      if (level === 'province' && selectedToCountry) {
-        await loadToProvinces(selectedToCountry.id);
-      } else if (level === 'city' && selectedToProvince) {
-        await loadToCities(selectedToProvince.id);
-      }
-    }
-    
-    setGeoModalVisible(true);
-  };
-
-  const handleGeoSelection = async (option: GeoOption) => {
-    if (geoModalType === 'from') {
-      if (geoModalLevel === 'country') {
-        setSelectedFromCountry(option);
-        setSelectedFromProvince(null);
-        setSelectedFromCity(null);
-        setFromProvinces([]);
-        setFromCities([]);
-        await loadFromProvinces(option.id);
-      } else if (geoModalLevel === 'province') {
-        setSelectedFromProvince(option);
-        setSelectedFromCity(null);
-        setFromCities([]);
-        await loadFromCities(option.id);
-      } else if (geoModalLevel === 'city') {
-        setSelectedFromCity(option);
-      }
-    } else {
-      if (geoModalLevel === 'country') {
-        setSelectedToCountry(option);
-        setSelectedToProvince(null);
-        setSelectedToCity(null);
-        setToProvinces([]);
-        setToCities([]);
-        await loadToProvinces(option.id);
-      } else if (geoModalLevel === 'province') {
-        setSelectedToProvince(option);
-        setSelectedToCity(null);
-        setToCities([]);
-        await loadToCities(option.id);
-      } else if (geoModalLevel === 'city') {
-        setSelectedToCity(option);
-      }
-    }
-    
-    setGeoModalVisible(false);
-    
-    setTimeout(() => {
-      saveLastSearch();
-    }, 100);
-  };
-
-  const clearGeoSelection = (type?: 'from' | 'to') => {
-    if (!type || type === 'from') {
-      setSelectedFromCountry(null);
-      setSelectedFromProvince(null);
-      setSelectedFromCity(null);
-      setFromProvinces([]);
-      setFromCities([]);
-    }
-    if (!type || type === 'to') {
-      setSelectedToCountry(null);
-      setSelectedToProvince(null);
-      setSelectedToCity(null);
-      setToProvinces([]);
-      setToCities([]);
-    }
-    if (!type) {
-      setOffers([]);
-    }
-    
-    setTimeout(() => {
-      saveLastSearch();
-    }, 100);
-  };
-
-  const getGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (geoModalType === 'from') {
-      switch (geoModalLevel) {
-        case 'country':
-          options = fromCountries;
-          break;
-        case 'province':
-          options = fromProvinces;
-          break;
-        case 'city':
-          options = fromCities;
-          break;
-      }
-    } else {
-      switch (geoModalLevel) {
-        case 'country':
-          options = toCountries;
-          break;
-        case 'province':
-          options = toProvinces;
-          break;
-        case 'city':
-          options = toCities;
-          break;
-      }
-    }
-
-    // Search filtering now lives in `ModalList`, which owns the search box (T-036).
-    return options;
-  };
-
-  const isGeoSelected = (option: GeoOption): boolean => {
-    if (geoModalType === 'from') {
-      if (geoModalLevel === 'country') return selectedFromCountry?.id === option.id;
-      if (geoModalLevel === 'province') return selectedFromProvince?.id === option.id;
-      if (geoModalLevel === 'city') return selectedFromCity?.id === option.id;
-    } else {
-      if (geoModalLevel === 'country') return selectedToCountry?.id === option.id;
-      if (geoModalLevel === 'province') return selectedToProvince?.id === option.id;
-      if (geoModalLevel === 'city') return selectedToCity?.id === option.id;
-    }
-    return false;
+  /** T-101 — clearing a direction is emptying its path. */
+  const clearGeoSelection = (type: 'from' | 'to') => {
+    if (type === 'from') setFromPath({});
+    else setToPath({});
   };
 
   const handleViewOffer = (offer: PassengerOffersAPI.PassengerOffer) => {
@@ -642,56 +362,36 @@ export default function SearchPassengerOffersScreen() {
               <Text style={styles.sectionLabel}>{t('searchPassengerOffers.fromLabel')}</Text>
             </View>
               
-            {/* From Country Selection - Compact */}
+            {/* T-101 — one button per direction; the sheet walks the levels. */}
             <TouchableOpacity
-              style={styles.countryButtonCompact}
-              onPress={() => openGeoModal('from', 'country')}
+              style={styles.geoSelectButtonCompact}
+              onPress={() => setGeoSheet('from')}
               activeOpacity={0.7}
             >
-              <Ionicons name="globe" size={14} color="#6B7280" />
-              <Text style={styles.countryButtonText} numberOfLines={1}>
-                {selectedFromCountry ? selectedFromCountry.name : 'Select Country'}
+              <Text
+                style={[
+                  styles.geoSelectTextCompact,
+                  !fromPath.province && styles.geoSelectTextPlaceholder,
+                ]}
+                numberOfLines={2}
+              >
+                {[fromPath.province?.name, fromPath.district?.name]
+                  .filter(Boolean)
+                  .join(', ') || t('offerWizard.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
             </TouchableOpacity>
-              
-            {/* From Province Selection */}
-            {selectedFromCountry && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('from', 'province')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.geoSelectTextCompact}>
-                  {selectedFromProvince ? selectedFromProvince.name : 'Select Province'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
 
-            {/* From City Selection (Optional) */}
-            {selectedFromProvince && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('from', 'city')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.geoSelectTextCompact, !selectedFromCity && styles.geoSelectTextPlaceholder]}>
-                  {selectedFromCity ? selectedFromCity.name : 'City (Optional)'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* Clear From Selection */}
-            {(selectedFromProvince || selectedFromCity) && (
+            {!!fromPath.province && (
               <TouchableOpacity
                 style={styles.clearButtonCompact}
-                onPress={() => clearGeoSelection('from')}
+                onPress={() => setFromPath({})}
                 activeOpacity={0.7}
               >
                 <Ionicons name="close-circle" size={16} color="#EF4444" />
-                <Text style={styles.clearButtonTextCompact}>{t('searchPassengerOffers.clear')}</Text>
+                <Text style={styles.clearButtonTextCompact}>
+                  {t('searchPassengerOffers.clear')}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -719,56 +419,36 @@ export default function SearchPassengerOffersScreen() {
               <Text style={styles.sectionLabel}>{t('searchPassengerOffers.toLabel')}</Text>
             </View>
               
-            {/* To Country Selection - Compact */}
+            {/* T-101 — one button per direction; the sheet walks the levels. */}
             <TouchableOpacity
-              style={styles.countryButtonCompact}
-              onPress={() => openGeoModal('to', 'country')}
+              style={styles.geoSelectButtonCompact}
+              onPress={() => setGeoSheet('to')}
               activeOpacity={0.7}
             >
-              <Ionicons name="globe" size={14} color="#6B7280" />
-              <Text style={styles.countryButtonText} numberOfLines={1}>
-                {selectedToCountry ? selectedToCountry.name : 'Select Country'}
+              <Text
+                style={[
+                  styles.geoSelectTextCompact,
+                  !toPath.province && styles.geoSelectTextPlaceholder,
+                ]}
+                numberOfLines={2}
+              >
+                {[toPath.province?.name, toPath.district?.name]
+                  .filter(Boolean)
+                  .join(', ') || t('offerWizard.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
             </TouchableOpacity>
-              
-            {/* To Province Selection */}
-            {selectedToCountry && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('to', 'province')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.geoSelectTextCompact}>
-                  {selectedToProvince ? selectedToProvince.name : 'Select Province'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
 
-            {/* To City Selection (Optional) */}
-            {selectedToProvince && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('to', 'city')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.geoSelectTextCompact, !selectedToCity && styles.geoSelectTextPlaceholder]}>
-                  {selectedToCity ? selectedToCity.name : 'City (Optional)'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* Clear To Selection */}
-            {(selectedToProvince || selectedToCity) && (
+            {!!toPath.province && (
               <TouchableOpacity
                 style={styles.clearButtonCompact}
-                onPress={() => clearGeoSelection('to')}
+                onPress={() => setToPath({})}
                 activeOpacity={0.7}
               >
                 <Ionicons name="close-circle" size={16} color="#EF4444" />
-                <Text style={styles.clearButtonTextCompact}>{t('searchPassengerOffers.clear')}</Text>
+                <Text style={styles.clearButtonTextCompact}>
+                  {t('searchPassengerOffers.clear')}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -952,25 +632,24 @@ export default function SearchPassengerOffersScreen() {
       </AppModal>
 
       {/* Geo Selection Modal */}
-      <GeoPickerModal
-        visible={geoModalVisible}
-        title={[
-          geoModalType === 'from'
+      {/* T-101 — the same shared sheet the passenger app's search uses. */}
+      <GeoSheet
+        visible={geoSheet !== null}
+        title={
+          geoSheet === 'from'
             ? t('searchPassengerOffers.from')
-            : t('searchPassengerOffers.to'),
-          geoModalLevel === 'country'
-            ? t('offerWizard.selectCountry')
-            : geoModalLevel === 'province'
-              ? t('offerWizard.selectProvince')
-              : t('offerWizard.selectCity'),
-        ].join(': ')}
-        options={getGeoOptions()}
-        // The screen tracks selection with a predicate, not an id — resolve it here
-        // rather than reshaping six pieces of state.
-        selectedId={getGeoOptions().find(isGeoSelected)?.id ?? null}
-        loading={geoLoading}
-        onSelect={handleGeoSelection}
-        onClose={() => setGeoModalVisible(false)}
+            : t('searchPassengerOffers.to')
+        }
+        initialPath={geoSheet === 'from' ? fromPath : toPath}
+        // This search sends from_text/to_text built from province + district, so
+        // district is as deep as it needs.
+        endLevel="district"
+        onDone={(path) => {
+          if (geoSheet === 'from') setFromPath(path);
+          else setToPath(path);
+          setGeoSheet(null);
+        }}
+        onClose={() => setGeoSheet(null)}
       />
     </SafeAreaView>
   );

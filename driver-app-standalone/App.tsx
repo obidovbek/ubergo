@@ -23,6 +23,8 @@ import {
 } from './services/PushService';
 import { handleNotificationTap } from './utils/notificationRouting';
 import { notifyPushReceived } from './utils/pushEvents';
+import { useFonts } from 'expo-font';
+import { fontAssets } from './themes/fonts';
 
 // Register background message handler at module level (only for native platforms)
 // This must be at module level for background notifications to work
@@ -41,6 +43,23 @@ if (Platform.OS !== 'web') {
 
 export default function App() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
+
+  /**
+   * T-101 step 2. `fontError` is deliberately NOT allowed to block the app: a missing
+   * face degrades to the system font, which is ugly but usable, and blocking startup
+   * over a cosmetic asset would be worse than the cosmetic problem.
+   *
+   * ⚠️ It is logged loudly because a font failure is otherwise INVISIBLE — the text
+   * renders in the fallback and looks *nearly* right, which is exactly how a wrong
+   * weight ships unnoticed.
+   */
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+
+  useEffect(() => {
+    if (fontError) {
+      console.error('[fonts] FAILED TO LOAD — falling back to the system font:', fontError);
+    }
+  }, [fontError]);
 
   useEffect(() => {
     // Check network connectivity
@@ -107,8 +126,10 @@ export default function App() {
     );
   }
 
-  // Show splash screen while checking connection (only on first render)
-  if (isConnected === null) {
+  // Splash while checking connection AND while fonts load (T-101 step 2).
+  // `|| fontError` releases the gate on failure — see the note above: a missing font
+  // must not be able to hold the app on the splash screen.
+  if (isConnected === null || !(fontsLoaded || fontError)) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>

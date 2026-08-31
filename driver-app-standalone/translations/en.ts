@@ -312,6 +312,8 @@ export default {
   },
 
   menu: {
+    /** T-101: the top bar screen name. `title` is the CARD heading. */
+    screenTitle: 'Intercity',
     title: 'TAXI',
     subtitle: 'Select country',
     uzbekistan: 'Uzbekistan',
@@ -775,7 +777,8 @@ export default {
     seatsLabel: 'Number of Seats',
     seatsDescription: '1 to 8 seats',
     priceLabel: 'Price Per Seat',
-    currencyLabel: 'Currency',    // T-079 / T-080 — amenities, jo'natma, road pickup and the fill-up flag.
+    currencyLabel: 'Currency',
+    // T-079 / T-080 — amenities, jo'natma, road pickup and the fill-up flag.
     amenitiesLabel: 'Amenities',
     amenityAirCon: 'Air conditioning',
     amenityWifi: 'Internet, WiFi',

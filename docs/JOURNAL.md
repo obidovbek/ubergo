@@ -5,6 +5,110 @@
 
 ---
 
+## 2026-08-30 — T-101: the new design system, foundation to five screens
+
+- **Task:** T-101 — rebuild both apps on the 33 `htmlDesign/` artboards the owner drew 2026-08-29.
+  Phase 1 (foundation) complete; five user screens converted. **Nothing committed — 56 files dirty.**
+
+- ✅ **PHASE 1 DONE.** Token layer in both apps · Manrope + JetBrains Mono bundled (7 faces each) ·
+  `expo-linear-gradient` + `react-native-svg` installed and **proven on a device** · TopBar +
+  BottomTabBar + Icon + Badge · Button/Card/Chip/Carousel · dark mode dropped.
+- ✅ **SCREENS:** `MenuScreen` (rebuilt to `UserMenuNeW`) · `SearchOffers` · `OfferDetails` ·
+  `MyBookings` · `MyPassengerOffers` — all at **0 raw colours**. Driver's
+  `SearchPassengerOffers` converted to the shared geo sheet.
+- 🟢 **THE RATCHET: user 839 → 414.** Driver 964 → 951 (its screens are untouched; only shared
+  components changed). `check-design-tokens.mjs` fails if either rises, and **was proven able to
+  go red** before being trusted.
+
+### The measurements that changed decisions
+
+- 🔴 **The design doc says blue `#0049FF` is the Driver colour. It is not.** Green beats blue
+  **398 to 51** across the 18 driver artboards. The blue is the *second word* of a two-word
+  wordmark ("UbexGo" green + "Driver" blue), in all 18 and zero user artboards. **Building to the
+  doc would have made the whole driver app the wrong colour.** *I got this wrong twice on the way —
+  once from the doc, once from an over-narrow grep — before checking the markup itself.*
+- 🔴 **Manrope has no weight 900.** Its variable axis is 200–800 and the static set stops at
+  ExtraBold. The artboards request 900 **113 times**; Google Fonts silently serves 800, so the
+  design has always *rendered* at 800. Folding 900→800 reproduces the artboards rather than falling
+  short. **Do not go hunting for a Manrope Black.**
+- 🔴 **JetBrains Mono is LOADED at 400/500/600 and USED at 700/800/900 — 290 times.** Browsers
+  synthesise; React Native does not. Bundling what the design declares would have rendered every
+  price and time one weight too light, silently.
+- 🔴 **FOUR ACCESSIBILITY FAILURES, all found by computing contrast, none visible by looking:**
+  the redesign's primary CTA **2.56:1** (white on brand green — owner approved using `action`
+  instead) · rating label **2.85:1** · seat badge **3.32:1** · `driver_found` status **2.42:1**.
+  All now pass. **The design system is more accessible than the code it replaces.**
+
+### What could not be built, and why
+
+- 🛑 **The four order scopes look right and all behave identically.** `DriverOffer` has **no geo
+  columns at all** — only `from_text`/`to_text` free strings matched with `ILIKE '%name%'` — so
+  three of the four rules are not expressible. `PassengerOffer` **has** the id columns and **no
+  search reads them**. → **T-102 boarded.**
+- 🛑 **"Hoziroq" on a driver offer does not exist.** `is_urgent` is passenger-only ("leave now");
+  `departs_when_full` is the driver's "leaves when the car fills", with a code comment already
+  warning they differ. The owner's definition — *leaves within ~30 min* — is a **third** concept.
+  Owner chose a real field over deriving it from the clock. → **T-103 boarded.**
+- 🛑 **Not shipped on the home screen because it would be FABRICATED STATE:** active-trip banner,
+  recent routes, balance/promo/trips. The artboard shows all three with invented data.
+- 🛑 **The search offer card cannot match the artboard yet** — the seat map needs per-seat gender,
+  the colour swatch needs `hex_code` on the offer response (the column exists on `VehicleColor`),
+  and vehicle class is not returned at all.
+
+### Mistakes worth carrying forward
+
+- 🔴 **I reported "converted" and let it read as "rebuilt".** The search screen got 127 colours
+  swapped; its layout never changed. **The owner had to point at a screenshot to find that out.**
+  Then I compounded it by claiming "most fields don't exist in the API" — **wrong**; only 3 of ~15
+  were missing. *Guessing stated as fact, twice in one report.*
+- 🔴 **I built the whole chrome and never mounted it.** `tsc`, lint and the token counter all
+  passed while `TopBar` rendered nowhere — `MenuScreen` still had its own header. **"It compiles"
+  is not "it renders", and only a device says which.**
+- 🔴 **I over-generalised an instruction and then applied taste on top of it.** Owner: *"other 4
+  scopes not carousel"* — about the **scopes**. I dropped the **service** carousel too, then hid it
+  entirely because only Taksi is enabled, immediately after being told the others are coming.
+- 🔴 **My i18n checker reported every key missing, including one predating the card.** Three
+  "fixes" later it returned byte-identical output — *a check that cannot change its answer is not
+  measuring anything*. Shell quoting had eaten the backslashes, so `\\s` reached the regex as a
+  literal `s`. **The dangerous version is the one where I "fix" translations to satisfy a broken
+  checker.**
+- 🔴 **I called `Button` dead with zero users. It had four.** My grep matched `components/Button`
+  and `./Button`; the real imports are `../Button`. **A negative grep is evidence about the
+  pattern, not the code.**
+- 🔴 **I left three routes registered in both the stack and the tabs** — the exact ambiguity a
+  comment I had just written warned against. Doesn't fail to compile; `navigate()` silently
+  resolves to the nearest.
+- 🟢 **And one that went right: "wire the remaining six geo call sites" became ONE.** Investigating
+  first showed they were three different jobs — route pickers, six-level *address* forms, and a
+  multi-select stop picker. `GeoPickerModal`'s own header says it already consolidated seven copies
+  in T-036. **Replacing it would have undone someone else's consolidation to impose mine.**
+
+### Decisions the owner made
+
+dark mode dropped · user + driver only, no new roles · `UserMenuNeW` canonical · CTA uses
+`action` not `brand` · both native deps approved · fonts bundled, no dep · services and scopes
+both carousels, unbuilt services dimmed · adm3 = `GeoSettlement` (delegated to me, decided from
+the schema) · "Yaqin" = a neighbours table · "Hoziroq" = a real field.
+
+### Verification
+
+**user `tsc` 6 / lint 218 / tokens 414 · driver `tsc` 28 / lint 285 / tokens 951.** Every
+deviation during the day was mine and was fixed, never rebaselined: a **201-error** spike (two
+"tidier" theme designs the existing code could not accept), **106** and again on `OfferDetails`
+(missing `theme` import after find-and-replace), **125** mid-geo-surgery.
+🔴 **The driver lint baseline of 304 was already STALE before today** — measured 289 before and
+after by `git stash`-ing my own change. A stale baseline reads a clean run as an improvement and
+hides a real regression.
+
+### Next
+
+**Nothing is committed.** Then: remaining user screens (`EditProfile` 49, `UserDetails` 47,
+`Profile` 43, `OfferDrivers` 41), then the driver app's screens (951), then steps 15-22.
+🛑 **Three screens have never been seen on a device** — `OfferDetails`, `MyBookings`,
+`MyPassengerOffers` — and the driver app's search needs a walk after the geo change.
+
+---
+
 ## 2026-08-16 (2) — the Paynet service, and four times I trusted a rendering instead of measuring
 
 - **Task:** T-088 — the Paynet web service. Planned, approved, built to five of six methods, and

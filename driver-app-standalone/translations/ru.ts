@@ -312,6 +312,8 @@ export default {
   },
 
   menu: {
+    /** T-101: the top bar screen name. `title` is the CARD heading. */
+    screenTitle: 'Междугородние',
     title: 'ТАКСИ',
     subtitle: 'Выберите страну',
     uzbekistan: 'Узбекистан',
@@ -775,7 +777,8 @@ export default {
     seatsLabel: 'Количество мест',
     seatsDescription: 'От 1 до 8 мест',
     priceLabel: 'Цена за место',
-    currencyLabel: 'Валюта',    // T-079 / T-080 — amenities, jo'natma, road pickup and the fill-up flag.
+    currencyLabel: 'Валюта',
+    // T-079 / T-080 — amenities, jo'natma, road pickup and the fill-up flag.
     amenitiesLabel: 'Удобства',
     amenityAirCon: 'Кондиционер',
     amenityWifi: 'Интернет, WiFi',

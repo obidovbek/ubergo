@@ -1,12 +1,21 @@
 /**
  * Main Navigator
- * Simple stack navigation for authenticated users (no bottom tabs)
+ *
+ * T-101 step 3: the stack now hosts the artboards' persistent bottom tab bar as its
+ * first route, with detail screens still in the stack so they push OVER the bar.
+ *
+ * 🛑 `Home`, `OfferWizard`, `OffersList` and `Profile` MOVED INTO `./MainTabs`. They are
+ * deliberately NOT registered here as well: two routes sharing one name across nested
+ * navigators makes `navigate()` ambiguous, and React Navigation resolves to the nearest,
+ * which is not always the one intended.
+ *
+ * ⚠️ Existing `navigate('OffersList')` etc. still work — the call bubbles up to the tab
+ * navigator and switches tab.
  */
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MenuScreen } from '../screens/MenuScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { MainTabs } from './MainTabs';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 
 import { EditProfileScreen } from '../screens/EditProfileScreen';
@@ -16,8 +25,6 @@ import { DriverLicenseScreen } from '../screens/DriverLicenseScreen';
 import { DriverVehicleScreen } from '../screens/DriverVehicleScreen';
 import { DriverTaxiLicenseScreen } from '../screens/DriverTaxiLicenseScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
-import { OffersListScreen } from '../screens/OffersListScreen';
-import { OfferWizardScreen } from '../screens/OfferWizardScreen';
 import OfferPassengersScreen from '../screens/OfferPassengersScreen';
 import SearchPassengerOffersScreen from '../screens/SearchPassengerOffersScreen';
 import PassengerOfferDetailsScreen from '../screens/PassengerOfferDetailsScreen';
@@ -32,16 +39,10 @@ export const MainNavigator: React.FC = () => {
         headerShown: false,
       }}
     >
+      {/* The tab bar — Asosiy / E'lon / Buyurtmalarim / Profil. Everything below pushes over it. */}
       <Stack.Screen
-        name="Home"
-        component={MenuScreen}
-      />
-      <Stack.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          headerShown: false,
-        }}
+        name="MainTabs"
+        component={MainTabs}
       />
       <Stack.Screen
         name="EditProfile"
@@ -77,20 +78,6 @@ export const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="OffersList"
-        component={OffersListScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="OfferWizard"
-        component={OfferWizardScreen}
         options={{
           headerShown: false,
         }}

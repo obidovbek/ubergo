@@ -63,16 +63,90 @@
 
 ## 🔥 Now (working on it)
 
-> 🔴 **END OF 2026-08-16 — *Now* HOLDS TWO CARDS: T-088 (Paynet) and T-100 (the IP problem that
-> blocks it).** T-088's code is **complete and verified against the real test3 database**; what is
-> left is **not application code** — T-100, `ChangePassword` persistence, and Paynet's credentials.
-> ✅ T-092 and T-091 both closed and verified the same day.
-> ⚠️ Everything else listed here is code-complete and waiting on the owner's device, per the note
-> above — so the "max 2 in *Now*" rule is not really being broken, though the section reads as if
-> it were.
+> 🎨 **2026-08-30 — T-101 IS THE ACTIVE CARD: the new design system.** The owner drew **33 artboards**
+> in `htmlDesign/` with Claude Design on 2026-08-29. Foundation first (tokens, Manrope, top bar, tab
+> bar, drop dark mode), then pages one by one, **user app first**. → `docs/PLAN.md`.
+> 🔴 **CORRECTION TO THE NOTE THAT STOOD HERE SINCE 2026-08-16: it said "*Now* HOLDS TWO CARDS:
+> T-088 and T-100". BOTH HALVES WERE WRONG.** **T-100 was never a card in *Now*** — it has always
+> been in *Later* (search `T-100`), so nothing had to be moved to make room for T-101. And *Now* did
+> not hold two cards but **five**: T-088, T-078, T-083, T-079+T-080, T-087. *Fourth time a card or
+> preamble in these files has disagreed with the board it describes (T-031, T-035, T-083, T-092) —
+> the board wins, not the prose.*
+> ✅ **T-088's code is complete and verified against the real test3 database.** What is left in it is
+> **not application code**: **T-100** (proxy layer, needs whoever administers `192.168.10.119`),
+> `ChangePassword` persistence, and Paynet's credentials. It stays in *Now* for that one code step.
+> ⚠️ **T-078 · T-083 · T-079/T-080 · T-087 are all code-complete and waiting on the owner's device**,
+> not on Claude. That is why the "max 2 in *Now*" rule reads as broken when it is not really.
 > 🧹 **AND THIS FILE HAS A PROBLEM OF ITS OWN:** lines 9-63 are **duplicated verbatim** further down
 > (the whole 2026-08-11/12 preamble *and* a second `## 🔥 Now` header). Noticed 2026-08-15 while
 > boarding T-092; left alone rather than swept mid-card. → **T-097** in *Later*.
+
+- [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
+  with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
+  converts pages one by one, user app first** → `docs/PLAN.md`.
+  ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
+  🟢 **Raw colours: user 839 -> 234 · driver 964 -> 951** (driver screens untouched; only shared
+  components). A counter script fails if either rises, and **was proven able to go red** — re-proven
+  at the new 234 ceiling on 2026-08-31.
+  ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
+  `Profile` 43 · `OfferDrivers` 41. 🟡 **TOKENIZED, NOT REBUILT** — colours only, layouts untouched,
+  so plan steps 10 / 12 / 13 stay open. `tsc` 6 (baseline) · lint 217 (one *below* baseline).
+  ✅ **Done:** token layer both apps · 7 font faces bundled · `expo-linear-gradient` +
+  `react-native-svg` **proven on a device** · TopBar/BottomTabBar/Icon/Badge ·
+  Button/Card/Chip/Carousel · shared `GeoSheet` · dark mode dropped · `MenuScreen` (rebuilt to
+  `UserMenuNeW`), `SearchOffers`, `OfferDetails`, `MyBookings`, `MyPassengerOffers` at **0 colours**
+  · driver `SearchPassengerOffers` on the shared sheet.
+  🔴 **FOUR ACCESSIBILITY FAILURES FIXED, all found by computing contrast:** the redesign's own CTA
+  **2.56:1** · `driver_found` status **2.42:1** · rating label **2.85:1** · seat badge **3.32:1**.
+  🛑 **THREE SCREENS HAVE NEVER RUN ON A DEVICE** — `OfferDetails`, `MyBookings`,
+  `MyPassengerOffers` — and the driver search needs a walk (3 location buttons became 1).
+  🛑 **THE FOUR ORDER SCOPES LOOK RIGHT AND ALL BEHAVE IDENTICALLY** until **T-102**. Do not
+  present them as delivered.
+  ✅ **OWNER DECISIONS 2026-08-30 (asked and answered before the plan was written):**
+  **① dark mode is DROPPED** (the 33 artboards have no dark variant) · **② scope is user + driver
+  only, admin maybe later — "do nothing for new roles, think like there is no other new roles"**
+  (so *usta*, *yuk*, *texnika* in the design docs are OUT) · **③ user app converts first** ·
+  **④ fonts ship as bundled `.ttf` in `assets/`, NO new dependency** (`expo-font` is already there) ·
+  **⑤ BOTH NEW NATIVE DEPENDENCIES APPROVED — `expo-linear-gradient` + `react-native-svg`, in both
+  apps.** Rule 4 is satisfied for this card; **anything further still needs asking.**
+  🛑 **CONSEQUENCE OF ⑤ — THE USER APP'S REBUILD IS NOW NATIVE TOO.** It was going to be a JS-only
+  rebuild (T-077 · T-083 · T-084); both approved packages are native modules, so the user app needs
+  `npx expo prebuild` + a full `npm run android` as well. **Install with `npx expo install`, not
+  `npm install`, so versions match Expo 54.** A missing native module surfaces as a *bundling*
+  error, which reads like a code mistake and sends you looking in the wrong place.
+  🔴 **THE REAL OBSTACLE IS NOT THE PALETTE — IT IS 1 652 HARDCODED HEX LITERALS.** Measured
+  2026-08-30: **user 789 · driver 863**, across **154 distinct values**, mostly raw Tailwind defaults
+  (`#10B981` x93, `#111827` x89, `#6B7280` x59). **`themes/` is imported by 25 files but its palette
+  (`primary #000000`, `secondary #00D9A5`) matches almost nothing on screen** — the real design
+  system is the literals, not the theme. **Repainting pages without fixing this just re-hardcodes
+  new literals**, which is why the foundation comes first.
+  🔴 **THE TAB BAR IS NEW NAVIGATION, NOT A REPAINT.** `navigation/MainNavigator.tsx` is a **pure
+  native stack — there is no bottom tab bar today**, and every artboard has one (5 tabs) plus a
+  persistent top bar (hamburger, bell+badge, avatar). ✅ **`@react-navigation/bottom-tabs@^7.4.0`
+  is ALREADY a dependency in both apps and unused** — so no new dependency, rule 4 clear.
+  🔴 **THE DESIGN DOC CONTRADICTS THE ARTBOARDS ON THE DRIVER ACCENT — TRUST THE ARTBOARDS.**
+  `htmlDesign/docs/00-UMUMIY-loyiha.md` says blue `#0049FF` is the Driver colour. **Measured across
+  the 14 `Driver*.dc.html` files: green `#05BB42` appears 224 times, blue 30.** Green is primary in
+  **both** apps; blue is an occasional secondary. *Building to the doc would have made the whole
+  driver app the wrong colour.*
+  ⚠️ **`htmlDesign/uploads/Chek_28082026/` is NOT just old copies**, though the design doc calls it
+  a source of confusion. It holds **5 artboards the root does not** (`DriverOrder`, `UserMainNeW`,
+  `UserTexnika`, `Yuk1`, `Yuk2`); the root holds 4 the uploads folder lacks (`DriverDaromad`,
+  `DriverProfil`, `DriverQidiruv`, `UserMenuNeW`). **Neither set is complete.** Of the 5 extras only
+  `DriverOrder` is in scope — the rest are the dropped roles.
+  ⚠️ **Three screens the design docs describe exist as NO FILE anywhere:** `UserUstaBuyurtma`,
+  `YukMashinalarElon`, `YukEgalariSorov`. All three are dropped roles, so all three are out of scope.
+  ⚠️ **Neither app has a single font file** (`find` for `.ttf`/`.otf` → nothing). Manrope's 800/900
+  weights are load-bearing in every artboard.
+  ✅ **Dropping dark mode is mostly deleting:** `MainLayout`/`ScreenLayout` already call
+  `createTheme('light')` at module scope.
+  🛑 **`themes/modal` is a FIGMA-ERA language** (cream `#FDF6E3`, 2px black border, red heading) from
+  T-036, and the new design replaces it outright — but it is live in `AppModal`/`ModalList`/
+  `ConfirmDialog` in **both** apps. Changing it changes every modal at once.
+  ⚠️ **Both apps' rebuilds were ALREADY outstanding before this card** (user: T-077, T-083, T-084;
+  driver: T-078, T-079/T-080, T-061, **native**). This card does not add a rebuild — it rides them.
+  ⚠️ **Per `ubexgo-app-conventions`: tokens are DUPLICATED per app, not extracted to a package.**
+  An earlier centralisation attempt was the wrong call. Edit both copies together, verify `diff -q`.
 
 - [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 1-8a DONE 2026-08-16. FIVE OF SIX METHODS BUILT AND THE MONEY
   PATH VERIFIED AGAINST THE REAL test3 DATABASE** → `docs/PLAN.md`.
@@ -1537,6 +1611,47 @@ masofalar'`). **2 of the 6 were on
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+
+- [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
+  scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`.
+  🔴 **`DriverOffer` HAS NO GEO COLUMNS AT ALL** — only `from_text`/`to_text` free strings, and
+  search is `ILIKE '%name%'` against them (`DriverOfferService.ts:812-839`). **So three of the
+  owner's four scopes cannot be expressed**, and "match adm2 but do NOT descend into it" — the rule
+  separating *Viloyat ichi* from *Viloyatlar aro* — is not representable at all.
+  ⚠️ **`PassengerOffer` is half-built the other way:** it HAS
+  `from_/to_{country,province,city,settlement}_id` and **no search code reads them** — grepping
+  every service for those columns in a `where` returns nothing. Columns written, never queried.
+  ✅ **adm3 = `GeoSettlement`** (decided 2026-08-30 from the schema: `GeoAdministrativeArea`,
+  `GeoSettlement` and `GeoNeighborhood` are **siblings** on `city_district_id`, not depths —
+  four levels, three kinds of adm3. `GeoSettlement` is the only one with a `type` column, which is
+  where QFY/shahar/qishloq lives, and `PassengerOffer` already chose it).
+  ✅ **"Yaqin" = a NEIGHBOURS TABLE** (owner, 2026-08-30) — `geo_district_neighbors`, not a radius
+  and not "same province".
+  🔴 **Adjacency is SYMMETRIC and the DB will not enforce it** — write both rows, or store one with
+  `CHECK (a < b)` and `UNION` both directions. A half-populated table means A finds B but B does
+  not find A, which presents as "sometimes search works".
+  🔴 **Add `CHECK (city_district_id <> neighbor_city_district_id)`** or *Yaqin* silently degrades
+  into *Tuman ichi*.
+  ⚠️ Needs an admin screen to populate ~200 districts. Until populated, *Yaqin* returns nothing —
+  correct behaviour, but the screen needs a real empty state saying so.
+  🛑 **T-101 step 8 must not present the scopes as working until this lands.**
+
+- [ ] T-103 (P2) ⚡ **"HOZIROQ" ON DRIVER OFFERS — `is_urgent`, the driver's stated intent.**
+  Owner defined it 2026-08-30: *"driver wants quick passenger that go as soon as possible maybe
+  around half hour"*.
+  🔴 **THIS IS A THIRD CONCEPT AND THE CODEBASE ALREADY WARNS ABOUT CONFUSING THE FIRST TWO.**
+  `is_urgent` exists on **passenger** offers only ("leave now"); `departs_when_full` exists on
+  **driver** offers ("to'lishi bilan yuraman" — leaves when the car FILLS) and
+  `api/driverOffers.ts:146` carries an explicit 🔴 comment that they are **not** the same.
+  **Driver-side "Hoziroq" is neither** and exists nowhere.
+  ✅ **Owner chose a REAL FIELD over deriving it from `start_at`** — a computed "within 30 min" tag
+  would label drivers who never asked for it and would appear/vanish on its own as the clock moves.
+  The driver sets it, as `DriverElon.dc.html` shows (inside the departure-time sheet, beside the
+  date and window — it is part of choosing when to leave, not a separate switch).
+  **Scope:** migration adding `is_urgent` to `driver_offers` · API accept + return it · driver-app
+  checkbox in the departure sheet · the passenger-side "Hoziroq" tag on the search card (T-101).
+  ⚠️ **`urgent` appears in 8 artboards** — it is a first-class concept, not decoration.
+  🛑 **Blocks the last field of T-101 step 7's offer card.**
 - [ ] T-062 (P1) 🛑 **BLOCKED ON AN OWNER ANSWER — [OWNER device test 2026-08-11, item ①] the two
   apps write the email to two different tables.** Owner: *"on both app registrations email not
   correctly entered works?"*

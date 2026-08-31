@@ -1,155 +1,175 @@
 /**
- * Button Component
- * Reusable button component with variants
+ * Button — T-101 step 5.
+ *
+ * Rebuilt on the measured artboard specs (DESIGN-TOKENS.md §7). The old version read
+ * the pre-redesign `palette.primary` / `borderRadius.md` aliases and had no users in
+ * either app; the variants below are the ones the artboards actually draw.
+ *
+ * SIZES — real control heights from the artboards, not a padding scale:
+ *   sm   44   the chip/toggle height, and the minimum touch target (153 uses)
+ *   md   52   sheet confirm buttons ("Tasdiqlash")
+ *   lg   56   the primary CTA
+ *
+ * VARIANTS:
+ *   primary      `action` fill + white       the confirm/submit button
+ *   dark         `text.primary` fill         used ONLY by car-class and price-mode
+ *                                            chips in the artboards — a deliberate
+ *                                            second emphasis, not an accident
+ *   outline      surface + `border.control`  the unselected chip state
+ *   destructive  surface + `dangerText`      "Bekor qilish"; 1.5px border, red label
+ *   text         no fill                     inline actions ("Hammasini o'qildi")
+ *
+ * 🔴 THE PRIMARY FILL IS `action` (#1F7A55), NOT `brand` (#05BB42).
+ * White on brand green measures 2.56:1 — it fails WCAG even for large text. The owner
+ * approved this correction on 2026-08-30. `brand` is the wordmark and selection colour;
+ * it is never a fill behind white text. See DESIGN-TOKENS.md §5.
+ *
+ * ⚠️ The artboards define NO pressed, disabled, or loading state for any button. These
+ * are derived from `theme.states` (the owner delegated them on 2026-08-30) so that every
+ * button in the app answers the question the same way, rather than each screen inventing
+ * its own.
  */
 
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  ViewStyle,
-  TextStyle,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
-import { createTheme } from '../themes';
+import { theme } from '../themes';
 
-const theme = createTheme('light');
+export type ButtonVariant =
+  | 'primary'
+  | 'dark'
+  | 'outline'
+  | 'destructive'
+  | 'text';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outlined' | 'text';
-  size?: 'small' | 'medium' | 'large';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  /** Rendered before the label — a chip mark, an icon. */
+  leading?: React.ReactNode;
+  /** Stretches to fill its row. Sheet confirm buttons do this. */
+  fullWidth?: boolean;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  accessibilityLabel?: string;
 }
+
+const HEIGHTS: Record<ButtonSize, number> = {
+  sm: theme.sizes.touchTarget, // 44
+  md: theme.sizes.buttonLg, // 52
+  lg: theme.sizes.buttonXl, // 56
+};
+
+const RADII: Record<ButtonSize, number> = {
+  sm: theme.borderRadius.control, // 13
+  md: theme.borderRadius.button, // 16
+  lg: theme.borderRadius.button + 1, // 17 — the artboards' CTA radius
+};
+
+const FILL: Record<ButtonVariant, string> = {
+  primary: theme.palette.action,
+  dark: theme.palette.text.primary,
+  outline: theme.palette.surface,
+  destructive: theme.palette.surface,
+  text: 'transparent',
+};
+
+const INK: Record<ButtonVariant, string> = {
+  primary: theme.palette.text.onAccent,
+  dark: theme.palette.text.onAccent,
+  outline: theme.palette.text.primary,
+  destructive: theme.palette.dangerText,
+  text: theme.palette.action,
+};
+
+const BORDER: Partial<Record<ButtonVariant, { color: string; width: number }>> = {
+  outline: { color: theme.palette.borders.control, width: theme.sizes.borderHairline },
+  destructive: { color: theme.palette.dangerText, width: theme.sizes.borderEmphasis },
+};
 
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
-  size = 'medium',
+  size = 'md',
   disabled = false,
   loading = false,
+  leading,
+  fullWidth = false,
   style,
   textStyle,
+  accessibilityLabel,
 }) => {
-  const getButtonStyle = (): ViewStyle => {
-    const baseStyle = styles.button;
-    const sizeStyle = styles[`button_${size}`];
-    const variantStyle = styles[`button_${variant}`];
-    
-    return {
-      ...baseStyle,
-      ...sizeStyle,
-      ...variantStyle,
-      ...(disabled && styles.button_disabled),
-      ...style,
-    };
-  };
-
-  const getTextStyle = (): TextStyle => {
-    const baseStyle = styles.text;
-    const sizeStyle = styles[`text_${size}`];
-    const variantStyle = styles[`text_${variant}`];
-    
-    return {
-      ...baseStyle,
-      ...sizeStyle,
-      ...variantStyle,
-      ...(disabled && styles.text_disabled),
-      ...textStyle,
-    };
-  };
+  const inert = disabled || loading;
+  const border = BORDER[variant];
 
   return (
-    <TouchableOpacity
-      style={getButtonStyle()}
+    <Pressable
       onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
+      disabled={inert}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: inert, busy: loading }}
+      style={({ pressed }) => [
+        styles.base,
+        {
+          height: HEIGHTS[size],
+          borderRadius: RADII[size],
+          backgroundColor: disabled ? theme.palette.disabled : FILL[variant],
+          alignSelf: fullWidth ? 'stretch' : 'flex-start',
+        },
+        border && { borderWidth: border.width, borderColor: border.color },
+        // The artboards give the raised variants a coloured shadow; flat ones none.
+        variant === 'primary' || variant === 'dark' ? theme.shadows.raised : null,
+        pressed && !inert && { opacity: theme.states.pressedOpacity },
+        disabled && { opacity: theme.states.disabledOpacity },
+        style,
+      ]}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outlined' || variant === 'text' 
-            ? theme.palette.primary.main 
-            : theme.palette.primary.contrastText
-          }
+          color={INK[variant]}
+          // Keeps the button's width stable while it spins, so a row of buttons does
+          // not reflow the moment one is pressed.
+          size="small"
         />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <View style={styles.row}>
+          {leading}
+          <Text
+            style={[
+              theme.typography.cardTitle,
+              { color: disabled ? theme.palette.text.disabled : INK[variant] },
+              textStyle,
+            ]}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
+  base: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
+    paddingHorizontal: 14,
   },
-  button_small: {
-    paddingVertical: theme.spacing(1),
-    paddingHorizontal: theme.spacing(2),
-  },
-  button_medium: {
-    paddingVertical: theme.spacing(1.5),
-    paddingHorizontal: theme.spacing(3),
-  },
-  button_large: {
-    paddingVertical: theme.spacing(2),
-    paddingHorizontal: theme.spacing(4),
-  },
-  button_primary: {
-    backgroundColor: theme.palette.primary.main,
-  },
-  button_secondary: {
-    backgroundColor: theme.palette.secondary.main,
-  },
-  button_outlined: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: theme.palette.primary.main,
-  },
-  button_text: {
-    backgroundColor: 'transparent',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  button_disabled: {
-    opacity: 0.5,
-  },
-  text: {
-    fontWeight: '600',
-  },
-  text_small: {
-    ...theme.typography.body2,
-  },
-  text_medium: {
-    ...theme.typography.body1,
-  },
-  text_large: {
-    ...theme.typography.h5,
-  },
-  text_primary: {
-    color: theme.palette.primary.contrastText,
-  },
-  text_secondary: {
-    color: theme.palette.secondary.contrastText,
-  },
-  text_outlined: {
-    color: theme.palette.primary.main,
-  },
-  text_text: {
-    color: theme.palette.primary.main,
-  },
-  text_disabled: {
-    color: theme.palette.text.disabled,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });
-

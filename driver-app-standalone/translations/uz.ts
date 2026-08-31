@@ -337,6 +337,8 @@ export default {
 
   // Menu Screen (Home)
   menu: {
+    /** T-101: the top bar screen name. `title` is the CARD heading. */
+    screenTitle: 'Shaharlar aro',
     title: 'TAXI',
     subtitle: 'Mamlakatni tanlang',
     uzbekistan: "O'zbekiston",

@@ -22,6 +22,7 @@ import type { MainStackParamList } from '../navigation/types';
 import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { TopBar } from '../components/chrome/TopBar';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { DriverOffer } from '../api/driverOffers';
 import { showToast } from '../utils/toast';
@@ -179,7 +180,23 @@ export const MenuScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
+      {/* T-101: the top bar's gradient now runs up under the status bar, so the bar is
+          transparent and lets the green show through rather than sitting on a slab of a
+          colour that is no longer anywhere on screen (#F5F5F5 predates the redesign).
+          `dark-content` stays: against the gradient's top (#1D9846) dark glyphs measure
+          4.97:1 and white only 3.73:1, so dark is the more legible of the two. */}
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      {/* T-101 step 3 — the artboards' shared top bar. Deliberately OUTSIDE the
+          ScrollView: in the design it is fixed chrome, not content that scrolls away.
+          `suffix="Driver"` is the driver app's one branding difference. */}
+      <TopBar
+        title={t('menu.screenTitle')}
+        suffix="Driver"
+        initials={userInitial}
+        onMenuPress={handleProfilePress}
+        onBellPress={() => navigation.navigate('Notifications')}
+        onAvatarPress={handleProfilePress}
+      />
       <ScrollView 
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
@@ -188,44 +205,6 @@ export const MenuScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {/* Header with Logo and Profile Button */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.logoContainer}>
-              {/* T-050: 38px + a profile button competing for the same row is
-                  enough to wrap the wordmark mid-word on a large font scale. */}
-              <Text
-                style={styles.logo}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-              >
-                {t('auth.appName')}
-              </Text>
-              {/* T-061 (owner item ⑥): the driver app's home screen was branded
-                  exactly like the passenger's. "Driver" is a SECOND line rather
-                  than part of the wordmark on purpose — "UbexGo Driver" at 38px
-                  is ~300px wide and cannot fit this row beside the profile
-                  button, so folding it into the logo would re-create the very
-                  overflow T-050 fixed (it would just ellipsize instead of
-                  wrapping). The registration screens can hard-code the full
-                  string only because theirs is 18px. */}
-              <Text style={styles.logoSuffix} numberOfLines={1}>
-                {t('auth.appNameDriverSuffix')}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.profileButton}
-              onPress={handleProfilePress}
-              activeOpacity={0.7}
-            >
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileInitial}>{userInitial}</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Main Card - Unified Menu */}
         <View style={styles.card}>
           {/* Title */}
@@ -296,19 +275,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: Platform.OS === 'android' ? 50 : 20,
   },
-  header: {
-    marginTop: Platform.OS === 'android' ? 12 : 8,
-    marginBottom: 28,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logoContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
   // T-061: sits directly under the wordmark, sized so it reads as part of the
   // same lockup rather than as a heading of its own.
   logoSuffix: {
@@ -318,43 +284,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     textTransform: 'uppercase',
     marginTop: -4,
-  },
-  logo: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#10B981',
-    letterSpacing: 0.5,
-    textShadowColor: 'rgba(16, 185, 129, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  profileButton: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  profileAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  profileInitial: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   card: {
     backgroundColor: '#FFFFFF',

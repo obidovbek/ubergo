@@ -23,6 +23,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createTheme } from '../themes';
 
 const theme = createTheme('light');
@@ -69,6 +70,7 @@ export const AppModal: React.FC<AppModalProps> = ({
   maxHeightRatio = 0.85,
   contentStyle,
 }) => {
+  const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
   return (
@@ -90,7 +92,20 @@ export const AppModal: React.FC<AppModalProps> = ({
           pointerEvents="box-none"
         >
           <View
-            style={[styles.card, { maxHeight: height * maxHeightRatio }, contentStyle]}
+            style={[
+              styles.card,
+              /*
+               * 🔴 `height` is the FULL screen, including the system navigation bar,
+               * so `height * 0.85` could put the card's bottom edge underneath the
+               * home/back buttons. Reported on an S24 Ultra against `GeoSheet`; the
+               * same arithmetic was wrong here, in the shell behind 9 dialogs.
+               *
+               * Subtracting the insets makes the ratio mean "85% of the space the
+               * user can actually see".
+               */
+              { maxHeight: (height - insets.top - insets.bottom) * maxHeightRatio },
+              contentStyle,
+            ]}
           >
             {(title || showCloseIcon) && (
               <View style={styles.header}>
