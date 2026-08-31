@@ -85,12 +85,18 @@
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
   ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
-  🟢 **Raw colours: user 839 -> 234 · driver 964 -> 951** (driver screens untouched; only shared
+  🟢 **Raw colours: user 839 -> 111 · driver 964 -> 951** (driver screens untouched; only shared
   components). A counter script fails if either rises, and **was proven able to go red** — re-proven
   at the new 234 ceiling on 2026-08-31.
   ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
-  `Profile` 43 · `OfferDrivers` 41. 🟡 **TOKENIZED, NOT REBUILT** — colours only, layouts untouched,
-  so plan steps 10 / 12 / 13 stay open. `tsc` 6 (baseline) · lint 217 (one *below* baseline).
+  `Profile` 43 · `OfferDrivers` 41 — **committed by the owner as `66d2b15`, walked on a device.**
+  ✅ **2026-08-31 (2) — the whole passenger-offer flow at 0:** `CreatePassengerOffer` 33 + six
+  `components/passengerOffer/*` (88) = **121**. Six new measured tokens (`maleTint`/`maleInk`/
+  `femaleTint`/`femaleInk`/`blueTintSoft`/`blueBorder`) added to **both** palettes.
+  🟡 **ALL OF IT IS TOKENIZED, NOT REBUILT** — colours only, layouts untouched, so plan steps
+  8 / 10 / 12 / 13 stay open. `tsc` 6 (baseline) · lint 217 (one *below* baseline).
+  🛑 **THE PASSENGER-OFFER FLOW HAS NOT RUN ON A DEVICE** — it is the app's main create path, and
+  the seat markers now read their colours from new tokens.
   ✅ **Done:** token layer both apps · 7 font faces bundled · `expo-linear-gradient` +
   `react-native-svg` **proven on a device** · TopBar/BottomTabBar/Icon/Badge ·
   Button/Card/Chip/Carousel · shared `GeoSheet` · dark mode dropped · `MenuScreen` (rebuilt to

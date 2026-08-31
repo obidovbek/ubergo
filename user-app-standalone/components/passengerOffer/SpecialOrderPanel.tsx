@@ -13,6 +13,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { CheckRow } from './CheckRow';
+import { theme } from '../../themes';
 
 /** Prices are kept as typed strings ("150 000") and parsed on submit. */
 export interface SpecialOrderValue {
@@ -86,7 +87,7 @@ export const SpecialOrderPanel: React.FC<SpecialOrderPanelProps> = ({
         onChangeText={(text) => onChange({ ...value, [key]: formatMoney(text) })}
         keyboardType="number-pad"
         placeholder="0"
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={theme.palette.text.tertiary}
         textAlign="center"
         maxLength={11}
       />
@@ -98,7 +99,7 @@ export const SpecialOrderPanel: React.FC<SpecialOrderPanelProps> = ({
     <View>
       <TouchableOpacity style={styles.toggle} onPress={onToggle} activeOpacity={0.8}>
         <Text style={styles.toggleText}>{t('passengerOffers.specialOrderToggle')}</Text>
-        <Ionicons name={expanded ? 'chevron-down' : 'chevron-forward'} size={20} color="#1E3A8A" />
+        <Ionicons name={expanded ? 'chevron-down' : 'chevron-forward'} size={20} color={theme.palette.maleInk} />
       </TouchableOpacity>
 
       {expanded && (
@@ -133,7 +134,7 @@ export const SpecialOrderPanel: React.FC<SpecialOrderPanelProps> = ({
               onChangeText={(text) => onChange({ ...value, waitingFeePerMin: formatMoney(text) })}
               keyboardType="number-pad"
               placeholder="0"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.palette.text.tertiary}
               textAlign="center"
               maxLength={9}
             />
@@ -168,12 +169,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 12,
     borderRadius: 10,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: theme.palette.blueTintSoft,
   },
   toggleText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E3A8A',
+    color: theme.palette.maleInk,
   },
   panel: {
     marginHorizontal: 20,
@@ -181,27 +182,27 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
-    backgroundColor: '#F0FDF4',
+    borderColor: theme.palette.brand,
+    backgroundColor: theme.palette.successTint,
   },
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'center',
   },
   priceNotice: {
     marginTop: 4,
     fontSize: 15,
     fontWeight: '700',
-    color: '#DC2626',
+    color: theme.palette.dangerText,
     textAlign: 'center',
   },
   intro: {
     marginTop: 8,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'center',
   },
   pricesHeading: {
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'center',
   },
   priceRow: {
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   priceLabel: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   priceInput: {
     width: 120,
@@ -229,16 +230,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#1E3A8A',
-    backgroundColor: '#DBEAFE',
+    borderColor: theme.palette.maleInk,
+    backgroundColor: theme.palette.maleTint,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   priceCurrency: {
     width: 78,
     fontSize: 14,
-    color: '#374151',
+    color: theme.palette.text.muted,
   },
   waitingRow: {
     flexDirection: 'row',
@@ -247,26 +248,26 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   waitingInput: {
-    backgroundColor: '#FEF08A',
-    borderColor: '#CA8A04',
+    backgroundColor: theme.palette.warnTint,
+    borderColor: theme.palette.warnBorder,
   },
   freeWaiting: {
     marginTop: 6,
     fontSize: 13,
-    color: '#4B5563',
+    color: theme.palette.text.muted,
     textAlign: 'center',
   },
   errorText: {
     marginTop: 8,
     fontSize: 12,
-    color: '#EF4444',
+    color: theme.palette.danger,
     textAlign: 'center',
   },
   submit: {
     marginTop: 16,
     minHeight: 48,
     borderRadius: 10,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: theme.palette.blueTintSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E3A8A',
+    color: theme.palette.maleInk,
   },
 });
 

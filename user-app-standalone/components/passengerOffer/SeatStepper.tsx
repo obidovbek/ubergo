@@ -11,6 +11,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { GenderPickSheet, type SeatGender } from './GenderPickSheet';
+import { theme } from '../../themes';
 
 export interface SeatRowCounts {
   male: number;
@@ -88,7 +89,7 @@ export const SeatStepper: React.FC<SeatStepperProps> = ({
               <Ionicons
                 name={gender === 'male' ? 'man' : 'woman'}
                 size={18}
-                color={gender === 'male' ? '#1D4ED8' : '#BE185D'}
+                color={gender === 'male' ? theme.palette.male : theme.palette.female}
               />
             )}
           </View>
@@ -102,7 +103,7 @@ export const SeatStepper: React.FC<SeatStepperProps> = ({
           disabled={disabled || total === 0}
           activeOpacity={0.7}
         >
-          <Ionicons name="remove" size={18} color="#111827" />
+          <Ionicons name="remove" size={18} color={theme.palette.text.primary} />
         </TouchableOpacity>
 
         <Text style={styles.count}>{total}</Text>
@@ -113,7 +114,7 @@ export const SeatStepper: React.FC<SeatStepperProps> = ({
           disabled={disabled || total >= capacity}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={18} color="#111827" />
+          <Ionicons name="add" size={18} color={theme.palette.text.primary} />
         </TouchableOpacity>
       </View>
 
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   seats: {
     flexDirection: 'row',
@@ -162,18 +163,18 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#86EFAC',
-    backgroundColor: '#DCFCE7',
+    borderColor: theme.palette.brand,
+    backgroundColor: theme.palette.successTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   seatMale: {
-    backgroundColor: '#DBEAFE',
-    borderColor: '#93C5FD',
+    backgroundColor: theme.palette.maleTint,
+    borderColor: theme.palette.blueBorder,
   },
   seatFemale: {
-    backgroundColor: '#FCE7F3',
-    borderColor: '#F9A8D4',
+    backgroundColor: theme.palette.femaleTint,
+    borderColor: theme.palette.female,
   },
   stepper: {
     flexDirection: 'row',
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
 });
 

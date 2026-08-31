@@ -51,7 +51,7 @@ export const GenderPickSheet: React.FC<GenderPickSheetProps> = ({
             onPress={() => onPick('male')}
             activeOpacity={0.8}
           >
-            <Ionicons name="man" size={30} color="#1D4ED8" />
+            <Ionicons name="man" size={30} color={theme.palette.male} />
             <Text style={styles.buttonText}>{t('passengerOffers.male')}</Text>
           </TouchableOpacity>
         )}
@@ -62,7 +62,7 @@ export const GenderPickSheet: React.FC<GenderPickSheetProps> = ({
             onPress={() => onPick('female')}
             activeOpacity={0.8}
           >
-            <Ionicons name="woman" size={30} color="#BE185D" />
+            <Ionicons name="woman" size={30} color={theme.palette.female} />
             <Text style={styles.buttonText}>{t('passengerOffers.female')}</Text>
           </TouchableOpacity>
         )}

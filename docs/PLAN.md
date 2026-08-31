@@ -523,6 +523,14 @@ Edit both copies together and verify with `diff -q`.
 - [ ] **8.** `CreatePassengerOfferScreen` → `UserBuyurtma.dc.html`
       ⚠️ **Four near-identical artboards** (`UserBuyurtma` / `Viloyat` / `Tuman` / `Yaqin`, ~138 KB
       each). The design doc recommends one screen with a **mode**, not four. Confirm with the owner.
+      🟡 **2026-08-31 — THE WHOLE FLOW IS TOKENIZED (121 → 0), NOT REBUILT.** `CreatePassengerOffer`
+      33 + all six `components/passengerOffer/*` (88). Colours only; no layout, no logic.
+      ✅ **SIX NEW PALETTE TOKENS, MEASURED NOT INVENTED** — `maleTint` `maleInk` `femaleTint`
+      `femaleInk` `blueTintSoft` `blueBorder`, read off the gender picker in `UserBuyurtma.dc.html`
+      and contrast-checked (8.27:1 / 7.24:1 ink-on-tint). Added to **both** apps' palettes together.
+      🔴 **THE SEAT MARKER IS THREE STATES, NOT TWO** — neutral / male / female, each a fill *and* a
+      border. The palette had `male` and `female` but no tints; mapping all three to what existed
+      would have made different seats render identically.
 - [ ] **9.** `MyBookingsScreen` + `MyPassengerOffersScreen` → `UserMyOrder.dc.html`
 - [ ] **10.** `OfferDetailsScreen` + `OfferDriversScreen` → `UserMyOrder.dc.html` detail states
       🟡 **2026-08-31 — `OfferDriversScreen` IS TOKENIZED (41 → 0), NOT REBUILT.** Its colours now
@@ -672,7 +680,7 @@ of truth — do not edit the owner's artboards).
 
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
-| user | **6** | **217** | **234** (from 839) |
+| user | **6** | **217** | **111** (from 839) |
 | driver | **28** | **285** | **951** (from 964) |
 
 🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
@@ -692,10 +700,14 @@ and scans `layout/` and `navigation/`.
    `MyPassengerOffers` (2026-08-30) and `EditProfile`, `UserDetails`, `Profile`, `OfferDrivers`
    (2026-08-31). The driver app's search also needs a walk: its three location buttons per
    direction became **one**, which is an interaction change, not a repaint.
-2. ✅ **DONE 2026-08-31 — the four remaining user screens are tokenized.** What is left in the
-   user app is **234 literals in 20 files**, and they are no longer screens-with-a-number: the
-   biggest are `NotificationsScreen` 35, `CreatePassengerOffer` 33, and the six
-   `components/passengerOffer/*` files (**86 between them** — one cluster, convert as a set).
+2. ✅ **DONE 2026-08-31 — four screens, then the whole passenger-offer flow.** User app is at
+   **111 literals in 13 files**. What remains, largest first: `NotificationsScreen` 35 ·
+   `BlockedScreen` 19 · `SplashScreen` 14 · `PhoneRegistration` 11 · `OTPVerification` 8, then
+   nine files with 6 or fewer. **`SplashScreen` runs before the theme does — check it can safely
+   import `themes/` before converting it.**
+   ⚠️ **The auth screens (`PhoneRegistration`, `OTPVerification`) are step 13's territory** and
+   carry the T-061/T-063 validators and the OR-003 SMS-Retriever hash. Colours only, and do not
+   touch field names or autofill.
 3. **Then the driver app's screens** (951), then steps 15-22.
 
 🔴 **TOKENIZED IS NOT REBUILT, AND THE BOARD MUST NOT READ OTHERWISE.** All four 2026-08-31 screens

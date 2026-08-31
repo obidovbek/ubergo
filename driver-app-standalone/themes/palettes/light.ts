@@ -83,6 +83,21 @@ export const lightPalette = {
   // ---------------------------------------------------------------- semantic accents
   male: '#1F5FA8', // male seat marker + gender modal (NOT a brand blue)
   female: '#C43D7A', // female seat marker
+  /**
+   * The gender pair's tints and inks, measured from the gender picker in
+   * `UserBuyurtma.dc.html` (T-101, 2026-08-31) — NOT derived by lightening `male`/`female`.
+   * Contrast checked: ink-on-tint 8.27:1 male / 7.24:1 female; marker-on-tint 5.61 / 4.27
+   * (markers are borders and icons, never body text).
+   * ⚠️ There are THREE seat states — neutral, male, female — and each needs its own tint AND
+   * border. Collapsing any two makes different seats render identically.
+   */
+  maleTint: '#E8F0FA',
+  maleInk: '#154779',
+  femaleTint: '#FDEBF3',
+  femaleInk: '#8E2455',
+  /** The softer blue tint + border used by the sheets' "cancel" control. */
+  blueTintSoft: '#DCEBFB',
+  blueBorder: '#9CC4EC',
   /** The artboards' blue tint (14 uses) — informational surfaces. Pairs with `male`. */
   blueTint: '#DCEEFB',
   timeInRange: '#2D6CDF', // selected blocks on the 15-minute grid

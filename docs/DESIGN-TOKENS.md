@@ -181,10 +181,25 @@ fail contrast, and how two different statuses nearly rendered identically.
 | `#D97706` `#92400E` `#B45309` | `warnInk` | urgent text |
 | `#3B82F6` `#2563EB` `#1E40AF` `#4A90E2` | `male` | male marker, informational accent |
 | `#DBEAFE` `#EFF6FF` `#E0E7FF` | `blueTint` | informational surfaces |
-| `#EC4899` `#FCE7F3` | `female` / tint | female marker |
+| `#EC4899` `#BE185D` `#F9A8D4` | `female` | female marker |
+| `#FCE7F3` | `femaleTint` | female seat fill |
+| `#1D4ED8` | `male` | male marker |
+| `#DBEAFE` | `maleTint` | male seat fill |
+| `#1E3A8A` | `maleInk` | ink on a male/informational tint |
+| `#BFDBFE` `#C7D2FE` | `blueTintSoft` | sheet "cancel" control fill |
+| `#93C5FD` | `blueBorder` | its border |
+| `#86EFAC` `#A7F3D0` | `brand` | neutral seat border (fill is `successTint`) |
+| `#CA8A04` | `warnBorder` | urgent border |
+| `#FEF08A` | `warnTint` | urgent fill |
 | `rgba(0,0,0,0.5)` | `scrim.modal` | modal backdrop |
 | `rgba(0,0,0,0.3)` | `scrim.light` | popover backdrop |
 | `#000` (shadowColor) | `text.primary` | shadows — the ink, not pure black |
+
+🔴 **THE SEAT MARKERS ARE THREE STATES, NOT TWO.** Neutral, male and female each need their own
+fill *and* border (`successTint`+`brand`, `maleTint`+`male`, `femaleTint`+`female`). The tints and
+inks were **measured from the gender picker in `UserBuyurtma.dc.html`** on 2026-08-31, not derived
+by lightening `male`/`female` — contrast checked at 8.27:1 and 7.24:1 ink-on-tint. Collapsing any
+two of the three makes different seats render identically.
 
 🔴 **`#000` is ambiguous and must be read in context.** As `shadowColor` it becomes
 `text.primary`; anywhere else, check what it actually paints before mapping it.

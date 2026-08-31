@@ -6,6 +6,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../../themes';
 
 interface CheckRowProps {
   label: string;
@@ -46,7 +47,7 @@ export const CheckRow: React.FC<CheckRowProps> = ({
         <Ionicons
           name={shape === 'radio' ? 'ellipse' : 'checkmark'}
           size={shape === 'radio' ? 12 : 16}
-          color={shape === 'radio' ? '#059669' : '#FFFFFF'}
+          color={shape === 'radio' ? theme.palette.actionPressed : theme.palette.surface}
         />
       )}
     </View>
@@ -79,39 +80,39 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 1.5,
-    borderColor: '#111827',
+    borderColor: theme.palette.text.primary,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
   },
   boxRadio: {
     borderRadius: 12,
-    borderColor: '#9CA3AF',
-    backgroundColor: '#E5E7EB',
+    borderColor: theme.palette.text.tertiary,
+    backgroundColor: theme.palette.borders.strong,
   },
   boxChecked: {
-    backgroundColor: '#10B981',
-    borderColor: '#059669',
+    backgroundColor: theme.palette.action,
+    borderColor: theme.palette.actionPressed,
   },
   boxRadioChecked: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#059669',
+    backgroundColor: theme.palette.surface,
+    borderColor: theme.palette.actionPressed,
   },
   boxDisabled: {
-    borderColor: '#D1D5DB',
+    borderColor: theme.palette.text.disabled,
   },
   label: {
     flexShrink: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   labelDanger: {
-    color: '#DC2626',
+    color: theme.palette.dangerText,
     fontWeight: '600',
   },
   labelDisabled: {
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
   },
 });
 

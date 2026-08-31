@@ -58,6 +58,7 @@ import {
 } from "../components/passengerOffer/SpecialOrderPanel";
 import { showToast } from "../utils/toast";
 import { showConfirmDialog } from "../utils/confirmDialog";
+import { theme } from '../themes';
 
 /*
  * T-028 — the shared list, not a local copy. The copy that used to sit here
@@ -656,7 +657,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -665,7 +666,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {isEdit
@@ -681,7 +682,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           start typing into a form about to be overwritten. */}
       {isPreparing ? (
         <View style={styles.preparingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
         </View>
       ) : (
       <>
@@ -810,7 +811,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                 value={payerPhone}
                 onChangeText={setPayerPhone}
                 placeholder={t("passengerOffers.payerPhonePlaceholder")}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.palette.text.tertiary}
                 keyboardType="phone-pad"
                 maxLength={20}
               />
@@ -966,7 +967,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                 value={roadPickupNote}
                 onChangeText={setRoadPickupNote}
                 placeholder={t("passengerOffers.roadPickupPlaceholder")}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.palette.text.tertiary}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -982,7 +983,7 @@ export const CreatePassengerOfferScreen: React.FC = () => {
             <TextInput
               style={styles.noteInput}
               placeholder={t("passengerOffers.additionalInfoPlaceholder")}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.palette.text.tertiary}
               value={note}
               onChangeText={setNote}
               multiline
@@ -1004,10 +1005,10 @@ export const CreatePassengerOfferScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={theme.palette.surface} size="small" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={22} color={theme.palette.surface} />
                   <Text style={styles.submitButtonText}>
                     {isEdit
                       ? t("passengerOffers.saveChanges")
@@ -1045,7 +1046,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: "row",
@@ -1054,17 +1055,17 @@ const styles = StyleSheet.create({
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.surface,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
-    shadowColor: "#000",
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -1074,7 +1075,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: "700",
-    color: "#111827",
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -1092,13 +1093,13 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   routeCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 16,
     marginTop: 8,
-    shadowColor: "#000",
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -1107,12 +1108,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: theme.palette.text.primary,
     marginBottom: 16,
   },
   // T-018 — sections of the Figma order screen
   cardTitleDanger: {
-    color: "#DC2626",
+    color: theme.palette.dangerText,
   },
   // Wraps instead of overflowing: the labels differ a lot in length per language
   inlineRow: {
@@ -1127,11 +1128,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: theme.palette.borders.strong,
     borderRadius: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.surface,
     fontSize: 15,
-    color: "#111827",
+    color: theme.palette.text.primary,
   },
   seatsHeader: {
     flexDirection: "row",
@@ -1143,7 +1144,7 @@ const styles = StyleSheet.create({
     height: 32,
     paddingHorizontal: 8,
     borderRadius: 16,
-    backgroundColor: "#10B981",
+    backgroundColor: theme.palette.action,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -1151,29 +1152,29 @@ const styles = StyleSheet.create({
   seatTotalText: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: theme.palette.surface,
   },
   submitWrapper: {
     paddingHorizontal: 20,
     paddingTop: 8,
   },
   inputError: {
-    borderColor: "#EF4444",
+    borderColor: theme.palette.danger,
     borderWidth: 2,
   },
   errorText: {
     fontSize: 13,
-    color: "#EF4444",
+    color: theme.palette.danger,
     marginTop: 6,
     fontWeight: "600",
   },
   detailsCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -1181,12 +1182,12 @@ const styles = StyleSheet.create({
   },
   noteInput: {
     borderWidth: 2,
-    borderColor: "#E5E7EB",
+    borderColor: theme.palette.borders.strong,
     borderRadius: 16,
     padding: 16,
     fontSize: 15,
-    color: "#111827",
-    backgroundColor: "#F9FAFB",
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.ground,
     minHeight: 100,
     fontWeight: "500",
   },
@@ -1195,25 +1196,25 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flexDirection: "row",
-    backgroundColor: "#10B981",
+    backgroundColor: theme.palette.action,
     borderRadius: 16,
     padding: 18,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#10B981",
+    shadowColor: theme.palette.action,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   submitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: theme.palette.text.tertiary,
     shadowOpacity: 0,
     elevation: 0,
   },
   submitButtonText: {
-    color: "#FFFFFF",
+    color: theme.palette.surface,
     fontSize: 17,
     fontWeight: "700",
   },

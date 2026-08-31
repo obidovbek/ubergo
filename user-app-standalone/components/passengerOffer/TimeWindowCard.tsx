@@ -22,6 +22,7 @@ import { TimeWheelModal } from "../TimeWheelModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "../../hooks/useTranslation";
 import { CheckRow } from "./CheckRow";
+import { theme } from '../../themes';
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
@@ -175,7 +176,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
     <View style={styles.wrapper}>
       {isDeparture && onUrgentChange && (
         <View style={styles.urgentRow}>
-          <Ionicons name="flash" size={22} color="#111827" />
+          <Ionicons name="flash" size={22} color={theme.palette.text.primary} />
           <CheckRow
             label={t("passengerOffers.urgent")}
             checked={urgent}
@@ -197,7 +198,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
               onPress={() => openPicker("date")}
               activeOpacity={0.7}
             >
-              <Ionicons name="calendar-outline" size={16} color="#4B5563" />
+              <Ionicons name="calendar-outline" size={16} color={theme.palette.text.muted} />
               <Text style={styles.controlText}>
                 {date ? formatDateNumeric(date) : t("passengerOffers.pickDate")}
               </Text>
@@ -209,7 +210,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                 onPress={() => openPicker("from")}
                 activeOpacity={0.7}
               >
-                <Ionicons name="time-outline" size={16} color="#4B5563" />
+                <Ionicons name="time-outline" size={16} color={theme.palette.text.muted} />
                 <Text style={styles.controlText}>
                   {fromTime
                     ? formatTime(fromTime)
@@ -223,7 +224,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
               onPress={() => openPicker("until")}
               activeOpacity={0.7}
             >
-              <Ionicons name="time-outline" size={16} color="#4B5563" />
+              <Ionicons name="time-outline" size={16} color={theme.palette.text.muted} />
               <Text style={styles.controlText}>
                 {untilTime
                   ? formatTime(untilTime)
@@ -238,7 +239,7 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                 activeOpacity={0.7}
                 hitSlop={8}
               >
-                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
               </TouchableOpacity>
             )}
           </View>
@@ -320,14 +321,14 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: "#C7D2FE",
+    borderColor: theme.palette.blueTintSoft,
     borderRadius: 10,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: theme.palette.blueTint,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   cardError: {
-    borderColor: "#EF4444",
+    borderColor: theme.palette.danger,
   },
   arrivalMarker: {
     position: "absolute",
@@ -336,12 +337,12 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#22C55E",
+    backgroundColor: theme.palette.brand,
   },
   summary: {
     fontSize: 15,
     lineHeight: 21,
-    color: "#111827",
+    color: theme.palette.text.primary,
   },
   controls: {
     flexDirection: "row",
@@ -358,12 +359,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    borderColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.surface,
   },
   controlText: {
     fontSize: 14,
-    color: "#111827",
+    color: theme.palette.text.primary,
   },
   clearButton: {
     paddingHorizontal: 4,
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 6,
     fontSize: 12,
-    color: "#EF4444",
+    color: theme.palette.danger,
   },
 });
 

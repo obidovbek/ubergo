@@ -23,6 +23,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import * as GeoAPI from '../../api/geo';
 import type { GeoOption } from '../../api/geo';
 import { GeoSelectModal } from './GeoSelectModal';
+import { theme } from '../../themes';
 
 export interface LocationValue {
   province: GeoOption | null;
@@ -266,7 +267,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       <View style={styles.labelRow}>
         <View style={[styles.marker, accent === 'end' && styles.markerEnd]} />
         <Text style={styles.label}>{label}</Text>
-        {loading && <ActivityIndicator size="small" color="#10B981" />}
+        {loading && <ActivityIndicator size="small" color={theme.palette.action} />}
       </View>
 
       <TouchableOpacity
@@ -277,7 +278,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         <Text style={[styles.selectText, !value.province && styles.selectPlaceholder]}>
           {value.province?.name || t('passengerOffers.selectProvince')}
         </Text>
-        <Ionicons name="chevron-down" size={18} color="#6B7280" />
+        <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
       </TouchableOpacity>
 
       {!!value.province && (
@@ -289,7 +290,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
           <Text style={[styles.selectText, !value.cityDistrict && styles.selectPlaceholder]}>
             {value.cityDistrict?.name || t('passengerOffers.selectCity')}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#6B7280" />
+          <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
         </TouchableOpacity>
       )}
 
@@ -308,10 +309,10 @@ export const LocationCard: React.FC<LocationCardProps> = ({
               onPress={() => onChange({ ...value, settlement: null })}
               hitSlop={8}
             >
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
           ) : (
-            <Ionicons name="chevron-down" size={18} color="#6B7280" />
+            <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
           )}
         </TouchableOpacity>
       )}
@@ -331,10 +332,10 @@ export const LocationCard: React.FC<LocationCardProps> = ({
               onPress={() => onChange({ ...value, neighborhood: null })}
               hitSlop={8}
             >
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
           ) : (
-            <Ionicons name="chevron-down" size={18} color="#6B7280" />
+            <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
           )}
         </TouchableOpacity>
       )}
@@ -345,7 +346,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         <Ionicons
           name="location-outline"
           size={18}
-          color={accent === 'end' ? '#22C55E' : '#6B7280'}
+          color={accent === 'end' ? theme.palette.brand : theme.palette.text.secondary}
           style={styles.landmarkIcon}
         />
         <TextInput
@@ -353,7 +354,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
           value={value.landmark}
           onChangeText={(text) => onChange({ ...value, landmark: text })}
           placeholder={t('passengerOffers.landmarkPlaceholder')}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={theme.palette.text.tertiary}
           maxLength={255}
         />
       </View>
@@ -382,13 +383,13 @@ export const LocationCard: React.FC<LocationCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1.5,
-    borderColor: '#10B981',
+    borderColor: theme.palette.action,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     padding: 12,
   },
   cardError: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
   },
   labelRow: {
     flexDirection: 'row',
@@ -399,17 +400,17 @@ const styles = StyleSheet.create({
   marker: {
     width: 12,
     height: 12,
-    backgroundColor: '#111827',
+    backgroundColor: theme.palette.text.primary,
   },
   markerEnd: {
     borderRadius: 6,
-    backgroundColor: '#22C55E',
+    backgroundColor: theme.palette.brand,
   },
   label: {
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
-    color: '#2563EB',
+    color: theme.palette.male,
   },
   select: {
     flexDirection: 'row',
@@ -419,19 +420,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     marginBottom: 8,
     gap: 8,
   },
   selectText: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   selectPlaceholder: {
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
   },
   // The border moved from the input to the row, so the pin sits INSIDE the
   // field rather than floating next to it.
@@ -441,9 +442,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
   },
   landmarkIcon: {
     marginRight: 8,
@@ -452,19 +453,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   summary: {
     marginTop: 10,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   errorText: {
     marginTop: 6,
     fontSize: 12,
-    color: '#EF4444',
+    color: theme.palette.danger,
   },
 });
 
