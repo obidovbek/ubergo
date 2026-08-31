@@ -550,6 +550,32 @@ Edit both copies together and verify with `diff -q`.
       🟡 **2026-08-31 — `UserDetailsScreen` IS TOKENIZED (47 → 0), NOT REBUILT.** Colours only;
       no field name, validator or autofill behaviour was touched.
 - [ ] **14.** `BlockedScreen` + remaining strays; **user raw-hex ceiling reaches 0.**
+      🟢 **2026-08-31 — 111 → 15.** `Notifications` 35 · `Blocked` 19 · auth pair 19 · the
+      `shadowColor: '#000'` strays the earlier screens left · `themed-text` · `RideCard` ·
+      `BackButton` · `MenuButton`. All tokenized, `tsc` 6, lint 217.
+      ✅ **`shadowColor: '#000'` → `text.primary`, and that is not a repaint but a CORRECTION:**
+      `themes/index.ts`'s own `shadow()` helper already casts `#16130E`, so the loose call sites
+      were casting a *different* shadow from the tokens beside them. They now agree.
+      🔵 **`#1877F2` IS EXEMPT ON PURPOSE — it is Facebook's brand blue** on the Facebook login
+      button, and Meta's guidelines require it exactly. Named `FACEBOOK_BRAND_BLUE` rather than
+      tokenized, so it reads as a third-party constant instead of a missed conversion.
+      ✅ **`BlockedScreen`'s three states (blocked/pending-delete/suspended) fold onto TWO palette
+      families** — safe only because each state also carries its own emoji (🚫/⏳/⚠️) and its own
+      translated title, so colour is not the sole signal. Checked before collapsing them.
+      ✅ **SPLASH REDESIGNED LIGHT — owner decided 2026-08-31.** Was dark navy `#0a1929`. Now on
+      `ground` with `successTint` bloom circles, a `surface` logo disc and `theme.shadows.raised`.
+      **Every animation and the T-050 wordmark fix were preserved** — only colour and depth moved.
+      🔴 **AND MEASURING IT CAUGHT THREE CONTRAST FAILURES THE MAPPING WOULD HAVE SHIPPED:**
+      the 36px wordmark in `brand` was **2.56:1** (the exact failure `light.ts` warns about — it is
+      the logo green, not a text green) → `action` **5.29:1**; the 18px tagline in `text.secondary`
+      **3.98:1** and the 14px loading label in `text.tertiary` **3.28:1** — *18px regular is not
+      "large text"*, which needs 24px — both → `text.muted` **6.41:1**. All four elements now pass.
+      🛑 **THE DRIVER APP HAS THE SAME DARK SPLASH** (`#0d1b2a`, teal instead of blue) and it is
+      still dark. It sits inside the driver's 951 and gets the same treatment in phase 3 — *this is
+      exactly the twin the `fix-the-class-not-the-instance` memory is about.*
+      ✅ **`themes/palettes/dark.ts` DELETED in both apps (owner approved 2026-08-31)**, along with
+      the now-unused `darkPalette` alias in both `themes/index.ts`. Nothing imported either.
+      **Goal 4 is now genuinely met** — dark mode is gone, not just unreachable.
 
 ### Phase 3 — driver app pages, one screen per step
 
@@ -680,7 +706,7 @@ of truth — do not edit the owner's artboards).
 
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
-| user | **6** | **217** | **111** (from 839) |
+| user | **6** | **216** | **1** (from 839) |
 | driver | **28** | **285** | **951** (from 964) |
 
 🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
@@ -700,15 +726,18 @@ and scans `layout/` and `navigation/`.
    `MyPassengerOffers` (2026-08-30) and `EditProfile`, `UserDetails`, `Profile`, `OfferDrivers`
    (2026-08-31). The driver app's search also needs a walk: its three location buttons per
    direction became **one**, which is an interaction change, not a repaint.
-2. ✅ **DONE 2026-08-31 — four screens, then the whole passenger-offer flow.** User app is at
-   **111 literals in 13 files**. What remains, largest first: `NotificationsScreen` 35 ·
-   `BlockedScreen` 19 · `SplashScreen` 14 · `PhoneRegistration` 11 · `OTPVerification` 8, then
-   nine files with 6 or fewer. **`SplashScreen` runs before the theme does — check it can safely
-   import `themes/` before converting it.**
-   ⚠️ **The auth screens (`PhoneRegistration`, `OTPVerification`) are step 13's territory** and
-   carry the T-061/T-063 validators and the OR-003 SMS-Retriever hash. Colours only, and do not
-   touch field names or autofill.
-3. **Then the driver app's screens** (951), then steps 15-22.
+2. ✅ **DONE 2026-08-31 — the user app is at 15, and 1 of those is deliberate.** Everything is
+   tokenized except `SplashScreen` (14) and Facebook's brand blue (1, exempt by design).
+   ⚠️ **The `SplashScreen` worry was unfounded** — it *already* imported `themes/`, so nothing
+   loads too early. The blocker is a design decision, not a technical one (see step 14).
+   ✅ The auth screens were converted **colours only** — no field name, validator or autofill
+   behaviour touched, so the T-061/T-063 validators and the OR-003 SMS hash are untouched.
+3. ✅ **BOTH OWNER DECISIONS ANSWERED 2026-08-31 AND DONE** — splash redesigned light; the
+   orphaned dark palettes deleted from both apps.
+   🟢 **THE USER APP IS EFFECTIVELY AT ZERO: 1 literal remains and it is deliberate** —
+   `FACEBOOK_BRAND_BLUE` in `PhoneRegistrationScreen`, which Meta's guidelines require verbatim.
+   The ceiling is 1 and the ratchet holds it there.
+4. **Then the driver app's screens** (951), then steps 15-22.
 
 🔴 **TOKENIZED IS NOT REBUILT, AND THE BOARD MUST NOT READ OTHERWISE.** All four 2026-08-31 screens
 had their colours converted and their **layouts left alone** — steps 10, 12 and 13 are still open.

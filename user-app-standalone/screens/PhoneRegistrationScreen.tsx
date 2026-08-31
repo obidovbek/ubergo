@@ -392,6 +392,9 @@ export const PhoneRegistrationScreen: React.FC = () => {
   );
 };
 
+/** Facebook's official brand blue — a third-party constant, never a UbexGo token. */
+const FACEBOOK_BRAND_BLUE = '#1877F2';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -418,7 +421,7 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#4CAF50',
+    color: theme.palette.action,
     marginBottom: theme.spacing(2),
   },
   title: {
@@ -494,14 +497,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.background.card,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: theme.palette.action,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(2),
     ...theme.typography.body1,
     color: theme.palette.text.primary,
     borderBottomWidth: 3,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
   },
   termsContainer: {
     marginBottom: theme.spacing(3),
@@ -512,10 +515,10 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   termsLink: {
-    color: '#2196F3',
+    color: theme.palette.action,
   },
   continueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     padding: theme.spacing(2.5),
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
@@ -527,7 +530,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 18,
   },
   socialContainer: {
@@ -547,7 +550,13 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   facebookButton: {
-    borderColor: '#1877F2',
+    /**
+     * 🔵 NOT a UbexGo colour and NOT convertible to a token — `#1877F2` is Facebook's
+     * official brand blue, and Meta's brand guidelines require their login button to use
+     * it exactly. Tokenising it would both break the guideline and hide a third-party
+     * constant inside our palette. Deliberately exempted in check-design-tokens.mjs.
+     */
+    borderColor: FACEBOOK_BRAND_BLUE,
   },
   socialIcon: {
     fontSize: 24,
@@ -561,7 +570,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   facebookText: {
-    color: '#1877F2',
+    color: FACEBOOK_BRAND_BLUE,
   },
   footer: {
     marginTop: theme.spacing(2),
@@ -574,7 +583,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   footerLink: {
-    color: '#2196F3',
+    color: theme.palette.action,
   },
   loginContainer: {
     flexDirection: 'row',
@@ -590,12 +599,12 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     ...theme.typography.body2,
-    color: '#2196F3',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   pickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: theme.palette.scrim.light,
     justifyContent: 'center',
     padding: theme.spacing(3),
   },

@@ -174,10 +174,10 @@ export const NotificationsScreen: React.FC = () => {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'success': return '#10B981';
-      case 'error': return '#EF4444';
-      case 'warning': return '#F59E0B';
-      default: return '#3B82F6';
+      case 'success': return theme.palette.action;
+      case 'error': return theme.palette.danger;
+      case 'warning': return theme.palette.warnBorder;
+      default: return theme.palette.male;
     }
   };
 
@@ -224,9 +224,9 @@ export const NotificationsScreen: React.FC = () => {
   if (loading && notifications.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
@@ -235,11 +235,11 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
       <View style={styles.header}>
         {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
         <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        <MenuButton color="#10B981" />
+        <MenuButton color={theme.palette.action} />
         <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         {/*
           T-072 — an ICON, not the sentence.
@@ -264,7 +264,7 @@ export const NotificationsScreen: React.FC = () => {
             accessibilityLabel={t('notifications.markAllRead')}
             accessibilityRole="button"
           >
-            <Ionicons name="checkmark-done" size={20} color="#FFFFFF" />
+            <Ionicons name="checkmark-done" size={20} color={theme.palette.surface} />
           </TouchableOpacity>
         ) : (
           <View style={styles.headerSpacer} />
@@ -286,7 +286,7 @@ export const NotificationsScreen: React.FC = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={loadNotifications}
-              colors={['#10B981']}
+              colors={[theme.palette.action]}
             />
           }
           contentContainerStyle={styles.listContent}
@@ -388,17 +388,17 @@ export const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -408,10 +408,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -442,9 +442,9 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 12,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -462,9 +462,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 18,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -473,11 +473,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   unreadNotification: {
     borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
+    borderLeftColor: theme.palette.action,
   },
   iconContainer: {
     width: 44,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     marginBottom: 6,
     lineHeight: 22,
@@ -508,23 +508,23 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginBottom: 8,
     lineHeight: 20,
   },
   date: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginTop: 4,
     marginLeft: 8,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   deleteIcon: {
     fontSize: 24,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '300',
   },
   emptyContainer: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   emptyIcon: {
     fontSize: 64,
@@ -557,19 +557,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -700,13 +700,13 @@ const styles = StyleSheet.create({
   },
   modalActionText: {
     ...theme.typography.button,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '600',
   },
   modalDeleteButton: {
     backgroundColor: theme.palette.error.main,
   },
   modalDeleteText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
 });

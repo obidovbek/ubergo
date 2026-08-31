@@ -153,7 +153,7 @@ export const SplashScreen: React.FC = () => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator
               size="large"
-              color="#4A90E2"
+              color={theme.palette.action}
               style={styles.spinner}
             />
             <Animated.Text
@@ -182,7 +182,10 @@ const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
-    backgroundColor: '#0a1929',
+    // T-101 (2026-08-31): this screen was dark navy (#0a1929) from the pre-redesign
+    // look. No artboard defines a splash, so the owner chose to bring it onto the
+    // light system rather than keep one dark screen in a light-only app.
+    backgroundColor: theme.palette.ground,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -191,26 +194,28 @@ const styles = StyleSheet.create({
   gradientCircle: {
     position: 'absolute',
     borderRadius: 1000,
-    opacity: 0.08,
+    // The dark version hid these at 0.08 against navy. On the light ground the same
+    // opacity is invisible, so the tint does the work instead of the alpha.
+    opacity: 0.5,
   },
   circle1: {
     width: 500,
     height: 500,
-    backgroundColor: '#4A90E2',
+    backgroundColor: theme.palette.successTintSoft,
     top: -150,
     right: -150,
   },
   circle2: {
     width: 400,
     height: 400,
-    backgroundColor: '#00D9A5',
+    backgroundColor: theme.palette.successTint,
     bottom: -100,
     left: -100,
   },
   circle3: {
     width: 300,
     height: 300,
-    backgroundColor: '#4A90E2',
+    backgroundColor: theme.palette.successTintSoft,
     top: '50%',
     left: '50%',
     marginTop: -150,
@@ -223,7 +228,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     width: width * 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    // A white sheen is invisible on a light ground; the sweep now reads as a very
+    // faint lift of the surface colour instead.
+    backgroundColor: theme.palette.surface,
+    opacity: 0.35,
     transform: [{ skewX: '-20deg' }],
   },
   content: {
@@ -238,24 +246,27 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(74, 144, 226, 0.15)',
+    backgroundColor: theme.palette.surface,
     borderWidth: 2,
-    borderColor: 'rgba(74, 144, 226, 0.3)',
+    borderColor: theme.palette.action,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4A90E2',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...theme.shadows.raised,
   },
   logoText: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    // The artboards set the wordmark at weight 900; Manrope stops at 800 and Google
+    // Fonts silently serves 800 for 900, so 800 IS what the design renders.
+    ...theme.font('sans', 800),
+    /**
+     * 🔴 `action`, NOT `brand`, and that is a deliberate departure from the artboards.
+     * The artboards draw the wordmark in `brand` #05BB42, which measures **2.56:1** on
+     * white — the very failure `light.ts` warns about, and the same one the owner already
+     * approved fixing on the UserMenuNeW CTA (2026-08-30). `action` measures 5.29:1.
+     * On the artboards' own 21px chrome wordmark this matters less; here it is the 36px
+     * hero of the first screen the app ever shows.
+     */
+    color: theme.palette.action,
     // T-050: letterSpacing was the hidden cost — 6 characters carry 6 extra
     // points of width, which is what pushed "UbexGo" past the 140px circle.
     letterSpacing: 1,
@@ -264,9 +275,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(74, 144, 226, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
   },
   taglineContainer: {
     marginBottom: 48,
@@ -274,11 +282,11 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 18,
-    fontWeight: '400',
-    color: '#E0E0E0',
+    // text.secondary measures 3.98:1 here and 18px regular is NOT "large text"
+    // (that needs 18pt/24px, or 14pt bold). text.muted is 6.41:1.
+    color: theme.palette.text.muted,
     textAlign: 'center',
     letterSpacing: 0.5,
-    opacity: 0.9,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -289,8 +297,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#B0B0B0',
+    // text.tertiary measures 3.28:1 — fine for the meta text it is named for, not for
+    // a 14px label that a user reads while waiting.
+    color: theme.palette.text.muted,
     letterSpacing: 0.5,
   },
   bottomAccent: {
@@ -299,6 +308,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: 'rgba(74, 144, 226, 0.4)',
+    backgroundColor: theme.palette.brand,
   },
 });

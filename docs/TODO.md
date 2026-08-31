@@ -85,7 +85,7 @@
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
   ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
-  🟢 **Raw colours: user 839 -> 111 · driver 964 -> 951** (driver screens untouched; only shared
+  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 951** (driver screens untouched; only shared
   components). A counter script fails if either rises, and **was proven able to go red** — re-proven
   at the new 234 ceiling on 2026-08-31.
   ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
@@ -95,8 +95,19 @@
   `femaleTint`/`femaleInk`/`blueTintSoft`/`blueBorder`) added to **both** palettes.
   🟡 **ALL OF IT IS TOKENIZED, NOT REBUILT** — colours only, layouts untouched, so plan steps
   8 / 10 / 12 / 13 stay open. `tsc` 6 (baseline) · lint 217 (one *below* baseline).
-  🛑 **THE PASSENGER-OFFER FLOW HAS NOT RUN ON A DEVICE** — it is the app's main create path, and
-  the seat markers now read their colours from new tokens.
+  ✅ **2026-08-31 (3) — user app down to 15:** `Notifications` 35 · `Blocked` 19 · auth pair 19 ·
+  strays. 🔵 **1 of the 15 is Facebook's brand blue, exempt on purpose** (Meta requires it exact);
+  the other **14 are `SplashScreen`, which needs an owner decision, not a mapping** — it is a dark
+  navy screen and no artboard defines a splash.
+  🟢 **2026-08-31 (4) — THE USER APP IS EFFECTIVELY AT ZERO (1 left, deliberate).**
+  ✅ **Splash redesigned light** (owner decided): animations and the T-050 wordmark fix preserved.
+  **Measuring it caught 3 contrast failures** — wordmark 2.56:1, tagline 3.98:1, loading 3.28:1;
+  all now 5.29 / 6.41 / 6.41. 🛑 **The DRIVER app's splash is still dark** — same screen, its twin.
+  ✅ **`themes/palettes/dark.ts` DELETED in both apps** (owner approved) + the dead `darkPalette`
+  alias. **Goal 4 genuinely met.** 🔵 The 1 remaining literal is Facebook's brand blue, exempt.
+  🛑 **NOT RUN ON A DEVICE:** the passenger-offer flow (the main create path, seat markers on new
+  tokens) and everything from 2026-08-31 (3) — notably `BlockedScreen`, whose three account states
+  now fold onto two colour families.
   ✅ **Done:** token layer both apps · 7 font faces bundled · `expo-linear-gradient` +
   `react-native-svg` **proven on a device** · TopBar/BottomTabBar/Icon/Badge ·
   Button/Card/Chip/Carousel · shared `GeoSheet` · dark mode dropped · `MenuScreen` (rebuilt to

@@ -301,5 +301,3 @@ export const theme: Theme = {
 export const createTheme = (_mode?: 'light' | 'dark'): Theme => theme;
 
 export { lightPalette };
-/** @deprecated Dark mode was dropped 2026-08-30. Aliased so imports keep compiling. */
-export const darkPalette = lightPalette;

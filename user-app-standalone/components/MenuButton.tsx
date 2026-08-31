@@ -16,6 +16,7 @@ import { TouchableOpacity, StyleSheet, type StyleProp, type ViewStyle } from 're
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../hooks/useTranslation';
+import { theme } from '../themes';
 
 interface MenuButtonProps {
   /** Icon colour — screens differ, so the caller decides. Defaults to the usual header grey. */
@@ -23,7 +24,7 @@ interface MenuButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export const MenuButton: React.FC<MenuButtonProps> = ({ color = '#111827', style }) => {
+export const MenuButton: React.FC<MenuButtonProps> = ({ color = theme.palette.text.primary, style }) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
 
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },

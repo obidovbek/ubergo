@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 8,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     // T-066 — a deliberately stronger shadow than the offer cards below it
     // (0.06 / radius 8). The picker now scrolls in the same surface as the
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
