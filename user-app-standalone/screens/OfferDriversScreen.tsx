@@ -43,12 +43,13 @@ import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { theme } from '../themes';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#FEF3C7', text: '#B45309' },
-  confirmed: { bg: '#D1FAE5', text: '#047857' },
-  rejected: { bg: '#FEE2E2', text: '#B91C1C' },
-  cancelled: { bg: '#F3F4F6', text: '#6B7280' },
+  pending: { bg: theme.palette.warnTint, text: theme.palette.warnInk },
+  confirmed: { bg: theme.palette.successTint, text: theme.palette.actionPressed },
+  rejected: { bg: theme.palette.dangerTint, text: theme.palette.dangerText },
+  cancelled: { bg: theme.palette.surfaceSunken, text: theme.palette.text.secondary },
 };
 
 export default function OfferDriversScreen() {
@@ -208,7 +209,7 @@ export default function OfferDriversScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.driverInfo}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={18} color="#4A90E2" />
+              <Ionicons name="person" size={18} color={theme.palette.male} />
             </View>
             <Text style={styles.driverName} numberOfLines={1}>
               {driverNameOf(item, t('offerDrivers.unknownDriver'))}
@@ -224,7 +225,7 @@ export default function OfferDriversScreen() {
         {/* `vehicle` is optional on the payload, so every field is guarded. */}
         {v ? (
           <View style={styles.row}>
-            <Ionicons name="car-outline" size={16} color="#6B7280" />
+            <Ionicons name="car-outline" size={16} color={theme.palette.text.secondary} />
             <Text style={styles.rowText} numberOfLines={1}>
               {[v.make?.name, v.model?.name, v.color?.name].filter(Boolean).join(' ')}
               {v.license_plate ? ` · ${v.license_plate}` : ''}
@@ -233,7 +234,7 @@ export default function OfferDriversScreen() {
         ) : null}
 
         <View style={styles.row}>
-          <Ionicons name="people-outline" size={16} color="#6B7280" />
+          <Ionicons name="people-outline" size={16} color={theme.palette.text.secondary} />
           <Text style={styles.rowText}>
             {t('offerDrivers.seatsOffered').replace(
               '{count}',
@@ -243,7 +244,7 @@ export default function OfferDriversScreen() {
         </View>
 
         <View style={styles.row}>
-          <Ionicons name="cash-outline" size={16} color="#6B7280" />
+          <Ionicons name="cash-outline" size={16} color={theme.palette.text.secondary} />
           <Text style={styles.rowText}>
             {formatNumberWithSpaces(item.offered_price_per_seat)} {item.currency}
             {'  ·  '}
@@ -269,7 +270,7 @@ export default function OfferDriversScreen() {
                 onPress={() => dialPhone(driverPhone, t)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Ionicons name="call" size={16} color={theme.palette.surface} />
                 <Text style={styles.callText}>{formatContactPhone(driverPhone)}</Text>
               </TouchableOpacity>
             ) : (
@@ -289,7 +290,7 @@ export default function OfferDriversScreen() {
               activeOpacity={0.7}
             >
               {busyId === item.id ? (
-                <ActivityIndicator size="small" color="#B91C1C" />
+                <ActivityIndicator size="small" color={theme.palette.dangerText} />
               ) : (
                 <Text style={styles.rejectText}>{t('offerDrivers.reject')}</Text>
               )}
@@ -313,7 +314,7 @@ export default function OfferDriversScreen() {
       <Ionicons
         name={loadFailed ? 'alert-circle-outline' : 'car-outline'}
         size={56}
-        color="#D1D5DB"
+        color={theme.palette.text.disabled}
       />
       <Text style={styles.emptyTitle}>
         {loadFailed ? t('offerDrivers.loadFailed') : t('offerDrivers.emptyTitle')}
@@ -328,7 +329,7 @@ export default function OfferDriversScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A90E2" />
+          <ActivityIndicator size="large" color={theme.palette.male} />
         </View>
       </SafeAreaView>
     );
@@ -336,7 +337,7 @@ export default function OfferDriversScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -344,7 +345,7 @@ export default function OfferDriversScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -375,29 +376,29 @@ export default function OfferDriversScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: theme.palette.ground },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   backButton: { padding: 4, marginRight: 8 },
   headerTextWrap: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.palette.text.primary },
+  headerSubtitle: { fontSize: 13, color: theme.palette.text.secondary, marginTop: 2 },
   listContent: { padding: 16, paddingBottom: 32 },
   emptyListContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -414,26 +415,26 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.palette.blueTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
-  driverName: { fontSize: 16, fontWeight: '600', color: '#111827', flex: 1 },
+  driverName: { fontSize: 16, fontWeight: '600', color: theme.palette.text.primary, flex: 1 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: 12, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  rowText: { fontSize: 14, color: '#374151', marginLeft: 8, flex: 1 },
+  rowText: { fontSize: 14, color: theme.palette.text.muted, marginLeft: 8, flex: 1 },
   messageBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     padding: 10,
     marginTop: 4,
     marginBottom: 4,
   },
-  messageText: { fontSize: 14, color: '#4B5563', fontStyle: 'italic' },
+  messageText: { fontSize: 14, color: theme.palette.text.muted, fontStyle: 'italic' },
   contactBox: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 10,
     padding: 12,
     marginTop: 8,
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#047857',
+    color: theme.palette.actionPressed,
     marginBottom: 8,
   },
   callButton: {
@@ -449,12 +450,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 12,
     paddingVertical: 12,
   },
-  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  contactMissing: { fontSize: 14, color: '#6B7280' },
+  callText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: theme.palette.text.secondary },
   actions: { flexDirection: 'row', marginTop: 12, gap: 10 },
   actionButton: {
     flex: 1,
@@ -463,22 +464,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rejectButton: { backgroundColor: '#FEE2E2' },
-  acceptButton: { backgroundColor: '#10B981' },
-  rejectText: { color: '#B91C1C', fontWeight: '700', fontSize: 15 },
-  acceptText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  rejectButton: { backgroundColor: theme.palette.dangerTint },
+  acceptButton: { backgroundColor: theme.palette.action },
+  rejectText: { color: theme.palette.dangerText, fontWeight: '700', fontSize: 15 },
+  acceptText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
   buttonDisabled: { opacity: 0.5 },
   emptyContainer: { alignItems: 'center', paddingHorizontal: 24 },
   emptyTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.palette.text.muted,
     marginTop: 16,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,

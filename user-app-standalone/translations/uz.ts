@@ -199,6 +199,33 @@ export default {
 
   // Menu Screen (Home)
   menu: {
+    // T-101 step 6 — services. Only Taksi is enabled today; the other four are
+    // built but not yet reachable. Keys kept so adding one is data, not a rewrite.
+    servicesLabel: "Xizmat turi",
+    serviceTaxi: "Taksi",
+    serviceJonatma: "Jo'natma",
+    serviceUstalar: "Ustalar",
+    serviceTexnika: "Maxsus texnika",
+    serviceYuk: "Yukmashina",
+    ctaJonatma: "Jo'natma yuborish",
+    ctaUstalar: "Usta chaqirish",
+    ctaTexnika: "Maxsus texnika chaqirish",
+    ctaYuk: "Yukmashina buyurtma qilish",
+    // T-101 step 6 — the four order scopes (Xalqaro deliberately omitted:
+    // no adm rule defined and no backend). See docs/PLAN-T101-SCOPES.md.
+    scopeTuman: "Tuman ichi",
+    scopeAro: "Viloyatlar aro",
+    scopeViloyat: "Viloyat ichi",
+    scopeYaqin: "Yaqin hududlar",
+    scopesLabel: "Yo'nalish turi",
+    recentRoutes: "So'nggi yo'nalishlar",
+    activeTrip: "Faol safar",
+    balance: "Balans",
+    promoCodes: "Promo kod",
+    trips: "Safarlar",
+    ctaTaxi: "Taksi buyurtma qilish",
+    /** T-101: the top bar screen name. `title` is the CARD heading. */
+    screenTitle: "Asosiy menyu",
     title: "TAXI",
     openMenu: "Menyu",
     subtitle: "Mamlakatni tanlang",

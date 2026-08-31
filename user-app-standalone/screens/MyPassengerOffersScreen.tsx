@@ -38,6 +38,7 @@ import { isAuthError, getErrorMessage } from '../utils/errorHandler';
 import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { subscribePushReceived } from '../utils/pushEvents';
+import { theme } from '../themes';
 
 /*
  * T-028 — the shared list, not a local copy.
@@ -328,38 +329,48 @@ export const MyPassengerOffersScreen: React.FC = () => {
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'expired':
-        return '#6B7280';
+        return theme.palette.text.secondary;
       case 'published':
-        return '#10B981';
+        return theme.palette.action;
       case 'driver_found':
-        return '#0EA5E9';
+        /*
+         * T-101 — was `#0EA5E9` on `#E0F2FE`, which measured **2.42:1** and is the
+         * worst contrast found in this app.
+         *
+         * ⚠️ NOT mapped to male/blueTint despite being the nearest blue: `completed`
+         * already uses that pair, and two different statuses rendering identically is
+         * a worse bug than the one being fixed. `brand` is distinct from both and is
+         * the right meaning — a driver was found.
+         */
+        return theme.palette.brand;
       case 'completed':
-        return '#3B82F6';
+        return theme.palette.male;
       case 'cancelled':
-        return '#EF4444';
+        return theme.palette.danger;
       case 'archived':
-        return '#6B7280';
+        return theme.palette.text.secondary;
       default:
-        return '#6B7280';
+        return theme.palette.text.secondary;
     }
   };
 
   const getStatusBgColor = (status: string): string => {
     switch (status) {
       case 'expired':
-        return '#F3F4F6';
+        return theme.palette.surfaceSunken;
       case 'published':
-        return '#D1FAE5';
+        return theme.palette.successTint;
       case 'driver_found':
-        return '#E0F2FE';
+        // Pairs with `brand` above: 6.96:1, up from 2.42:1.
+        return theme.palette.successTint;
       case 'completed':
-        return '#DBEAFE';
+        return theme.palette.blueTint;
       case 'cancelled':
-        return '#FEE2E2';
+        return theme.palette.dangerTint;
       case 'archived':
-        return '#F3F4F6';
+        return theme.palette.surfaceSunken;
       default:
-        return '#F9FAFB';
+        return theme.palette.ground;
     }
   };
 
@@ -453,11 +464,11 @@ export const MyPassengerOffersScreen: React.FC = () => {
           
           <View style={styles.routeConnector}>
             <View style={styles.routeLine} />
-            <Ionicons name="arrow-down" size={16} color="#D1D5DB" />
+            <Ionicons name="arrow-down" size={16} color={theme.palette.text.disabled} />
           </View>
           
           <View style={styles.routeRow}>
-            <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.routeDot, { backgroundColor: theme.palette.male }]} />
             <View style={styles.routeContent}>
               <Text style={styles.routeLabel}>{t('passengerOffers.to')}</Text>
               <Text style={styles.routeText} numberOfLines={1}>
@@ -471,7 +482,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <View style={styles.infoIconContainer}>
-              <Ionicons name="calendar-outline" size={18} color="#10B981" />
+              <Ionicons name="calendar-outline" size={18} color={theme.palette.action} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('myBookings.date')}</Text>
@@ -481,7 +492,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
           
           <View style={styles.infoItem}>
             <View style={styles.infoIconContainer}>
-              <Ionicons name="people" size={18} color="#3B82F6" />
+              <Ionicons name="people" size={18} color={theme.palette.male} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('passengerOffers.seatsNeeded')}</Text>
@@ -522,12 +533,12 @@ export const MyPassengerOffersScreen: React.FC = () => {
             activeOpacity={0.7}
           >
             <View style={styles.driverInfoHeader}>
-              <Ionicons name="car-outline" size={16} color="#3B82F6" />
+              <Ionicons name="car-outline" size={16} color={theme.palette.male} />
               <Text style={styles.driverInfoText}>
                 {driverCount} {driverCount > 1 ? t('passengerOffers.driversInterested') : t('passengerOffers.driverInterested')}
                 {pendingDrivers > 0 && ` (${pendingDrivers} ${t('passengerOffers.pending')})`}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
+              <Ionicons name="chevron-forward" size={16} color={theme.palette.male} />
             </View>
           </TouchableOpacity>
         )}
@@ -544,7 +555,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
               }}
               activeOpacity={0.7}
             >
-              <Ionicons name="create-outline" size={18} color="#2563EB" />
+              <Ionicons name="create-outline" size={18} color={theme.palette.male} />
               <Text style={styles.editButtonText}>{t('passengerOffers.edit')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -555,7 +566,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
               }}
               activeOpacity={0.7}
             >
-              <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+              <Ionicons name="close-circle-outline" size={18} color={theme.palette.danger} />
               <Text style={styles.cancelButtonText}>{t('passengerOffers.cancelRequest')}</Text>
             </TouchableOpacity>
           </View>
@@ -567,7 +578,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <View style={styles.emptyIconContainer}>
-        <Ionicons name="document-text-outline" size={48} color="#D1D5DB" />
+        <Ionicons name="document-text-outline" size={48} color={theme.palette.text.disabled} />
       </View>
       <Text style={styles.emptyText}>{t('passengerOffers.noRequests')}</Text>
       <Text style={styles.emptySubtext}>
@@ -578,7 +589,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
         onPress={() => navigation.navigate('CreatePassengerOffer')}
         activeOpacity={0.7}
       >
-        <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+        <Ionicons name="add-circle" size={20} color={theme.palette.surface} />
         <Text style={styles.createButtonText}>{t('passengerOffers.createRideRequest')}</Text>
       </TouchableOpacity>
     </View>
@@ -591,7 +602,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('passengerOffers.loadingRequests')}</Text>
         </View>
       </SafeAreaView>
@@ -600,7 +611,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -609,7 +620,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <MenuButton />
         <Text style={styles.headerTitle}>{t('passengerOffers.title')}</Text>
@@ -618,25 +629,25 @@ export const MyPassengerOffersScreen: React.FC = () => {
           onPress={() => navigation.navigate('CreatePassengerOffer')}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={24} color="#10B981" />
+          <Ionicons name="add" size={24} color={theme.palette.action} />
         </TouchableOpacity>
       </View>
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
+        <View style={[styles.statCard, { backgroundColor: theme.palette.successTint }]}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
           </View>
-          <Text style={[styles.statValue, { color: '#10B981' }]}>{publishedCount}</Text>
+          <Text style={[styles.statValue, { color: theme.palette.action }]}>{publishedCount}</Text>
           <Text style={styles.statLabel}>{t('passengerOffers.active')}</Text>
         </View>
         
-        <View style={[styles.statCard, { backgroundColor: '#DBEAFE' }]}>
+        <View style={[styles.statCard, { backgroundColor: theme.palette.blueTint }]}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="checkmark-done-circle" size={20} color="#3B82F6" />
+            <Ionicons name="checkmark-done-circle" size={20} color={theme.palette.male} />
           </View>
-          <Text style={[styles.statValue, { color: '#3B82F6' }]}>{completedCount}</Text>
+          <Text style={[styles.statValue, { color: theme.palette.male }]}>{completedCount}</Text>
           <Text style={styles.statLabel}>{t('passengerOffers.completed')}</Text>
         </View>
       </View>
@@ -697,8 +708,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
             <RefreshControl 
               refreshing={isRefreshing} 
               onRefresh={handleRefresh}
-              tintColor="#10B981"
-              colors={['#10B981']}
+              tintColor={theme.palette.action}
+              colors={[theme.palette.action]}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -711,7 +722,7 @@ export const MyPassengerOffersScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   loadingContainer: {
     flex: 1,
@@ -720,7 +731,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -730,13 +741,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -750,14 +761,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   addButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -788,7 +799,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   filterScrollView: {
@@ -815,11 +826,11 @@ const styles = StyleSheet.create({
   },
   filterTabText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
   },
   filterTabIndicator: {
@@ -828,7 +839,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 2,
   },
   listContent: {
@@ -836,7 +847,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   offerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -871,7 +882,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginRight: 12,
   },
   routeContent: {
@@ -879,7 +890,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -888,7 +899,7 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   routeConnector: {
     flexDirection: 'row',
@@ -899,7 +910,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginRight: 8,
   },
   infoGrid: {
@@ -911,7 +922,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     padding: 12,
   },
@@ -919,7 +930,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -929,17 +940,17 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   priceSection: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -952,16 +963,16 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   priceValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   driverInfo: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.palette.blueTint,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
@@ -976,7 +987,7 @@ const styles = StyleSheet.create({
   },
   driverInfoText: {
     fontSize: 14,
-    color: '#3B82F6',
+    color: theme.palette.male,
     fontWeight: '600',
     // T-024: takes the slack between the car icon and the chevron, so the
     // chevron is pinned right instead of floating next to the text.
@@ -991,7 +1002,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.palette.blueTint,
     borderRadius: 12,
     padding: 14,
     gap: 8,
@@ -999,20 +1010,20 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2563EB',
+    color: theme.palette.male,
   },
   cancelButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     padding: 14,
     gap: 8,
   },
   cancelButtonText: {
-    color: '#EF4444',
+    color: theme.palette.danger,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1027,7 +1038,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -1035,31 +1046,31 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     textAlign: 'center',
     marginBottom: 24,
   },
   createButton: {
     flexDirection: 'row',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   createButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 16,
     fontWeight: '700',
   },

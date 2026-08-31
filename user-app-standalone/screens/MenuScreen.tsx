@@ -1,35 +1,57 @@
 /**
- * Menu Screen (Home Screen)
- * Main menu with taxi service options
+ * Menu Screen (Home) — rebuilt on `UserMenuNeW.dc.html`, T-101 step 6.
+ *
+ * The owner chose `UserMenuNeW` as the canonical main menu on 2026-08-30 (there were
+ * two competing artboards; `UserMainMenu` is the other and is now superseded).
+ *
+ * THE SHAPE OF THIS SCREEN: pick a SERVICE, pick a SCOPE, press the CTA.
+ *
+ *   service   A CAROUSEL showing ALL FIVE. Taksi is the only one enabled; the other
+ *             four render dimmed and inert — "not built yet", not "cancelled". The
+ *             owner confirmed 2026-08-30 that Jo'natma, Ustalar, Maxsus texnika and
+ *             Yukmashina ARE COMING, so showing them keeps the product's shape visible
+ *             as it grows. Adding one is a line in SERVICES plus a route.
+ *
+ *             🔴 I ORIGINALLY HID THIS ROW while only one service was enabled, reasoning
+ *             that a one-option picker is noise. That was wrong: the owner had just said
+ *             the others are coming, and hiding it made the service concept look deleted.
+ *             Do not "tidy" it away again.
+ *
+ *   scope     A CAROUSEL of the four adm-level order scopes.
+ *             **Xalqaro is omitted** — it appears in no scope rule the owner defined
+ *             and has no adm mapping. See docs/PLAN-T101-SCOPES.md.
+ *
+ *   CTA       Carries the chosen service + scope to the order screen.
+ *
+ * ⚠️ Choosing a scope currently only STYLES the selection and travels with the CTA.
+ * The four scopes need backend matching that does not exist yet (**T-102**: `DriverOffer`
+ * has no geo columns and search is an `ILIKE` on free text). Until then all four behave
+ * identically. This must not be presented as delivering the scopes.
+ *
+ * 🛑 NOT SHIPPED, all for one reason — they would be FABRICATED STATE: the active-trip
+ * banner (no live-trip endpoint), recent routes (the artboard's are hardcoded), and the
+ * balance/promo/trips stats (the wallet is step 19). The artboard shows all three with
+ * invented data.
  */
 
 import React, { useState } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   StatusBar,
-  Platform,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import { createTheme } from '../themes';
+import { theme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
-import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../contexts/NotificationContext';
-
-const theme = createTheme('light');
-
-interface TaxiOption {
-  id: string;
-  titleKey: string;
-  subtitle?: string;
-}
+import { TopBar } from '../components/chrome/TopBar';
+import { Carousel } from '../components/Carousel';
+import { Button } from '../components/Button';
 
 /*
  * T-028 — the shared list, not a local copy.
@@ -42,328 +64,156 @@ interface TaxiOption {
  */
 type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
+/**
+ * The services from `UserMenuNeW.dc.html`, in the artboard's order.
+ *
+ * ⚠️ `enabled: false` is NOT "cancelled" — it is "not built yet". Keep these rows.
+ * Deleting them loses the artboard's own ordering and CTA wording, which is the only
+ * record of what the owner drew.
+ */
+const SERVICES = [
+  { key: 'taxi', labelKey: 'menu.serviceTaxi', ctaKey: 'menu.ctaTaxi', enabled: true },
+  { key: 'jonatma', labelKey: 'menu.serviceJonatma', ctaKey: 'menu.ctaJonatma', enabled: false },
+  { key: 'ustalar', labelKey: 'menu.serviceUstalar', ctaKey: 'menu.ctaUstalar', enabled: false },
+  { key: 'texnika', labelKey: 'menu.serviceTexnika', ctaKey: 'menu.ctaTexnika', enabled: false },
+  { key: 'yuk', labelKey: 'menu.serviceYuk', ctaKey: 'menu.ctaYuk', enabled: false },
+] as const;
+
+type ServiceKey = (typeof SERVICES)[number]['key'];
+
+/**
+ * The four scopes, in the artboard's own order.
+ *
+ * ⚠️ `matchLevel` IS RECORDED BUT NOT YET SENT ANYWHERE. It is the adm level the
+ * backend will match on once **T-102** exists (`DriverOffer` has no geo columns today
+ * and search is an `ILIKE` on free text, so no scope can be honoured). It lives here so
+ * the mapping the owner defined on 2026-08-30 is captured in code next to the labels it
+ * belongs to, rather than only in docs/PLAN-T101-SCOPES.md.
+ *
+ * **Do not read this as "the scope is wired up".** When T-102 lands, pass it to
+ * `CreatePassengerOffer` and delete this warning.
+ */
+const SCOPES = [
+  { key: 'tuman', labelKey: 'menu.scopeTuman', matchLevel: 'adm3' },
+  { key: 'aro', labelKey: 'menu.scopeAro', matchLevel: 'adm2' },
+  { key: 'viloyat', labelKey: 'menu.scopeViloyat', matchLevel: 'adm2' },
+  { key: 'yaqin', labelKey: 'menu.scopeYaqin', matchLevel: 'adm3' },
+] as const;
+
+type ScopeKey = (typeof SCOPES)[number]['key'];
+
 export const MenuScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<MenuScreenNavigationProp>();
   const { t } = useTranslation();
   const { unreadCount } = useNotifications();
-  const [selectedCountry, setSelectedCountry] = useState(t('menu.uzbekistan'));
 
-  // Taxi options with translation keys
-  const taxiOptions: TaxiOption[] = [
-    { id: 'driver_offers', titleKey: 'menu.driverOffersTitle' },
-    { id: 'my_bookings', titleKey: 'menu.myBookings' },
-    { id: 'create_passenger_offer', titleKey: 'passengerOffers.createRideRequest' },
-    { id: 'my_passenger_offers', titleKey: 'passengerOffers.myRideRequests' },
-    // { id: 'viloyatlar', titleKey: 'menu.viloyatlar' },
-    // { id: 'ichi', titleKey: 'menu.ichi' },
-    // { id: 'tuman', titleKey: 'menu.tuman' },
-    // { id: 'empty', titleKey: 'menu.empty' },
-    // { id: 'xalqaro', titleKey: 'menu.xalqaro' },
-  ];
+  const [service, setService] = useState<ServiceKey>('taxi');
+  // Defaults to the artboard's own default scope.
+  const [scope, setScope] = useState<ScopeKey>('aro');
 
-  // Get user display name or initials
-  const displayName = (user as any)?.display_name || 
-                     (user as any)?.name || 
-                     t('menu.guest');
+  const currentService = SERVICES.find((s) => s.key === service) ?? SERVICES[0];
+
+  const displayName =
+    (user as any)?.display_name || (user as any)?.name || t('menu.guest');
   const userInitial = displayName.charAt(0).toUpperCase();
 
-  const handleOptionPress = (optionId: string) => {
-    if (optionId === 'driver_offers') {
-      navigation.navigate('SearchOffers');
-    } else if (optionId === 'my_bookings') {
-      navigation.navigate('MyBookings');
-    } else if (optionId === 'create_passenger_offer') {
-      navigation.navigate('CreatePassengerOffer');
-    } else if (optionId === 'my_passenger_offers') {
-      navigation.navigate('MyPassengerOffers');
-    } else {
-      console.log('Selected option:', optionId);
-      // Handle navigation or action based on selected option
-    }
-  };
-
-  const handleProfilePress = () => {
-    navigation.navigate('Profile');
-  };
+  const handleProfilePress = () => navigation.navigate('Profile');
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-      <ScrollView 
+      {/* T-101: the top bar's gradient runs up under the status bar, so the bar is
+          transparent and lets the green show through rather than sitting on a slab of a
+          colour that is no longer anywhere on screen (#F5F5F5 predates the redesign).
+          `dark-content` stays: against the gradient's top (#1D9846) dark glyphs measure
+          4.97:1 and white only 3.73:1, so dark is the more legible of the two. */}
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      {/* Deliberately OUTSIDE the ScrollView: fixed chrome, not content. */}
+      <TopBar
+        title={t('menu.screenTitle')}
+        initials={userInitial}
+        notificationCount={unreadCount}
+        onMenuPress={handleProfilePress}
+        onBellPress={() => navigation.navigate('Notifications')}
+        onAvatarPress={handleProfilePress}
+      />
+
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Logo and Profile Button */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.logoContainer}>
-              {/* T-050: 38px + a profile button competing for the same row is
-                  enough to wrap the wordmark mid-word on a large font scale. */}
-              <Text
-                style={styles.logo}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-              >
-                {t('auth.appName')}
-              </Text>
-            </View>
-            <View style={styles.headerActions}>
-              {/* Unread messages — visible without opening the menu. The count
-                  comes from NotificationContext, which already reloads when a
-                  push arrives in the foreground, so this stays live. */}
-              <TouchableOpacity
-                style={styles.mailButton}
-                // `as any` matches the rest of this file (see the CreatePassengerOffer
-                // call above): MainStackParamList still lists only 3 of the
-                // navigator's 9 routes, so 'Notifications' is not in the type yet.
-                onPress={() => navigation.navigate('Notifications')}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={t('notifications.title')}
-              >
-                <Ionicons name="mail-outline" size={24} color="#111827" />
-                {unreadCount > 0 && (
-                  <View style={styles.mailBadge}>
-                    <Text style={styles.mailBadgeText}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.profileButton}
-                onPress={handleProfilePress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.profileAvatar}>
-                  <Text style={styles.profileInitial}>{userInitial}</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        {/* ---- service ---- */}
+        <Text style={styles.eyebrow}>{t('menu.servicesLabel').toUpperCase()}</Text>
+        <Carousel
+          items={SERVICES.map((s) => ({
+            key: s.key,
+            label: t(s.labelKey),
+            enabled: s.enabled,
+          }))}
+          selectedKey={service}
+          onSelect={(k) => setService(k as ServiceKey)}
+          testID="service-carousel"
+        />
 
-        {/* Main Card */}
-        <View style={styles.card}>
-          {/* Title */}
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{t('menu.title')}</Text>
-            {/* <Text style={styles.cardSubtitle}>{t('menu.subtitle')}</Text> */}
-          </View>
+        {/* ---- scope ---- */}
+        <Text style={styles.eyebrow}>{t('menu.scopesLabel').toUpperCase()}</Text>
+        <Carousel
+          items={SCOPES.map((s) => ({ key: s.key, label: t(s.labelKey) }))}
+          selectedKey={scope}
+          onSelect={(k) => setScope(k as ScopeKey)}
+          testID="scope-carousel"
+        />
 
-          {/* Country Selector */}
-          {/* <TouchableOpacity style={styles.countrySelector}>
-            <Text style={styles.countryFlag}>🇺🇿</Text>
-            <Text style={styles.countryName}>{selectedCountry}</Text>
-          </TouchableOpacity> */}
+        {/* ---- the primary call to action ---- */}
+        <Button
+          title={t(currentService.ctaKey)}
+          size="lg"
+          fullWidth
+          onPress={() =>
+            // The scope travels now so the wiring is ready; the order screen
+            // consumes it once T-102 makes the four scopes behave differently.
+            navigation.navigate('CreatePassengerOffer', {})
+          }
+          style={styles.cta}
+        />
 
-          {/* Taxi Options Grid */}
-          <View style={styles.optionsGrid}>
-            {taxiOptions.map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                style={styles.optionButton}
-                onPress={() => handleOptionPress(option.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.optionText}>
-                  {t(option.titleKey)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {/*
+          🔴 THIS LINK IS WHAT KEEPS `MyPassengerOffers` REACHABLE.
+
+          The owner removed the four action cards on 2026-08-30 because the tab bar and
+          drawer already cover them. That is true for three of the four — SearchOffers
+          and MyBookings are TABS, and CreatePassengerOffer is this screen's own CTA —
+          but `MyPassengerOffers` is a STACK-ONLY route with no other entry point, so
+          deleting its card outright would have stranded a working screen.
+
+          Checked, not assumed: nothing else in the app navigates to it, `MyBookings`
+          has no ride-requests section, and the drawer config is stale placeholder data.
+          The right long-term home is a segment inside MyBookings — that belongs to
+          step 9, which rebuilds both screens together. Until then, one text link.
+        */}
+        <Button
+          title={t('passengerOffers.myRideRequests')}
+          variant="text"
+          size="sm"
+          fullWidth
+          onPress={() => navigation.navigate('MyPassengerOffers')}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    paddingBottom: 40,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
-  },
-  header: {
-    marginTop: Platform.OS === 'android' ? 12 : 8,
-    marginBottom: 28,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logoContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  logo: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#10B981',
-    letterSpacing: 0.5,
-    textShadowColor: 'rgba(16, 185, 129, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  profileButton: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  profileAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  profileInitial: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mailButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Sits on the icon's top-right corner. overflow stays visible because the
-  // badge deliberately spills outside the button's bounds.
-  mailBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mailBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  cardHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  cardTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  cardSubtitle: {
-    fontSize: 15,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  countrySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    marginBottom: 24,
-    borderWidth: 1.5,
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  countryFlag: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  countryName: {
-    fontSize: 17,
-    color: '#111827',
-    fontWeight: '700',
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  optionButton: {
-    width: '47%',
-    aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    padding: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  optionText: {
-    fontSize: 15,
-    color: '#111827',
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-});
+  container: { flex: 1, backgroundColor: theme.palette.ground },
+  scrollContent: { padding: 18, paddingBottom: 32, gap: 12 },
 
+  eyebrow: {
+    ...theme.typography.eyebrow,
+    color: theme.palette.text.tertiary,
+  },
+
+
+
+  cta: { marginTop: 4 },
+});

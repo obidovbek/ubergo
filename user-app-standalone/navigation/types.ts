@@ -38,14 +38,30 @@ export type SearchOffersParams = {
  * from the other, so a route added there without a line here silently returns
  * this file to the state T-028 fixed.
  */
-export type MainStackParamList = {
+/**
+ * T-101 step 3 — the four tab routes.
+ *
+ * These moved OUT of `MainNavigator` and into `MainTabs`. They stay in the list below
+ * because navigation is nested: `navigate('SearchOffers')` from a stack screen still
+ * resolves, bubbling up to the tab navigator and switching tab. Removing them would
+ * break every existing call site for no benefit.
+ *
+ * 🛑 There is no `Hisob` (wallet) tab — the artboards show five tabs but this app has
+ * no wallet screen, so the bar ships with four. See `MainTabs.tsx`.
+ */
+export type MainTabParamList = {
   Home: undefined;
+  SearchOffers: SearchOffersParams | undefined;
+  MyBookings: undefined;
   Profile: undefined;
+};
+
+export type MainStackParamList = MainTabParamList & {
+  /** T-101 — the tab navigator itself; everything else pushes over it. */
+  MainTabs: undefined;
   EditProfile: undefined;
   Notifications: undefined;
-  SearchOffers: SearchOffersParams | undefined;
   OfferDetails: { offerId: number };
-  MyBookings: undefined;
   /** T-040 — an id turns the create screen into an editor for that order. */
   CreatePassengerOffer: { offerId?: number } | undefined;
   MyPassengerOffers: undefined;

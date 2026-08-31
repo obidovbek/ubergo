@@ -30,6 +30,7 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { subscribePushReceived } from '../utils/pushEvents';
+import { theme } from '../themes';
 
 /**
  * How each status of the passenger's OWN request is presented (T-067).
@@ -42,10 +43,10 @@ const REQUEST_STATUS_COLORS: Record<
   OffersAPI.OfferPassenger['status'],
   { bg: string; text: string; icon: string }
 > = {
-  pending: { bg: '#FEF3C7', text: '#92400E', icon: 'time-outline' },
-  confirmed: { bg: '#D1FAE5', text: '#065F46', icon: 'checkmark-circle' },
-  rejected: { bg: '#FEE2E2', text: '#991B1B', icon: 'close-circle' },
-  cancelled: { bg: '#F3F4F6', text: '#4B5563', icon: 'ban-outline' },
+  pending: { bg: theme.palette.warnTint, text: theme.palette.warnInk, icon: 'time-outline' },
+  confirmed: { bg: theme.palette.successTint, text: theme.palette.actionPressed, icon: 'checkmark-circle' },
+  rejected: { bg: theme.palette.dangerTint, text: theme.palette.dangerDeep, icon: 'close-circle' },
+  cancelled: { bg: theme.palette.surfaceSunken, text: theme.palette.text.muted, icon: 'ban-outline' },
 };
 
 export default function OfferDetailsScreen() {
@@ -316,7 +317,7 @@ export default function OfferDetailsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('offerDetails.loadingDetails')}</Text>
         </View>
       </SafeAreaView>
@@ -351,7 +352,7 @@ export default function OfferDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -360,7 +361,7 @@ export default function OfferDetailsScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('offerDetails.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -380,12 +381,12 @@ export default function OfferDetailsScreen() {
           <View style={styles.routeConnector}>
             <View style={styles.routeLine} />
             <View style={styles.routeArrowContainer}>
-              <Ionicons name="arrow-down" size={20} color="#10B981" />
+              <Ionicons name="arrow-down" size={20} color={theme.palette.action} />
             </View>
           </View>
           
           <View style={styles.routeRow}>
-            <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.routeDot, { backgroundColor: theme.palette.male }]} />
             <View style={styles.routeContent}>
               <Text style={styles.routeLabel}>{t('offerDetails.to')}</Text>
               <Text style={styles.routeText}>{offer.to_text}</Text>
@@ -396,16 +397,16 @@ export default function OfferDetailsScreen() {
         {/* Info Grid */}
         <View style={styles.infoGrid}>
           <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="calendar" size={24} color="#3B82F6" />
+            <View style={[styles.infoIconContainer, { backgroundColor: theme.palette.blueTint }]}>
+              <Ionicons name="calendar" size={24} color={theme.palette.male} />
             </View>
             <Text style={styles.infoLabel}>{t('offerDetails.departure')}</Text>
             <Text style={styles.infoValue}>{formatOfferDate(offer.start_at)}</Text>
           </View>
           
           <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: '#D1FAE5' }]}>
-              <Ionicons name="people" size={24} color="#10B981" />
+            <View style={[styles.infoIconContainer, { backgroundColor: theme.palette.successTint }]}>
+              <Ionicons name="people" size={24} color={theme.palette.action} />
             </View>
             <Text style={styles.infoLabel}>{t('offerDetails.available')}</Text>
             <Text style={styles.infoValue}>
@@ -417,7 +418,7 @@ export default function OfferDetailsScreen() {
         {/* Price Card */}
         <View style={styles.priceCard}>
           <View style={styles.priceIconContainer}>
-            <Ionicons name="cash" size={24} color="#10B981" />
+            <Ionicons name="cash" size={24} color={theme.palette.action} />
           </View>
           <View style={styles.priceContent}>
             <Text style={styles.priceLabel}>{t('offerDetails.pricePerSeat')}</Text>
@@ -426,7 +427,7 @@ export default function OfferDetailsScreen() {
             </Text>
             {hasFrontSeatPricing && (
               <View style={styles.frontSeatPriceInfo}>
-                <Ionicons name="information-circle-outline" size={14} color="#3B82F6" />
+                <Ionicons name="information-circle-outline" size={14} color={theme.palette.male} />
                 <Text style={styles.frontSeatPriceText}>
                   {t('offerDetails.frontSeatInfo').replace('{price}', formatNumberWithSpaces(offer.front_price_per_seat!)).replace('{currency}', offer.currency)}
                 </Text>
@@ -440,8 +441,8 @@ export default function OfferDetailsScreen() {
           <Text style={styles.cardTitle}>{t('offerDetails.driverVehicle')}</Text>
           
           <View style={styles.detailItem}>
-            <View style={[styles.detailIconBox, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="person" size={20} color="#3B82F6" />
+            <View style={[styles.detailIconBox, { backgroundColor: theme.palette.blueTint }]}>
+              <Ionicons name="person" size={20} color={theme.palette.male} />
             </View>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>{t('offerDetails.driver')}</Text>
@@ -462,7 +463,7 @@ export default function OfferDetailsScreen() {
                             : 'star-outline'
                         }
                         size={16}
-                        color="#F59E0B"
+                        color={theme.palette.warnBorder}
                         style={styles.ratingStarIcon}
                       />
                     ))}
@@ -484,8 +485,8 @@ export default function OfferDetailsScreen() {
           
           {offer.vehicle && (
             <View style={styles.detailItem}>
-              <View style={[styles.detailIconBox, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="car-sport" size={20} color="#F59E0B" />
+              <View style={[styles.detailIconBox, { backgroundColor: theme.palette.warnTint }]}>
+                <Ionicons name="car-sport" size={20} color={theme.palette.warnBorder} />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>{t('offerDetails.vehicle')}</Text>
@@ -529,20 +530,20 @@ export default function OfferDetailsScreen() {
           return (
             <View style={styles.noteCard}>
               <View style={styles.noteHeader}>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
                 <Text style={styles.noteTitle}>{t('offerDetails.whatDriverOffers')}</Text>
               </View>
 
               <View style={styles.amenityRow}>
                 {badges.map((b) => (
                   <View key={b.key} style={styles.amenityBadge}>
-                    <Ionicons name={b.icon} size={14} color="#166534" />
+                    <Ionicons name={b.icon} size={14} color={theme.palette.actionPressed} />
                     <Text style={styles.amenityText}>{b.label}</Text>
                   </View>
                 ))}
                 {parcel && (
                   <View style={styles.amenityBadge}>
-                    <Ionicons name="cube-outline" size={14} color="#166534" />
+                    <Ionicons name="cube-outline" size={14} color={theme.palette.actionPressed} />
                     <Text style={styles.amenityText}>
                       {t('offerDetails.parcelAccepted')}
                       {/* The kg limit and price are the driver's own numbers —
@@ -570,7 +571,7 @@ export default function OfferDetailsScreen() {
         {offer.note && (
           <View style={styles.noteCard}>
             <View style={styles.noteHeader}>
-              <Ionicons name="chatbubble-ellipses" size={20} color="#10B981" />
+              <Ionicons name="chatbubble-ellipses" size={20} color={theme.palette.action} />
               <Text style={styles.noteTitle}>{t('offerDetails.noteFromDriver')}</Text>
             </View>
             <Text style={styles.noteText}>{offer.note}</Text>
@@ -645,7 +646,7 @@ export default function OfferDetailsScreen() {
               <Ionicons 
                 name="remove-circle" 
                 size={40} 
-                color={seatsRequested <= 1 ? '#D1D5DB' : '#10B981'} 
+                color={seatsRequested <= 1 ? theme.palette.text.disabled : theme.palette.action} 
               />
             </TouchableOpacity>
             
@@ -668,7 +669,7 @@ export default function OfferDetailsScreen() {
               <Ionicons
                 name="add-circle"
                 size={40}
-                color={seatsRequested >= offer.seats_free ? '#D1D5DB' : '#10B981'}
+                color={seatsRequested >= offer.seats_free ? theme.palette.text.disabled : theme.palette.action}
               />
             </TouchableOpacity>
           </View>
@@ -684,8 +685,8 @@ export default function OfferDetailsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="car-sport" size={20} color="#3B82F6" />
+                <View style={[styles.optionIcon, { backgroundColor: theme.palette.blueTint }]}>
+                  <Ionicons name="car-sport" size={20} color={theme.palette.male} />
                 </View>
                 <View style={styles.optionTextContainer}>
                   <Text style={styles.optionText}>
@@ -700,7 +701,7 @@ export default function OfferDetailsScreen() {
                 </View>
               </View>
               <View style={[styles.checkbox, wantFrontSeat && styles.checkboxActive]}>
-                {wantFrontSeat && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                {wantFrontSeat && <Ionicons name="checkmark" size={18} color={theme.palette.surface} />}
               </View>
             </TouchableOpacity>
 
@@ -710,13 +711,13 @@ export default function OfferDetailsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, { backgroundColor: '#FEF3C7' }]}>
-                  <Ionicons name="briefcase" size={20} color="#F59E0B" />
+                <View style={[styles.optionIcon, { backgroundColor: theme.palette.warnTint }]}>
+                  <Ionicons name="briefcase" size={20} color={theme.palette.warnBorder} />
                 </View>
                 <Text style={styles.optionText}>{t('offerDetails.haveLargeBaggage')}</Text>
               </View>
               <View style={[styles.checkbox, haveLargeBaggage && styles.checkboxActive]}>
-                {haveLargeBaggage && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                {haveLargeBaggage && <Ionicons name="checkmark" size={18} color={theme.palette.surface} />}
               </View>
             </TouchableOpacity>
 
@@ -726,13 +727,13 @@ export default function OfferDetailsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.optionLeft}>
-                <View style={[styles.optionIcon, { backgroundColor: '#FEE2E2' }]}>
-                  <Ionicons name="paw" size={20} color="#EF4444" />
+                <View style={[styles.optionIcon, { backgroundColor: theme.palette.dangerTint }]}>
+                  <Ionicons name="paw" size={20} color={theme.palette.danger} />
                 </View>
                 <Text style={styles.optionText}>{t('offerDetails.travelingWithPet')}</Text>
               </View>
               <View style={[styles.checkbox, havePets && styles.checkboxActive]}>
-                {havePets && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                {havePets && <Ionicons name="checkmark" size={18} color={theme.palette.surface} />}
               </View>
             </TouchableOpacity>
           </View>
@@ -740,7 +741,7 @@ export default function OfferDetailsScreen() {
           <TextInput
             style={styles.messageInput}
             placeholder={t('offerDetails.messagePlaceholder')}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.palette.text.tertiary}
             value={message}
             onChangeText={setMessage}
             multiline
@@ -846,10 +847,10 @@ export default function OfferDetailsScreen() {
               activeOpacity={0.8}
             >
               {joining ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={theme.palette.surface} size="small" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={22} color={theme.palette.surface} />
                   <Text style={styles.joinButtonText}>{t('offerDetails.requestToJoin')}</Text>
                 </>
               )}
@@ -864,7 +865,7 @@ export default function OfferDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -872,13 +873,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -892,7 +893,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -913,7 +914,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   routeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 20,
@@ -932,7 +933,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginRight: 16,
   },
   routeContent: {
@@ -940,7 +941,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -949,7 +950,7 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
     lineHeight: 24,
   },
   routeConnector: {
@@ -961,14 +962,14 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 24,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginRight: 12,
   },
   routeArrowContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -980,7 +981,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -1000,20 +1001,20 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     textAlign: 'center',
   },
   priceCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
@@ -1023,7 +1024,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -1033,21 +1034,21 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     marginBottom: 4,
   },
   priceValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   frontSeatPriceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
     gap: 6,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: theme.palette.blueTint,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -1055,11 +1056,11 @@ const styles = StyleSheet.create({
   },
   frontSeatPriceText: {
     fontSize: 12,
-    color: '#1E40AF',
+    color: theme.palette.male,
     fontWeight: '600',
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
@@ -1073,7 +1074,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 16,
   },
   detailItem: {
@@ -1095,19 +1096,19 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginBottom: 4,
   },
   detailText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     lineHeight: 22,
   },
   detailSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginTop: 4,
     fontWeight: '500',
   },
@@ -1116,7 +1117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     gap: 6,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.palette.warnTint,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -1132,30 +1133,30 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.palette.warnInk,
     marginLeft: 4,
   },
   ratingCount: {
     fontSize: 13,
-    color: '#92400E',
+    color: theme.palette.warnInk,
     fontWeight: '600',
     marginLeft: 6,
   },
   ratingCountNew: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
     marginLeft: 6,
     fontStyle: 'italic',
   },
   noteCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
+    borderLeftColor: theme.palette.action,
   },
   noteHeader: {
     flexDirection: 'row',
@@ -1166,11 +1167,11 @@ const styles = StyleSheet.create({
   noteTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   noteText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     lineHeight: 22,
     fontWeight: '500',
   },
@@ -1187,18 +1188,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: theme.palette.successTint,
   },
   amenityText: {
     fontSize: 13,
-    color: '#166534',
+    color: theme.palette.actionPressed,
     fontWeight: '600',
   },
   amenityNote: {
     marginTop: 10,
     fontSize: 13,
     lineHeight: 19,
-    color: '#374151',
+    color: theme.palette.text.muted,
   },
 
   /* ── T-081: the salon tiles ("O'zingizga maqul bolgan joyni tanlang") ── */
@@ -1216,31 +1217,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.surface,
     alignItems: 'center',
   },
   salonTileOn: {
-    borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
+    borderColor: theme.palette.brand,
+    backgroundColor: theme.palette.successTint,
   },
   salonTileLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.palette.text.muted,
     textAlign: 'center',
   },
   salonTileLabelOn: {
-    color: '#166534',
+    color: theme.palette.actionPressed,
   },
   salonTilePrice: {
     marginTop: 4,
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   seatCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
@@ -1270,11 +1271,11 @@ const styles = StyleSheet.create({
   seatCount: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   seatCountLabel: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginTop: 4,
   },
@@ -1284,14 +1285,14 @@ const styles = StyleSheet.create({
   optionsTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 12,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -1311,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   optionTextContainer: {
@@ -1319,7 +1320,7 @@ const styles = StyleSheet.create({
   },
   optionPriceText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: theme.palette.male,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -1328,23 +1329,23 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.palette.text.disabled,
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: theme.palette.action,
+    borderColor: theme.palette.action,
   },
   messageInput: {
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 16,
     padding: 16,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.ground,
     minHeight: 100,
     fontWeight: '500',
   },
@@ -1352,11 +1353,11 @@ const styles = StyleSheet.create({
     height: 100,
   },
   footer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     paddingTop: 20,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.palette.borders.strong,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -1367,12 +1368,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   priceBreakdown: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     padding: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   priceBreakdownRow: {
     flexDirection: 'row',
@@ -1381,13 +1382,13 @@ const styles = StyleSheet.create({
   },
   priceBreakdownLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
     flex: 1,
   },
   priceBreakdownValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   totalSection: {
@@ -1397,23 +1398,23 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   totalPrice: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   joinButton: {
     flexDirection: 'row',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 16,
     padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1442,12 +1443,12 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   joinButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: theme.palette.text.tertiary,
     shadowOpacity: 0,
     elevation: 0,
   },
   joinButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 17,
     fontWeight: '700',
   },

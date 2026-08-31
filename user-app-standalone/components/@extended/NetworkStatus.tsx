@@ -150,7 +150,7 @@ export const NetworkStatus: React.FC = () => {
             title={t('networkStatus.retry')}
             onPress={handleRetry}
             variant="primary"
-            size="large"
+            size="lg"
             style={styles.retryButton}
           />
         </View>

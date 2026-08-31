@@ -1,16 +1,24 @@
 /**
  * Main Navigator
- * Simple stack navigation for authenticated users (no bottom tabs)
+ *
+ * T-101 step 3: the stack now hosts the artboards' persistent bottom tab bar as its
+ * first route, with every detail screen still in the stack so it pushes OVER the bar —
+ * which is what the artboards show.
+ *
+ * 🛑 `Home`, `SearchOffers`, `MyBookings` and `Profile` MOVED INTO THE TAB NAVIGATOR
+ * (`./MainTabs`). They are deliberately NOT registered here as well: two routes with
+ * one name in nested navigators makes `navigate('Profile')` ambiguous, and React
+ * Navigation resolves it to the nearest one, which is not always the one you meant.
+ *
+ * ⚠️ Existing `navigate('SearchOffers')` / `navigate('MyBookings')` / etc. calls from
+ * `MenuScreen` still work — the call bubbles up to the tab navigator and switches tab.
  */
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MenuScreen } from '../screens/MenuScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { MainTabs } from './MainTabs';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
-import SearchOffersScreen from '../screens/SearchOffersScreen';
 import OfferDetailsScreen from '../screens/OfferDetailsScreen';
-import MyBookingsScreen from '../screens/MyBookingsScreen';
 import { CreatePassengerOfferScreen } from '../screens/CreatePassengerOfferScreen';
 import { MyPassengerOffersScreen } from '../screens/MyPassengerOffersScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
@@ -25,47 +33,28 @@ export const MainNavigator: React.FC = () => {
         headerShown: false,
       }}
     >
-      <Stack.Screen 
-        name="Home" 
-        component={MenuScreen}
+      {/* The tab bar — Asosiy / Qidirish / Mening buyurtmalarim / Profil.
+          Everything below pushes OVER it. */}
+      <Stack.Screen
+        name="MainTabs"
+        component={MainTabs}
       />
-      <Stack.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen 
-        name="Notifications" 
+      <Stack.Screen
+        name="Notifications"
         component={NotificationsScreen}
         options={{
           headerShown: false,
         }}
       />
-      <Stack.Screen 
-        name="SearchOffers" 
-        component={SearchOffersScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen 
-        name="OfferDetails" 
+      <Stack.Screen
+        name="OfferDetails"
         component={OfferDetailsScreen}
         options={{
           headerShown: false,
         }}
       />
-      <Stack.Screen 
-        name="MyBookings" 
-        component={MyBookingsScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen 
-        name="CreatePassengerOffer" 
+      <Stack.Screen
+        name="CreatePassengerOffer"
         component={CreatePassengerOfferScreen}
         options={{
           headerShown: false,

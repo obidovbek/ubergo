@@ -1037,7 +1037,7 @@ export const UserDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   keyboardAvoiding: {
     flex: 1,
@@ -1055,23 +1055,23 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 38,
     fontWeight: '800',
-    color: '#10B981',
+    color: theme.palette.action,
     marginBottom: 12,
     letterSpacing: 0.5,
-    textShadowColor: 'rgba(16, 185, 129, 0.2)',
+    textShadowColor: theme.palette.successTint,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   title: {
     fontSize: 28,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '800',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
     fontWeight: '500',
@@ -1097,14 +1097,14 @@ const styles = StyleSheet.create({
     color: theme.palette.error.main,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: '#111827',
-    shadowColor: '#000',
+    color: theme.palette.text.primary,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -1114,14 +1114,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
     borderWidth: 2,
   },
   // Greyed out while another referral field holds the value — the one-of-three
   // rule is shown, not enforced only at submit time.
   inputDisabled: {
-    backgroundColor: '#F3F4F6',
-    color: '#9CA3AF',
+    backgroundColor: theme.palette.surfaceSunken,
+    color: theme.palette.text.tertiary,
   },
   /*
    * T-091 — the user's own code and handle, boxed off from everything else.
@@ -1129,9 +1129,9 @@ const styles = StyleSheet.create({
    * opposite thing, and nothing but layout and wording keeps them apart.
    */
   identifierSection: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2.5),
@@ -1168,11 +1168,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 14,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -1182,12 +1182,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   genderButtonActive: {
-    borderColor: '#10B981',
-    backgroundColor: '#F0FDF4',
+    borderColor: theme.palette.action,
+    backgroundColor: theme.palette.successTint,
     borderWidth: 2,
   },
   genderButtonError: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
     borderWidth: 2,
   },
   radio: {
@@ -1195,15 +1195,15 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: theme.palette.text.disabled,
     marginRight: 12,
   },
   radioActive: {
-    borderColor: '#10B981',
-    backgroundColor: '#10B981',
+    borderColor: theme.palette.action,
+    backgroundColor: theme.palette.action,
   },
   radioError: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
   },
   genderText: {
     ...theme.typography.body1,
@@ -1214,11 +1214,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   infoBox: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: theme.palette.warnTint,
     padding: theme.spacing(2),
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#FFE082',
+    borderColor: theme.palette.warnBorder,
     marginBottom: theme.spacing(2.5),
   },
   infoText: {
@@ -1261,7 +1261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1291,7 +1291,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     backgroundColor: 'transparent',
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1304,10 +1304,10 @@ const styles = StyleSheet.create({
   addPhoneButton: {
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1.5),
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
     borderRadius: 0,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
   },
   addPhoneText: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '600',
   },
   dateInputContainer: {
@@ -1330,7 +1330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.palette.background.card,
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: theme.palette.action,
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -1355,7 +1355,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1370,19 +1370,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.palette.borders.strong,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   modalButton: {
     padding: 10,
   },
   modalButtonText: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   datePickerContainer: {
@@ -1399,11 +1399,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   pickerScroll: {
     flex: 1,
@@ -1414,18 +1414,18 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.palette.ground,
   },
   pickerItemSelected: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   pickerItemText: {
     fontSize: 15,
-    color: '#666',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
   },
   pickerItemTextSelected: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '600',
   },
   phoneItem: {
@@ -1453,19 +1453,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   removePhoneText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 16,
   },
   submitButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 14,
     alignItems: 'center',
     marginTop: 24,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1478,14 +1478,14 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   pickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: theme.palette.scrim.light,
     justifyContent: 'center',
     padding: theme.spacing(3),
   },

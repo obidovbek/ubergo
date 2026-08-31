@@ -33,8 +33,9 @@ import { useTranslation } from '../hooks/useTranslation';
 import { formatNumberWithSpaces } from '../utils/format';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
-import { GeoSelectModal } from '../components/passengerOffer/GeoSelectModal';
+import { GeoSheet, type GeoPath } from '../components/geo/GeoSheet';
 import { AppModal } from '../components/AppModal';
+import { theme } from '../themes';
 
 const LAST_SEARCH_KEY = '@ubexgo:last_search';
 
@@ -60,26 +61,33 @@ export default function SearchOffersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Geo selection states - From
-  const [fromCountries, setFromCountries] = useState<GeoOption[]>([]);
-  const [fromProvinces, setFromProvinces] = useState<GeoOption[]>([]);
-  const [fromCities, setFromCities] = useState<GeoOption[]>([]);
-  const [selectedFromCountry, setSelectedFromCountry] = useState<GeoOption | null>(null);
-  const [selectedFromProvince, setSelectedFromProvince] = useState<GeoOption | null>(null);
-  const [selectedFromCity, setSelectedFromCity] = useState<GeoOption | null>(null);
+  /*
+   * T-101 — the geo cascade moved into `GeoSheet`.
+   *
+   * 🔴 This screen used to own 16 state hooks and ~112 lines re-implementing the
+   * cascade: three option lists and three selections PER DIRECTION, plus the
+   * "clear the child when the parent changes" rule written out twice. The same
+   * logic existed in seven places across the two apps, which is why the pickers
+   * had drifted apart on screen.
+   *
+   * `GeoSheet` owns the levels, the loading and the clearing. This screen keeps
+   * only WHICH path is chosen for each direction.
+   *
+   * ⚠️ The `selected*` names below are DERIVED, not state, so the rest of this
+   * file — the search request, the route card, the swap button — keeps reading
+   * exactly what it read before. That is deliberate: replacing the picker should
+   * not mean auditing 1 900 lines.
+   */
+  const [fromPath, setFromPath] = useState<GeoPath>({});
+  const [toPath, setToPath] = useState<GeoPath>({});
+  const [geoSheet, setGeoSheet] = useState<'from' | 'to' | null>(null);
 
-  // Geo selection states - To
-  const [toCountries, setToCountries] = useState<GeoOption[]>([]);
-  const [toProvinces, setToProvinces] = useState<GeoOption[]>([]);
-  const [toCities, setToCities] = useState<GeoOption[]>([]);
-  const [selectedToCountry, setSelectedToCountry] = useState<GeoOption | null>(null);
-  const [selectedToProvince, setSelectedToProvince] = useState<GeoOption | null>(null);
-  const [selectedToCity, setSelectedToCity] = useState<GeoOption | null>(null);
-  
-  // Modal states
-  const [geoModalVisible, setGeoModalVisible] = useState(false);
-  const [geoModalType, setGeoModalType] = useState<'from' | 'to'>('from');
-  const [geoModalLevel, setGeoModalLevel] = useState<'country' | 'province' | 'city'>('country');
-  const [geoLoading, setGeoLoading] = useState(false);
+  const selectedFromCountry = fromPath.country ?? null;
+  const selectedFromProvince = fromPath.province ?? null;
+  const selectedFromCity = fromPath.district ?? null;
+  const selectedToCountry = toPath.country ?? null;
+  const selectedToProvince = toPath.province ?? null;
+  const selectedToCity = toPath.district ?? null;
   
   // Filter states
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -90,8 +98,8 @@ export default function SearchOffersScreen() {
 
   useEffect(() => {
     const initialize = async () => {
-      await loadFromCountries();
-      await loadToCountries();
+      // T-101 — no pre-loading. `GeoSheet` fetches each level when it opens, so the
+      // screen no longer holds option lists it might never show.
 
       /*
        * T-077 — a route handed over from the request the passenger just
@@ -103,10 +111,16 @@ export default function SearchOffersScreen() {
        * auto-search effect then fires on its own once both provinces are set.
        */
       if (handoff.fromProvince && handoff.toProvince) {
-        setSelectedFromProvince(handoff.fromProvince);
-        setSelectedFromCity(handoff.fromCity ?? null);
-        setSelectedToProvince(handoff.toProvince);
-        setSelectedToCity(handoff.toCity ?? null);
+        // T-101 — one assignment per direction now that a path is a single value.
+        // `district` is this screen's "city": the level below viloyat (adm2).
+        setFromPath({
+          province: handoff.fromProvince,
+          ...(handoff.fromCity ? { district: handoff.fromCity } : {}),
+        });
+        setToPath({
+          province: handoff.toProvince,
+          ...(handoff.toCity ? { district: handoff.toCity } : {}),
+        });
         return;
       }
 
@@ -161,92 +175,44 @@ export default function SearchOffersScreen() {
   const loadLastSearch = async () => {
     try {
       const savedData = await AsyncStorage.getItem(LAST_SEARCH_KEY);
-      if (savedData) {
-        const searchData = JSON.parse(savedData);
-        
-        // Wait a bit for countries to be loaded
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Restore From location
-        if (searchData.fromCountry) {
-          setSelectedFromCountry(searchData.fromCountry);
-          if (searchData.fromProvince) {
-            // Load provinces first, then restore selections
-            await loadFromProvinces(searchData.fromCountry.id);
-            setSelectedFromProvince(searchData.fromProvince);
-            if (searchData.fromCity) {
-              await loadFromCities(searchData.fromProvince.id);
-              setSelectedFromCity(searchData.fromCity);
-            }
-          }
-        }
-        
-        // Restore To location
-        if (searchData.toCountry) {
-          setSelectedToCountry(searchData.toCountry);
-          if (searchData.toProvince) {
-            await loadToProvinces(searchData.toCountry.id);
-            setSelectedToProvince(searchData.toProvince);
-            if (searchData.toCity) {
-              await loadToCities(searchData.toProvince.id);
-              setSelectedToCity(searchData.toCity);
-            }
-          }
-        }
-      }
+      if (!savedData) return;
+      const searchData = JSON.parse(savedData);
+
+      /*
+       * T-101 — this used to reload every option list before restoring a selection,
+       * because the old picker could only show a list it had already fetched. It
+       * even slept 300ms first, hoping the countries had arrived.
+       *
+       * `GeoSheet` fetches what it needs when it opens, so a restored path is just
+       * a value. The sleep and the six loader calls are gone with it.
+       */
+      setFromPath({
+        ...(searchData.fromCountry ? { country: searchData.fromCountry } : {}),
+        ...(searchData.fromProvince ? { province: searchData.fromProvince } : {}),
+        ...(searchData.fromCity ? { district: searchData.fromCity } : {}),
+      });
+      setToPath({
+        ...(searchData.toCountry ? { country: searchData.toCountry } : {}),
+        ...(searchData.toProvince ? { province: searchData.toProvince } : {}),
+        ...(searchData.toCity ? { district: searchData.toCity } : {}),
+      });
     } catch (error) {
       console.error('Failed to load last search:', error);
     }
   };
 
   // Swap From and To
-  const swapLocations = async () => {
-    // Store current values before swapping
-    const tempFromCountry = selectedFromCountry;
-    const tempFromProvince = selectedFromProvince;
-    const tempFromCity = selectedFromCity;
-    const tempToCountry = selectedToCountry;
-    const tempToProvince = selectedToProvince;
-    const tempToCity = selectedToCity;
-    
-    // Swap the selections
-    setSelectedFromCountry(tempToCountry);
-    setSelectedFromProvince(tempToProvince);
-    setSelectedFromCity(tempToCity);
-    
-    setSelectedToCountry(tempFromCountry);
-    setSelectedToProvince(tempFromProvince);
-    setSelectedToCity(tempFromCity);
-    
-    // Clear and reload provinces/cities for the new From location (was To)
-    if (tempToCountry) {
-      setFromProvinces([]);
-      setFromCities([]);
-      await loadFromProvinces(tempToCountry.id);
-      if (tempToProvince) {
-        await loadFromCities(tempToProvince.id);
-      }
-    }
-    
-    // Clear and reload provinces/cities for the new To location (was From)
-    if (tempFromCountry) {
-      setToProvinces([]);
-      setToCities([]);
-      await loadToProvinces(tempFromCountry.id);
-      if (tempFromProvince) {
-        await loadToCities(tempFromProvince.id);
-      }
-    }
-    
-    // Save swapped values immediately (don't wait for state updates)
-    await saveLastSearch({
-      fromCountry: tempToCountry,
-      fromProvince: tempToProvince,
-      fromCity: tempToCity,
-      toCountry: tempFromCountry,
-      toProvince: tempFromProvince,
-      toCity: tempFromCity,
-    });
+  /*
+   * T-101 — swapping two paths is one exchange.
+   *
+   * 🔴 This used to be ~40 lines: six `setSelected*` calls, then clearing and
+   * RE-FETCHING both provinces and cities for the new direction, because the old
+   * picker could only display lists it had already loaded. None of that is needed
+   * when the sheet loads on open.
+   */
+  const swapLocations = () => {
+    setFromPath(toPath);
+    setToPath(fromPath);
   };
 
   // Auto-save search when both provinces are selected
@@ -267,97 +233,6 @@ export default function SearchOffersScreen() {
       loadOffers();
     }
   }, [selectedFromProvince, selectedFromCity, selectedToProvince, selectedToCity, minRating, maxPrice, minPrice, sortBy]);
-
-  const loadFromCountries = async () => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCountries();
-      setFromCountries(data);
-      
-      // Auto-select Uzbekistan as default country
-      const uzbekistan = data.find(country => 
-        country.name.toLowerCase().includes('zbekistan')
-      );
-      if (uzbekistan && !selectedFromCountry) {
-        setSelectedFromCountry(uzbekistan);
-        loadFromProvinces(uzbekistan.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to load countries:', error);
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCountries = async () => {
-    try {
-      const data = await GeoAPI.fetchGeoCountries();
-      setToCountries(data);
-      
-      // Auto-select Uzbekistan as default country
-      const uzbekistan = data.find(country => 
-        country.name.toLowerCase().includes('zbekistan')
-      );
-      if (uzbekistan && !selectedToCountry) {
-        setSelectedToCountry(uzbekistan);
-        loadToProvinces(uzbekistan.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to load countries:', error);
-    }
-  };
-
-  const loadFromProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoProvinces(countryId);
-      setFromProvinces(data);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      showToast.error('Error', 'Failed to load provinces');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadFromCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setFromCities(data);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error('Error', 'Failed to load cities');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToProvinces = async (countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoProvinces(countryId);
-      setToProvinces(data);
-    } catch (error: any) {
-      console.error('Failed to load provinces:', error);
-      showToast.error('Error', 'Failed to load provinces');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const data = await GeoAPI.fetchGeoCityDistricts(provinceId);
-      setToCities(data);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error('Error', 'Failed to load cities');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
 
   const loadOffers = async () => {
     if (!selectedFromProvince || !selectedToProvince) {
@@ -394,156 +269,10 @@ export default function SearchOffersScreen() {
     setRefreshing(false);
   };
 
-  const openGeoModal = async (type: 'from' | 'to', level: 'country' | 'province' | 'city') => {
-    setGeoModalType(type);
-    setGeoModalLevel(level);
-    
-    if (type === 'from') {
-      if (level === 'province' && !selectedFromCountry) {
-        showToast.error(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
-        return;
-      }
-      if (level === 'city' && !selectedFromProvince) {
-        showToast.error(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
-        return;
-      }
-      
-      if (level === 'province' && selectedFromCountry) {
-        await loadFromProvinces(selectedFromCountry.id);
-      } else if (level === 'city' && selectedFromProvince) {
-        await loadFromCities(selectedFromProvince.id);
-      }
-    } else {
-      if (level === 'province' && !selectedToCountry) {
-        showToast.error(t('searchOffers.selectCountry'), t('searchOffers.selectCountry'));
-        return;
-      }
-      if (level === 'city' && !selectedToProvince) {
-        showToast.error(t('searchOffers.selectProvince'), t('searchOffers.selectProvince'));
-        return;
-      }
-      
-      if (level === 'province' && selectedToCountry) {
-        await loadToProvinces(selectedToCountry.id);
-      } else if (level === 'city' && selectedToProvince) {
-        await loadToCities(selectedToProvince.id);
-      }
-    }
-    
-    setGeoModalVisible(true);
-  };
-
-  const handleGeoSelection = async (option: GeoOption) => {
-    if (geoModalType === 'from') {
-      if (geoModalLevel === 'country') {
-        setSelectedFromCountry(option);
-        setSelectedFromProvince(null);
-        setSelectedFromCity(null);
-        setFromProvinces([]);
-        setFromCities([]);
-        await loadFromProvinces(option.id);
-      } else if (geoModalLevel === 'province') {
-        setSelectedFromProvince(option);
-        setSelectedFromCity(null);
-        setFromCities([]);
-        await loadFromCities(option.id);
-      } else if (geoModalLevel === 'city') {
-        setSelectedFromCity(option);
-      }
-    } else {
-      if (geoModalLevel === 'country') {
-        setSelectedToCountry(option);
-        setSelectedToProvince(null);
-        setSelectedToCity(null);
-        setToProvinces([]);
-        setToCities([]);
-        await loadToProvinces(option.id);
-      } else if (geoModalLevel === 'province') {
-        setSelectedToProvince(option);
-        setSelectedToCity(null);
-        setToCities([]);
-        await loadToCities(option.id);
-      } else if (geoModalLevel === 'city') {
-        setSelectedToCity(option);
-      }
-    }
-    
-    setGeoModalVisible(false);
-    
-    // Save search after selection
-    setTimeout(() => {
-      saveLastSearch();
-    }, 100);
-  };
-
-  const clearGeoSelection = (type?: 'from' | 'to') => {
-    if (!type || type === 'from') {
-      setSelectedFromCountry(null);
-      setSelectedFromProvince(null);
-      setSelectedFromCity(null);
-      setFromProvinces([]);
-      setFromCities([]);
-    }
-    if (!type || type === 'to') {
-      setSelectedToCountry(null);
-      setSelectedToProvince(null);
-      setSelectedToCity(null);
-      setToProvinces([]);
-      setToCities([]);
-    }
-    if (!type) {
-      setOffers([]);
-    }
-    
-    // Save after clearing
-    setTimeout(() => {
-      saveLastSearch();
-    }, 100);
-  };
-
-  const getGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (geoModalType === 'from') {
-      switch (geoModalLevel) {
-        case 'country':
-          options = fromCountries;
-          break;
-        case 'province':
-          options = fromProvinces;
-          break;
-        case 'city':
-          options = fromCities;
-          break;
-      }
-    } else {
-      switch (geoModalLevel) {
-        case 'country':
-          options = toCountries;
-          break;
-        case 'province':
-          options = toProvinces;
-          break;
-        case 'city':
-          options = toCities;
-          break;
-      }
-    }
-
-    // Search filtering now lives in `ModalList`, which owns the search box (T-036).
-    return options;
-  };
-
-  const isGeoSelected = (option: GeoOption): boolean => {
-    if (geoModalType === 'from') {
-      if (geoModalLevel === 'country') return selectedFromCountry?.id === option.id;
-      if (geoModalLevel === 'province') return selectedFromProvince?.id === option.id;
-      if (geoModalLevel === 'city') return selectedFromCity?.id === option.id;
-    } else {
-      if (geoModalLevel === 'country') return selectedToCountry?.id === option.id;
-      if (geoModalLevel === 'province') return selectedToProvince?.id === option.id;
-      if (geoModalLevel === 'city') return selectedToCity?.id === option.id;
-    }
-    return false;
+  /** T-101 — clearing a direction is emptying its path. */
+  const clearGeoSelection = (type: 'from' | 'to') => {
+    if (type === 'from') setFromPath({});
+    else setToPath({});
   };
 
   const handleJoinOffer = (offer: OffersAPI.DriverOffer) => {
@@ -752,14 +481,14 @@ export default function SearchOffersScreen() {
           <Ionicons
             name="information-circle-outline"
             size={24}
-            color="#9CA3AF"
+            color={theme.palette.text.tertiary}
             style={styles.cardInfoIcon}
           />
         </View>
 
         {!!item.note && (
           <View style={styles.noteContainer}>
-            <Ionicons name="chatbubble-outline" size={12} color="#6B7280" />
+            <Ionicons name="chatbubble-outline" size={12} color={theme.palette.text.secondary} />
             <Text style={styles.noteText} numberOfLines={2}>
               {item.note}
             </Text>
@@ -798,55 +527,37 @@ export default function SearchOffersScreen() {
               <Text style={styles.sectionLabel}>{t('searchOffers.from')}</Text>
             </View>
 
-            {/* From Country Selection - Compact */}
+            {/*
+              T-101 — ONE button per direction, replacing three (country, province,
+              city) plus a clear button. The sheet walks the levels itself, so the
+              screen shows the CHOSEN PATH rather than one control per level.
+            */}
             <TouchableOpacity
-              style={styles.countryButtonCompact}
-              onPress={() => openGeoModal('from', 'country')}
+              style={styles.geoSelectButtonCompact}
+              onPress={() => setGeoSheet('from')}
               activeOpacity={0.7}
             >
-              <Ionicons name="globe" size={14} color="#6B7280" />
-              <Text style={styles.countryButtonText} numberOfLines={1}>
-                {selectedFromCountry ? selectedFromCountry.name : t('searchOffers.selectCountry')}
+              <Text
+                style={[
+                  styles.geoSelectTextCompact,
+                  !fromPath.province && styles.geoSelectTextPlaceholder,
+                ]}
+                numberOfLines={2}
+              >
+                {[fromPath.province?.name, fromPath.district?.name]
+                  .filter(Boolean)
+                  .join(', ') || t('searchOffers.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
 
-            {/* From Province Selection */}
-            {selectedFromCountry && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('from', 'province')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.geoSelectTextCompact}>
-                  {selectedFromProvince ? selectedFromProvince.name : t('searchOffers.selectProvince')}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* From City Selection (Optional) */}
-            {selectedFromProvince && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('from', 'city')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.geoSelectTextCompact, !selectedFromCity && styles.geoSelectTextPlaceholder]}>
-                  {selectedFromCity ? selectedFromCity.name : t('searchOffers.cityOptional')}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* Clear From Selection */}
-            {(selectedFromProvince || selectedFromCity) && (
+            {!!fromPath.province && (
               <TouchableOpacity
                 style={styles.clearButtonCompact}
-                onPress={() => clearGeoSelection('from')}
+                onPress={() => setFromPath({})}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Ionicons name="close-circle" size={16} color={theme.palette.danger} />
                 <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
               </TouchableOpacity>
             )}
@@ -863,7 +574,7 @@ export default function SearchOffersScreen() {
               <Ionicons
                 name="swap-vertical"
                 size={20}
-                color={selectedFromProvince && selectedToProvince ? '#10B981' : '#D1D5DB'}
+                color={selectedFromProvince && selectedToProvince ? theme.palette.action : theme.palette.text.disabled}
               />
             </TouchableOpacity>
           </View>
@@ -871,59 +582,41 @@ export default function SearchOffersScreen() {
           {/* To Location Section */}
           <View style={styles.locationColumn}>
             <View style={styles.locationHeader}>
-              <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
+              <View style={[styles.locationDot, { backgroundColor: theme.palette.male }]} />
               <Text style={styles.sectionLabel}>{t('searchOffers.to')}</Text>
             </View>
 
-            {/* To Country Selection - Compact */}
+            {/*
+              T-101 — ONE button per direction, replacing three (country, province,
+              city) plus a clear button. The sheet walks the levels itself, so the
+              screen shows the CHOSEN PATH rather than one control per level.
+            */}
             <TouchableOpacity
-              style={styles.countryButtonCompact}
-              onPress={() => openGeoModal('to', 'country')}
+              style={styles.geoSelectButtonCompact}
+              onPress={() => setGeoSheet('to')}
               activeOpacity={0.7}
             >
-              <Ionicons name="globe" size={14} color="#6B7280" />
-              <Text style={styles.countryButtonText} numberOfLines={1}>
-                {selectedToCountry ? selectedToCountry.name : t('searchOffers.selectCountry')}
+              <Text
+                style={[
+                  styles.geoSelectTextCompact,
+                  !toPath.province && styles.geoSelectTextPlaceholder,
+                ]}
+                numberOfLines={2}
+              >
+                {[toPath.province?.name, toPath.district?.name]
+                  .filter(Boolean)
+                  .join(', ') || t('searchOffers.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
 
-            {/* To Province Selection */}
-            {selectedToCountry && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('to', 'province')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.geoSelectTextCompact}>
-                  {selectedToProvince ? selectedToProvince.name : t('searchOffers.selectProvince')}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* To City Selection (Optional) */}
-            {selectedToProvince && (
-              <TouchableOpacity
-                style={styles.geoSelectButtonCompact}
-                onPress={() => openGeoModal('to', 'city')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.geoSelectTextCompact, !selectedToCity && styles.geoSelectTextPlaceholder]}>
-                  {selectedToCity ? selectedToCity.name : t('searchOffers.cityOptional')}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-
-            {/* Clear To Selection */}
-            {(selectedToProvince || selectedToCity) && (
+            {!!toPath.province && (
               <TouchableOpacity
                 style={styles.clearButtonCompact}
-                onPress={() => clearGeoSelection('to')}
+                onPress={() => setToPath({})}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Ionicons name="close-circle" size={16} color={theme.palette.danger} />
                 <Text style={styles.clearButtonTextCompact}>{t('searchOffers.clear')}</Text>
               </TouchableOpacity>
             )}
@@ -946,7 +639,7 @@ export default function SearchOffersScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -955,7 +648,7 @@ export default function SearchOffersScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <MenuButton />
         <Text style={styles.headerTitle}>{t('searchOffers.title')}</Text>
@@ -964,7 +657,7 @@ export default function SearchOffersScreen() {
           onPress={() => setFilterModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="options" size={24} color="#111827" />
+          <Ionicons name="options" size={24} color={theme.palette.text.primary} />
           {(minRating > 0 || maxPrice || minPrice || sortBy !== 'date_asc') && (
             <View style={styles.filterBadge} />
           )}
@@ -973,7 +666,7 @@ export default function SearchOffersScreen() {
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('searchOffers.loadingOffers')}</Text>
         </View>
       ) : (
@@ -991,7 +684,7 @@ export default function SearchOffersScreen() {
               {!selectedFromProvince || !selectedToProvince ? (
                 <>
                   <View style={styles.emptyIconContainer}>
-                    <Ionicons name="location-outline" size={48} color="#D1D5DB" />
+                    <Ionicons name="location-outline" size={48} color={theme.palette.text.disabled} />
                   </View>
                   <Text style={styles.emptyText}>{t('searchOffers.selectLocations')}</Text>
                   <Text style={styles.emptySubtext}>
@@ -1001,7 +694,7 @@ export default function SearchOffersScreen() {
               ) : (
                 <>
                   <View style={styles.emptyIconContainer}>
-                    <Ionicons name="car-outline" size={48} color="#D1D5DB" />
+                    <Ionicons name="car-outline" size={48} color={theme.palette.text.disabled} />
                   </View>
                   <Text style={styles.emptyText}>{t('searchOffers.noRidesAvailable')}</Text>
                   <Text style={styles.emptySubtext}>
@@ -1049,7 +742,7 @@ export default function SearchOffersScreen() {
                       <Ionicons 
                         name={option.icon as any} 
                         size={20} 
-                        color={sortBy === option.value ? '#10B981' : '#6B7280'} 
+                        color={sortBy === option.value ? theme.palette.action : theme.palette.text.secondary} 
                       />
                       <Text style={[
                         styles.sortOptionText,
@@ -1058,7 +751,7 @@ export default function SearchOffersScreen() {
                         {option.label}
                       </Text>
                       {sortBy === option.value && (
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                        <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -1082,7 +775,7 @@ export default function SearchOffersScreen() {
                       <Ionicons 
                         name="star" 
                         size={16} 
-                        color={minRating === rating ? '#F59E0B' : '#D1D5DB'} 
+                        color={minRating === rating ? theme.palette.warnBorder : theme.palette.text.disabled} 
                       />
                       <Text style={[
                         styles.ratingOptionText,
@@ -1134,30 +827,34 @@ export default function SearchOffersScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="refresh" size={20} color="#EF4444" />
+                <Ionicons name="refresh" size={20} color={theme.palette.danger} />
                 <Text style={styles.clearFiltersText}>{t('searchOffers.clearAllFilters')}</Text>
               </TouchableOpacity>
         </ScrollView>
       </AppModal>
 
       {/* Geo Selection Modal */}
-      <GeoSelectModal
-        visible={geoModalVisible}
-        title={[
-          geoModalType === 'from' ? t('searchOffers.from') : t('searchOffers.to'),
-          geoModalLevel === 'country'
-            ? t('searchOffers.selectCountry')
-            : geoModalLevel === 'province'
-              ? t('searchOffers.selectProvince')
-              : t('searchOffers.cityOptional').replace(' (Optional)', ''),
-        ].join(': ')}
-        options={getGeoOptions()}
-        // The screen tracks selection with a predicate, not an id — resolve it here
-        // rather than reshaping six pieces of state.
-        selectedId={getGeoOptions().find(isGeoSelected)?.id ?? null}
-        loading={geoLoading}
-        onSelect={handleGeoSelection}
-        onClose={() => setGeoModalVisible(false)}
+      {/*
+        T-101 — ONE sheet that owns the whole cascade.
+
+        It replaces `GeoSelectModal` plus the three helpers that fed it
+        (`openGeoModal`, `getGeoOptions`, `isGeoSelected`), six loader functions and
+        16 state hooks. The sheet fetches each level itself and hands back the full
+        path, so this screen only records which path belongs to which direction.
+      */}
+      <GeoSheet
+        visible={geoSheet !== null}
+        title={geoSheet === 'from' ? t('searchOffers.from') : t('searchOffers.to')}
+        initialPath={geoSheet === 'from' ? fromPath : toPath}
+        // The search sends `*_province_id` and `*_city_id`, so district (adm2) is as
+        // deep as this screen needs. The order screen goes to adm3.
+        endLevel="district"
+        onDone={(path) => {
+          if (geoSheet === 'from') setFromPath(path);
+          else setToPath(path);
+          setGeoSheet(null);
+        }}
+        onClose={() => setGeoSheet(null)}
       />
     </SafeAreaView>
   );
@@ -1166,7 +863,7 @@ export default function SearchOffersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -1174,13 +871,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1194,7 +891,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -1204,7 +901,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1221,10 +918,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.palette.danger,
   },
   searchContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     marginBottom: 16,
     marginTop: 8,
@@ -1251,14 +948,14 @@ const styles = StyleSheet.create({
   resultsCount: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   resultsRule: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
   },
   locationRow: {
     flexDirection: 'row',
@@ -1278,12 +975,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -1297,9 +994,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderWidth: 2,
-    borderColor: '#10B981',
+    borderColor: theme.palette.action,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1307,10 +1004,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: theme.palette.successTint,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 8,
@@ -1320,17 +1017,17 @@ const styles = StyleSheet.create({
   countryButtonText: {
     flex: 1,
     fontSize: 12,
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '600',
   },
   geoSelectButtonCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     padding: 10,
     marginBottom: 8,
     minHeight: 42,
@@ -1338,18 +1035,18 @@ const styles = StyleSheet.create({
   geoSelectTextCompact: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   geoSelectTextPlaceholder: {
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
   },
   clearButtonCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 8,
     padding: 6,
     marginTop: 4,
@@ -1357,20 +1054,20 @@ const styles = StyleSheet.create({
   },
   clearButtonTextCompact: {
     fontSize: 12,
-    color: '#EF4444',
+    color: theme.palette.danger,
     fontWeight: '700',
   },
   selectedLocationCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 12,
     padding: 12,
     marginTop: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#10B981',
+    borderLeftColor: theme.palette.action,
   },
   selectedLocationLabel: {
     fontSize: 10,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1378,7 +1075,7 @@ const styles = StyleSheet.create({
   },
   selectedLocationText: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     lineHeight: 18,
   },
@@ -1389,7 +1086,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -1401,7 +1098,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   offerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -1425,12 +1122,12 @@ const styles = StyleSheet.create({
   cardCarName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   cardFuel: {
     marginTop: 2,
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   cardWhen: {
     // `flex: 1` on both columns rather than a fixed width: the Russian
@@ -1443,12 +1140,12 @@ const styles = StyleSheet.create({
   cardTimeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   cardDateText: {
     marginTop: 2,
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   cardSeats: {
     minWidth: 30,
@@ -1456,14 +1153,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#111827',
+    borderColor: theme.palette.text.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardSeatsText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   cardPrices: {
     flexDirection: 'row',
@@ -1477,26 +1174,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: '#22C55E',
+    backgroundColor: theme.palette.brand,
     alignItems: 'center',
   },
   /** No such price on this offer — present but plainly inactive. */
   priceBlockDead: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
   },
   priceBlockLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
   priceBlockValue: {
     marginTop: 2,
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
   priceBlockTextDead: {
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
   },
   cardInfoIcon: {
     marginLeft: 2,
@@ -1513,7 +1210,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginRight: 12,
   },
   routeContent: {
@@ -1521,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1530,7 +1227,7 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   routeConnector: {
     flexDirection: 'row',
@@ -1541,7 +1238,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 16,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginRight: 8,
   },
   infoSection: {
@@ -1556,7 +1253,7 @@ const styles = StyleSheet.create({
   infoTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1566,14 +1263,14 @@ const styles = StyleSheet.create({
   },
   infoTagText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     flex: 1,
   },
   ratingTag: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.palette.warnTint,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.palette.warnBorder,
   },
   ratingStars: {
     flexDirection: 'row',
@@ -1584,13 +1281,13 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: '#D97706',
+    color: theme.palette.warnInk,
     fontWeight: '700',
     marginLeft: 4,
   },
   ratingCountText: {
     fontSize: 11,
-    color: '#92400E',
+    color: theme.palette.warnInk,
     fontWeight: '600',
   },
   offerFooter: {
@@ -1599,12 +1296,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.palette.surfaceSunken,
   },
   seatsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.palette.successTint,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -1612,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   seatsText: {
     fontSize: 13,
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
   },
   priceBadge: {
@@ -1621,11 +1318,11 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   priceLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -1634,14 +1331,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     gap: 8,
   },
   noteText: {
     flex: 1,
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     lineHeight: 18,
     fontWeight: '500',
   },
@@ -1662,7 +1359,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -1670,12 +1367,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1686,7 +1383,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '85%',
@@ -1699,39 +1396,39 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   modalCloseButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 22,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   modalSearchBox: {
     padding: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     paddingHorizontal: 14,
     minHeight: 48,
   },
@@ -1741,7 +1438,7 @@ const styles = StyleSheet.create({
   modalSearchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     paddingVertical: 0,
     fontWeight: '500',
   },
@@ -1749,14 +1446,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   modalSearchClearText: {
     fontSize: 18,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   modalLoading: {
@@ -1771,7 +1468,7 @@ const styles = StyleSheet.create({
   },
   modalEmptyText: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   modalList: {
@@ -1784,21 +1481,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F9FAFB',
+    borderBottomColor: theme.palette.ground,
   },
   modalItemSelected: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
+    borderLeftColor: theme.palette.action,
   },
   modalItemText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '500',
     flex: 1,
   },
   modalItemTextSelected: {
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
   },
   // Filter Modal Styles
@@ -1808,12 +1505,12 @@ const styles = StyleSheet.create({
   filterSection: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   filterSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 16,
   },
   sortOptions: {
@@ -1823,24 +1520,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     gap: 12,
   },
   sortOptionActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
+    backgroundColor: theme.palette.successTint,
+    borderColor: theme.palette.action,
   },
   sortOptionText: {
     flex: 1,
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   sortOptionTextActive: {
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
   },
   ratingOptions: {
@@ -1853,23 +1550,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     gap: 6,
   },
   ratingOptionActive: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: theme.palette.warnTint,
+    borderColor: theme.palette.warnBorder,
   },
   ratingOptionText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   ratingOptionTextActive: {
-    color: '#D97706',
+    color: theme.palette.warnInk,
     fontWeight: '700',
   },
   priceInputs: {
@@ -1882,23 +1579,23 @@ const styles = StyleSheet.create({
   },
   priceInputLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     marginBottom: 8,
   },
   priceInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     padding: 12,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   priceInputSeparator: {
     fontSize: 18,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '700',
     paddingTop: 20,
   },
@@ -1908,28 +1605,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     margin: 20,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     gap: 8,
   },
   clearFiltersText: {
     fontSize: 15,
-    color: '#EF4444',
+    color: theme.palette.danger,
     fontWeight: '700',
   },
   filterFooter: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.palette.borders.strong,
   },
   applyFiltersButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
   },
   applyFiltersText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 16,
     fontWeight: '700',
   },

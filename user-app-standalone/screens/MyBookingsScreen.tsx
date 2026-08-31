@@ -33,6 +33,7 @@ import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { theme } from '../themes';
 
 export default function MyBookingsScreen() {
   const navigation = useNavigation();
@@ -163,30 +164,30 @@ export default function MyBookingsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#F59E0B';
+        return theme.palette.warnBorder;
       case 'confirmed':
-        return '#10B981';
+        return theme.palette.action;
       case 'rejected':
-        return '#EF4444';
+        return theme.palette.danger;
       case 'cancelled':
-        return '#6B7280';
+        return theme.palette.text.secondary;
       default:
-        return '#9CA3AF';
+        return theme.palette.text.tertiary;
     }
   };
 
   const getStatusBgColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#FEF3C7';
+        return theme.palette.warnTint;
       case 'confirmed':
-        return '#D1FAE5';
+        return theme.palette.successTint;
       case 'rejected':
-        return '#FEE2E2';
+        return theme.palette.dangerTint;
       case 'cancelled':
-        return '#F3F4F6';
+        return theme.palette.surfaceSunken;
       default:
-        return '#F9FAFB';
+        return theme.palette.ground;
     }
   };
 
@@ -255,11 +256,11 @@ export default function MyBookingsScreen() {
           
           <View style={styles.routeConnector}>
             <View style={styles.routeLine} />
-            <Ionicons name="arrow-down" size={16} color="#D1D5DB" />
+            <Ionicons name="arrow-down" size={16} color={theme.palette.text.disabled} />
           </View>
           
           <View style={styles.routeRow}>
-            <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.routeDot, { backgroundColor: theme.palette.male }]} />
             <View style={styles.routeContent}>
               <Text style={styles.routeLabel}>{t('offerDetails.to')}</Text>
               <Text style={styles.routeText} numberOfLines={1}>
@@ -273,7 +274,7 @@ export default function MyBookingsScreen() {
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <View style={styles.infoIconContainer}>
-              <Ionicons name="calendar-outline" size={18} color="#10B981" />
+              <Ionicons name="calendar-outline" size={18} color={theme.palette.action} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('myBookings.date')}</Text>
@@ -283,7 +284,7 @@ export default function MyBookingsScreen() {
           
           <View style={styles.infoItem}>
             <View style={styles.infoIconContainer}>
-              <Ionicons name="people" size={18} color="#3B82F6" />
+              <Ionicons name="people" size={18} color={theme.palette.male} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('myBookings.seats')}</Text>
@@ -300,7 +301,7 @@ export default function MyBookingsScreen() {
             <Text style={styles.priceLabel}>{t('myBookings.totalPrice')}</Text>
             {item.total_agreed_price && item.total_agreed_price !== (offer.price_per_seat * item.seats_requested) && (
               <View style={styles.agreedPriceBadge}>
-                <Ionicons name="lock-closed" size={10} color="#10B981" />
+                <Ionicons name="lock-closed" size={10} color={theme.palette.action} />
                 <Text style={styles.agreedPriceText}>Agreed</Text>
               </View>
             )}
@@ -326,7 +327,7 @@ export default function MyBookingsScreen() {
                 onPress={() => dialPhone(driverPhone, t)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Ionicons name="call" size={16} color={theme.palette.surface} />
                 <Text style={styles.callText}>{formatContactPhone(driverPhone)}</Text>
               </TouchableOpacity>
             ) : (
@@ -341,7 +342,7 @@ export default function MyBookingsScreen() {
         {item.rejection_reason && (
           <View style={styles.rejectionContainer}>
             <View style={styles.rejectionHeader}>
-              <Ionicons name="information-circle" size={16} color="#EF4444" />
+              <Ionicons name="information-circle" size={16} color={theme.palette.danger} />
               <Text style={styles.rejectionLabel}>{t('myBookings.rejectionReason')}</Text>
             </View>
             <Text style={styles.rejectionText}>{item.rejection_reason}</Text>
@@ -356,7 +357,7 @@ export default function MyBookingsScreen() {
               onPress={() => handleCancelBooking(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+              <Ionicons name="close-circle-outline" size={18} color={theme.palette.danger} />
               <Text style={styles.cancelButtonText}>{t('myBookings.cancelBooking')}</Text>
             </TouchableOpacity>
           )}
@@ -367,7 +368,7 @@ export default function MyBookingsScreen() {
               onPress={() => handleRateDriver(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="star" size={18} color="#F59E0B" />
+              <Ionicons name="star" size={18} color={theme.palette.warnBorder} />
               <Text style={styles.rateButtonText}>{t('myBookings.rateDriver')}</Text>
             </TouchableOpacity>
           )}
@@ -381,7 +382,7 @@ export default function MyBookingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -390,7 +391,7 @@ export default function MyBookingsScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <MenuButton />
         <Text style={styles.headerTitle}>{t('myBookings.title')}</Text>
@@ -399,19 +400,19 @@ export default function MyBookingsScreen() {
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
+        <View style={[styles.statCard, { backgroundColor: theme.palette.warnTint }]}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="time" size={20} color="#F59E0B" />
+            <Ionicons name="time" size={20} color={theme.palette.warnBorder} />
           </View>
-          <Text style={[styles.statValue, { color: '#F59E0B' }]}>{pendingCount}</Text>
+          <Text style={[styles.statValue, { color: theme.palette.warnBorder }]}>{pendingCount}</Text>
           <Text style={styles.statLabel}>{t('myBookings.pending')}</Text>
         </View>
         
-        <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
+        <View style={[styles.statCard, { backgroundColor: theme.palette.successTint }]}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
           </View>
-          <Text style={[styles.statValue, { color: '#10B981' }]}>{confirmedCount}</Text>
+          <Text style={[styles.statValue, { color: theme.palette.action }]}>{confirmedCount}</Text>
           <Text style={styles.statLabel}>{t('myBookings.confirmed')}</Text>
         </View>
       </View>
@@ -454,7 +455,7 @@ export default function MyBookingsScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('myBookings.loadingBookings')}</Text>
         </View>
       ) : (
@@ -468,14 +469,14 @@ export default function MyBookingsScreen() {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
-              tintColor="#10B981"
-              colors={['#10B981']}
+              tintColor={theme.palette.action}
+              colors={[theme.palette.action]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
+                <Ionicons name="calendar-outline" size={48} color={theme.palette.text.disabled} />
               </View>
               <Text style={styles.emptyText}>{t('myBookings.noBookings')}</Text>
               <Text style={styles.emptySubtext}>
@@ -515,7 +516,7 @@ export default function MyBookingsScreen() {
                     <Ionicons
                       name={star <= rating ? 'star' : 'star-outline'}
                       size={48}
-                      color={star <= rating ? '#F59E0B' : '#D1D5DB'}
+                      color={star <= rating ? theme.palette.warnBorder : theme.palette.text.disabled}
                     />
                   </TouchableOpacity>
                 ))}
@@ -535,7 +536,7 @@ export default function MyBookingsScreen() {
               <TextInput
                 style={styles.commentInput}
                 placeholder={t('myBookings.shareExperience')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.palette.text.tertiary}
                 value={ratingComment}
                 onChangeText={setRatingComment}
                 multiline
@@ -551,10 +552,10 @@ export default function MyBookingsScreen() {
                 activeOpacity={0.8}
               >
                 {submittingRating ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={theme.palette.surface} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                    <Ionicons name="checkmark-circle" size={22} color={theme.palette.surface} />
                     <Text style={styles.submitRatingText}>{t('myBookings.submitRating')}</Text>
                   </>
                 )}
@@ -568,7 +569,7 @@ export default function MyBookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -576,13 +577,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -596,7 +597,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   filterContainer: {
@@ -644,11 +645,11 @@ const styles = StyleSheet.create({
   },
   filterTabText: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
   },
   filterTabIndicator: {
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 2,
   },
   loadingContainer: {
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   bookingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -711,7 +712,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginRight: 12,
   },
   routeContent: {
@@ -719,7 +720,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   routeConnector: {
     flexDirection: 'row',
@@ -739,7 +740,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginRight: 8,
   },
   infoGrid: {
@@ -751,7 +752,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     padding: 12,
   },
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -769,17 +770,17 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   priceSection: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -792,13 +793,13 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   agreedPriceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.palette.successTint,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -806,23 +807,23 @@ const styles = StyleSheet.create({
   },
   agreedPriceText: {
     fontSize: 10,
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   priceValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   pricePerSeatText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
     marginTop: 4,
   },
   contactBox: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 10,
     padding: 12,
     marginTop: 12,
@@ -830,7 +831,7 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#047857',
+    color: theme.palette.actionPressed,
     marginBottom: 8,
   },
   callButton: {
@@ -838,19 +839,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 12,
     minHeight: 44,
   },
-  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  contactMissing: { fontSize: 14, color: '#6B7280' },
+  callText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: theme.palette.text.secondary },
   rejectionContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
+    borderLeftColor: theme.palette.danger,
   },
   rejectionHeader: {
     flexDirection: 'row',
@@ -861,13 +862,13 @@ const styles = StyleSheet.create({
   rejectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#EF4444',
+    color: theme.palette.danger,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   rejectionText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     lineHeight: 20,
     fontWeight: '500',
   },
@@ -880,13 +881,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     padding: 14,
     gap: 8,
   },
   cancelButtonText: {
-    color: '#EF4444',
+    color: theme.palette.danger,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -895,13 +896,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.palette.warnTint,
     borderRadius: 12,
     padding: 14,
     gap: 8,
   },
   rateButtonText: {
-    color: '#D97706',
+    color: theme.palette.warnInk,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -916,7 +917,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -924,12 +925,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -940,7 +941,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '80%',
@@ -952,38 +953,38 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   modalCloseButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 22,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   ratingContent: {
     padding: 20,
   },
   ratingBookingInfo: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
   },
   ratingRoute: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -996,25 +997,25 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F59E0B',
+    color: theme.palette.warnBorder,
     textAlign: 'center',
     marginBottom: 24,
   },
   commentInput: {
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 16,
     padding: 16,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.ground,
     minHeight: 120,
     fontWeight: '500',
     marginBottom: 20,
   },
   submitRatingButton: {
     flexDirection: 'row',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 16,
     padding: 18,
     alignItems: 'center',
@@ -1022,10 +1023,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submitRatingButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: theme.palette.text.tertiary,
   },
   submitRatingText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 17,
     fontWeight: '700',
   },

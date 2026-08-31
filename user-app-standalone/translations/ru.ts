@@ -181,6 +181,33 @@ export default {
   },
 
   menu: {
+    // T-101 step 6 — services. Only Taksi is enabled today; the other four are
+    // built but not yet reachable. Keys kept so adding one is data, not a rewrite.
+    servicesLabel: "Тип услуги",
+    serviceTaxi: "Такси",
+    serviceJonatma: "Посылка",
+    serviceUstalar: "Мастера",
+    serviceTexnika: "Спецтехника",
+    serviceYuk: "Грузовик",
+    ctaJonatma: "Отправить посылку",
+    ctaUstalar: "Вызвать мастера",
+    ctaTexnika: "Вызвать спецтехнику",
+    ctaYuk: "Заказать грузовик",
+    // T-101 step 6 — the four order scopes (Xalqaro deliberately omitted:
+    // no adm rule defined and no backend). See docs/PLAN-T101-SCOPES.md.
+    scopeTuman: "В районе",
+    scopeAro: "Между областями",
+    scopeViloyat: "В области",
+    scopeYaqin: "Ближние районы",
+    scopesLabel: "Тип маршрута",
+    recentRoutes: "Недавние маршруты",
+    activeTrip: "Активная поездка",
+    balance: "Баланс",
+    promoCodes: "Промокод",
+    trips: "Поездки",
+    ctaTaxi: "Заказать такси",
+    /** T-101: the top bar screen name. `title` is the CARD heading. */
+    screenTitle: "Главное меню",
     title: 'ТАКСИ',
     openMenu: 'Меню',
     subtitle: 'Выберите страну',
