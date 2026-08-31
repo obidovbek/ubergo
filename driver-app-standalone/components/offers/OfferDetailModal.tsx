@@ -19,6 +19,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { AppModal } from '../AppModal';
 import type { DriverOffer, OfferStatus } from '../../api/driverOffers';
+import { theme } from '../../themes';
 
 // Parse location text into parts (city, province, country)
 const parseLocation = (locationText: string): { city: string; province: string; country: string } => {
@@ -101,10 +102,10 @@ const formatLocation = (
 
 const getStatusColor = (status: OfferStatus): string => {
   switch (status) {
-    case 'published': return '#10B981';
-    case 'archived': return '#6B7280';
-    case 'cancelled': return '#EF4444';
-    default: return '#6B7280';
+    case 'published': return theme.palette.action;
+    case 'archived': return theme.palette.text.secondary;
+    case 'cancelled': return theme.palette.danger;
+    default: return theme.palette.text.secondary;
   }
 };
 
@@ -220,7 +221,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                     type: 'from', 
                     primary: fromFormatted.primary,
                     context: fromFormatted.context,
-                    color: '#10B981' 
+                    color: theme.palette.action 
                   },
                   ...(offer.stops || []).map((stop, index) => {
                     const stopFormatted = formatLocation(stop.label_text, sharedContext);
@@ -229,14 +230,15 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                       primary: stopFormatted.primary,
                       context: stopFormatted.context,
                       index: index + 1,
-                      color: '#F59E0B',
+                      // ink, not border: rendered as badge TEXT
+                      color: theme.palette.warnInk,
                     };
                   }),
                   { 
                     type: 'to', 
                     primary: toFormatted.primary,
                     context: toFormatted.context,
-                    color: '#3B82F6' 
+                    color: theme.palette.male 
                   },
                 ];
 
@@ -261,9 +263,9 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                           <View style={styles.modalIconContainer}>
                             <View style={[styles.modalRouteIcon, { backgroundColor: point.color }]}>
                               {point.type === 'from' ? (
-                                <MaterialIcons name="location-on" size={22} color="#FFFFFF" />
+                                <MaterialIcons name="location-on" size={22} color={theme.palette.surface} />
                               ) : point.type === 'to' ? (
-                                <MaterialIcons name="place" size={22} color="#FFFFFF" />
+                                <MaterialIcons name="place" size={22} color={theme.palette.surface} />
                               ) : (
                                 <View style={styles.modalStopBadge}>
                                   <Text style={styles.modalStopBadgeText}>{stopIndex}</Text>
@@ -305,7 +307,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
               
               {/* Departure Time Card */}
               <View style={styles.modalDetailCardNew}>
-                <View style={[styles.modalDetailIconNew, { backgroundColor: '#FEF3C7' }]}>
+                <View style={[styles.modalDetailIconNew, { backgroundColor: theme.palette.warnTint }]}>
                   <Text style={styles.modalDetailEmojiNew}>🕐</Text>
                 </View>
                 <View style={styles.modalDetailContentNew}>
@@ -318,7 +320,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
 
               {/* Seats Card */}
               <View style={styles.modalDetailCardNew}>
-                <View style={[styles.modalDetailIconNew, { backgroundColor: '#DBEAFE' }]}>
+                <View style={[styles.modalDetailIconNew, { backgroundColor: theme.palette.maleTint }]}>
                   <Text style={styles.modalDetailEmojiNew}>💺</Text>
                 </View>
                 <View style={styles.modalDetailContentNew}>
@@ -333,7 +335,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
 
               {/* Price Card */}
               <View style={styles.modalDetailCardNew}>
-                <View style={[styles.modalDetailIconNew, { backgroundColor: '#D1FAE5' }]}>
+                <View style={[styles.modalDetailIconNew, { backgroundColor: theme.palette.successTint }]}>
                   <Text style={styles.modalDetailEmojiNew}>💰</Text>
                 </View>
                 <View style={styles.modalDetailContentNew}>
@@ -367,7 +369,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                 }}
                 activeOpacity={0.8}
               >
-                <MaterialIcons name="people" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                <MaterialIcons name="people" size={20} color={theme.palette.surface} style={styles.buttonIcon} />
                 <Text style={styles.actionButtonText}>{t('driverOffers.viewPassengers') || 'View Passengers'}</Text>
               </TouchableOpacity>
             )}
@@ -382,7 +384,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                 }}
                 activeOpacity={0.8}
               >
-                <MaterialIcons name="edit" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                <MaterialIcons name="edit" size={20} color={theme.palette.surface} style={styles.buttonIcon} />
                 <Text style={styles.actionButtonText}>{t('driverOffers.edit') || 'Tahrirlash'}</Text>
               </TouchableOpacity>
             )}
@@ -398,7 +400,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   }}
                   activeOpacity={0.8}
                 >
-                  <MaterialIcons name="close" size={18} color="#EF4444" style={styles.buttonIcon} />
+                  <MaterialIcons name="close" size={18} color={theme.palette.danger} style={styles.buttonIcon} />
                   <Text style={styles.secondaryButtonText}>{t('driverOffers.cancel') || 'Bekor qilish'}</Text>
                 </TouchableOpacity>
               )}
@@ -411,7 +413,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   }}
                   activeOpacity={0.8}
                 >
-                  <MaterialIcons name="check-circle" size={18} color="#3B82F6" style={styles.buttonIcon} />
+                  <MaterialIcons name="check-circle" size={18} color={theme.palette.male} style={styles.buttonIcon} />
                   <Text style={styles.secondaryButtonText}>{t('driverOffers.publish')}</Text>
                 </TouchableOpacity>
               )}
@@ -424,7 +426,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   }}
                   activeOpacity={0.8}
                 >
-                  <MaterialIcons name="archive" size={18} color="#6B7280" style={styles.buttonIcon} />
+                  <MaterialIcons name="archive" size={18} color={theme.palette.text.secondary} style={styles.buttonIcon} />
                   <Text style={styles.secondaryButtonText}>{t('driverOffers.archive')}</Text>
                 </TouchableOpacity>
               )}
@@ -437,7 +439,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   }}
                   activeOpacity={0.8}
                 >
-                  <MaterialIcons name="delete-outline" size={18} color="#EF4444" style={styles.buttonIcon} />
+                  <MaterialIcons name="delete-outline" size={18} color={theme.palette.danger} style={styles.buttonIcon} />
                   <Text style={styles.secondaryButtonText}>{t('driverOffers.delete')}</Text>
                 </TouchableOpacity>
               )}
@@ -458,10 +460,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -480,7 +482,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   modalHeaderContent: {
     flex: 1,
@@ -489,12 +491,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 4,
   },
   modalOfferId: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     fontFamily: 'monospace',
     letterSpacing: 0.5,
@@ -503,13 +505,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 20,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   modalStatusContainer: {
@@ -536,7 +538,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   modalSharedContextContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
   },
   modalSharedContextText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     fontStyle: 'italic',
   },
@@ -566,7 +568,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -580,12 +582,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalStopBadgeText: {
-    color: '#F59E0B',
+    color: theme.palette.warnInk,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -606,7 +608,7 @@ const styles = StyleSheet.create({
   },
   modalRouteLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -614,13 +616,13 @@ const styles = StyleSheet.create({
   },
   modalRouteText: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     lineHeight: 22,
   },
   modalRouteContext: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
     marginTop: 3,
     fontStyle: 'italic',
@@ -628,26 +630,26 @@ const styles = StyleSheet.create({
   modalDetailsSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     marginTop: 8,
   },
   modalDetailsSectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 16,
     letterSpacing: 0.3,
   },
   modalDetailCardNew: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     padding: 16,
     borderRadius: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -674,7 +676,7 @@ const styles = StyleSheet.create({
   },
   modalDetailLabelNew: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -682,13 +684,13 @@ const styles = StyleSheet.create({
   },
   modalDetailValueNew: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     lineHeight: 20,
   },
   modalDetailValueNewPrice: {
     fontSize: 16,
-    color: '#10B981',
+    color: theme.palette.action,
     fontWeight: '700',
     lineHeight: 22,
   },
@@ -698,33 +700,33 @@ const styles = StyleSheet.create({
   },
   seatsFreeNew: {
     fontSize: 15,
-    color: '#10B981',
+    color: theme.palette.action,
     fontWeight: '700',
   },
   seatsSeparatorNew: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     marginHorizontal: 4,
     fontWeight: '500',
   },
   seatsTotalNew: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   rejectionBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     padding: 14,
     borderRadius: 12,
     marginHorizontal: 20,
     marginTop: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: theme.palette.dangerTint,
   },
   rejectionLabel: {
     fontSize: 12,
-    color: '#991B1B',
+    color: theme.palette.dangerText,
     fontWeight: '700',
     marginBottom: 6,
     textTransform: 'uppercase',
@@ -732,17 +734,17 @@ const styles = StyleSheet.create({
   },
   rejectionText: {
     fontSize: 14,
-    color: '#7F1D1D',
+    color: theme.palette.dangerDeep,
     lineHeight: 20,
     fontWeight: '500',
   },
   modalActions: {
     padding: 20,
     paddingTop: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderTopColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: -2,
@@ -761,9 +763,9 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   viewPassengersButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.palette.male,
     width: '100%',
-    shadowColor: '#3B82F6',
+    shadowColor: theme.palette.male,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -774,9 +776,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   editButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     width: '100%',
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -794,34 +796,34 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 2,
     paddingVertical: 14,
     minHeight: 50,
   },
   cancelButton: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
   },
   publishButton: {
-    borderColor: '#3B82F6',
+    borderColor: theme.palette.male,
   },
   archiveButton: {
-    borderColor: '#6B7280',
+    borderColor: theme.palette.text.secondary,
   },
   deleteButton: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
   },
   buttonIcon: {
     marginRight: 8,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   secondaryButtonText: {
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,

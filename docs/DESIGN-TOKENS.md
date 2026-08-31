@@ -195,6 +195,64 @@ fail contrast, and how two different statuses nearly rendered identically.
 | `rgba(0,0,0,0.3)` | `scrim.light` | popover backdrop |
 | `#000` (shadowColor) | `text.primary` | shadows — the ink, not pure black |
 
+### 2.10 🔴 FILL TOKENS ARE NOT INK TOKENS — the defect this card kept producing
+
+A colour that is correct as a **background or border** is usually wrong as **text**, and the
+mapping table cannot tell the difference: it maps a *value*, not a *role*. Found 2026-08-31 in
+both apps, after it had already shipped through several "converted" screens:
+
+| Rendered as text | Measured | Correct token |
+|---|---|---|
+| `warnBorder` on ground (driver status "pending") | **1.65:1** | `warnInk` 5.63:1 |
+| `warnBorder` on surface (stop badges ×4) | **1.84:1** | `warnInk` 6.28:1 |
+| `warnBorder` on `dangerTint` (user OTP attempts left) | **1.50:1** | `warnInk` 5.11:1 |
+| `warnBorder` on surface (user rating label, 18px) | **1.84:1** | `warnInk` 6.30:1 |
+
+⚠️ **The rating label was "fixed" on 2026-08-30 and came out WORSE** — 2.85:1 became 1.84:1,
+because the fix moved it off one fill token onto another. *A contrast fix that is not measured
+after the change is not a fix.*
+
+**The rule:** before mapping a literal, ask what the property is. `color:` and `textShadowColor:`
+need an ink token (`*Ink`, `text.*`, `actionPressed`); `backgroundColor:` and `borderColor:` take
+the fill/border tokens. `warnBorder`, `brand`, `dangerBorder`, `text.chevron` and `text.disabled`
+are **never** body text.
+
+### 2.11 ✅ RESOLVED 2026-08-31 — the three supporting ink tiers were darkened
+
+**As drawn, `secondary` (#7C776D, 3.98:1) and `tertiary` (#8A857A, 3.28:1) failed WCAG AA for
+normal text**, and are used that way ~200× across both apps.
+
+🔴 **The "they pass AA-large" defence does not survive checking the artboards.** AA-large needs
+24px (or 18.5px bold). The artboards use these two colours at **9-12px** — 651 uses, essentially
+all small labels. So the exemption never applied.
+
+🔴 **And the obvious fix was wrong.** Pushing both to exactly 4.5:1 produced #736E65 and #726E65 —
+**two tiers rendering identically**, replacing a legibility bug with a meaning bug.
+
+**What shipped instead:** all three supporting tiers re-spaced evenly between 4.5:1 and muted's
+6.41:1, preserving the artboards' exact hue (41.3°) and saturation (0.064):
+
+| Token | Was | Now | On ground | On surface |
+|---|---|---|---|---|
+| `text.muted` | `#5C574E` | `#5B5750` | 6.42:1 | 7.18:1 |
+| `text.secondary` | `#7C776D` | `#66625A` | **5.43:1** | 6.07:1 |
+| `text.tertiary` | `#8A857A` | `#716D64` | **4.61:1** | 5.16:1 |
+
+Every tier is legible at small sizes and a visible step from its neighbour. The warm-grey
+character is unchanged — only lightness moved.
+
+**Two consequential follow-ons, both found by re-auditing afterwards:**
+- `selectPlaceholder` in three driver document screens used `text.disabled` (**1.55:1**) for
+  placeholder text. Every `placeholderTextColor` in both apps uses `text.tertiary`; these three
+  were inconsistent with their own app. Aligned.
+- The OTP resend countdown (**both apps**) used `text.disabled` so it would not read as tappable.
+  Right intent, wrong mechanism — it achieved that by being nearly invisible, on a live countdown
+  the user is reading. `text.tertiary` is still clearly non-interactive beside the link colour.
+
+**Legitimately exempt, verified individually:** the `TopBar` wordmark (a logotype — `brand` green
+is the mark itself), the GeoSheet `›` chevron, and two `<Ionicons>` glyphs. Decorative or
+non-text; contrast minimums do not apply.
+
 🔴 **THE SEAT MARKERS ARE THREE STATES, NOT TWO.** Neutral, male and female each need their own
 fill *and* border (`successTint`+`brand`, `maleTint`+`male`, `femaleTint`+`female`). The tints and
 inks were **measured from the gender picker in `UserBuyurtma.dc.html`** on 2026-08-31, not derived

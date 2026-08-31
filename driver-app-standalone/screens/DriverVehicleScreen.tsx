@@ -2966,7 +2966,9 @@ const styles = StyleSheet.create({
   },
   selectPlaceholder: {
     ...theme.typography.body1,
-    color: theme.palette.text.disabled,
+    // text.tertiary is the placeholder tier everywhere else in this app;
+    // text.disabled is 1.55:1 and is for decorative glyphs, not readable text.
+    color: theme.palette.text.tertiary,
   },
   // Simple Dropdown Styles
   simpleDropdownOverlay: {

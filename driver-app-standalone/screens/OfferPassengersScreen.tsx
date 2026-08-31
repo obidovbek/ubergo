@@ -30,6 +30,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { useTranslation } from '../hooks/useTranslation';
 import { AppModal } from '../components/AppModal';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { theme } from '../themes';
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
@@ -148,18 +149,26 @@ export default function OfferPassengersScreen() {
     }
   };
 
+  /**
+   * 🔴 THESE ARE INK COLOURS, NOT FILL COLOURS — the value is rendered as 11px bold TEXT
+   * on `ground`, so each must clear 4.5:1 there. The obvious mapping (warnBorder / danger /
+   * text.tertiary) is the FILL family and measured 1.65 / 4.62 / 3.28:1 — `pending` was
+   * effectively unreadable. Measured values now: 5.63 · 4.72 · 5.38 · 6.41 · 6.41.
+   * All five stay visually distinct; `cancelled` must NOT collapse into `rejected` — grey
+   * and red mean different things to a driver, and each status also carries its own icon.
+   */
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#FF9800';
+        return theme.palette.warnInk;
       case 'confirmed':
-        return '#4CAF50';
+        return theme.palette.action;
       case 'rejected':
-        return '#F44336';
+        return theme.palette.dangerText;
       case 'cancelled':
-        return '#9E9E9E';
+        return theme.palette.text.muted;
       default:
-        return '#666';
+        return theme.palette.text.muted;
     }
   };
 
@@ -209,7 +218,7 @@ export default function OfferPassengersScreen() {
 
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
-            <Ionicons name="people-outline" size={18} color="#666" />
+            <Ionicons name="people-outline" size={18} color={theme.palette.text.secondary} />
             <Text style={styles.detailText}>
               {item.seats_requested === 1
                 ? (t('offerPassengers.seatsRequestedOne') || '1 seat requested')
@@ -219,13 +228,13 @@ export default function OfferPassengersScreen() {
           </View>
           {item.is_front_seat && (
             <View style={styles.detailRow}>
-              <Ionicons name="car-sport-outline" size={18} color="#666" />
+              <Ionicons name="car-sport-outline" size={18} color={theme.palette.text.secondary} />
               <Text style={styles.detailText}>{t('offerPassengers.frontSeatRequested') || 'Front seat requested'}</Text>
             </View>
           )}
           {item.agreed_price_per_seat && (
             <View style={styles.detailRow}>
-              <Ionicons name="cash-outline" size={18} color="#4CAF50" />
+              <Ionicons name="cash-outline" size={18} color={theme.palette.action} />
               <Text style={styles.detailText}>
                 {item.is_front_seat && item.seats_requested === 1
                   ? (t('offerPassengers.agreedPriceFrontSeat') || 'Agreed: {price} {currency} (front seat)')
@@ -246,7 +255,7 @@ export default function OfferPassengersScreen() {
             </View>
           )}
           <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={18} color="#666" />
+            <Ionicons name="time-outline" size={18} color={theme.palette.text.secondary} />
             <Text style={styles.detailText}>
               {new Date(item.created_at).toLocaleString()}
             </Text>
@@ -263,7 +272,7 @@ export default function OfferPassengersScreen() {
         {item.rejection_reason && (
           <View style={styles.rejectionContainer}>
             <View style={styles.rejectionHeader}>
-              <Ionicons name="information-circle" size={16} color="#EF4444" />
+              <Ionicons name="information-circle" size={16} color={theme.palette.danger} />
               <Text style={styles.rejectionLabel}>{t('offerPassengers.rejectionReason') || 'Rejection Reason'}:</Text>
             </View>
             <Text style={styles.rejectionText}>{item.rejection_reason}</Text>
@@ -281,7 +290,7 @@ export default function OfferPassengersScreen() {
                 onPress={() => dialPhone(passengerPhone, t)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Ionicons name="call" size={16} color={theme.palette.surface} />
                 <Text style={styles.callText}>{formatContactPhone(passengerPhone)}</Text>
               </TouchableOpacity>
             ) : (
@@ -299,7 +308,7 @@ export default function OfferPassengersScreen() {
               onPress={() => handleConfirm(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="checkmark" size={20} color="#fff" />
+              <Ionicons name="checkmark" size={20} color={theme.palette.surface} />
               <Text style={styles.actionButtonText}>{t('offerPassengers.confirm') || 'Confirm'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -307,7 +316,7 @@ export default function OfferPassengersScreen() {
               onPress={() => handleReject(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={20} color="#fff" />
+              <Ionicons name="close" size={20} color={theme.palette.surface} />
               <Text style={styles.actionButtonText}>{t('offerPassengers.reject') || 'Reject'}</Text>
             </TouchableOpacity>
           </View>
@@ -315,7 +324,7 @@ export default function OfferPassengersScreen() {
 
         {isConfirmed && (
           <View style={styles.confirmedBanner}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
             <Text style={styles.confirmedText}>{t('offerPassengers.confirmed') || 'Confirmed'}</Text>
           </View>
         )}
@@ -325,7 +334,7 @@ export default function OfferPassengersScreen() {
             <Ionicons 
               name={item.status === 'rejected' ? 'close-circle' : 'ban'} 
               size={20} 
-              color={item.status === 'rejected' ? '#EF4444' : '#6B7280'} 
+              color={item.status === 'rejected' ? theme.palette.danger : theme.palette.text.secondary} 
             />
             <Text style={[styles.statusBannerText, item.status === 'rejected' ? styles.rejectedText : styles.cancelledText]}>
               {item.status === 'rejected' 
@@ -351,7 +360,7 @@ export default function OfferPassengersScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -360,7 +369,7 @@ export default function OfferPassengersScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('offerPassengers.title') || 'Passenger Requests'}</Text>
         <View style={styles.headerSpacer} />
@@ -387,7 +396,7 @@ export default function OfferPassengersScreen() {
             onPress={() => setStatusFilter('pending')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>{pendingCount}</Text>
+            <Text style={[styles.summaryValue, { color: theme.palette.warnInk }]}>{pendingCount}</Text>
             <Text style={styles.summaryLabel}>{t('offerPassengers.pending') || 'Kutilmoqda'}</Text>
           </TouchableOpacity>
 
@@ -396,7 +405,7 @@ export default function OfferPassengersScreen() {
             onPress={() => setStatusFilter('confirmed')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.summaryValue, { color: '#10B981' }]}>{confirmedCount}</Text>
+            <Text style={[styles.summaryValue, { color: theme.palette.action }]}>{confirmedCount}</Text>
             <Text style={styles.summaryLabel}>{t('offerPassengers.confirmed') || 'Tasdiqlangan'}</Text>
           </TouchableOpacity>
 
@@ -405,7 +414,7 @@ export default function OfferPassengersScreen() {
             onPress={() => setStatusFilter('rejected')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.summaryValue, { color: '#EF4444' }]}>{rejectedCount}</Text>
+            <Text style={[styles.summaryValue, { color: theme.palette.danger }]}>{rejectedCount}</Text>
             <Text style={styles.summaryLabel}>{t('offerPassengers.rejected') || 'Rad etilgan'}</Text>
           </TouchableOpacity>
 
@@ -414,7 +423,7 @@ export default function OfferPassengersScreen() {
             onPress={() => setStatusFilter('cancelled')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.summaryValue, { color: '#6B7280' }]}>{cancelledCount}</Text>
+            <Text style={[styles.summaryValue, { color: theme.palette.text.secondary }]}>{cancelledCount}</Text>
             <Text style={styles.summaryLabel}>{t('offerPassengers.cancelled') || 'Bekor qilingan'}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -422,7 +431,7 @@ export default function OfferPassengersScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading') || 'Loading...'}</Text>
         </View>
       ) : (
@@ -435,14 +444,14 @@ export default function OfferPassengersScreen() {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
-              tintColor="#10B981"
-              colors={['#10B981']}
+              tintColor={theme.palette.action}
+              colors={[theme.palette.action]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+                <Ionicons name="people-outline" size={64} color={theme.palette.text.disabled} />
               </View>
               <Text style={styles.emptyText}>
                 {statusFilter === 'all' 
@@ -502,7 +511,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -510,15 +519,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -527,7 +536,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   headerSpacer: {
@@ -536,9 +545,9 @@ const styles = StyleSheet.create({
   summaryContainer: {
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   summaryScrollContent: {
     paddingHorizontal: 16,
@@ -546,7 +555,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: 90,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     padding: 10,
     alignItems: 'center',
@@ -554,18 +563,18 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   summaryCardActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#10B981',
+    backgroundColor: theme.palette.surface,
+    borderColor: theme.palette.action,
   },
   summaryValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 2,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -573,11 +582,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -586,12 +595,12 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   passengerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     marginHorizontal: 20,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -609,7 +618,7 @@ const styles = StyleSheet.create({
   passengerName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: theme.palette.text.primary,
     marginBottom: 6,
   },
   statusBadge: {
@@ -619,7 +628,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.palette.ground,
   },
   statusText: {
     fontSize: 11,
@@ -628,7 +637,7 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme.palette.borders.strong,
     paddingTop: 12,
     marginBottom: 12,
   },
@@ -639,11 +648,11 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginLeft: 8,
   },
   contactBox: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 10,
     padding: 12,
     marginTop: 12,
@@ -651,7 +660,7 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#047857',
+    color: theme.palette.actionPressed,
     marginBottom: 8,
   },
   callButton: {
@@ -659,27 +668,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 12,
     minHeight: 44,
   },
-  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  contactMissing: { fontSize: 14, color: '#6B7280' },
+  callText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: theme.palette.text.secondary },
   messageContainer: {
     padding: 12,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: theme.palette.blueTint,
     borderRadius: 8,
     marginBottom: 12,
   },
   messageLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2196F3',
+    color: theme.palette.action,
     marginBottom: 4,
   },
   messageText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -695,13 +704,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   confirmButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.palette.action,
   },
   rejectButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: theme.palette.danger,
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.palette.surface,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -710,7 +719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 12,
     gap: 8,
     marginTop: 8,
@@ -718,7 +727,7 @@ const styles = StyleSheet.create({
   confirmedText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   statusBanner: {
     flexDirection: 'row',
@@ -730,28 +739,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   rejectedBanner: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: theme.palette.dangerTint,
   },
   cancelledBanner: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
   },
   statusBannerText: {
     fontSize: 14,
     fontWeight: '700',
   },
   rejectedText: {
-    color: '#EF4444',
+    color: theme.palette.danger,
   },
   cancelledText: {
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   rejectionContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
+    borderLeftColor: theme.palette.danger,
   },
   rejectionHeader: {
     flexDirection: 'row',
@@ -762,13 +771,13 @@ const styles = StyleSheet.create({
   rejectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#EF4444',
+    color: theme.palette.danger,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   rejectionText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     lineHeight: 20,
     fontWeight: '500',
   },
@@ -783,7 +792,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -791,24 +800,24 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 22,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.palette.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -820,12 +829,12 @@ const styles = StyleSheet.create({
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginBottom: 16,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
@@ -844,20 +853,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.palette.ground,
   },
   modalConfirmButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: theme.palette.danger,
   },
   modalCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: theme.palette.text.secondary,
   },
   modalConfirmText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: theme.palette.surface,
   },
 });
 

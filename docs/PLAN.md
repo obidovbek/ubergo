@@ -634,6 +634,16 @@ of truth — do not edit the owner's artboards).
 
 ## Risks / open questions
 
+- ✅ **RESOLVED 2026-08-31 (owner delegated the call): the three supporting ink tiers were
+  darkened in BOTH apps.** `secondary` #7C776D → **#66625A** (3.98 → 5.43:1) · `tertiary`
+  #8A857A → **#716D64** (3.28 → 4.61:1) · `muted` #5C574E → **#5B5750** (unchanged in effect).
+  🔴 **The "they pass AA-large" defence did not survive checking the artboards** — AA-large needs
+  24px and the artboards use these at **9-12px**, 651 times. 🔴 **And the obvious fix was wrong:**
+  pushing both to exactly 4.5:1 made them #736E65 / #726E65 — *identical tiers*, a meaning bug
+  replacing a legibility one. Instead all three were re-spaced evenly to 6.42 / 5.43 / 4.61,
+  keeping the artboards' exact hue and saturation. **Failures across both apps: 219 → 6, and all
+  6 are verified-decorative** (wordmark, chevron glyph, two icons). → `DESIGN-TOKENS.md` §2.11.
+
 - ✅ **RESOLVED 2026-08-30 — THE OWNER APPROVED BOTH NEW DEPENDENCIES (rule 4 satisfied):**
   **`expo-linear-gradient`** and **`react-native-svg`**, in **both** apps. The artboards need both:
   the top bar and service cards are `linear-gradient(180deg,#1D9846,#F4F2ED)`, and every icon is an
@@ -707,7 +717,7 @@ of truth — do not edit the owner's artboards).
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
 | user | **6** | **216** | **1** (from 839) |
-| driver | **28** | **282** | **837** (from 964) |
+| driver | **28** | **282** | **506** (from 964) |
 
 🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
 `Profile` 43 · `OfferDrivers` 41, all to **0**. The ceiling is 234 and **the ratchet was re-proven
@@ -743,9 +753,19 @@ and scans `layout/` and `navigation/`.
    `Notifications`, `EditProfile`.
    🔵 **`PLAY_STORE_BLACK` + `APP_STORE_BLUE` named, not tokenized** — store-badge brand colours,
    same category as the user app's `FACEBOOK_BRAND_BLUE`.
-   **What is left is the big screens**, largest first: `OfferWizard` 127 · `SearchPassengerOffers`
-   105 · `OfferPassengers` 78 · `PassengerOfferDetails` 69 · `OfferDetailModal` 62 ·
-   `MyJoinRequests` 50, then the four document screens (48/48/44/33/29) and `Profile` 44.
+   ✅ **2026-08-31 (2) — THE OFFERS CLUSTER: 837 → 506.** `OfferPassengers` 78 ·
+   `PassengerOfferDetails` 69 · `OfferDetailModal` 62 · `MyJoinRequests` 50 · `OfferCard` 26 ·
+   `PassengerOfferExtras` 16 · `StatusFilterTabs` 11 · `OffersList` 19 — one feature, converted
+   as a set.
+   🔴 **AND IT SURFACED A DEFECT CLASS, NOT A ONE-OFF — see `DESIGN-TOKENS.md` §2.10.** The
+   mapping table maps a *value*, not a *role*, so fill tokens kept landing on text.
+   `getStatusColor` returned `warnBorder` for "pending" — **1.65:1**, effectively unreadable —
+   and four stop badges did the same at 1.84:1. **All five statuses were then re-checked to be
+   sure the fix kept them distinct** (`cancelled` grey must not collapse into `rejected` red).
+   🔴 **THE SAME DEFECT WAS ALREADY LIVE IN THE USER APP** — 3 text uses fixed there too, one of
+   them the rating label that 2026-08-30 "fixed" from 2.85:1 **to a worse 1.84:1**.
+   **What is left is the big screens**, largest first: `OfferWizard` 127 ·
+   `SearchPassengerOffers` 105, then the document screens (48/48/44/33/29) and `Profile` 44.
    ⚠️ **`SearchPassengerOffers` was already partly converted on 2026-08-30** (the shared geo sheet)
    and **still needs a device walk** — its three location buttons per direction became one.
    Then steps 15-22.

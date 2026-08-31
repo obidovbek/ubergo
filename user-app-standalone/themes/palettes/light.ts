@@ -32,16 +32,37 @@ export const lightPalette = {
 
   // ---------------------------------------------------------------- text
   text: {
+    /**
+     * 🔴 THE THREE SUPPORTING TIERS WERE DARKENED 2026-08-31, and this is a deliberate
+     * departure from the artboards.
+     *
+     * As drawn, `secondary` was #7C776D (3.98:1 on ground) and `tertiary` #8A857A
+     * (3.28:1) — both below WCAG AA's 4.5:1 for normal-size text. The "but they pass
+     * AA-large" defence does not apply here: **the artboards use them at 9-12px**, never
+     * at the 24px that AA-large needs. 651 uses across the 33 artboards, essentially all
+     * of them small labels.
+     *
+     * Simply pushing both to 4.5:1 collapsed them into each other (#736E65 vs #726E65) —
+     * two tiers rendering identically, which is its own bug. So all three supporting tiers
+     * were re-spaced evenly between 4.5:1 and muted's 6.41:1, keeping the artboards' exact
+     * hue (41.3°) and saturation (0.064) so the warm-grey character is unchanged:
+     *
+     *   muted      #5B5750  6.42:1   (was #5C574E 6.41:1 — imperceptible shift)
+     *   secondary  #66625A  5.43:1   (was #7C776D 3.98:1)
+     *   tertiary   #716D64  4.61:1   (was #8A857A 3.28:1)
+     *
+     * Every tier is now legible at small sizes AND a visible step from its neighbour.
+     */
     primary: '#16130E', // body + headings; also the avatar / inverted-card fill
-    secondary: '#7C776D', // supporting copy, phone numbers, notes
-    tertiary: '#8A857A', // INACTIVE TAB, eyebrow labels, timestamps, meta
-    muted: '#5C574E', // list titles, key-value labels, inactive segment
+    secondary: '#66625A', // supporting copy, phone numbers, notes
+    tertiary: '#716D64', // INACTIVE TAB, eyebrow labels, timestamps, meta
+    muted: '#5B5750', // list titles, key-value labels, inactive segment
     onDark: '#F4F2ED', // text sitting on a `text.primary` fill
     onAccent: '#FFFFFF', // text sitting on `action` / `danger` / `brandSuffix`
     chevron: '#B6B1A5', // disclosure glyphs — DECORATIVE ONLY (1.91:1)
     disabled: '#C9C4B8',
     /** @deprecated placeholder ink — the old palette's key. Use `tertiary`. Dies in step 23. */
-    hint: '#8A857A',
+    hint: '#716D64',
   },
 
   // ---------------------------------------------------------------- brand vs action

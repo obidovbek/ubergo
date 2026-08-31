@@ -13,6 +13,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
+import { theme } from '../../themes';
 import type {
   PassengerOffer,
   PassengerOfferPaymentType,
@@ -58,7 +59,7 @@ const Chip: React.FC<ChipProps> = ({ icon, label, tone = 'neutral' }) => (
       <Ionicons
         name={icon}
         size={12}
-        color={tone === 'urgent' ? '#B91C1C' : tone === 'info' ? '#1D4ED8' : '#4B5563'}
+        color={tone === 'urgent' ? theme.palette.dangerText : tone === 'info' ? theme.palette.male : theme.palette.text.muted}
       />
     )}
     <Text style={[styles.chipText, tone === 'urgent' && styles.chipTextUrgent, tone === 'info' && styles.chipTextInfo]}>
@@ -279,44 +280,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
   },
   chipUrgent: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: theme.palette.dangerTint,
   },
   chipInfo: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: theme.palette.maleTint,
   },
   chipText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: theme.palette.text.muted,
   },
   chipTextUrgent: {
-    color: '#B91C1C',
+    color: theme.palette.dangerText,
     fontWeight: '700',
   },
   chipTextInfo: {
-    color: '#1D4ED8',
+    color: theme.palette.male,
     fontWeight: '600',
   },
   pickupNote: {
     fontSize: 12,
     fontStyle: 'italic',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   special: {
     marginTop: 4,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
-    backgroundColor: '#F0FDF4',
+    borderColor: theme.palette.brand,
+    backgroundColor: theme.palette.successTint,
     gap: 4,
   },
   specialTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#047857',
+    color: theme.palette.actionPressed,
     marginBottom: 2,
   },
   specialRow: {
@@ -326,16 +327,16 @@ const styles = StyleSheet.create({
   },
   specialLabel: {
     fontSize: 12,
-    color: '#374151',
+    color: theme.palette.text.muted,
   },
   specialPrice: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   freeWaiting: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
 });
 

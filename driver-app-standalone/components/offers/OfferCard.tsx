@@ -10,13 +10,14 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { formatDateTime } from '../../utils/date';
 import { formatNumberWithSpaces } from '../../utils/format';
 import type { DriverOffer, OfferStatus } from '../../api/driverOffers';
+import { theme } from '../../themes';
 
 const getStatusColor = (status: OfferStatus): string => {
   switch (status) {
-    case 'published': return '#10B981';
-    case 'archived': return '#6B7280';
-    case 'cancelled': return '#EF4444';
-    default: return '#6B7280';
+    case 'published': return theme.palette.action;
+    case 'archived': return theme.palette.text.secondary;
+    case 'cancelled': return theme.palette.danger;
+    default: return theme.palette.text.secondary;
   }
 };
 
@@ -146,7 +147,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
       primary: fromFormatted.primary, 
       context: fromFormatted.context,
       icon: 'A', 
-      color: '#10B981' 
+      color: theme.palette.action 
     },
     ...(offer.stops || []).map((stop, index) => {
       const stopFormatted = formatLocation(stop.label_text, sharedContext);
@@ -155,7 +156,8 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
         primary: stopFormatted.primary,
         context: stopFormatted.context,
         icon: String(index + 1),
-        color: '#F59E0B',
+        // ink, not border: this value is rendered as badge TEXT
+        color: theme.palette.warnInk,
       };
     }),
     { 
@@ -163,7 +165,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
       primary: toFormatted.primary, 
       context: toFormatted.context,
       icon: 'B', 
-      color: '#3B82F6' 
+      color: theme.palette.male 
     },
   ];
 
@@ -227,7 +229,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
                     <IconComponent 
                       name={iconName as any} 
                       size={20} 
-                      color="#FFFFFF" 
+                      color={theme.palette.surface} 
                     />
                   )}
                 </View>
@@ -270,21 +272,21 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
       */}
       <View style={styles.factsRow}>
         <View style={styles.fact}>
-          <MaterialIcons name="schedule" size={14} color="#6B7280" />
+          <MaterialIcons name="schedule" size={14} color={theme.palette.text.secondary} />
           <Text style={styles.factText} numberOfLines={1}>
             {formatDateTime(offer.start_at, currentLanguage)}
           </Text>
         </View>
 
         <View style={styles.fact}>
-          <MaterialIcons name="event-seat" size={14} color="#6B7280" />
+          <MaterialIcons name="event-seat" size={14} color={theme.palette.text.secondary} />
           <Text style={styles.factText}>
             {offer.seats_free}/{offer.seats_total}
           </Text>
         </View>
 
         <View style={styles.fact}>
-          <MaterialIcons name="payments" size={14} color="#6B7280" />
+          <MaterialIcons name="payments" size={14} color={theme.palette.text.secondary} />
           <Text style={styles.factPrice} numberOfLines={1}>
             {formatNumberWithSpaces(Math.round(Number(offer.price_per_seat)))}{' '}
             {offer.currency}
@@ -297,12 +299,12 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onPress }) => {
 
 const styles = StyleSheet.create({
   offerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     marginHorizontal: 4,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -311,7 +313,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     overflow: 'hidden',
   },
   cardHeader: {
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
   },
   offerIdText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     fontFamily: 'monospace',
   },
@@ -342,7 +344,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   sharedContextContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -351,7 +353,7 @@ const styles = StyleSheet.create({
   },
   sharedContextText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     fontStyle: 'italic',
   },
@@ -375,7 +377,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -389,12 +391,12 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   stopIconText: {
-    color: '#F59E0B',
+    color: theme.palette.warnInk,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 10,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -423,13 +425,13 @@ const styles = StyleSheet.create({
   },
   routeText: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     lineHeight: 20,
   },
   routeContext: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
     marginTop: 2,
     fontStyle: 'italic',
@@ -445,7 +447,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.palette.surfaceSunken,
   },
   fact: {
     flexDirection: 'row',
@@ -456,13 +458,13 @@ const styles = StyleSheet.create({
   },
   factText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     flexShrink: 1,
   },
   factPrice: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     flexShrink: 1,
   },

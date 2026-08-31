@@ -28,6 +28,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { DriverOffer, OfferStatus } from '../api/driverOffers';
 import { OfferCard, OfferDetailModal, StatusFilterTabs } from '../components/offers';
+import { theme } from '../themes';
 
 export const OffersListScreen: React.FC = () => {
   const { token } = useAuth();
@@ -266,7 +267,7 @@ export const OffersListScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
@@ -275,7 +276,7 @@ export const OffersListScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
       <View style={styles.header}>
         {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
         <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
@@ -341,7 +342,7 @@ export const OffersListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -349,10 +350,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -369,17 +370,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 12,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -389,13 +390,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   createButtonIcon: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontSize: 20,
     fontWeight: '700',
     marginRight: 6,
   },
   createButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '700',
     fontSize: 14,
     letterSpacing: 0.3,
@@ -404,11 +405,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -417,28 +418,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 22,
   },
   emptyButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '700',
     fontSize: 16,
   },

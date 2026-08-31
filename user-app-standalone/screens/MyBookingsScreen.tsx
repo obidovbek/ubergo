@@ -404,7 +404,7 @@ export default function MyBookingsScreen() {
           <View style={styles.statIconContainer}>
             <Ionicons name="time" size={20} color={theme.palette.warnBorder} />
           </View>
-          <Text style={[styles.statValue, { color: theme.palette.warnBorder }]}>{pendingCount}</Text>
+          <Text style={[styles.statValue, { color: theme.palette.warnInk }]}>{pendingCount}</Text>
           <Text style={styles.statLabel}>{t('myBookings.pending')}</Text>
         </View>
         
@@ -997,7 +997,9 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: theme.palette.warnBorder,
+    // ink, not border — this is TEXT. See the 2026-08-31 note in PLAN.md: the
+    // 2026-08-30 pass moved this off #F59E0B but landed on another fill token.
+    color: theme.palette.warnInk,
     textAlign: 'center',
     marginBottom: 24,
   },

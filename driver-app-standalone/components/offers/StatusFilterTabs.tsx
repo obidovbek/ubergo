@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from '../../hooks/useTranslation';
 import type { OfferStatus } from '../../api/driverOffers';
+import { theme } from '../../themes';
 
 interface StatusFilterTabsProps {
   statusFilter: OfferStatus | 'all';
@@ -92,9 +93,9 @@ const styles = StyleSheet.create({
   filterContainer: {
     paddingVertical: 12,
     paddingHorizontal: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   filterScrollContent: {
     paddingHorizontal: 12,
@@ -103,15 +104,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     marginHorizontal: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   filterChipActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
+    backgroundColor: theme.palette.action,
+    borderColor: theme.palette.action,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -122,20 +123,20 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '700',
   },
   filterChipCount: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   filterChipCountActive: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     opacity: 0.9,
   },
 });

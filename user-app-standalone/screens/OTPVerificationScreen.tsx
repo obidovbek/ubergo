@@ -507,8 +507,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Deliberately not the link blue — it must not read as tappable while counting down.
+  // But `text.disabled` (1.55:1) achieved that by being nearly invisible, and this is a
+  // live countdown the user is actively reading. `text.tertiary` (4.61:1) is still clearly
+  // non-interactive next to the link colour, and is legible.
   resendCountdown: {
-    color: theme.palette.text.disabled,
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   attemptsContainer: {
@@ -523,7 +526,8 @@ const styles = StyleSheet.create({
   },
   attemptsText: {
     ...theme.typography.body2,
-    color: theme.palette.warnBorder,
+    // ink, not border: 1.50:1 on the dangerTint background it sits on.
+    color: theme.palette.warnInk,
     fontWeight: '600',
   },
   attemptsTextWarning: {

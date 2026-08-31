@@ -38,16 +38,17 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
 import { formatDateTime } from '../utils/date';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { theme } from '../themes';
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
 const FILTERS: StatusFilter[] = ['all', 'pending', 'confirmed', 'rejected', 'cancelled'];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#FEF3C7', text: '#B45309' },
-  confirmed: { bg: '#D1FAE5', text: '#047857' },
-  rejected: { bg: '#FEE2E2', text: '#B91C1C' },
-  cancelled: { bg: '#F3F4F6', text: '#6B7280' },
+  pending: { bg: theme.palette.warnTint, text: theme.palette.warnInk },
+  confirmed: { bg: theme.palette.successTint, text: theme.palette.actionPressed },
+  rejected: { bg: theme.palette.dangerTint, text: theme.palette.dangerText },
+  cancelled: { bg: theme.palette.surfaceSunken, text: theme.palette.text.secondary },
 };
 
 export default function MyJoinRequestsScreen() {
@@ -164,27 +165,27 @@ export default function MyJoinRequestsScreen() {
         {offer ? (
           <>
             <View style={styles.routeRow}>
-              <Ionicons name="location-outline" size={16} color="#10B981" />
+              <Ionicons name="location-outline" size={16} color={theme.palette.action} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {offer.from_text}
               </Text>
             </View>
             <View style={styles.routeRow}>
-              <Ionicons name="flag-outline" size={16} color="#3B82F6" />
+              <Ionicons name="flag-outline" size={16} color={theme.palette.male} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {offer.to_text}
               </Text>
             </View>
 
             <View style={styles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+              <Ionicons name="calendar-outline" size={14} color={theme.palette.text.secondary} />
               <Text style={styles.metaText}>
                 {formatDateTime(offer.start_at, currentLanguage)}
               </Text>
             </View>
             {!!passengerName && (
               <View style={styles.metaRow}>
-                <Ionicons name="person-outline" size={14} color="#6B7280" />
+                <Ionicons name="person-outline" size={14} color={theme.palette.text.secondary} />
                 <Text style={styles.metaText}>{passengerName}</Text>
               </View>
             )}
@@ -233,7 +234,7 @@ export default function MyJoinRequestsScreen() {
                 onPress={() => dialPhone(passengerPhone, t)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Ionicons name="call" size={16} color={theme.palette.surface} />
                 <Text style={styles.callText}>{formatContactPhone(passengerPhone)}</Text>
               </TouchableOpacity>
             ) : (
@@ -254,10 +255,10 @@ export default function MyJoinRequestsScreen() {
             activeOpacity={0.8}
           >
             {cancellingId === item.id ? (
-              <ActivityIndicator size="small" color="#B91C1C" />
+              <ActivityIndicator size="small" color={theme.palette.dangerText} />
             ) : (
               <>
-                <Ionicons name="close-circle-outline" size={18} color="#B91C1C" />
+                <Ionicons name="close-circle-outline" size={18} color={theme.palette.dangerText} />
                 <Text style={styles.cancelButtonText}>{t('myJoinRequests.cancel')}</Text>
               </>
             )}
@@ -269,7 +270,7 @@ export default function MyJoinRequestsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -277,7 +278,7 @@ export default function MyJoinRequestsScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('myJoinRequests.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -307,7 +308,7 @@ export default function MyJoinRequestsScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
         </View>
       ) : (
         <FlatList
@@ -318,7 +319,7 @@ export default function MyJoinRequestsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Ionicons name="paper-plane-outline" size={48} color="#D1D5DB" />
+              <Ionicons name="paper-plane-outline" size={48} color={theme.palette.text.disabled} />
               <Text style={styles.emptyText}>{t('myJoinRequests.empty')}</Text>
             </View>
           }
@@ -331,7 +332,7 @@ export default function MyJoinRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -339,9 +340,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'android' ? 16 : 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   backButton: {
     width: 40,
@@ -353,16 +354,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'center',
   },
   headerSpacer: {
     width: 40,
   },
   filterBar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   filterContent: {
     paddingHorizontal: 12,
@@ -373,18 +374,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
   },
   filterChipActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
   centered: {
     flex: 1,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
   },
   listContent: {
@@ -404,11 +405,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     gap: 6,
   },
   cardHeader: {
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   },
   createdAt: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
   },
   routeRow: {
     flexDirection: 'row',
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   metaRow: {
     flexDirection: 'row',
@@ -448,13 +449,13 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   priceBox: {
     marginTop: 6,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     gap: 4,
   },
   priceLine: {
@@ -464,32 +465,32 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   priceValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   totalLabel: {
     fontWeight: '700',
-    color: '#047857',
+    color: theme.palette.actionPressed,
   },
   totalValue: {
     fontWeight: '800',
-    color: '#047857',
+    color: theme.palette.actionPressed,
   },
   message: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: '#4B5563',
+    color: theme.palette.text.muted,
   },
   rejectionReason: {
     fontSize: 13,
-    color: '#B91C1C',
+    color: theme.palette.dangerText,
   },
   contactBox: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 10,
     padding: 12,
     marginTop: 8,
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#047857',
+    color: theme.palette.actionPressed,
     marginBottom: 8,
   },
   callButton: {
@@ -505,12 +506,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 12,
     minHeight: 44,
   },
-  callText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  contactMissing: { fontSize: 14, color: '#6B7280' },
+  callText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
+  contactMissing: { fontSize: 14, color: theme.palette.text.secondary },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -520,12 +521,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
+    borderColor: theme.palette.dangerBorder,
+    backgroundColor: theme.palette.dangerTint,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#B91C1C',
+    color: theme.palette.dangerText,
   },
 });

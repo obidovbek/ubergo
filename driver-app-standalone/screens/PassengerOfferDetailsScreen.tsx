@@ -40,6 +40,7 @@ import { formatDateTime } from '../utils/date';
 import { showToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandler';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { theme } from '../themes';
 
 /** The one vehicle attached to the driver's profile, as the wizard reads it. */
 interface DriverVehicleSummary {
@@ -242,28 +243,28 @@ export default function PassengerOfferDetailsScreen() {
       case 'confirmed':
         return {
           icon: 'checkmark-done-circle' as const,
-          color: '#047857',
+          color: theme.palette.actionPressed,
           style: styles.bannerSuccess,
           text: t('passengerOfferDetails.statusConfirmed'),
         };
       case 'rejected':
         return {
           icon: 'close-circle' as const,
-          color: '#B91C1C',
+          color: theme.palette.dangerText,
           style: styles.bannerDanger,
           text: t('passengerOfferDetails.statusRejected'),
         };
       case 'cancelled':
         return {
           icon: 'ban' as const,
-          color: '#6B7280',
+          color: theme.palette.text.secondary,
           style: styles.bannerMuted,
           text: t('passengerOfferDetails.statusCancelled'),
         };
       default: // pending
         return {
           icon: 'checkmark-circle' as const,
-          color: '#047857',
+          color: theme.palette.actionPressed,
           style: styles.bannerSuccess,
           text: t('passengerOfferDetails.alreadySent'),
         };
@@ -272,7 +273,7 @@ export default function PassengerOfferDetailsScreen() {
 
   const renderRow = (icon: keyof typeof Ionicons.glyphMap, label: string, value: string) => (
     <View style={styles.detailRow}>
-      <Ionicons name={icon} size={18} color="#6B7280" />
+      <Ionicons name={icon} size={18} color={theme.palette.text.secondary} />
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue} numberOfLines={2}>
         {value}
@@ -282,7 +283,7 @@ export default function PassengerOfferDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -290,7 +291,7 @@ export default function PassengerOfferDetailsScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('passengerOfferDetails.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -298,11 +299,11 @@ export default function PassengerOfferDetailsScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
         </View>
       ) : loadError || !offer ? (
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color="#D1D5DB" />
+          <Ionicons name="alert-circle-outline" size={48} color={theme.palette.text.disabled} />
           <Text style={styles.errorText}>{loadError || t('passengerOfferDetails.notFound')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadOffer} activeOpacity={0.8}>
             <Text style={styles.retryText}>{t('common.retry')}</Text>
@@ -330,11 +331,11 @@ export default function PassengerOfferDetailsScreen() {
 
               <View style={styles.routeConnector}>
                 <View style={styles.routeLine} />
-                <Ionicons name="arrow-down" size={16} color="#D1D5DB" />
+                <Ionicons name="arrow-down" size={16} color={theme.palette.text.disabled} />
               </View>
 
               <View style={styles.routeRow}>
-                <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
+                <View style={[styles.routeDot, { backgroundColor: theme.palette.male }]} />
                 <View style={styles.routeContent}>
                   <Text style={styles.routeLabel}>{t('passengerOfferDetails.to')}</Text>
                   <Text style={styles.routeText}>{offer.to_text}</Text>
@@ -413,7 +414,7 @@ export default function PassengerOfferDetailsScreen() {
                       onPress={() => dialPhone(passengerPhoneOf(myJoin.offer), t)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="call" size={18} color="#FFFFFF" />
+                      <Ionicons name="call" size={18} color={theme.palette.surface} />
                       <Text style={styles.callText}>
                         {formatContactPhone(passengerPhoneOf(myJoin.offer))}
                       </Text>
@@ -426,7 +427,7 @@ export default function PassengerOfferDetailsScreen() {
               </>
             ) : (
               <TouchableOpacity style={styles.cta} onPress={openJoin} activeOpacity={0.85}>
-                <Ionicons name="car-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="car-outline" size={20} color={theme.palette.surface} />
                 <Text style={styles.ctaText}>{t('passengerOfferDetails.takeOrder')}</Text>
               </TouchableOpacity>
             )}
@@ -463,12 +464,12 @@ export default function PassengerOfferDetailsScreen() {
           <Text style={styles.fieldLabel}>{t('passengerOfferDetails.vehicle')}</Text>
           {vehicle ? (
             <View style={styles.vehicleBox}>
-              <Ionicons name="car-sport-outline" size={18} color="#374151" />
+              <Ionicons name="car-sport-outline" size={18} color={theme.palette.text.muted} />
               <Text style={styles.vehicleText}>{vehicle.label}</Text>
             </View>
           ) : (
             <View style={styles.warningBox}>
-              <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+              <Ionicons name="alert-circle-outline" size={18} color={theme.palette.dangerText} />
               <Text style={styles.warningText}>{t('passengerOfferDetails.noVehicle')}</Text>
             </View>
           )}
@@ -481,7 +482,7 @@ export default function PassengerOfferDetailsScreen() {
               onPress={() => setSeatsOffered((n) => Math.max(offer?.seats_needed ?? 1, n - 1))}
               activeOpacity={0.7}
             >
-              <Ionicons name="remove" size={20} color="#111827" />
+              <Ionicons name="remove" size={20} color={theme.palette.text.primary} />
             </TouchableOpacity>
             <Text style={styles.stepperValue}>{seatsOffered}</Text>
             <TouchableOpacity
@@ -489,7 +490,7 @@ export default function PassengerOfferDetailsScreen() {
               onPress={() => setSeatsOffered((n) => Math.min(8, n + 1))}
               activeOpacity={0.7}
             >
-              <Ionicons name="add" size={20} color="#111827" />
+              <Ionicons name="add" size={20} color={theme.palette.text.primary} />
             </TouchableOpacity>
           </View>
           <Text style={styles.fieldHint}>
@@ -507,7 +508,7 @@ export default function PassengerOfferDetailsScreen() {
             onChangeText={(text) => setPriceInput(text.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
             placeholder="0"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.palette.text.tertiary}
           />
 
           {priceValid && !!offer && (
@@ -526,7 +527,7 @@ export default function PassengerOfferDetailsScreen() {
             value={message}
             onChangeText={setMessage}
             placeholder={t('passengerOfferDetails.messagePlaceholder')}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.palette.text.tertiary}
             multiline
             maxLength={300}
           />
@@ -539,7 +540,7 @@ export default function PassengerOfferDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -547,9 +548,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'android' ? 16 : 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   backButton: {
     width: 40,
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'center',
   },
   headerSpacer: {
@@ -576,17 +577,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
   },
   retryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: theme.palette.surface,
     fontWeight: '700',
   },
   scrollContent: {
@@ -595,11 +596,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   routeRow: {
     flexDirection: 'row',
@@ -609,7 +610,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginTop: 6,
   },
   routeContent: {
@@ -618,18 +619,18 @@ const styles = StyleSheet.create({
   routeLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     letterSpacing: 0.5,
   },
   routeText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginTop: 2,
   },
   landmarkText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginTop: 2,
   },
   routeConnector: {
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 18,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginLeft: 4,
   },
   detailRow: {
@@ -653,31 +654,31 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   detailValue: {
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
     textAlign: 'right',
   },
   noteLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     marginBottom: 4,
   },
   noteText: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.palette.text.muted,
     lineHeight: 20,
   },
   footer: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.palette.borders.strong,
   },
   cta: {
     flexDirection: 'row',
@@ -686,12 +687,12 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 52,
     borderRadius: 14,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   ctaText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
   sentBanner: {
     flexDirection: 'row',
@@ -711,32 +712,32 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: 10,
     borderRadius: 14,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   callText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.palette.surface,
   },
   contactMissing: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textAlign: 'center',
     marginTop: 10,
   },
   // Per-status skins. The banner is no longer always green — a rejected driver
   // seeing a green "sent" banner would think their offer was still live.
   bannerSuccess: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: theme.palette.successTint,
+    borderColor: theme.palette.brand,
   },
   bannerDanger: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FCA5A5',
+    backgroundColor: theme.palette.dangerTint,
+    borderColor: theme.palette.dangerBorder,
   },
   bannerMuted: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
+    backgroundColor: theme.palette.surfaceSunken,
+    borderColor: theme.palette.text.disabled,
   },
   sentBannerText: {
     fontSize: 15,
@@ -753,12 +754,12 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.palette.text.muted,
     marginTop: 10,
   },
   fieldHint: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   vehicleBox: {
     flexDirection: 'row',
@@ -766,15 +767,15 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: theme.palette.text.disabled,
   },
   vehicleText: {
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   warningBox: {
     flexDirection: 'row',
@@ -782,14 +783,14 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: theme.palette.dangerTint,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: theme.palette.dangerBorder,
   },
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: '#B91C1C',
+    color: theme.palette.dangerText,
   },
   stepper: {
     flexDirection: 'row',
@@ -798,9 +799,9 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 6,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: theme.palette.text.disabled,
   },
   stepperButton: {
     width: 36,
@@ -808,24 +809,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
   },
   stepperValue: {
     minWidth: 24,
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   input: {
     minHeight: 46,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.palette.text.disabled,
+    backgroundColor: theme.palette.surface,
     paddingHorizontal: 12,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   inputMultiline: {
     minHeight: 72,
@@ -839,18 +840,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: theme.palette.brand,
   },
   totalLabel: {
     fontSize: 13,
-    color: '#047857',
+    color: theme.palette.actionPressed,
     fontWeight: '600',
   },
   totalValue: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#047857',
+    color: theme.palette.actionPressed,
   },
 });
