@@ -2914,7 +2914,7 @@ export const OfferWizardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -2972,7 +2972,7 @@ export const OfferWizardScreen: React.FC = () => {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={theme.palette.text.onAccent} />
                 ) : (
                   <Text style={styles.buttonPrimaryText}>
                     {offerId
@@ -3128,7 +3128,7 @@ export const OfferWizardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   keyboardView: {
     flex: 1,
@@ -3137,11 +3137,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.palette.ground,
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -3151,10 +3151,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -3169,7 +3169,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
@@ -3181,9 +3181,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.palette.borders.strong,
   },
   stepContainer: {
     flexDirection: 'row',
@@ -3193,16 +3193,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.palette.surface,
   },
   stepCircleActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
+    backgroundColor: theme.palette.action,
+    borderColor: theme.palette.action,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 3,
@@ -3214,20 +3214,20 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
   },
   stepNumberActive: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
   },
   stepLine: {
     width: 50,
     height: 3,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginHorizontal: 6,
     borderRadius: 2,
   },
   stepLineActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   scrollView: {
     flex: 1,
@@ -3237,7 +3237,7 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 24,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '800',
     marginBottom: 28,
     letterSpacing: -0.5,
@@ -3247,19 +3247,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     marginBottom: 10,
   },
   input: {
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 14,
     padding: 16,
-    color: '#111827',
-    shadowColor: '#000',
+    color: theme.palette.text.primary,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -3269,7 +3269,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: theme.palette.danger,
     borderWidth: 2,
   },
   textArea: {
@@ -3277,14 +3277,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   selectInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 14,
     padding: 16,
     justifyContent: 'center',
     minHeight: 52,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -3295,18 +3295,18 @@ const styles = StyleSheet.create({
   },
   selectInputText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '500',
   },
   dateInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     borderRadius: 14,
     padding: 16,
     justifyContent: 'center',
     minHeight: 52,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -3317,7 +3317,7 @@ const styles = StyleSheet.create({
   },
   dateInputText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '500',
   },
   /* ── T-078: payment + class chips ──────────────────────────────────── */
@@ -3331,40 +3331,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.surface,
   },
   wizardChipOn: {
-    borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
+    borderColor: theme.palette.brand,
+    backgroundColor: theme.palette.successTint,
   },
   wizardChipText: {
     fontSize: 14,
-    color: '#374151',
+    color: theme.palette.text.muted,
   },
   wizardChipTextOn: {
     fontWeight: '700',
-    color: '#166534',
+    color: theme.palette.actionPressed,
   },
   helperText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginTop: 6,
     fontWeight: '500',
   },
   errorText: {
     fontSize: 13,
-    color: '#EF4444',
+    color: theme.palette.dangerText,
     marginTop: 6,
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: theme.palette.borders.strong,
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -3378,18 +3378,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   summaryValue: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     flex: 1,
     textAlign: 'right',
     fontWeight: '600',
@@ -3399,11 +3399,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     paddingTop: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.palette.borders.strong,
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: -2,
@@ -3421,8 +3421,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   buttonPrimary: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
+    backgroundColor: theme.palette.action,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -3432,25 +3432,25 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   buttonSecondary: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   buttonPrimaryText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   buttonSecondaryText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
   },
   // Geo Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3459,13 +3459,13 @@ const styles = StyleSheet.create({
     maxHeight: '95%',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 24,
     width: '100%',
     maxHeight: '95%',
     minHeight: '70%',
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: {
       width: 0,
       height: 12,
@@ -3481,12 +3481,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.surface,
   },
   modalTitle: {
     fontSize: 20,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
     flex: 1,
     letterSpacing: -0.5,
@@ -3495,41 +3495,41 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 20,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     lineHeight: 20,
   },
   modalSearchBox: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.surface,
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     paddingHorizontal: 12,
     minHeight: 52,
   },
   modalSearchIcon: {
     fontSize: 18,
     marginRight: 10,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
   },
   modalSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     paddingVertical: 0,
     fontWeight: '500',
   },
@@ -3537,36 +3537,36 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   modalSearchClearText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     lineHeight: 16,
   },
   modalList: {
     maxHeight: 500,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
   },
   modalLoading: {
     padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
   },
   modalEmpty: {
     padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
   },
   modalEmptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -3577,42 +3577,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: theme.palette.surfaceSunken,
+    backgroundColor: theme.palette.surface,
   },
   modalItemSelected: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-    borderBottomColor: '#D1FAE5',
+    borderLeftColor: theme.palette.action,
+    borderBottomColor: theme.palette.successTint,
   },
   modalItemText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     flex: 1,
     fontWeight: '500',
     letterSpacing: -0.2,
   },
   modalItemTextSelected: {
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '600',
   },
   modalCheck: {
     fontSize: 20,
-    color: '#10B981',
+    color: theme.palette.action,
     fontWeight: '700',
     marginLeft: 12,
   },
   locationDisplay: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderWidth: 1.5,
-    borderColor: '#10B981',
+    borderColor: theme.palette.action,
     borderRadius: 14,
     padding: 16,
   },
   locationText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   stopsHeader: {
@@ -3622,11 +3622,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   addStopButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    shadowColor: '#10B981',
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -3636,18 +3636,18 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addStopButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   stopCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 14,
     padding: 16,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   stopHeader: {
     flexDirection: 'row',
@@ -3657,31 +3657,31 @@ const styles = StyleSheet.create({
   },
   stopNumber: {
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '700',
   },
   removeStopButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.palette.danger,
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeStopButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 20,
   },
   multiSelectButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: theme.palette.warnBorder,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#F59E0B',
+    shadowColor: theme.palette.warnBorder,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -3691,7 +3691,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   multiSelectButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -3699,8 +3699,8 @@ const styles = StyleSheet.create({
   modalFooter: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderTopColor: theme.palette.borders.strong,
+    backgroundColor: theme.palette.ground,
   },
   modalFooterInfo: {
     marginBottom: 16,
@@ -3709,7 +3709,7 @@ const styles = StyleSheet.create({
   },
   modalFooterText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -3726,8 +3726,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   modalButtonPrimary: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
+    backgroundColor: theme.palette.action,
+    shadowColor: theme.palette.action,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -3737,23 +3737,23 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalButtonSecondary: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
   },
   modalButtonDisabled: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     shadowOpacity: 0,
     elevation: 0,
   },
   modalButtonPrimaryText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   modalButtonSecondaryText: {
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -3765,9 +3765,9 @@ const styles = StyleSheet.create({
   locationChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderWidth: 1.5,
-    borderColor: '#10B981',
+    borderColor: theme.palette.action,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -3775,7 +3775,7 @@ const styles = StyleSheet.create({
   },
   locationChipText: {
     fontSize: 14,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
     marginRight: 8,
   },
@@ -3783,12 +3783,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     justifyContent: 'center',
     alignItems: 'center',
   },
   chipRemoveText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 16,
@@ -3799,14 +3799,14 @@ const styles = StyleSheet.create({
   },
   locationContextText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     fontStyle: 'italic',
   },
   // Date/Time Picker Modal Styles
   datePickerModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   datePickerModalContent: {
@@ -3820,20 +3820,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.palette.borders.strong,
   },
   datePickerModalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.palette.text.primary,
   },
   datePickerModalCancelText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.palette.text.secondary,
   },
   datePickerModalConfirmText: {
     fontSize: 16,
-    color: '#10B981',
+    color: theme.palette.action,
     fontWeight: '600',
   },
   datePickerContainer: {
@@ -3850,11 +3850,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   pickerScroll: {
     flex: 1,
@@ -3865,18 +3865,18 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.palette.ground,
   },
   pickerItemSelected: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   pickerItemText: {
     fontSize: 15,
-    color: '#666',
+    color: theme.palette.text.secondary,
     fontWeight: '500',
   },
   pickerItemTextSelected: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontWeight: '600',
   },
 });

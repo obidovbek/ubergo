@@ -38,6 +38,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { AppModal } from '../components/AppModal';
 import { GeoSheet, type GeoPath } from '../components/geo/GeoSheet';
 import type { MainStackParamList } from '../navigation/types';
+import { theme } from '../themes';
 
 const LAST_SEARCH_KEY = '@ubexgo_driver:last_passenger_search';
 
@@ -248,11 +249,11 @@ export default function SearchPassengerOffersScreen() {
         
         <View style={styles.routeConnector}>
           <View style={styles.routeLine} />
-          <Ionicons name="arrow-down" size={16} color="#D1D5DB" />
+          <Ionicons name="arrow-down" size={16} color={theme.palette.text.disabled} />
         </View>
         
         <View style={styles.routeRow}>
-          <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
+          <View style={[styles.routeDot, { backgroundColor: theme.palette.male }]} />
           <View style={styles.routeContent}>
             <Text style={styles.routeLabel}>{t('searchPassengerOffers.toLabel')}</Text>
             <Text style={styles.routeText} numberOfLines={2}>
@@ -271,12 +272,12 @@ export default function SearchPassengerOffersScreen() {
       <View style={styles.infoSection}>
         <View style={styles.infoRow}>
           <View style={styles.infoTag}>
-            <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+            <Ionicons name="calendar-outline" size={14} color={theme.palette.text.secondary} />
             <Text style={styles.infoTagText}>{formatDate(item.start_at)}</Text>
           </View>
           
           <View style={styles.infoTag}>
-            <Ionicons name="person-outline" size={14} color="#6B7280" />
+            <Ionicons name="person-outline" size={14} color={theme.palette.text.secondary} />
             <Text style={styles.infoTagText} numberOfLines={1}>
               {passengerNameOf(item)}
             </Text>
@@ -285,7 +286,7 @@ export default function SearchPassengerOffersScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoTag}>
-            <Ionicons name="people" size={14} color="#6B7280" />
+            <Ionicons name="people" size={14} color={theme.palette.text.secondary} />
             <Text style={styles.infoTagText}>
               {t('searchPassengerOffers.seatsNeededCount').replace(
                 '{count}',
@@ -324,13 +325,13 @@ export default function SearchPassengerOffersScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.viewButtonText}>{t('searchPassengerOffers.viewDetails')}</Text>
-          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+          <Ionicons name="arrow-forward" size={16} color={theme.palette.text.onAccent} />
         </TouchableOpacity>
       </View>
 
       {item.note && (
         <View style={styles.noteContainer}>
-          <Ionicons name="chatbubble-outline" size={12} color="#6B7280" />
+          <Ionicons name="chatbubble-outline" size={12} color={theme.palette.text.secondary} />
           <Text style={styles.noteText} numberOfLines={2}>
             {item.note}
           </Text>
@@ -379,7 +380,7 @@ export default function SearchPassengerOffersScreen() {
                   .filter(Boolean)
                   .join(', ') || t('offerWizard.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
 
             {!!fromPath.province && (
@@ -388,7 +389,7 @@ export default function SearchPassengerOffersScreen() {
                 onPress={() => setFromPath({})}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Ionicons name="close-circle" size={16} color={theme.palette.dangerText} />
                 <Text style={styles.clearButtonTextCompact}>
                   {t('searchPassengerOffers.clear')}
                 </Text>
@@ -407,7 +408,7 @@ export default function SearchPassengerOffersScreen() {
               <Ionicons 
                 name="swap-vertical" 
                 size={20} 
-                color={selectedFromProvince && selectedToProvince ? '#10B981' : '#D1D5DB'} 
+                color={selectedFromProvince && selectedToProvince ? theme.palette.action : theme.palette.text.disabled} 
               />
             </TouchableOpacity>
           </View>
@@ -415,7 +416,7 @@ export default function SearchPassengerOffersScreen() {
           {/* To Location Section */}
           <View style={styles.locationColumn}>
             <View style={styles.locationHeader}>
-              <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
+              <View style={[styles.locationDot, { backgroundColor: theme.palette.male }]} />
               <Text style={styles.sectionLabel}>{t('searchPassengerOffers.toLabel')}</Text>
             </View>
               
@@ -436,7 +437,7 @@ export default function SearchPassengerOffersScreen() {
                   .filter(Boolean)
                   .join(', ') || t('offerWizard.selectProvince')}
               </Text>
-              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color={theme.palette.text.tertiary} />
             </TouchableOpacity>
 
             {!!toPath.province && (
@@ -445,7 +446,7 @@ export default function SearchPassengerOffersScreen() {
                 onPress={() => setToPath({})}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Ionicons name="close-circle" size={16} color={theme.palette.dangerText} />
                 <Text style={styles.clearButtonTextCompact}>
                   {t('searchPassengerOffers.clear')}
                 </Text>
@@ -470,7 +471,7 @@ export default function SearchPassengerOffersScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -479,7 +480,7 @@ export default function SearchPassengerOffersScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('searchPassengerOffers.title')}</Text>
         <TouchableOpacity
@@ -487,7 +488,7 @@ export default function SearchPassengerOffersScreen() {
           onPress={() => setFilterModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="options" size={24} color="#111827" />
+          <Ionicons name="options" size={24} color={theme.palette.text.primary} />
           {(maxPrice || minSeats || sortBy !== 'date_asc') && (
             <View style={styles.filterBadge} />
           )}
@@ -496,7 +497,7 @@ export default function SearchPassengerOffersScreen() {
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('searchPassengerOffers.loading')}</Text>
         </View>
       ) : (
@@ -514,7 +515,7 @@ export default function SearchPassengerOffersScreen() {
               {!selectedFromProvince || !selectedToProvince ? (
                 <>
                   <View style={styles.emptyIconContainer}>
-                    <Ionicons name="location-outline" size={48} color="#D1D5DB" />
+                    <Ionicons name="location-outline" size={48} color={theme.palette.text.disabled} />
                   </View>
                   <Text style={styles.emptyText}>{t('searchPassengerOffers.emptySelectTitle')}</Text>
                   <Text style={styles.emptySubtext}>
@@ -524,7 +525,7 @@ export default function SearchPassengerOffersScreen() {
               ) : (
                 <>
                   <View style={styles.emptyIconContainer}>
-                    <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+                    <Ionicons name="people-outline" size={48} color={theme.palette.text.disabled} />
                   </View>
                   <Text style={styles.emptyText}>{t('searchPassengerOffers.emptyNoneTitle')}</Text>
                   <Text style={styles.emptySubtext}>
@@ -572,7 +573,7 @@ export default function SearchPassengerOffersScreen() {
                       <Ionicons 
                         name={option.icon as any} 
                         size={20} 
-                        color={sortBy === option.value ? '#10B981' : '#6B7280'} 
+                        color={sortBy === option.value ? theme.palette.action : theme.palette.text.secondary} 
                       />
                       <Text style={[
                         styles.sortOptionText,
@@ -581,7 +582,7 @@ export default function SearchPassengerOffersScreen() {
                         {option.label}
                       </Text>
                       {sortBy === option.value && (
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                        <Ionicons name="checkmark-circle" size={20} color={theme.palette.action} />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -625,7 +626,7 @@ export default function SearchPassengerOffersScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="refresh" size={20} color="#EF4444" />
+                <Ionicons name="refresh" size={20} color={theme.palette.dangerText} />
                 <Text style={styles.clearFiltersText}>{t('searchPassengerOffers.clearAllFilters')}</Text>
               </TouchableOpacity>
         </ScrollView>
@@ -658,7 +659,7 @@ export default function SearchPassengerOffersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   header: {
     flexDirection: 'row',
@@ -666,17 +667,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
     paddingBottom: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -686,17 +687,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     letterSpacing: -0.5,
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -710,13 +711,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.palette.danger,
   },
   // ⚠️ `searchScrollView` (maxHeight: 270) is deliberately GONE. It made the
   // search card a second, independent scroll surface next to the FlatList — the
   // cause of the card and the results merging into each other (owner, 2026-08-10).
   searchContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     // No marginHorizontal: the list's own padding now supplies it, so the card
     // and the offer cards line up on exactly the same left/right edge.
@@ -725,7 +726,7 @@ const styles = StyleSheet.create({
     padding: 16,
     // A slightly stronger shadow than the offer cards carry: this is the control
     // surface and should read as sitting ABOVE the results, not as one of them.
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -743,14 +744,14 @@ const styles = StyleSheet.create({
   resultsCount: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   resultsRule: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
   },
   locationRow: {
     flexDirection: 'row',
@@ -770,12 +771,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -789,9 +790,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderWidth: 2,
-    borderColor: '#10B981',
+    borderColor: theme.palette.action,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -799,10 +800,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: theme.palette.successTint,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 8,
@@ -812,17 +813,17 @@ const styles = StyleSheet.create({
   countryButtonText: {
     flex: 1,
     fontSize: 12,
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '600',
   },
   geoSelectButtonCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     padding: 10,
     marginBottom: 8,
     minHeight: 42,
@@ -830,18 +831,18 @@ const styles = StyleSheet.create({
   geoSelectTextCompact: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   geoSelectTextPlaceholder: {
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '500',
   },
   clearButtonCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 8,
     padding: 6,
     marginTop: 4,
@@ -849,7 +850,7 @@ const styles = StyleSheet.create({
   },
   clearButtonTextCompact: {
     fontSize: 12,
-    color: '#EF4444',
+    color: theme.palette.dangerText,
     fontWeight: '700',
   },
   loadingContainer: {
@@ -859,7 +860,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -871,11 +872,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   offerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.palette.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -892,7 +893,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     marginRight: 12,
   },
   routeContent: {
@@ -900,7 +901,7 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -909,12 +910,12 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   // mo'ljal — the landmark the passenger typed (T-018)
   landmarkText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     marginTop: 2,
   },
   routeConnector: {
@@ -926,7 +927,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 16,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     marginRight: 8,
   },
   infoSection: {
@@ -941,7 +942,7 @@ const styles = StyleSheet.create({
   infoTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -951,7 +952,7 @@ const styles = StyleSheet.create({
   },
   infoTagText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     flex: 1,
   },
@@ -961,39 +962,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.palette.surfaceSunken,
   },
   budgetBadge: {
     flex: 1,
   },
   budgetLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginBottom: 4,
   },
   budgetValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.palette.action,
   },
   budgetPerSeat: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
     marginTop: 2,
   },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
   },
   viewButtonText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1002,14 +1003,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     gap: 8,
   },
   noteText: {
     flex: 1,
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     lineHeight: 18,
     fontWeight: '500',
   },
@@ -1028,7 +1029,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -1036,23 +1037,23 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.palette.scrim.modal,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.palette.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '85%',
@@ -1065,39 +1066,39 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
   },
   modalCloseButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.palette.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
     fontSize: 22,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   modalSearchBox: {
     padding: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     paddingHorizontal: 14,
     minHeight: 48,
   },
@@ -1107,7 +1108,7 @@ const styles = StyleSheet.create({
   modalSearchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     paddingVertical: 0,
     fontWeight: '500',
   },
@@ -1115,14 +1116,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.borders.strong,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   modalSearchClearText: {
     fontSize: 18,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   modalLoading: {
@@ -1137,7 +1138,7 @@ const styles = StyleSheet.create({
   },
   modalEmptyText: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: theme.palette.text.tertiary,
     fontWeight: '600',
   },
   modalList: {
@@ -1150,21 +1151,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F9FAFB',
+    borderBottomColor: theme.palette.ground,
   },
   modalItemSelected: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.palette.successTint,
     borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
+    borderLeftColor: theme.palette.action,
   },
   modalItemText: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '500',
     flex: 1,
   },
   modalItemTextSelected: {
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
   },
   // Filter Modal Styles
@@ -1174,12 +1175,12 @@ const styles = StyleSheet.create({
   filterSection: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.palette.surfaceSunken,
   },
   filterSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.palette.text.primary,
     marginBottom: 16,
   },
   sortOptions: {
@@ -1189,24 +1190,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     gap: 12,
   },
   sortOptionActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
+    backgroundColor: theme.palette.successTint,
+    borderColor: theme.palette.action,
   },
   sortOptionText: {
     flex: 1,
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
   },
   sortOptionTextActive: {
-    color: '#059669',
+    color: theme.palette.actionPressed,
     fontWeight: '700',
   },
   filterInputGroup: {
@@ -1214,18 +1215,18 @@ const styles = StyleSheet.create({
   },
   filterInputLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.palette.text.secondary,
     fontWeight: '600',
     marginBottom: 8,
   },
   filterInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.palette.ground,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: theme.palette.borders.strong,
     padding: 12,
     fontSize: 15,
-    color: '#111827',
+    color: theme.palette.text.primary,
     fontWeight: '600',
   },
   clearFiltersButton: {
@@ -1234,28 +1235,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     margin: 20,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.palette.dangerTint,
     borderRadius: 12,
     gap: 8,
   },
   clearFiltersText: {
     fontSize: 15,
-    color: '#EF4444',
+    color: theme.palette.dangerText,
     fontWeight: '700',
   },
   filterFooter: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.palette.borders.strong,
   },
   applyFiltersButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.palette.action,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
   },
   applyFiltersText: {
-    color: '#FFFFFF',
+    color: theme.palette.text.onAccent,
     fontSize: 16,
     fontWeight: '700',
   },

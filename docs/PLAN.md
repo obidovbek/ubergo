@@ -13,15 +13,20 @@
 > 🔴 **T-047 PARKED.** 🛑 **T-031 — item 1 CLOSED by the owner, do NOT reopen** → `PLAN-T031.md`.
 > ⏸️ **T-040 · T-039 · T-037 · T-033 · T-030 · T-027 · T-018 · T-026A · T-025** → their own files.
 
-## 🔴 BOARD STATE 2026-08-30 — read before starting anything
+## 🔴 BOARD STATE 2026-08-31 — read before starting anything
 
 **`tsc` BASELINES: API 281 · admin 0 · user 6 · driver 28.** All four lint at **0 errors**.
-🔴 **LINT WARNING BASELINE CORRECTED 2026-08-30: driver is 289, NOT the 304 recorded everywhere.**
-Measured by `git stash`-ing my own theme change and running eslint on HEAD: **289 before, 289
-after**, so the 304 was already stale before this card began. User's **225** was re-measured the
-same way and **is** correct. *A stale baseline reads a clean run as a 15-warning improvement and a
-real regression as normal — the same trap that misled T-031.* Warning baselines: user **225** ·
-driver **289**.
+🟢 **LINT WARNING BASELINES, RE-MEASURED 2026-08-31: user 216 · driver 280.**
+Both are *below* where this card started (user 225 → 218 → **216**, driver 304 → 289 → **280**);
+the conversions removed unused imports. **Neither was ever rebaselined upward to accommodate a
+change** — every deviation during the card was a real defect and was fixed.
+🔴 **The 225 / 289 / 304 figures recorded elsewhere in these files are HISTORY, not baselines.**
+*A stale baseline reads a clean run as an improvement and hides a real regression — the trap that
+misled T-031, and the reason these numbers are dated every time they are written.*
+
+🟢 **RAW-COLOUR CEILINGS: user 1 · driver 3 — both at their floor**, enforced by
+`scripts/check-design-tokens.mjs` in each app. All 4 remaining literals are deliberate third-party
+constants; see the Resume point.
 
 🛑 **THE TWO APP REBUILDS ARE STILL OUTSTANDING** — user (T-077 · T-083 · T-084) and driver
 (T-078 · T-079/T-080 · T-061; T-076 removed a native dep).
@@ -603,7 +608,16 @@ Edit both copies together and verify with `diff -q`.
 
 ### Phase 4 — close
 
-- [ ] **23.** Delete the token aliases left from step 1b; both ceilings are 0 and the script enforces it.
+- [ ] **23.** Delete the token aliases left from step 1b; both ceilings are at their floor and the
+      script enforces it.
+      🔴 **MEASURED 2026-08-31 — THIS IS ~370 CALL SITES, NOT A CLEANUP.** Counted across both apps:
+      `createTheme` **98** · `palette.background` **77** · `palette.success` **68** ·
+      `palette.grey` **29** · `shadows.md` **24** · `palette.error` **15** · `palette.primary` **14** ·
+      `palette.border` **18** · `palette.divider` **12** · `palette.secondary` **8** ·
+      `palette.info` **8** · `shadows.sm/lg` **10** · `palette.warning` **4** · `text.hint` **1**.
+      **Do this as its own card with its own plan** — it touches every screen in both apps and has
+      no visual intent, so a regression here is silent. The aliases are correct today; they are
+      debt, not a bug.
 - [ ] **24.** `/arch` to sync `docs/ARCHITECTURE.md`; add the design-system section.
 - [ ] **25.** Update `docs/CHECKLIST.md` with a per-screen visual walk.
 - [ ] **26.** Owner rebuilds both apps and walks the checklist.
@@ -703,87 +717,46 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-08-30 at end of day. Nothing is committed — 56 files are dirty.**
+> **Written 2026-08-31 at end of day, for a brand-new chat session.**
+> **Everything is committed through `c005785` except this file, `TODO.md` and `JOURNAL.md`.**
+> Read this section, then `docs/JOURNAL.md`'s 2026-08-31 entry. Nothing else is required.
 
-### Where the work is
+### 🟢 What is finished
 
-**Phase 1 (foundation) is COMPLETE in both apps.** Steps 1a-5 done, plus 7b/7c/7d and 9-10.
-**Five user screens are at 0 raw colours:** `MenuScreen` (rebuilt to `UserMenuNeW`),
-`SearchOffers`, `OfferDetails`, `MyBookings`, `MyPassengerOffers`. The driver app's
-`SearchPassengerOffers` was converted to the shared geo sheet.
-
-### The numbers to trust
+**The COLOUR half of T-101 is complete in both apps. 1 803 raw literals removed.**
+Every screen in both apps now reads its colours from `themes/`.
 
 | | `tsc` | lint (0 errors) | raw colours |
 |---|---|---|---|
 | user | **6** | **216** | **1** (from 839) |
-| driver | **28** | **280** | **235** (from 964) |
+| driver | **28** | **280** | **3** (from 964) |
 
-🟢 **2026-08-31: user 414 → 234.** Four screens tokenized — `EditProfile` 49 · `UserDetails` 47 ·
-`Profile` 43 · `OfferDrivers` 41, all to **0**. The ceiling is 234 and **the ratchet was re-proven
-able to go red at it** (added one literal → exit 1). User lint is **217**, one *below* the 218
-baseline; the conversion removed an unused import. `tsc` unmoved at 6.
+**The 4 remaining literals are deliberate and must NOT be "fixed":**
+`FACEBOOK_BRAND_BLUE` (Meta requires it verbatim) · `PLAY_STORE_BLACK` + `APP_STORE_BLUE`
+(store-badge guidelines) · `VEHICLE_SWATCH_FALLBACK` (a car's paint colour, overridden at runtime
+by `hex_code` from the DB). Both ceilings sit at the floor and `check-design-tokens.mjs` holds them
+there; it was re-proven able to go red at every ceiling.
 
-🔴 **Do NOT use the old lint figure of 304 for the driver app — it was already stale before
-2026-08-30.** Measured 289 before and after that day's first change; it is **285** now.
-🔴 **The "789 / 863 / 1 652" colour counts quoted higher up this file are UNDERCOUNTS** from a
-hex-only grep. `scripts/check-design-tokens.mjs` is the authority; it also counts `rgba()`/`hsl()`
-and scans `layout/` and `navigation/`.
+### 🛑 What is NOT finished — read before claiming T-101 is done
 
-### Next actions, in order
+1. **TOKENIZED IS NOT REBUILT.** Colours come from `themes/`; **the layouts are still the pre-T-101
+   layouts** and almost no screen matches its artboard. Steps 8-22 each carry a note saying exactly
+   what was and was not done. *The owner had to catch this from a screenshot on 2026-08-30 — do not
+   let the colour count imply more than it means.*
+2. **ALMOST NOTHING HAS RUN ON A DEVICE.** The largest unverified surface is the **ink-ladder
+   change**, which altered supporting text on *every screen in both apps*, and the **two splash
+   screens**, which changed structurally rather than just in colour.
+   Also still unwalked from 2026-08-30: `SearchPassengerOffers`, whose three location buttons per
+   direction became **one** — an interaction change, not a repaint.
+3. **Step 23 is ~370 call sites** and wants its own card (sized in the step itself).
+4. **T-102 and T-103 are open** and gate the search screens actually looking right.
 
-1. 🛑 **SEVEN SCREENS HAVE NEVER RUN ON A DEVICE** — `OfferDetails`, `MyBookings`,
-   `MyPassengerOffers` (2026-08-30) and `EditProfile`, `UserDetails`, `Profile`, `OfferDrivers`
-   (2026-08-31). The driver app's search also needs a walk: its three location buttons per
-   direction became **one**, which is an interaction change, not a repaint.
-2. ✅ **DONE 2026-08-31 — the user app is at 15, and 1 of those is deliberate.** Everything is
-   tokenized except `SplashScreen` (14) and Facebook's brand blue (1, exempt by design).
-   ⚠️ **The `SplashScreen` worry was unfounded** — it *already* imported `themes/`, so nothing
-   loads too early. The blocker is a design decision, not a technical one (see step 14).
-   ✅ The auth screens were converted **colours only** — no field name, validator or autofill
-   behaviour touched, so the T-061/T-063 validators and the OR-003 SMS hash are untouched.
-3. ✅ **BOTH OWNER DECISIONS ANSWERED 2026-08-31 AND DONE** — splash redesigned light; the
-   orphaned dark palettes deleted from both apps.
-   🟢 **THE USER APP IS EFFECTIVELY AT ZERO: 1 literal remains and it is deliberate** —
-   `FACEBOOK_BRAND_BLUE` in `PhoneRegistrationScreen`, which Meta's guidelines require verbatim.
-   The ceiling is 1 and the ratchet holds it there.
-4. **The driver app — STARTED 2026-08-31: 951 → 837.** Done: its **splash twin** (redesigned
-   light, mirrored circle layout preserved), `BackButton`, `RideCard`, `themed-text`,
-   `OTPVerification`, `PhoneRegistration`, `RegisterFirst`, `DriverDetails`, `Blocked`,
-   `Notifications`, `EditProfile`.
-   🔵 **`PLAY_STORE_BLACK` + `APP_STORE_BLUE` named, not tokenized** — store-badge brand colours,
-   same category as the user app's `FACEBOOK_BRAND_BLUE`.
-   ✅ **2026-08-31 (2) — THE OFFERS CLUSTER: 837 → 506.** `OfferPassengers` 78 ·
-   `PassengerOfferDetails` 69 · `OfferDetailModal` 62 · `MyJoinRequests` 50 · `OfferCard` 26 ·
-   `PassengerOfferExtras` 16 · `StatusFilterTabs` 11 · `OffersList` 19 — one feature, converted
-   as a set.
-   🔴 **AND IT SURFACED A DEFECT CLASS, NOT A ONE-OFF — see `DESIGN-TOKENS.md` §2.10.** The
-   mapping table maps a *value*, not a *role*, so fill tokens kept landing on text.
-   `getStatusColor` returned `warnBorder` for "pending" — **1.65:1**, effectively unreadable —
-   and four stop badges did the same at 1.84:1. **All five statuses were then re-checked to be
-   sure the fix kept them distinct** (`cancelled` grey must not collapse into `rejected` red).
-   🔴 **THE SAME DEFECT WAS ALREADY LIVE IN THE USER APP** — 3 text uses fixed there too, one of
-   them the rating label that 2026-08-30 "fixed" from 2.85:1 **to a worse 1.84:1**.
-   ✅ **2026-08-31 (3) — THE FIVE DOCUMENT SCREENS + Menu/Profile/RegisterFirst: 506 → 235.**
-   `DriverPersonalInfo` 48 · `DriverVehicle` 48 · `DriverPassport` 44 · `DriverLicense` 33 ·
-   `DriverTaxiLicense` 29 · `Profile` 44 · `Menu` 26 · `RegisterFirst` 2.
-   ✅ **FIRST CONVERSION DONE ROLE-AWARE FROM THE START** (per §2.10, written the same day):
-   the tokenizer reads the CSS property, so `color:` takes an ink token and
-   `backgroundColor:`/`borderColor:` take the fill. `#E53935` is in these screens as BOTH — 16
-   text uses, 10 borders — and it split correctly: `dangerText` (6.02:1) vs `danger`.
-   **The error text was 4.23:1 before and would have stayed failing under a value-only map.**
-   🚗 **`VEHICLE_SWATCH_FALLBACK` (#87CEEB) named, not tokenized** — it is the placeholder for a
-   car's real paint colour, replaced at runtime by `selectedColor.hex_code` from the DB. Car
-   colours are data, not design tokens.
-   **What is left: `OfferWizard` 127 · `SearchPassengerOffers` 105**, plus the 2 named store
-   constants and 1 vehicle swatch that stay by design.
-   ⚠️ **`SearchPassengerOffers` was already partly converted on 2026-08-30** (the shared geo sheet)
-   and **still needs a device walk** — its three location buttons per direction became one.
-   Then steps 15-22.
+### ▶️ Next actions, in the order they are worth doing
 
-🔴 **TOKENIZED IS NOT REBUILT, AND THE BOARD MUST NOT READ OTHERWISE.** All four 2026-08-31 screens
-had their colours converted and their **layouts left alone** — steps 10, 12 and 13 are still open.
-This is the same distinction the owner had to point at a screenshot to discover on 2026-08-30.
+1. 🛑 **A device pass over both apps. This is the real gate** — see (2) above for where to look.
+2. **The artboard rebuild** — the visible half of T-101. Not started.
+3. **Step 23** as its own card.
+4. **T-102 / T-103.**
 
 ### How to convert a screen (the pattern that works)
 
@@ -792,20 +765,30 @@ This is the same distinction the owner had to point at a screenshot to discover 
 a repaint. The proof it stayed safe: `git diff` showed **125 insertions / 124 deletions**, every
 changed line a colour, the extra one the import.
 
-🔴 **AFTER ANY FIND-AND-REPLACE, CHECK THE FILE IMPORTS `theme`.** This bit twice — `tsc` went to
-**106** on `SearchOffers` and again on `OfferDetails`. Find-and-replace produces code that *looks*
-right; only the baseline notices.
-⚠️ **Map colours from an EXPLICIT table, never by hue**, and report what you cannot map rather than
-guessing. Four accessibility failures were found this way — including one where the obvious fix
-would have made two different statuses render identically.
+🔴 **MAP BY ROLE, NOT BY VALUE — `DESIGN-TOKENS.md` §2.10.** The same literal maps differently
+depending on the CSS property: `color:` needs an **ink** token (`*Ink`, `text.*`, `actionPressed`,
+`dangerText`), while `backgroundColor:`/`borderColor:` take the **fill** token. Ignoring this
+shipped text at **1.65:1**. `warnBorder`, `brand`, `dangerBorder`, `text.chevron` and
+`text.disabled` are **never** body text.
+🔴 **AFTER ANY FIND-AND-REPLACE, CHECK THE FILE IMPORTS `theme`.** This bit four times across two
+days. Find-and-replace produces code that *looks* right; only the baseline notices.
+🔴 **BEWARE DOUBLE-QUOTED STRINGS.** A naive replace turns `backgroundColor: "#FFF"` into JSX
+braces inside a StyleSheet object — `tsc` went 6 → 34 that way.
+⚠️ **Map from an EXPLICIT table (§2.9), never by hue**, and report what you cannot map rather than
+guessing. Every accessibility failure this card found was found this way — including two where the
+obvious fix would have made different states render identically.
+⚠️ **Verify with the three baselines every time** (`tsc`, lint, the token script) and **never
+rebaseline upward** to accommodate a change.
 
 ### Owner decisions already banked — do NOT re-ask
 
-dark mode dropped · user + driver only, no new roles · `UserMenuNeW` is canonical ·
-CTA uses `action` not `brand` · `expo-linear-gradient` + `react-native-svg` approved ·
-fonts bundled as `.ttf`, no dependency · **services AND scopes are both carousels**, unbuilt
-services dimmed and inert · adm3 = `GeoSettlement` · "Yaqin" = a neighbours table ·
-"Hoziroq" = a real field, not derived.
+dark mode dropped (and `palettes/dark.ts` **deleted** in both apps) · user + driver only, no new
+roles · `UserMenuNeW` is canonical · CTA uses `action` not `brand` · `expo-linear-gradient` +
+`react-native-svg` approved · fonts bundled as `.ttf`, no dependency · **services AND scopes are
+both carousels**, unbuilt services dimmed · adm3 = `GeoSettlement` · "Yaqin" = a neighbours table ·
+"Hoziroq" = a real field · **splash screens redesigned light** (no artboard defines one) ·
+**the ink ladder was darkened on delegated authority** — reasoning in `DESIGN-TOKENS.md` §2.11 so
+it can be reversed on sight.
 
 ### Blocked on backend — these are NOT T-101's to fix
 

@@ -63,9 +63,12 @@
 
 ## 🔥 Now (working on it)
 
-> 🎨 **2026-08-30 — T-101 IS THE ACTIVE CARD: the new design system.** The owner drew **33 artboards**
-> in `htmlDesign/` with Claude Design on 2026-08-29. Foundation first (tokens, Manrope, top bar, tab
-> bar, drop dark mode), then pages one by one, **user app first**. → `docs/PLAN.md`.
+> 🎨 **T-101 IS THE ACTIVE CARD: the new design system.** The owner drew **33 artboards** in
+> `htmlDesign/` with Claude Design on 2026-08-29. → `docs/PLAN.md`.
+> 🟢 **2026-08-31 — ITS COLOUR HALF IS COMPLETE IN BOTH APPS (1 803 literals removed) and committed
+> through `c005785`.** 🛑 **Its VISUAL half has not started: tokenized is not rebuilt, and almost
+> nothing has run on a device.** Full detail in `docs/JOURNAL.md` 2026-08-31; the handoff a fresh
+> session should read is the **Resume point** at the bottom of `docs/PLAN.md`.
 > 🔴 **CORRECTION TO THE NOTE THAT STOOD HERE SINCE 2026-08-16: it said "*Now* HOLDS TWO CARDS:
 > T-088 and T-100". BOTH HALVES WERE WRONG.** **T-100 was never a card in *Now*** — it has always
 > been in *Later* (search `T-100`), so nothing had to be moved to make room for T-101. And *Now* did
@@ -84,67 +87,31 @@
 - [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
-  ✅ **PLAN APPROVED 2026-08-30. PHASE 1 COMPLETE + 5 USER SCREENS CONVERTED. Not committed.**
-  🟢 **Raw colours: user 839 -> 1 · driver 964 -> 235** (driver screens untouched; only shared
-  components). A counter script fails if either rises, and **was proven able to go red** — re-proven
-  at the new 234 ceiling on 2026-08-31.
-  ✅ **2026-08-31 — four more user screens at 0 colours:** `EditProfile` 49 · `UserDetails` 47 ·
-  `Profile` 43 · `OfferDrivers` 41 — **committed by the owner as `66d2b15`, walked on a device.**
-  ✅ **2026-08-31 (2) — the whole passenger-offer flow at 0:** `CreatePassengerOffer` 33 + six
-  `components/passengerOffer/*` (88) = **121**. Six new measured tokens (`maleTint`/`maleInk`/
-  `femaleTint`/`femaleInk`/`blueTintSoft`/`blueBorder`) added to **both** palettes.
-  🟡 **ALL OF IT IS TOKENIZED, NOT REBUILT** — colours only, layouts untouched, so plan steps
-  8 / 10 / 12 / 13 stay open. `tsc` 6 (baseline) · lint 217 (one *below* baseline).
-  ✅ **2026-08-31 (3) — user app down to 15:** `Notifications` 35 · `Blocked` 19 · auth pair 19 ·
-  strays. 🔵 **1 of the 15 is Facebook's brand blue, exempt on purpose** (Meta requires it exact);
-  the other **14 are `SplashScreen`, which needs an owner decision, not a mapping** — it is a dark
-  navy screen and no artboard defines a splash.
-  🟢 **2026-08-31 (4) — THE USER APP IS EFFECTIVELY AT ZERO (1 left, deliberate).**
-  ✅ **Splash redesigned light** (owner decided): animations and the T-050 wordmark fix preserved.
-  **Measuring it caught 3 contrast failures** — wordmark 2.56:1, tagline 3.98:1, loading 3.28:1;
-  all now 5.29 / 6.41 / 6.41. 🛑 **The DRIVER app's splash is still dark** — same screen, its twin.
-  ✅ **`themes/palettes/dark.ts` DELETED in both apps** (owner approved) + the dead `darkPalette`
-  alias. **Goal 4 genuinely met.** 🔵 The 1 remaining literal is Facebook's brand blue, exempt.
-  ✅ **2026-08-31 (5) — DRIVER APP STARTED: 951 → 837.** Its **splash twin redesigned light** to
-  match the user app's (mirrored circle layout preserved as-is), plus `BackButton`, `RideCard`,
-  `themed-text`, the auth pair, `RegisterFirst`, `DriverDetails`, `Blocked`, `Notifications`,
-  `EditProfile`. `tsc` 28 (baseline) · lint 282 (three *below* baseline).
-  🔵 Store-badge brand colours named `PLAY_STORE_BLACK` / `APP_STORE_BLUE`, not tokenized.
-  ✅ **2026-08-31 (6) — DRIVER OFFERS CLUSTER: 837 → 506** (8 files, one feature, converted as a set).
-  🔴 **IT SURFACED A DEFECT CLASS: fill tokens rendered as TEXT.** The driver's passenger-status
-  label was `warnBorder` at **1.65:1** — effectively unreadable — plus 4 stop badges at 1.84:1, and
-  **3 more already live in the USER app**, one of them the rating label that 2026-08-30 "fixed"
-  from 2.85:1 to a *worse* 1.84:1. All 8 now use `warnInk` (5.1-6.3:1). Rule written up in
-  `DESIGN-TOKENS.md` §2.10 so the next conversion does not repeat it.
-  ✅ **2026-08-31 (7) — THE INK LADDER FIXED IN BOTH APPS (owner delegated the call).**
-  `text.secondary` 3.98 → **5.43:1** · `text.tertiary` 3.28 → **4.61:1** · `muted` unchanged in
-  effect. Re-spaced evenly rather than both pushed to 4.5, which would have made two tiers
-  **identical**. Artboard hue/saturation preserved. **Contrast failures both apps: 219 → 6, all 6
-  verified decorative.** Also fixed: placeholder text at 1.55:1 in 3 driver screens, and the OTP
-  countdown in **both** apps. → `DESIGN-TOKENS.md` §2.11.
-  🛑 **THIS CHANGES THE LOOK OF EVERY SCREEN** — supporting copy is slightly darker everywhere.
-  Nothing else moved; it is a lightness shift within the same warm grey.
-  ✅ **2026-08-31 (8) — DRIVER: 506 → 235.** The five document/registration screens (48/48/44/33/29)
-  plus `Profile` 44, `Menu` 26, `RegisterFirst` 2. **First conversion written role-aware from the
-  start** (§2.10): `#E53935` appears as both error TEXT (16×) and borders (10×) and split correctly
-  into `dangerText` / `danger` — the text was **4.23:1** and a value-only map would have left it
-  failing. 🚗 `VEHICLE_SWATCH_FALLBACK` named, not tokenized (it is car paint, not UI).
-  `tsc` 28 · lint 280 (two *below* baseline). **Driver contrast failures: 2, both decorative.**
-  🛑 **NOT RUN ON A DEVICE** — both splash screens, and everything from 2026-08-31 (3)-(8).
-  🛑 **NOT RUN ON A DEVICE:** the passenger-offer flow (the main create path, seat markers on new
-  tokens) and everything from 2026-08-31 (3) — notably `BlockedScreen`, whose three account states
-  now fold onto two colour families.
-  ✅ **Done:** token layer both apps · 7 font faces bundled · `expo-linear-gradient` +
-  `react-native-svg` **proven on a device** · TopBar/BottomTabBar/Icon/Badge ·
-  Button/Card/Chip/Carousel · shared `GeoSheet` · dark mode dropped · `MenuScreen` (rebuilt to
-  `UserMenuNeW`), `SearchOffers`, `OfferDetails`, `MyBookings`, `MyPassengerOffers` at **0 colours**
-  · driver `SearchPassengerOffers` on the shared sheet.
-  🔴 **FOUR ACCESSIBILITY FAILURES FIXED, all found by computing contrast:** the redesign's own CTA
-  **2.56:1** · `driver_found` status **2.42:1** · rating label **2.85:1** · seat badge **3.32:1**.
-  🛑 **THREE SCREENS HAVE NEVER RUN ON A DEVICE** — `OfferDetails`, `MyBookings`,
-  `MyPassengerOffers` — and the driver search needs a walk (3 location buttons became 1).
-  🛑 **THE FOUR ORDER SCOPES LOOK RIGHT AND ALL BEHAVE IDENTICALLY** until **T-102**. Do not
-  present them as delivered.
+  ✅ **PLAN APPROVED 2026-08-30. Phase 1 (foundation) complete. Committed through `c005785`.**
+
+  🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
+  Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
+  must not be "fixed"** — `FACEBOOK_BRAND_BLUE`, `PLAY_STORE_BLACK`, `APP_STORE_BLUE`,
+  `VEHICLE_SWATCH_FALLBACK` (third-party brand colours and one vehicle-paint fallback).
+  `check-design-tokens.mjs` holds both ceilings at the floor and **was re-proven able to go red at
+  every ceiling.** Baselines: user `tsc` 6 / lint 216 · driver `tsc` 28 / lint 280 — both lint
+  figures *below* their starting baselines, never rebaselined upward.
+
+  🟢 **ALSO DELIVERED:** both splash screens redesigned light · `palettes/dark.ts` deleted in both
+  apps (**goal 4 genuinely met**) · six measured gender/seat tokens added to both palettes · the
+  three supporting ink tiers darkened so they pass AA at the sizes the artboards actually use.
+  **Contrast failures across both apps: 219 → 2, and both survivors are verified decorative.**
+
+  🛑 **TOKENIZED IS NOT REBUILT — the layouts are still the pre-T-101 layouts** and almost no screen
+  matches its artboard. Steps 8-22 each carry a note on what was and was not done. *The owner had to
+  catch this from a screenshot on 2026-08-30; the colour count must not be read as more than it is.*
+  🛑 **ALMOST NOTHING HAS RUN ON A DEVICE.** Biggest unverified surface: the ink-ladder change
+  (**every screen in both apps**) and the two structurally-rebuilt splash screens. Also still
+  unwalked: `SearchPassengerOffers`, whose 3 location buttons per direction became **1**.
+  📋 **Step 23 (delete the compat aliases) measured at ~370 call sites → wants its own card.**
+  🛑 **T-102 and T-103 remain open** and gate the search screens looking right.
+
+  📓 **The full narrative — every measurement, every mistake — is in `docs/JOURNAL.md` 2026-08-31.**
   ✅ **OWNER DECISIONS 2026-08-30 (asked and answered before the plan was written):**
   **① dark mode is DROPPED** (the 33 artboards have no dark variant) · **② scope is user + driver
   only, admin maybe later — "do nothing for new roles, think like there is no other new roles"**

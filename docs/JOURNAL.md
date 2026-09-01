@@ -5,6 +5,98 @@
 
 ---
 
+## 2026-08-31 — T-101: both apps off 1 803 hardcoded colours, and four contrast defects found by measuring
+
+- **Task:** T-101 — the colour half of the redesign, finished. **User 839 → 1 · driver 964 → 3**,
+  across seven commits (`66d2b15` … `c005785`). **The last two doc edits are uncommitted.**
+
+- 🟢 **BOTH APPS ARE AT THEIR FLOOR. The 4 literals left are all deliberate:**
+  `FACEBOOK_BRAND_BLUE` (Meta requires it verbatim on their login button) · `PLAY_STORE_BLACK` +
+  `APP_STORE_BLUE` (store-badge guidelines) · `VEHICLE_SWATCH_FALLBACK` (a car's paint colour,
+  replaced at runtime by `hex_code` from the DB — car colours are data, not design tokens).
+  **Goal 5 of the card is met.** Both ratchets were re-proven able to go red at every new ceiling.
+
+### 🛑 READ THIS BEFORE SAYING T-101 IS DONE
+
+**TOKENIZED IS NOT REBUILT.** Every screen now reads its colours from `themes/`. **Almost none has
+been rebuilt to match its artboard** — the layouts are still the pre-T-101 layouts. Steps 8-22 are
+annotated individually with what was and was not done. *This is the exact ambiguity the owner had
+to catch from a screenshot on 2026-08-30; do not let the number imply more than it means.*
+
+**AND ALMOST NONE OF IT HAS RUN ON A DEVICE.** Both splash screens changed structurally, and the
+ink-ladder change altered supporting text on **every screen in both apps**.
+
+### The measurements that changed decisions
+
+- 🔴 **FILL TOKENS ARE NOT INK TOKENS — this was a defect CLASS, not a one-off.** The migration
+  table maps a *value*, not a *role*, so fill colours kept landing on text. The driver's passenger
+  status label rendered "pending" at **1.65:1** — effectively unreadable — plus four stop badges at
+  1.84:1, and **three more were already live in the user app**. One of those was the rating label
+  that the 2026-08-30 session recorded as a contrast *fix*: it went 2.85:1 → **1.84:1**, worse,
+  because the fix moved it from one fill token to another and nobody measured after.
+  → rule written up in `DESIGN-TOKENS.md` §2.10; every later conversion was role-aware from the start.
+- 🔴 **`text.secondary` (3.98:1) and `text.tertiary` (3.28:1) failed AA for normal text** and were
+  used that way ~200×. **The "they pass AA-large" defence did not survive checking the artboards** —
+  AA-large needs 24px and the artboards use these at **9-12px**, 651 times.
+  🔴 **And the obvious fix was wrong:** pushing both to exactly 4.5:1 produced #736E65 and #726E65 —
+  *two tiers rendering identically*, a meaning bug replacing a legibility one. All three supporting
+  tiers were re-spaced evenly instead (6.42 / 5.43 / 4.61), hue and saturation preserved.
+  **Contrast failures across both apps: 219 → 2, and both survivors are verified decorative.**
+- 🔴 **The light splash needed three fixes the mapping alone would have shipped:** wordmark
+  **2.56:1** (`brand` is the logo green — `light.ts` warns about exactly this), tagline 3.98:1,
+  loading label 3.28:1. All now 5.29 / 6.41 / 6.41.
+- ✅ **Six new palette tokens, measured not invented** — `maleTint` `maleInk` `femaleTint`
+  `femaleInk` `blueTintSoft` `blueBorder`, read off the gender picker in `UserBuyurtma.dc.html`.
+  **The seat marker is THREE states** (neutral/male/female), each needing a fill *and* a border;
+  the palette had two colours and no tints, so mapping to what existed would have made different
+  seats render identically.
+
+### Mistakes worth carrying forward
+
+- 🔴 **I broke the build with a find-and-replace and the baseline caught it, not me.** Six files in
+  the passenger-offer cluster use double-quoted strings, so stylesheet values became JSX braces —
+  `tsc` 6 → 34. The same six referenced `theme` without importing it. **Both fixed before shipping,
+  both invisible to reading.**
+- 🔴 **My first contrast audit was over-broad and I nearly reported 219 "failures" as conversion
+  bugs.** Most were `text.secondary`/`text.tertiary` — tokens *designed* to be text, failing because
+  of the palette, not the conversion. **A finding stated at the wrong altitude is a wrong finding.**
+- 🔴 **I claimed `SplashScreen` might load before the theme and would need care. It already imported
+  the theme.** Unfounded caution, corrected the moment I opened the file.
+- 🔴 **Shell quoting ate backslashes in a Python heredoc** — the same trap as 2026-08-30's i18n
+  checker. Fixed by passing the path through an env var.
+- 🟢 **One that went right: checking the artboard before deleting.** `ProfileScreen` paints a
+  coloured tint/dot per menu row; `UserMainMenu.dc.html` has **no coloured icon circles at all**.
+  Deleting them is a layout change, so they were mapped and flagged for step 12 rather than
+  smuggled into a repaint.
+- 🟢 **And another: the driver splash's mirrored circles were preserved, not "corrected".** They
+  are a deliberate pre-existing difference from the user app.
+
+### Decisions the owner made
+
+splash redesigned light (no artboard defines one) · `themes/palettes/dark.ts` **deleted** in both
+apps along with the dead `darkPalette` alias — **goal 4 is now genuinely met, not just unreachable**
+· the ink-ladder call was **delegated to me** and is recorded in `DESIGN-TOKENS.md` §2.11 with its
+reasoning, so it can be reversed on sight.
+
+### Verification
+
+**user `tsc` 6 · lint 216 · 1 colour** (lint two *below* the 218 baseline — conversions removed
+unused imports). **driver `tsc` 28 · lint 280 · 3 colours** (two below its 282). Every session's
+diff was checked mechanically to contain **only** colour lines plus theme imports. No baseline was
+ever rebaselined upward to accommodate a change.
+
+### Next
+
+1. 🛑 **A device pass over both apps — this is the real gate**, and the biggest unverified surface
+   is the ink-ladder change (every screen) and the two rebuilt splash screens.
+2. **The artboard rebuild** — the visible half of T-101, not started.
+3. **Step 23 is ~370 call sites** (`createTheme` 98 · `palette.background` 77 · `palette.success`
+   68 · …). Measured, sized, and **wants its own card** — it has no visual intent, so a regression
+   there is silent.
+4. **T-102 and T-103 are still open** and gate the search screens looking right.
+
+---
+
 ## 2026-08-30 — T-101: the new design system, foundation to five screens
 
 - **Task:** T-101 — rebuild both apps on the 33 `htmlDesign/` artboards the owner drew 2026-08-29.
