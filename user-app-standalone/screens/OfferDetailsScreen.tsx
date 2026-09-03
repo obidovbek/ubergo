@@ -15,7 +15,6 @@ import {
   TextInput,
   SafeAreaView,
   StatusBar,
-  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { MainNavigationProp } from '../navigation/types';
@@ -30,7 +29,8 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { subscribePushReceived } from '../utils/pushEvents';
-import { theme } from '../themes';
+import { TopBar } from '../components/chrome/TopBar';
+import { theme, font } from '../themes';
 
 /**
  * How each status of the passenger's OWN request is presented (T-067).
@@ -354,18 +354,18 @@ export default function OfferDetailsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('offerDetails.title')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      {/*
+        T-101 step 10 — the shared `TopBar` replaces the hand-rolled header.
+        ⚠️ `background="flat"`: measured, the gradient belongs to LANDING boards; detail
+        and form screens sit on the flat ground. `onBackPress` is required because this
+        screen is PUSHED over the tab bar — no artboard draws a back arrow, since each
+        board is a standalone frame that models no push.
+      */}
+      <TopBar
+        title={t('offerDetails.title')}
+        background="flat"
+        onBackPress={() => navigation.goBack()}
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Route Card */}
@@ -867,38 +867,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.ground,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    paddingBottom: 16,
-    backgroundColor: theme.palette.ground,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.palette.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    width: 40,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -908,7 +876,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: theme.palette.text.secondary,
     fontSize: 15,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   scrollView: {
     flex: 1,
@@ -942,14 +910,14 @@ const styles = StyleSheet.create({
   routeLabel: {
     fontSize: 12,
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...font('sans', 600),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   routeText: {
     fontSize: 17,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.primary,
     lineHeight: 24,
   },
@@ -1002,13 +970,13 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 12,
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     textAlign: 'center',
   },
   priceCard: {
@@ -1035,12 +1003,12 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 13,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginBottom: 4,
   },
   priceValue: {
     fontSize: 24,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.action,
   },
   frontSeatPriceInfo: {
@@ -1057,7 +1025,7 @@ const styles = StyleSheet.create({
   frontSeatPriceText: {
     fontSize: 12,
     color: theme.palette.male,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   detailsCard: {
     backgroundColor: theme.palette.surface,
@@ -1073,7 +1041,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
     marginBottom: 16,
   },
@@ -1097,20 +1065,20 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 12,
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginBottom: 4,
   },
   detailText: {
     fontSize: 16,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
     lineHeight: 22,
   },
   detailSubtext: {
     fontSize: 14,
     color: theme.palette.text.secondary,
     marginTop: 4,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -1132,20 +1100,20 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 15,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.warnInk,
     marginLeft: 4,
   },
   ratingCount: {
     fontSize: 13,
     color: theme.palette.warnInk,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginLeft: 6,
   },
   ratingCountNew: {
     fontSize: 13,
     color: theme.palette.text.tertiary,
-    fontWeight: '500',
+    ...font('sans', 500),
     marginLeft: 6,
     fontStyle: 'italic',
   },
@@ -1166,14 +1134,14 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
   },
   noteText: {
     fontSize: 15,
     color: theme.palette.text.secondary,
     lineHeight: 22,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   /* ── T-084: what the driver offers ────────────────────────────────── */
   amenityRow: {
@@ -1193,7 +1161,7 @@ const styles = StyleSheet.create({
   amenityText: {
     fontSize: 13,
     color: theme.palette.actionPressed,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   amenityNote: {
     marginTop: 10,
@@ -1227,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   salonTileLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.muted,
     textAlign: 'center',
   },
@@ -1237,7 +1205,7 @@ const styles = StyleSheet.create({
   salonTilePrice: {
     marginTop: 4,
     fontSize: 15,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
   },
   seatCard: {
@@ -1270,13 +1238,13 @@ const styles = StyleSheet.create({
   },
   seatCount: {
     fontSize: 48,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
   },
   seatCountLabel: {
     fontSize: 14,
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginTop: 4,
   },
   optionsContainer: {
@@ -1284,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   optionsTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
     marginBottom: 12,
   },
@@ -1313,7 +1281,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   optionTextContainer: {
     flex: 1,
@@ -1321,7 +1289,7 @@ const styles = StyleSheet.create({
   optionPriceText: {
     fontSize: 12,
     color: theme.palette.male,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginTop: 2,
   },
   checkbox: {
@@ -1347,7 +1315,7 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.ground,
     minHeight: 100,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   bottomSpacing: {
     height: 100,
@@ -1383,13 +1351,13 @@ const styles = StyleSheet.create({
   priceBreakdownLabel: {
     fontSize: 13,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...font('sans', 500),
     flex: 1,
   },
   priceBreakdownValue: {
     fontSize: 13,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   totalSection: {
     flexDirection: 'row',
@@ -1399,11 +1367,11 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 15,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   totalPrice: {
     fontSize: 32,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.action,
   },
   joinButton: {
@@ -1434,11 +1402,11 @@ const styles = StyleSheet.create({
   },
   requestStatusTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    ...font('sans', 700),
   },
   requestStatusHint: {
     fontSize: 13,
-    fontWeight: '500',
+    ...font('sans', 500),
     marginTop: 2,
     opacity: 0.9,
   },
@@ -1450,7 +1418,7 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: theme.palette.surface,
     fontSize: 17,
-    fontWeight: '700',
+    ...font('sans', 700),
   },
 });
 

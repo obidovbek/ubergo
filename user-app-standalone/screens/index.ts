@@ -10,5 +10,6 @@ export { MenuScreen } from './MenuScreen';
 export { HomeScreen } from './HomeScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { CreatePassengerOfferScreen } from './CreatePassengerOfferScreen';
-export { MyPassengerOffersScreen } from './MyPassengerOffersScreen';
+// T-101 step 9 — the merged order list; replaces MyBookingsScreen + MyPassengerOffersScreen.
+export { default as MyOrdersScreen } from './MyOrdersScreen';
 

@@ -237,7 +237,14 @@ const styles = StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.palette.info.light + '20',
+    /*
+     * T-101 step 12 — was `theme.palette.info.light + '20'`, a colour BUILT AT RUNTIME by
+     * string concatenation. `check-design-tokens.mjs` scans for literals, so no literal
+     * meant no finding: this shipped as an untokenised fill while the app measured clean.
+     * Third instance of the class (five more were in `NotificationsScreen`, step 11).
+     * `blueTint` is the measured token for an informational surface.
+     */
+    backgroundColor: theme.palette.blueTint,
     padding: theme.spacing(2),
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing(4),

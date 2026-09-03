@@ -335,6 +335,9 @@ export default {
     title: "Xabarnomalar",
     noNotifications: "Xabarnomalar yo'q",
     markAllRead: "Barchasini o'qilgan deb belgilash",
+    /** T-101 step 11 — the artboard's own wording, short enough for a panel row. */
+    markAllShort: "Hammasini o'qildi",
+    unreadCount: "{count} ta o'qilmagan",
     markAllReadConfirm:
       "Barcha xabarnomalarni o'qilgan deb belgilashni xohlaysizmi?",
     allMarkedRead: "Barcha xabarnomalar o'qilgan deb belgilandi",
@@ -476,6 +479,59 @@ export default {
   },
 
   // My Bookings Screen
+  /**
+   * T-101 step 9 — the MERGED order list (ride requests + bookings in one screen).
+   * Copy taken from `UserMyOrder.dc.html` itself, not invented.
+   */
+  /**
+   * T-101 step 11 — the slide-in drawer. Labels are the artboard's own (`NAV` in
+   * `UserMyOrder.dc.html`), not invented.
+   */
+  drawer: {
+    open: "Menyu",
+    close: "Menyuni yopish",
+    /** Shown on entries that have no screen yet — the artboard dims unbuilt services too. */
+    soon: "Tez orada",
+    groupOrder: "Buyurtma",
+    orderCreate: "Buyurtma berish",
+    orderMine: "Mening buyurtmalarim",
+    groupMessages: "Xabarlar",
+    messagesAll: "Xabarlar",
+    messagesService: "Servis xabarlar",
+    chat: "Chat",
+    balance: "Balans",
+    promo: "Promo",
+    promotions: "Aksiyalar",
+    contacts: "Kontaktlar",
+    settings: "Sozlamalar",
+    prices: "Narxlar",
+    guides: "Yo'riqnomalar",
+  },
+
+  myOrders: {
+    title: "Mening buyurtmalarim",
+    modeJarayon: "Jarayonda",
+    modeAktiv: "Faol",
+    modeTarix: "Tarix",
+    listJarayon: "Shafyor javobini kutayotgan buyurtmalar",
+    listAktiv: "Barcha marshrutlar bo'yicha",
+    listTarix: "Yakunlangan buyurtmalar",
+    listCount: "{count} ta buyurtma",
+    emptyJarayonTitle: "Jarayonda buyurtma yo'q",
+    emptyJarayonBody:
+      "Buyurtma shartlarini yuborsangiz, shafyor javobini kutayotgan buyurtmalar shu yerda turadi.",
+    emptyAktivTitle: "Faol buyurtma yo'q",
+    emptyAktivBody: "Shafyor qabul qilgan buyurtmalar shu yerga o'tadi.",
+    emptyTarixTitle: "Tarix bo'sh",
+    emptyTarixBody: "Yakunlangan safarlaringiz shu yerda saqlanadi.",
+    /** A row the passenger posted, as opposed to a seat they booked. */
+    myRequest: "Mening buyurtmam",
+    driversInterested: "{count} ta shafyor javob berdi",
+    awaitingDrivers: "Shafyor javobi kutilmoqda",
+    seatsNeeded: "{count} ta o'rin",
+    newOrder: "Yangi buyurtma",
+  },
+
   myBookings: {
     title: "Mening bronlarim",
     pending: "Kutilmoqda",

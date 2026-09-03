@@ -24,11 +24,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
-  StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +42,7 @@ import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatNumberWithSpaces } from '../utils/format';
 import { dialPhone, formatContactPhone } from '../utils/contactPhone';
+import { TopBar } from '../components/chrome/TopBar';
 import { theme } from '../themes';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -203,53 +203,52 @@ export default function OfferDriversScreen() {
     // relying on the field's absence alone would make a server change silent.
     const isConfirmed = item.status === 'confirmed';
     const driverPhone = item.driver?.phone_e164;
+    const name = driverNameOf(item, t('offerDrivers.unknownDriver'));
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.driverInfo}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={18} color={theme.palette.male} />
-            </View>
-            <Text style={styles.driverName} numberOfLines={1}>
-              {driverNameOf(item, t('offerDrivers.unknownDriver'))}
-            </Text>
+        {/* The artboard's card head: round avatar, name, status pill on the right. */}
+        <View style={styles.cardHead}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{name.slice(0, 2).toUpperCase()}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: colors.bg }]}>
-            <Text style={[styles.badgeText, { color: colors.text }]}>
+          <View style={styles.cardHeadText}>
+            <Text style={styles.driverName} numberOfLines={1}>
+              {name}
+            </Text>
+            {/* `vehicle` is optional on the payload, so every field is guarded. */}
+            {v ? (
+              <Text style={styles.carLine} numberOfLines={1}>
+                {[v.make?.name, v.model?.name, v.color?.name].filter(Boolean).join(' ')}
+                {v.license_plate ? ` · ${v.license_plate}` : ''}
+              </Text>
+            ) : null}
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: colors.bg }]}>
+            <Text style={[styles.statusText, { color: colors.text }]}>
               {t(`offerDrivers.status_${item.status}`)}
             </Text>
           </View>
         </View>
 
-        {/* `vehicle` is optional on the payload, so every field is guarded. */}
-        {v ? (
-          <View style={styles.row}>
-            <Ionicons name="car-outline" size={16} color={theme.palette.text.secondary} />
-            <Text style={styles.rowText} numberOfLines={1}>
-              {[v.make?.name, v.model?.name, v.color?.name].filter(Boolean).join(' ')}
-              {v.license_plate ? ` · ${v.license_plate}` : ''}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.row}>
-          <Ionicons name="people-outline" size={16} color={theme.palette.text.secondary} />
-          <Text style={styles.rowText}>
-            {t('offerDrivers.seatsOffered').replace(
-              '{count}',
-              String(item.seats_offered)
-            )}
+        {/*
+          The artboard's inset "well": the offer's terms on the sunken ground, seats on
+          the left and the money in MONO on the right — every number in these boards is
+          monospaced, and a price column only lines up in a monospaced face.
+        */}
+        <View style={styles.termsWell}>
+          <Text style={styles.termsSeats}>
+            {t('offerDrivers.seatsOffered').replace('{count}', String(item.seats_offered))}
+          </Text>
+          <Text style={styles.termsPrice}>
+            {formatNumberWithSpaces(item.offered_price_per_seat)} {item.currency}
           </Text>
         </View>
 
-        <View style={styles.row}>
-          <Ionicons name="cash-outline" size={16} color={theme.palette.text.secondary} />
-          <Text style={styles.rowText}>
-            {formatNumberWithSpaces(item.offered_price_per_seat)} {item.currency}
-            {'  ·  '}
-            {t('offerDrivers.total')}: {formatNumberWithSpaces(item.total_offered_price)}{' '}
-            {item.currency}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>{t('offerDrivers.total')}</Text>
+          <Text style={styles.totalValue}>
+            {formatNumberWithSpaces(item.total_offered_price)} {item.currency}
           </Text>
         </View>
 
@@ -265,14 +264,14 @@ export default function OfferDriversScreen() {
           <View style={styles.contactBox}>
             <Text style={styles.contactLabel}>{t('offerDrivers.contactTitle')}</Text>
             {driverPhone ? (
-              <TouchableOpacity
+              <Pressable
                 style={styles.callButton}
                 onPress={() => dialPhone(driverPhone, t)}
-                activeOpacity={0.7}
+                accessibilityRole="button"
               >
-                <Ionicons name="call" size={16} color={theme.palette.surface} />
+                <Ionicons name="call" size={17} color={theme.palette.text.onAccent} />
                 <Text style={styles.callText}>{formatContactPhone(driverPhone)}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ) : (
               // A driver who signed up with Google SSO can have no number on
               // file. Say so rather than showing a button that dials nothing.
@@ -283,26 +282,26 @@ export default function OfferDriversScreen() {
 
         {isPending && (
           <View style={styles.actions}>
-            <TouchableOpacity
+            <Pressable
               style={[styles.actionButton, styles.rejectButton, disabled && styles.buttonDisabled]}
               onPress={() => handleReject(item)}
               disabled={disabled}
-              activeOpacity={0.7}
+              accessibilityRole="button"
             >
               {busyId === item.id ? (
                 <ActivityIndicator size="small" color={theme.palette.dangerText} />
               ) : (
                 <Text style={styles.rejectText}>{t('offerDrivers.reject')}</Text>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               style={[styles.actionButton, styles.acceptButton, disabled && styles.buttonDisabled]}
               onPress={() => handleAccept(item)}
               disabled={disabled}
-              activeOpacity={0.7}
+              accessibilityRole="button"
             >
               <Text style={styles.acceptText}>{t('offerDrivers.accept')}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
       </View>
@@ -310,54 +309,47 @@ export default function OfferDriversScreen() {
   };
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons
-        name={loadFailed ? 'alert-circle-outline' : 'car-outline'}
-        size={56}
-        color={theme.palette.text.disabled}
-      />
+    <View style={styles.empty}>
       <Text style={styles.emptyTitle}>
         {loadFailed ? t('offerDrivers.loadFailed') : t('offerDrivers.emptyTitle')}
       </Text>
-      {!loadFailed && (
-        <Text style={styles.emptyText}>{t('offerDrivers.emptyMessage')}</Text>
-      )}
+      {!loadFailed && <Text style={styles.emptyBody}>{t('offerDrivers.emptyMessage')}</Text>}
     </View>
   );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+        <TopBar
+          title={t('offerDrivers.title')}
+          onBackPress={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.palette.male} />
+          <ActivityIndicator size="large" color={theme.palette.action} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
-        </TouchableOpacity>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {t('offerDrivers.title')}
-          </Text>
-          {pendingCount > 0 && (
-            <Text style={styles.headerSubtitle}>
-              {t('offerDrivers.pendingCount').replace('{count}', String(pendingCount))}
-            </Text>
-          )}
-        </View>
-      </View>
+    /*
+     * ⚠️ `edges` WITHOUT 'top' — `TopBar` applies the top inset itself via
+     * `useSafeAreaInsets`. Letting SafeAreaView pad as well shifts the header down by a
+     * whole status bar; the double-inset defect found in step 8. The old header here
+     * used `edges={['top']}` because it did its own padding.
+     */
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/*
+        ⚠️ `background="flat"`. The gradient is NOT universal — measured across the
+        artboards, landing screens carry it and detail/form screens sit on the flat
+        ground. This is a screen pushed over the tab bar, so it also needs `onBackPress`,
+        which no artboard draws (each board is a standalone frame and models no push).
+      */}
+      <TopBar
+        title={t('offerDrivers.title')}
+        background="flat"
+        onBackPress={() => navigation.goBack()}
+      />
 
       <FlatList
         data={drivers}
@@ -366,9 +358,25 @@ export default function OfferDriversScreen() {
         contentContainerStyle={
           drivers.length === 0 ? styles.emptyListContent : styles.listContent
         }
+        ListHeaderComponent={
+          pendingCount > 0 ? (
+            <View style={styles.listHead}>
+              <Text style={styles.listHeadTitle}>{t('offerDrivers.title')}</Text>
+              <Text style={styles.listHeadCount}>
+                {t('offerDrivers.pendingCount').replace('{count}', String(pendingCount))}
+              </Text>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={theme.palette.action}
+            colors={[theme.palette.action]}
+          />
         }
       />
     </SafeAreaView>
@@ -378,110 +386,157 @@ export default function OfferDriversScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.palette.ground },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-  },
-  backButton: { padding: 4, marginRight: 8 },
-  headerTextWrap: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.palette.text.primary },
-  headerSubtitle: { fontSize: 13, color: theme.palette.text.secondary, marginTop: 2 },
-  listContent: { padding: 16, paddingBottom: 32 },
-  emptyListContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  card: {
-    backgroundColor: theme.palette.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardHeader: {
+
+  listContent: { paddingHorizontal: 18, paddingBottom: 32, gap: 12 },
+  emptyListContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 18 },
+  listHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 10,
+    paddingHorizontal: 2,
   },
-  driverInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+  listHeadTitle: {
+    ...theme.typography.caption,
+    ...theme.font('sans', 700),
+    color: theme.palette.text.secondary,
+  },
+  listHeadCount: {
+    ...theme.typography.monoMeta,
+    ...theme.font('mono', 600),
+    color: theme.palette.text.tertiary,
+  },
+
+  // ---------------------------------------------------------------- card
+  card: {
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderHairline,
+    borderColor: theme.palette.borders.chrome,
+    borderRadius: theme.borderRadius.card,
+    padding: 13,
+    gap: 10,
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.palette.blueTint,
+    width: 42,
+    height: 42,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.palette.successTint,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
   },
-  driverName: { fontSize: 16, fontWeight: '600', color: theme.palette.text.primary, flex: 1 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  rowText: { fontSize: 14, color: theme.palette.text.muted, marginLeft: 8, flex: 1 },
-  messageBox: {
+  avatarText: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.actionPressed },
+  cardHeadText: { flex: 1, minWidth: 0, gap: 3 },
+  driverName: { fontSize: 14.5, ...theme.font('sans', 800), color: theme.palette.text.primary },
+  carLine: { fontSize: 12, ...theme.font('sans', 600), color: theme.palette.text.secondary },
+
+  statusPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.full,
+  },
+  statusText: { fontSize: 10.5, ...theme.font('sans', 800) },
+
+  termsWell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 13,
     backgroundColor: theme.palette.ground,
-    borderRadius: 10,
+  },
+  termsSeats: { flex: 1, fontSize: 12.5, ...theme.font('sans', 800), color: theme.palette.text.primary },
+  termsPrice: { ...theme.typography.monoPrice, color: theme.palette.actionPressed },
+
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  totalLabel: { fontSize: 11, ...theme.font('sans', 600), color: theme.palette.text.tertiary },
+  totalValue: {
+    ...theme.typography.monoMeta,
+    ...theme.font('mono', 700),
+    color: theme.palette.text.primary,
+  },
+
+  messageBox: {
     padding: 10,
-    marginTop: 4,
-    marginBottom: 4,
+    borderRadius: 13,
+    backgroundColor: theme.palette.ground,
   },
-  messageText: { fontSize: 14, color: theme.palette.text.muted, fontStyle: 'italic' },
+  messageText: { ...theme.typography.secondary, color: theme.palette.text.secondary },
+
   contactBox: {
-    backgroundColor: theme.palette.successTint,
-    borderRadius: 10,
+    gap: 8,
     padding: 12,
-    marginTop: 8,
+    borderRadius: theme.borderRadius.field,
+    backgroundColor: theme.palette.successTint,
   },
-  contactLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.palette.actionPressed,
-    marginBottom: 8,
-  },
+  contactLabel: { fontSize: 11, ...theme.font('sans', 700), color: theme.palette.actionPressed },
   callButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    minHeight: 46,
+    borderRadius: theme.borderRadius.field,
     backgroundColor: theme.palette.action,
-    borderRadius: 12,
-    paddingVertical: 12,
   },
-  callText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
-  contactMissing: { fontSize: 14, color: theme.palette.text.secondary },
-  actions: { flexDirection: 'row', marginTop: 12, gap: 10 },
+  callText: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.text.onAccent },
+  contactMissing: { ...theme.typography.secondary, color: theme.palette.text.secondary },
+
+  actions: {
+    flexDirection: 'row',
+    gap: 9,
+    paddingTop: 9,
+    borderTopWidth: theme.sizes.borderHairline,
+    borderTopColor: theme.palette.borders.chrome,
+  },
   actionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    minHeight: 46,
+    borderRadius: theme.borderRadius.field,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rejectButton: { backgroundColor: theme.palette.dangerTint },
-  acceptButton: { backgroundColor: theme.palette.action },
-  rejectText: { color: theme.palette.dangerText, fontWeight: '700', fontSize: 15 },
-  acceptText: { color: theme.palette.surface, fontWeight: '700', fontSize: 15 },
-  buttonDisabled: { opacity: 0.5 },
-  emptyContainer: { alignItems: 'center', paddingHorizontal: 24 },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: theme.palette.text.muted,
-    marginTop: 16,
-    textAlign: 'center',
+  /*
+   * ⚠️ REJECT IS THE QUIET BUTTON, ACCEPT THE LOUD ONE — and that asymmetry is
+   * deliberate: accepting is irreversible and auto-rejects every rival bid (see the file
+   * header), so the destructive-looking control is the one that does LESS harm. Reject
+   * is an outlined danger button rather than a danger FILL: `dangerTint` behind
+   * `dangerText` measures 4.88:1, while a filled danger button would compete with accept
+   * for the eye.
+   */
+  rejectButton: {
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderEmphasis,
+    borderColor: theme.palette.dangerBorder,
   },
-  emptyText: {
-    fontSize: 14,
+  acceptButton: { backgroundColor: theme.palette.action },
+  rejectText: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.dangerText },
+  acceptText: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.text.onAccent },
+  buttonDisabled: { opacity: theme.states.disabledOpacity },
+
+  // ---------------------------------------------------------------- empty
+  empty: {
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderHairline,
+    borderColor: theme.palette.borders.emphasis,
+    borderStyle: 'dashed',
+    borderRadius: theme.borderRadius.card,
+    paddingVertical: 26,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyTitle: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.text.primary },
+  emptyBody: {
+    ...theme.typography.secondary,
     color: theme.palette.text.secondary,
-    marginTop: 8,
     textAlign: 'center',
-    lineHeight: 20,
   },
 });

@@ -294,6 +294,9 @@ export default {
     title: 'Уведомления',
     noNotifications: 'Нет уведомлений',
     markAllRead: 'Отметить все как прочитанные',
+    /** T-101 step 11 — короткая форма для строки панели. */
+    markAllShort: 'Прочитать все',
+    unreadCount: 'непрочитанных: {count}',
     markAllReadConfirm: 'Вы хотите отметить все уведомления как прочитанные?',
     allMarkedRead: 'Все уведомления отмечены как прочитанные',
     markReadError: 'Не удалось отметить уведомление как прочитанное',
@@ -429,6 +432,51 @@ export default {
   },
 
   // My Bookings Screen
+  /** T-101 step 9 — объединённый список заказов. */
+  /** T-101 step 11 — выдвижное меню. */
+  drawer: {
+    open: 'Меню',
+    close: 'Закрыть меню',
+    soon: 'Скоро',
+    groupOrder: 'Заказы',
+    orderCreate: 'Создать заказ',
+    orderMine: 'Мои заказы',
+    groupMessages: 'Сообщения',
+    messagesAll: 'Сообщения',
+    messagesService: 'Сервисные сообщения',
+    chat: 'Чат',
+    balance: 'Баланс',
+    promo: 'Промо',
+    promotions: 'Акции',
+    contacts: 'Контакты',
+    settings: 'Настройки',
+    prices: 'Цены',
+    guides: 'Инструкции',
+  },
+
+  myOrders: {
+    title: 'Мои заказы',
+    modeJarayon: 'В процессе',
+    modeAktiv: 'Активные',
+    modeTarix: 'История',
+    listJarayon: 'Заказы в ожидании водителя',
+    listAktiv: 'По всем маршрутам',
+    listTarix: 'Завершённые заказы',
+    listCount: 'заказов: {count}',
+    emptyJarayonTitle: 'Нет заказов в процессе',
+    emptyJarayonBody:
+      'Отправьте условия заказа — и заказы в ожидании водителя появятся здесь.',
+    emptyAktivTitle: 'Нет активных заказов',
+    emptyAktivBody: 'Заказы, принятые водителем, перейдут сюда.',
+    emptyTarixTitle: 'История пуста',
+    emptyTarixBody: 'Здесь хранятся ваши завершённые поездки.',
+    myRequest: 'Мой заказ',
+    driversInterested: 'откликнулось водителей: {count}',
+    awaitingDrivers: 'Ожидание водителя',
+    seatsNeeded: 'мест: {count}',
+    newOrder: 'Новый заказ',
+  },
+
   myBookings: {
     title: 'Мои бронирования',
     pending: 'В ожидании',

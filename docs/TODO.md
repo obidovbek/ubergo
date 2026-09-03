@@ -271,6 +271,44 @@
   ⚠️ **Per `ubexgo-app-conventions`: tokens are DUPLICATED per app, not extracted to a package.**
   An earlier centralisation attempt was the wrong call. Edit both copies together, verify `diff -q`.
 
+  🟢 **2026-09-03 — STEPS 9-12 DONE IN ONE SESSION. FOUR MORE SCREENS, AND FOUR CARDS WHOSE
+  PREMISE WAS WRONG UNTIL MEASURED.**
+  **Step 9 — the merged order list.** `MyBookings` + `MyPassengerOffers` → ONE `MyOrdersScreen`.
+  The artboard's three modes (`Jarayonda`/`Faol`/`Tarix`) are **lifecycle stages, not statuses**,
+  and they cut ACROSS both screens — which is why two ~1 000-line screens that disagreed with each
+  other about their own tabs became one. Rules extracted to `utils/orderLifecycle.ts` + 18 cases.
+  🔴 **Two contrast defects came over with the code:** `driver_found` used `brand` on `successTint`
+  and its comment **claimed 6.96:1** — but `brand` is the bright `#05BB42`, so it really measured
+  **2.24:1**. *The comment had measured a different token than the code used.* Also `cancelled`
+  used a FILL as ink (4.20:1). Both fixed; all 20 pairs pass AA.
+  **Step 10 — `OfferDrivers` rebuilt, `OfferDetails` converted** (1 456 lines, 47+/79-, no booking
+  logic in the diff). 🔴 **The card's premise was wrong:** the artboard's "detail state" is a
+  read-only SHEET over the order list; `OfferDetails` is a *join form* reached from search.
+  Recorded, not papered over. **34 `fontWeight` literals → `font()` — the Android font trap.**
+  **Step 11 — the drawer, which never existed.** 🔴 **`TopBar`'s hamburger had been wired to the
+  wrong thing since step 3**: it opened the PROFILE on the home screen (what the avatar already
+  did) and navigated Home on the orders tab. `NavDrawer` now exists; **6 of its 10 entries have no
+  screen and render dimmed** — the artboard's own `navGo()` handles exactly one of ten.
+  **Step 12 — `ProfileScreen` rebuilt, `EditProfile` converted** (31+/60-, no save/validation line).
+  **The six coloured tint/dot pairs are deleted**, as the card predicted — 🔴 **and they encoded
+  nothing**: `bell`/`help` shared an amber pair, `edit`/`card` a blue one. Five colours, six rows.
+  🔴 **A COLOUR CLASS THE TOKEN RATCHET CANNOT SEE.** Fills built at RUNTIME as `colour + '20'`
+  carry no literal, so `check-design-tokens.mjs` read those screens as clean at 0. Five found in
+  `NotificationsScreen`, then **the class was swept across BOTH apps** (`palette\.[a-zA-Z.]* *\+
+  *['"]`) — two more in `NetworkStatus.tsx`. **Both apps are clean of it now.**
+  ✅ **Checkers: 18 lifecycle cases · 69 i18n keys × 3 locales · 8 ride-time. Every one proven able
+  to go red.** 🔴 **The i18n checker was twice the bug it exists to catch** — v1 skipped keys
+  reaching `t()` via a ternary and stayed GREEN on a deliberate break; v2's generalised regex had
+  an unescaped dot that would match `drawerXopen`.
+  📋 **T-105 has grown:** both old order screens are orphaned (**2 of the user app's 6 baseline
+  `tsc` errors live inside one of them**), `menu-items/index.ts` is dead with zero importers, and
+  `MenuButton` is down to 2 real call sites.
+  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
+  🛑 **NOTHING FROM STEPS 6b, 8e, 8f, 9, 10, 11 OR 12 HAS BEEN SEEN ON A DEVICE.** The queue is now
+  six steps deep and includes brand-new interaction surface (the drawer) and a converted booking
+  form. **Step 13 is the auth flow — the OR-003 SMS-Retriever hash and the T-061/T-063 validators
+  live there, and no baseline can see an autofill break.** A device pass belongs before it.
+
 - [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 1-8a DONE 2026-08-16. FIVE OF SIX METHODS BUILT AND THE MONEY
   PATH VERIFIED AGAINST THE REAL test3 DATABASE** → `docs/PLAN.md`.
   ✅ **PROVEN, not reasoned:** a credit lands · 🔴 **the same `transactionId` twice credits ONCE and

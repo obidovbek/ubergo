@@ -809,19 +809,221 @@ Edit both copies together and verify with `diff -q`.
       🔴 **THE SEAT MARKER IS THREE STATES, NOT TWO** — neutral / male / female, each a fill *and* a
       border. The palette had `male` and `female` but no tints; mapping all three to what existed
       would have made different seats render identically.
-- [ ] **9.** `MyBookingsScreen` + `MyPassengerOffersScreen` → `UserMyOrder.dc.html`
-- [ ] **10.** `OfferDetailsScreen` + `OfferDriversScreen` → `UserMyOrder.dc.html` detail states
-      🟡 **2026-08-31 — `OfferDriversScreen` IS TOKENIZED (41 → 0), NOT REBUILT.** Its colours now
-      come from `themes/`; its layout is untouched and does not match the artboard yet.
-- [ ] **11.** `MenuScreen` + `NotificationsScreen` → drawer + bell panel in the artboards
-- [ ] **12.** `ProfileScreen` + `EditProfileScreen` → profile sheet in `UserMainMenu.dc.html`
-      🟡 **2026-08-31 — BOTH TOKENIZED (43 + 49 → 0), NEITHER REBUILT.** Layouts untouched.
-      🔴 **AND THE ARTBOARD DELETES SOMETHING THE CODE STILL HAS.** `ProfileScreen` paints a
-      different coloured tint/dot pair per menu row (amber, blue, indigo, pink, grey);
-      `UserMainMenu.dc.html` has **no coloured icon circles at all** — its menu is monochrome ink
-      with green accents. Verified by counting the artboard's own literals. The pairs were mapped
-      to the nearest tokens to clear the ratchet; **this step should DELETE them**, which is a
-      layout change and so was left for the rebuild rather than smuggled into a repaint.
+- [x] **9. `MyBookingsScreen` + `MyPassengerOffersScreen` → `UserMyOrder.dc.html`.
+      ✅ DONE 2026-09-03 — THE TWO SCREENS BECAME ONE.**
+      🔴 **THIS STEP WAS A MERGE, NOT A REPAINT, AND MEASURING IS WHAT SHOWED IT.** The
+      artboard's three modes — `Jarayonda` / `Faol` / `Tarix` — are **LIFECYCLE STAGES**, read
+      off its own `buildList()`: `(done||cancelled) ? tarix : step===0 ? jarayon : aktiv`. They
+      cut **across** the two screens rather than along them: a passenger asks *"have I got a
+      driver yet?"*, not *"whose offer was this?"*. The two screens sliced the same journey by
+      SOURCE — an implementation detail — and **disagreed with each other about their own tabs**
+      (all/pending/confirmed vs all/published/completed/cancelled).
+      ✅ **The plan of record already said so:** `MenuScreen`'s step-6b comment names *"a segment
+      inside MyBookings — that belongs to step 9"*. **That text-link workaround is now retired.**
+      ✅ **Owner decisions 2026-09-03:** full merge into the one tab; **build only what has a
+      backend.**
+      🛑 **FOUR ARTBOARD FEATURES DELIBERATELY NOT BUILT — they have no API:** the tax receipt
+      ("Chek", fiscal mark), the "budilnik" alarm ping, the in-app message sheet, and the
+      like/dislike + tags rating. **The stars-and-comment rating IS real and was kept.** Drawing
+      the other three would ship four dead buttons on a screen about to be walked on a device.
+      ✅ **`utils/orderLifecycle.ts` — the grouping as PURE FUNCTIONS**, plus
+      `scripts/check-order-lifecycle.mjs`: **18 cases, importing the REAL module.**
+      **Proven able to fail:** dropping the expiry branch → `published, left 4h ago` lands in
+      `jarayon`, red, exit 1; restored → green.
+      🔴 **TWO CONTRAST FAILURES INHERITED FROM THE OLD SCREENS, BOTH FOUND BY MEASURING:**
+      ① `driver_found` used `brand` on `successTint` and its comment **claimed 6.96:1** — but
+      `brand` is the BRIGHT `#05BB42` (the palette's own note: *"NOT a button fill"*), so it
+      really measured **2.24:1**, barely better than the `#0EA5E9` defect T-101 replaced. *The
+      comment had measured a different colour from the one the code used.* → `actionPressed` on
+      `blueTint`, **6.70:1**. ② `cancelled`/`rejected` used `danger` (a FILL) as ink, **4.20:1**
+      → `dangerText`, **4.88:1** — the §2.10 role rule again.
+      ⚠️ **`completed` MOVED to the neutral `surfaceSunken`** to free the blue: the two inks
+      measured **1.24:1 from each other** on a shared tint, so `driver_found` and `completed`
+      would have read as the same pill — the collision the old comment was right to fear even
+      though its number was wrong. **All 20 pairs on the screen now pass AA**, measured against
+      the real palette (not hand-typed hexes — two of my own probes used wrong values first).
+      ✅ **ONE NEW TOKEN, MEASURED NOT INVENTED: `surfaceTrack` = `#E4E0D7`**, the
+      segmented-control groove (2 uses: `UserMyOrder`, `UserQidiruv`). Added to **both** palettes
+      together; `diff` confirms the only remaining delta is still the documented `brandSuffix`.
+      ✅ **`components/chrome/SegmentedModes.tsx` in both apps** — the mode strip with mono count
+      pills. ⚠️ **NOT the same control as the `Qidiruv` boards' filter strip**, though both carry
+      a count pill: those are `radius 12px 12px 0 0` with `border-bottom:none` — TABS welded to a
+      panel. Measured side by side; **step 17 should build that variant separately.**
+      ✅ **EVERY CARRIED-OVER FIX LISTED IN THE FILE HEADER AND VERIFIED:** T-024 · T-028 · T-039 ·
+      T-040 · T-051 · T-055 · T-068 · the auth-expiry logout. *A rewrite is exactly where such
+      things go missing, so they are enumerated where the next reader will see them.*
+      🟢 **AND `MyBookings` HAD T-051's DEFECT STILL IN IT** — `useEffect(…, [token, filter])`
+      refetched on every tab tap AND raised the full-screen spinner. Fixed on the other screen in
+      T-051 and left standing here: *fix the class, not the instance.* One fetch per visit now,
+      `Promise.allSettled` so one endpoint failing cannot blank the other list.
+      ✅ **19 i18n keys × 3 locales resolve** (new `myOrders` block, copy taken from the artboard
+      itself). 🔴 **THE CHECKER'S FIRST VERSION WAS THE BUG IT EXISTS TO CATCH** — it matched only
+      literal `t('…')`, so it skipped the three mode labels that reach `t()` via a ternary, and
+      breaking `modeAktiv` left it **GREEN**. Widened to every `myOrders.*` literal; now red on
+      that break. *A checker that cannot go red proves nothing — twice learned, now written down.*
+      📋 **BOTH OLD SCREEN FILES ARE NOW ORPHANED** (`MyBookingsScreen.tsx`,
+      `MyPassengerOffersScreen.tsx` — nothing imports them; grep-verified). **NOT deleted —
+      rule 4.** 2 of the user app's 6 baseline `tsc` errors live in the orphan. → **T-105.**
+      📋 **The `MyPassengerOffers` ROUTE is kept as a redirect** to the merged screen so no
+      lingering caller or deep link is stranded; delete it in the same cleanup card.
+      **Baselines unchanged: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 / lint 280 /
+      tokens 3**, plus 45 checker cases green (18 lifecycle · 19×3 i18n · 8 ride-time).
+      🛑 **NOT SEEN ON A DEVICE.**
+- [x] **10. `OfferDetailsScreen` + `OfferDriversScreen`. ✅ DONE 2026-09-03 — but the card's
+      premise was wrong, and measuring is what showed it.**
+      🔴 **NEITHER SCREEN IS THE ARTBOARD'S "DETAIL STATE".** `UserMyOrder.dc.html`'s detail is a
+      read-only **SHEET over the order list** (order code, driver block, route, info rows,
+      cancel + alarm/message/call). The two screens this card names are different things:
+      • **`OfferDetailsScreen` (1 456 lines) is a DRIVER'S OFFER WITH A JOIN FORM** — seat
+        picking, front-seat premium, salon scope, price confirmation. Reached from **search**.
+        It is where you *book* a ride, not where you *view* one you already have.
+      • **`OfferDriversScreen` (487 lines)** is the passenger choosing between bidding drivers.
+      **The artboard specifies neither.** Recorded rather than pretended otherwise.
+      ✅ **Owner decision 2026-09-03: rebuild the small one, convert the big one.**
+      ✅ **`OfferDriversScreen` REBUILT** (487 lines, under the 500-line threshold): shared
+      `TopBar` (`flat` + `onBackPress`), the artboard's card / avatar / status pill / inset
+      "terms well", money in MONO, dashed-border empty state. **All logic preserved verbatim** —
+      T-024 (the screen's reason to exist), T-054 (phone only on the confirmed row), T-068
+      (push scoped by `offer_id`), the `busyId` single-flight guard, and the confirm dialog that
+      **names how many rival drivers a tap will auto-reject**.
+      ⚠️ **REJECT IS DELIBERATELY THE QUIET BUTTON.** Accepting is irreversible and declines
+      every other bidder, so the destructive-*looking* control is the one that does less harm.
+      Reject is an outlined danger button, not a danger FILL.
+      ✅ **`OfferDetailsScreen` CONVERTED, NOT REBUILT** — 1 456 lines of working booking maths
+      (T-067 duplicate-request handling, T-081 salon scope, the front-seat premium that mirrors
+      `OfferPassengerService.joinOffer` exactly). **Proof it stayed safe: 47 insertions /
+      79 deletions, and the diff contains no `joinOffer`, seat, price, salon or token line.**
+      🔴 **34 `fontWeight` LITERALS → `font('sans', n)` — THE ANDROID FONT TRAP.** React Native
+      does **not** synthesise weights on Android: `fontWeight` selects no face at all, the family
+      NAME must carry it. A missing weight does not throw, it silently falls back and looks
+      *nearly* right. All 34 mapped to bundled faces (500/600/700). ⚠️ **And `font` then had to
+      be imported** — the "check the file imports what you used" trap, which has now bitten five
+      times across three days.
+      ✅ **Four dead style blocks deleted** (`header`, `backButton`, `headerTitle`,
+      `headerSpacer` — 0 uses each after the `TopBar` swap) and the then-unused `Platform`
+      import with them. **File terminator re-checked** — the step-8d truncation slip.
+      ⚠️ **`OfferDetailsScreen` imports `SafeAreaView` from `react-native`, NOT
+      safe-area-context** — a no-op on Android, which is exactly what hides the double-inset bug.
+      Left alone (it is not double-padding today because `TopBar` is the only inset applier), but
+      it should move to safe-area-context when someone touches this screen again.
+      ✅ **Contrast measured from the REAL palette: 17/17 pairs pass AA** on the rebuilt screen.
+      `dangerBorder` `#D9705E` is the artboard's own cancel-button border.
+      📋 **THE ARTBOARD'S DETAIL SHEET IS STILL UNBUILT** — it belongs over `MyOrdersScreen`, not
+      here, and two of its three action buttons (alarm ping, in-app message) have no backend.
+      Worth its own card once those exist; the remaining cancel + call already work from the
+      merged card.
+      **Baselines unchanged: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 / lint 280 /
+      tokens 3**, plus 45 checker cases green.
+      🛑 **NOT SEEN ON A DEVICE.**
+- [x] **11. `MenuScreen` + `NotificationsScreen` → drawer + bell panel.
+      ✅ DONE 2026-09-03 — and the hamburger had been lying since step 3.**
+      🔴 **THERE WAS NO DRAWER IN THE APP AT ALL.** `MenuButton.tsx` said so outright (*"the app
+      has no drawer navigator"*), yet `TopBar` has drawn a hamburger since step 3. It was wired
+      to whatever each screen had lying around: on the **home screen it opened the PROFILE — the
+      same thing the avatar beside it did** — and on the orders tab it navigated Home (my own
+      step-9 code, for want of anything better). **Every artboard draws a navigation menu behind
+      that button.** *A control that has been on screen for eight steps doing the wrong thing is
+      not something the artboards told me; it took following the button to what it called.*
+      ✅ **`components/chrome/NavDrawer.tsx`** — the artboard's panel, measured from
+      `UserMyOrder.dc.html` lines 39-66: 270-wide (capped at 78% on narrow phones), `ground`,
+      right hairline, `shadows.drawer`, wordmark 19/900, groups 46px/14.5/700 with expand arrows,
+      children 38px/13.5/600 indented 22, separators above the three grouped sections.
+      ⚠️ **NOT a `@react-navigation/drawer` navigator** — that is a new dependency (rule 4) and
+      would have to wrap the whole tree. This is a `Modal` over the current screen, which is what
+      the artboards actually draw: a panel over the page, not a navigator.
+      ⚠️ **`Modal` renders OUTSIDE the SafeAreaProvider**, so insets are applied by hand — the
+      S24-Ultra nav-bar bug from step 8e, same reason `BottomSheet` does it.
+      ✅ **SIX OF THE TEN ENTRIES HAVE NO SCREEN** (Chat, Balans, Promo, Aksiyalar, Narxlar,
+      Yo'riqnomalar, plus "Servis xabarlar"). They render **dimmed with a "Tez orada" marker**,
+      not as dead taps. 🔴 **The artboard's own `navGo()` handles exactly ONE of its ten labels
+      and merely closes the menu for the rest** — the design has always known this menu is mostly
+      aspirational. Owner decision 2026-09-03: wire what exists, dim the rest.
+      ✅ **TYPE-SAFE BY CONSTRUCTION: entries are typed `ParamlessRoute`** — the existing derived
+      type — so an entry pointing at a screen that needs params **does not compile**.
+      **Proven, not asserted:** pointing `orderMine` at `OfferDrivers` → `TS2322: Type
+      '"OfferDrivers"' is not assignable to type 'ParamlessRoute | undefined'`; restored.
+      ✅ **`NotificationsScreen`: header → `TopBar`**, and **T-072's icon-only mark-all becomes a
+      full-width panel row with words again** ("Hammasini o'qildi" — the artboard's own). *T-072
+      shrank it to an icon because it wrapped the title in a crowded row; the artboard gives it
+      its own row, so the reason for the compromise is gone. The fix was right for the layout it
+      was in; the layout changed.*
+      🔴 **FIVE RAW COLOURS THE TOKEN RATCHET COULD NOT SEE.** The screen built its tints as
+      `colour + '20'` — string concatenation appending 12.5% alpha at RUNTIME.
+      `check-design-tokens.mjs` scans for literals, and there is no literal, so the screen counted
+      as **clean at 0 while shipping five untokenised fills**. It also mapped by value, not role:
+      `danger` and `warnBorder` are FILLS being used as ink over tints derived from themselves.
+      Replaced with measured ink/tint pairs. ⚠️ **A ceiling of 0 means "no literals", not "no raw
+      colours" — a runtime-built colour is invisible to it.**
+      ✅ **12 more `fontWeight` literals → `font()`** (the step-10 Android trap), **and `font` had
+      to be imported here too** — sixth time that trap has bitten.
+      ⚠️ **ONE `fontWeight` DELIBERATELY LEFT**: the `×` delete glyph at 300. Manrope's bundled
+      range starts at 500, so `font()` would fold it **UPWARD** and render the hairline heavier —
+      the opposite of the intent. Reason recorded at the style. *Mechanical conversion would have
+      silently changed it.*
+      ✅ **Four orphaned style blocks + `Ionicons`/`Platform` imports removed** after the header
+      swap; **file terminator re-checked** (the step-8d slip).
+      ✅ **The i18n checker now sweeps THREE files** (`myOrders` · `drawer` · `notifications`) —
+      **56 keys × 3 locales = 168 lookups.** **Proven able to fail:** renaming `drawer.balance` in
+      uz → `FAIL uz drawer.balance`, exit 1; restored → green.
+      🔴 **AND ITS REGEX WAS WRONG WHEN GENERALISED** — `${prefix}\\.` emitted an UNESCAPED dot, so
+      `drawerXopen` would have matched and been reported as a phantom missing key. Caught by
+      testing the regex against a probe string rather than trusting the green run; the count was
+      56 either way, so nothing but a deliberate check would have found it.
+      ✅ **Contrast: 11/11 pass AA.** The drawer wordmark measures 2.29:1 and is the **already-
+      documented logotype exemption** (`DESIGN-TOKENS.md` §2.11 — same as `TopBar`'s); recorded
+      there rather than "fixed", since `brand` green *is* the mark.
+      📋 **`menu-items/index.ts` IS CONFIRMED DEAD** — stale English placeholder data
+      (`Home`/`Activity`/`Profile`, emoji icons) with **zero importers**, grep-verified. The
+      drawer supersedes it. **Not deleted — rule 4.** → **T-105**.
+      **Baselines unchanged: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 / lint 280 /
+      tokens 3.**
+      🛑 **NOT SEEN ON A DEVICE.** The drawer is brand-new interaction surface — worth opening
+      from both screens, expanding both groups, and checking the dimmed entries do nothing.
+- [x] **12. `ProfileScreen` + `EditProfileScreen`. ✅ DONE 2026-09-03 — the coloured circles are
+      gone, as this card predicted.**
+      🔴 **THE ARTBOARD'S "PROFILE SHEET" IS A 232px POPOVER, NOT A SCREEN.**
+      `UserMainMenu.dc.html` lines 89-103: an avatar, a name, a mono phone number, a hairline, and
+      six plain text rows with a red "Chiqish". **No icons anywhere in it.** But `Profile` is a
+      bottom-TAB destination in this app, so the popover cannot replace it — the screen was rebuilt
+      in the popover's *language* (monochrome ink, near-black avatar disc, mono phone, one red
+      row), not swapped for it. Same call as step 10: the artboard is a drawing, not a spec.
+      ✅ **THE SIX COLOURED TINT/DOT PAIRS ARE DELETED** — amber, blue, indigo, pink, grey — with
+      `renderIcon` and its three style blocks. The 2026-08-31 repaint mapped them to the nearest
+      tokens only to clear the ratchet, and left a note that deleting them belonged here.
+      🔴 **AND THEY WERE NEVER CARRYING INFORMATION:** `bell` and `help` rendered the **same**
+      amber pair, `edit` and `card` the **same** blue tint. Five colours encoding six rows, two
+      pairs duplicated — decoration that read as a system. *Counting them is what showed it; the
+      card said "delete" and was right for a second reason nobody had recorded.*
+      ✅ **FOUR OF THE SIX MENU ROWS GO NOWHERE** (`payment`, `history`, `help`, `settings`). The
+      old code ran `console.log('Navigate to …')` on tap — **indistinguishable from a broken app
+      to anyone holding the phone.** They now render dimmed with the "Tez orada" marker, exactly
+      as the drawer's unbuilt entries do (step 11).
+      ✅ **`EditProfileScreen` CONVERTED, NOT REBUILT** (1 511 lines). **31 insertions / 60
+      deletions, and the diff contains no validation, save, phone or `onChangeText` line** —
+      grep-verified. Both header instances (the loading branch AND the main return) → `TopBar`;
+      **T-071's grievance stays fixed**, since `TopBar`'s back control is a fixed-size tile.
+      ✅ **14 more `fontWeight` literals → `font()`**, and **`font` had to be imported here too —
+      seventh time that trap has bitten.** Four orphaned style blocks removed; terminator checked.
+      🔴 **A THIRD AND FOURTH RUNTIME-BUILT COLOUR, FOUND BY SWEEPING FOR THE CLASS.** Step 11
+      found five `colour + '20'` fills in `NotificationsScreen`; grepping
+      `palette\\.[a-zA-Z.]* *\\+ *['\"]` across **both apps** found one more in each —
+      `components/@extended/NetworkStatus.tsx`, an info panel. Both fixed to `blueTint`.
+      **Both apps are now clean of the pattern**, which the token ratchet still cannot see.
+      *Finding one instance is a fix; sweeping for the class is the fix.*
+      ✅ **The i18n checker now sweeps FOUR files** — 69 keys × 3 locales = 207 lookups.
+      ✅ **Contrast: 12/12 pass AA**, measured from the real palette.
+      ⚠️ **`text.chevron` is used for the disclosure `›` and is DECORATIVE ONLY (1.91:1)** — that
+      is its documented role in the palette, not a finding.
+      ⚠️ **`EditProfileScreen` imports `SafeAreaView` from `react-native`**, like
+      `OfferDetailsScreen`. A no-op on Android, so `TopBar` is the only inset applier and there is
+      no double-inset today. Left alone in a value conversion; move it when the screen is next
+      rebuilt.
+      ⚠️ **`ProfileScreen` logs auth state on EVERY render** (`console.log('ProfileScreen: Auth
+      state', …)`) plus three more in the logout path. Pre-existing noise, outside a repaint's
+      remit — recorded, not silently removed. → worth a sweep card.
+      **Baselines unchanged: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 / lint 280 /
+      tokens 3.**
+      🛑 **NOT SEEN ON A DEVICE.**
 - [ ] **13.** Auth flow: `PhoneRegistrationScreen` → `UserR1`, `OTPVerificationScreen` → `UserR2OTP`,
       `UserDetailsScreen` → `UserR3Fio`. ⚠️ **Touching OTP risks the T-061/T-063 validators and the
       OR-003 SMS-Retriever hash — do not change field names or autofill behaviour.**
@@ -966,6 +1168,59 @@ of truth — do not edit the owner's artboards).
 
 ## Session notes
 
+### 2026-09-03 (4) — step 12: colours that encoded nothing, and a class swept instead of an instance
+
+- **Step 12 done.** `ProfileScreen` **rebuilt** (439 lines) on the artboard's monochrome language;
+  `EditProfileScreen` **converted values only** (1 511 lines — 31+/60-, no validation/save line in
+  the diff). **The six coloured tint/dot pairs are deleted**, as the card predicted.
+- 🔴 **And they were never carrying information:** `bell`/`help` rendered the *same* amber pair and
+  `edit`/`card` the *same* blue tint — five colours for six rows, two duplicated. Counting them
+  gave the card a second reason nobody had recorded.
+- 🔴 **Four of the six menu rows go nowhere** and used to `console.log` on tap — indistinguishable
+  from a broken app. Now dimmed with "Tez orada", like the drawer's.
+- 🔴 **Swept for step 11's runtime-colour class instead of fixing one instance:** grepping both
+  apps found `palette.info.light + '20'` in each `NetworkStatus.tsx`. **Both apps are now clean of
+  a pattern the token ratchet cannot see.**
+- **All six baselines unchanged; 12/12 contrast pairs pass AA; i18n sweep now 69 keys × 3 locales.**
+
+### 2026-09-03 (3) — step 11: the hamburger had been wired to the wrong thing since step 3
+
+- **Step 11 done.** Built `components/chrome/NavDrawer.tsx` — the app had **no drawer at all**,
+  and `TopBar`'s hamburger opened the *profile* on the home screen (the same thing the avatar
+  did) and navigated Home on the orders tab. Six of the ten entries have no screen and render
+  **dimmed with a "Tez orada" marker**; entries are typed `ParamlessRoute`, so a route needing
+  params **cannot compile** (proven).
+- **`NotificationsScreen`**: header → `TopBar`, and **five raw colours the token ratchet could not
+  see** — built as `colour + '20'` at runtime, so a literal-scanning checker read the screen as
+  clean at 0. Replaced with measured ink/tint pairs. **T-072's icon-only mark-all got its words
+  back**, because the artboard gives it a row of its own.
+- **The i18n checker now sweeps three files (56 keys × 3 locales)** — and **its generalised regex
+  had an unescaped dot** that would have matched `drawerXopen`. Found by testing the regex against
+  a probe, not by trusting the green run.
+- **All six baselines unchanged; 11/11 contrast pairs pass AA** (the drawer wordmark is the
+  already-documented logotype exemption).
+
+### 2026-09-03 (2) — step 10: the card named two screens the artboard does not specify
+
+- **Step 10 done.** `OfferDriversScreen` **rebuilt** (487 lines, under the threshold) on the
+  artboard's card language; `OfferDetailsScreen` **converted values only** (1 456 lines of
+  booking maths — 47+/79- and no logic line in the diff). **34 `fontWeight` literals → `font()`**,
+  the Android font trap. Four dead style blocks removed.
+- 🔴 **The card's premise was wrong and measuring showed it:** the artboard's "detail state" is a
+  read-only SHEET over the order list; `OfferDetails` is a *join form* reached from search, and
+  `OfferDrivers` is bid selection. **Recorded rather than papered over.** The real sheet belongs
+  over `MyOrdersScreen` and two of its three actions have no backend → its own card.
+- **All six baselines unchanged; 17/17 contrast pairs pass AA on the rebuilt screen.**
+
+### 2026-09-03 — step 9: two screens became one, and two contrast defects came with them
+
+- **Step 9 done.** `MyBookingsScreen` + `MyPassengerOffersScreen` → one `MyOrdersScreen` on the
+  artboard's three lifecycle modes. New: `utils/orderLifecycle.ts` (pure rules),
+  `components/chrome/SegmentedModes.tsx` (both apps), `surfaceTrack` token (both palettes),
+  a `myOrders` i18n block, and two checkers (18 lifecycle cases · 19 keys × 3 locales), **both
+  proven able to fail**. The `MenuScreen` text-link workaround retired exactly as predicted.
+  **All six baselines unchanged; all 20 contrast pairs on the screen pass AA.**
+
 ### 2026-08-30 — card opened, plan approved, step 1a started
 
 - ✅ **PLAN APPROVED BY THE OWNER**, together with **both new dependencies**
@@ -990,122 +1245,203 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-08-31 at end of day, for a brand-new chat session.**
-> **Everything is committed through `c005785` except this file, `TODO.md` and `JOURNAL.md`.**
-> Read this section, then `docs/JOURNAL.md`'s 2026-08-31 entry. Nothing else is required.
+> **Written 2026-09-03 at the end of step 12, for a brand-new chat session.**
+> Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
 
-**The COLOUR half of T-101 is complete in both apps. 1 803 raw literals removed.**
-Every screen in both apps now reads its colours from `themes/`.
+**The COLOUR half of T-101 is complete in both apps** (1 803 raw literals removed; both ceilings
+at their floor and enforced by `scripts/check-design-tokens.mjs`).
 
-| | `tsc` | lint (0 errors) | raw colours |
-|---|---|---|---|
-| user | **6** | **216** | **1** (from 839) |
-| driver | **28** | **280** | **3** (from 964) |
+**The VISIBLE half has started, user app first. Screens rebuilt so far:**
 
-**The 4 remaining literals are deliberate and must NOT be "fixed":**
-`FACEBOOK_BRAND_BLUE` (Meta requires it verbatim) · `PLAY_STORE_BLACK` + `APP_STORE_BLUE`
-(store-badge guidelines) · `VEHICLE_SWATCH_FALLBACK` (a car's paint colour, overridden at runtime
-by `hex_code` from the DB). Both ceilings sit at the floor and `check-design-tokens.mjs` holds them
-there; it was re-proven able to go red at every ceiling.
+| step | screen | note |
+|---|---|---|
+| 6 / 6b | `MenuScreen` (home) | + active-trip banner and recent routes, from real data |
+| 8 · 8b–8f | `CreatePassengerOfferScreen` | the whole order form, incl. the date/time sheet and its RULES |
+| **9** | **`MyOrdersScreen`** | **the merged order list — replaces TWO screens** |
+| **10** | **`OfferDriversScreen`** | **rebuilt**; `OfferDetailsScreen` converted (values only) |
+| **11** | **`NavDrawer`** (new) + `NotificationsScreen` | the drawer never existed; the hamburger was wired wrong |
+| **12** | **`ProfileScreen`** | **rebuilt**; `EditProfileScreen` converted (values only) |
 
-### 🛑 What is NOT finished — read before claiming T-101 is done
+**Baselines, all six at their long-standing values:**
+user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **280** · tokens **3**.
+🔴 **Never rebaseline upward.** Three lint warnings appeared during step 9 (`catch (error: any)`
+carried over from the old screens) and were **fixed**, not accommodated — `unknown` is safe there
+because `isAuthError`/`getErrorMessage` both accept `any`.
 
-1. **TOKENIZED IS NOT REBUILT.** Colours come from `themes/`; **the layouts are still the pre-T-101
-   layouts** and almost no screen matches its artboard. Steps 8-22 each carry a note saying exactly
-   what was and was not done. *The owner had to catch this from a screenshot on 2026-08-30 — do not
-   let the colour count imply more than it means.*
-2. **ALMOST NOTHING HAS RUN ON A DEVICE.** The largest unverified surface is the **ink-ladder
-   change**, which altered supporting text on *every screen in both apps*, and the **two splash
-   screens**, which changed structurally rather than just in colour.
-   Also still unwalked from 2026-08-30: `SearchPassengerOffers`, whose three location buttons per
-   direction became **one** — an interaction change, not a repaint.
-3. **Step 23 is ~370 call sites** and wants its own card (sized in the step itself).
-4. **T-102 and T-103 are open** and gate the search screens actually looking right.
+**Checkers that must stay green** (all `node scripts/…` in `user-app-standalone`, no new dep):
+`check-design-tokens.mjs` · `check-ride-time.mjs` (8) · `check-order-lifecycle.mjs` (18) ·
+`check-i18n-myorders.mjs` (19 keys × 3 locales). **Every one has been proven able to go red.**
 
 ### ▶️ Next actions, in the order they are worth doing
 
-1. 🛑 **A device pass over both apps. This is the real gate** — see (2) above for where to look.
-   **Step 8 added three things to walk:** the FLAT top bar on the order screen, the back arrow on
-   a pushed screen, and the safe-area fix (the header must not sit a status-bar too low).
-2. **The artboard rebuild** — the visible half of T-101. **Step 8 done 2026-09-01, the first one.**
-3. **Step 23** as its own card.
-4. **T-102 / T-103.**
+1. 🛑 **A DEVICE PASS. This is still the real gate, and it keeps growing** — nothing from steps 6b,
+   8e, 8f, 9 or 10 has been seen on a device. **Step 10 adds two screens to walk:** the rebuilt
+   `OfferDrivers` (accept/reject still work? the confirm dialog still names the rival count?) and
+   `OfferDetails`, whose booking form was converted — **its seat/price maths must still be right**,
+   which is the one thing a repaint should never have changed.
+   **Step 11 adds the DRAWER, which is brand-new interaction surface**: open it from both screens,
+   expand both groups, confirm the six dimmed entries do nothing, and check the notification
+   panel's mark-all row.
+   **Step 12 adds the profile tab** (its four dimmed rows, the drawer from its hamburger) and
+   **`EditProfile`, whose form was converted — saving a profile must still work**. **Step 9 is the biggest thing to walk**: it changes what the
+   `Mening buyurtmalarim` TAB shows (both bookings and the passenger's own ride requests, in three
+   modes) and removes the home screen's ride-requests text link. Check each mode holds the right
+   rows, the count pills are right, and cancel / edit / rate still work from the merged card.
+2. **Step 13 — the AUTH FLOW, and it is the most dangerous step in this card.**
+   🛑 **`PhoneRegistration` / `OTPVerification` / `UserDetails` carry the T-061/T-063 validators
+   and the OR-003 SMS-Retriever hash.** Do NOT change field names or autofill behaviour: the hash
+   is device-confirmed (`asNtyBnPVzB`) and a renamed field silently breaks OTP autofill, which no
+   baseline can see. **Convert values; do not rebuild the form logic**, whatever the line count
+   says.
+3. **T-105 (cleanup card) has grown** — see below.
+4. **Step 23** (~370 call sites) as its own card. **T-102 / T-103** still gate the search screens.
 
-### 🔴 What step 8 changed for the steps after it
+### 📋 What step 9 handed to the cleanup card (T-105)
 
-- **`TopBar` now takes `background="gradient" | "flat"` and `onBackPress`.** The gradient is NOT
-  universal — measured, `UserMenuNeW`/`UserMyOrder` have it, `UserBuyurtma`/`UserQidiruv` do not.
-  **Step 17 (`DriverQidiruv`) must pass `flat`.** Every pushed screen wants `onBackPress`.
-- **Any screen mounting `TopBar` under *safe-area-context*'s `SafeAreaView` must pass
-  `edges={['left','right','bottom']}`** or the top inset is applied twice. React Native's own
-  `SafeAreaView` (what `MenuScreen` uses) is a no-op on Android and hides this.
-- **`ORDER_SCOPES` lives in `user-app-standalone/types/orderScope.ts`**, not in `MenuScreen`.
-- **`Chip` is proven in real use now** — payment (accent) and car class (`dark`).
+- **`screens/MyBookingsScreen.tsx` and `screens/MyPassengerOffersScreen.tsx` are ORPHANED**
+  — nothing imports either (grep-verified). **Not deleted: rule 4.** ⚠️ **2 of the user app's 6
+  baseline `tsc` errors live inside the orphan**, so deleting it *lowers* the baseline to 4.
+- **The `MyPassengerOffers` ROUTE is kept as a redirect** to the merged screen, so no lingering
+  caller or deep link is stranded. Delete it in the same pass.
+- **`menu-items/index.ts` is stale English placeholder data with ZERO importers** (grep-verified,
+  step 11) — `Home`/`Activity`/`Profile`, emoji icons, pointing at a route that does not exist.
+  `NavDrawer` supersedes it.
+- **`MenuButton.tsx`** — its whole reason for existing was that "the app has no drawer navigator".
+  It now has one. **Counted, not guessed: 4 call sites, and 2 are the orphaned step-9 screens** —
+  so it really has **2** (`ProfileScreen` → step 12, `SearchOffersScreen` → step 17). Both should
+  take `TopBar`+`NavDrawer` instead, after which the component dies with the orphans.
+- Already on the card from earlier steps: `GeoSelectModal` and `TimeWheelModal` have **zero call
+  sites**; `DateWheelModal` is still used by `EditProfile`/`UserDetails` (**checked, not assumed**).
+
+### 🔴 What step 12 established
+
+- **An unbuilt destination is DIMMED AND LABELLED — everywhere now**, not just in the drawer.
+  `ProfileScreen`'s four dead rows used to `console.log` on tap. If a row cannot go anywhere, say
+  so on the row.
+- 🔴 **SWEEP FOR A CLASS, NOT AN INSTANCE.** Step 11 found five runtime-built colours in one
+  screen; step 12 grepped `palette\.[a-zA-Z.]* *\+ *['"]` across BOTH apps and found the last
+  two. **Both apps are clean of it now** — re-run that grep after any conversion.
+- **Coloured decoration that duplicates itself is not a system.** Before preserving a per-row
+  colour scheme, count the distinct pairs against the rows: `ProfileScreen` had five colours for
+  six rows with two duplicated, which is why deleting them lost nothing.
+- ⚠️ **Two screens import `SafeAreaView` from `react-native`** (`OfferDetailsScreen`,
+  `EditProfileScreen`). A no-op on Android; harmless while `TopBar` is the only inset applier, but
+  it is exactly what hides a double-inset. Move both when either is next rebuilt.
+
+### 🔴 What step 11 established
+
+- **`NavDrawer` is the hamburger's destination now.** Any screen mounting `TopBar` with
+  `onMenuPress` should open it (`MenuScreen` and `MyOrdersScreen` do). ⚠️ **It is a `Modal`, not
+  a navigator** — no new dependency, and insets are applied by hand because `Modal` renders
+  outside the SafeAreaProvider.
+- **Unbuilt destinations render DIMMED with a "soon" marker, never as dead taps.** Six of the
+  drawer's ten entries have no screen. The artboard does the same with its unbuilt services.
+- **Drawer entries are typed `ParamlessRoute`** — a route needing params does not compile. Reuse
+  that type for any future menu.
+- 🔴 **A TOKEN CEILING OF 0 MEANS "NO LITERALS", NOT "NO RAW COLOURS".**
+  `NotificationsScreen` built five fills as `colour + '20'` at runtime and the ratchet read it as
+  clean. **When converting a screen, grep for `+ '` and template literals near colours**, not
+  just for `#`.
+- 🔴 **`fontWeight` is still the most common unconverted defect** (see step 10) — but **do not
+  convert it mechanically.** A weight below 500 (Manrope's bundled floor) folds UPWARD through
+  `font()` and renders *heavier*. Step 11 left one `300` hairline alone for that reason.
+
+### 🔴 What step 10 established
+
+- **`TopBar` with `background="flat"` + `onBackPress` is the pattern for every PUSHED screen.**
+  Used by `OfferDrivers` and `OfferDetails`; steps 11-22 should follow it rather than hand-rolling
+  a header. **Any screen mounting `TopBar` under safe-area-context's `SafeAreaView` must pass
+  `edges={['left','right','bottom']}`** or the top inset is applied twice.
+- 🔴 **`fontWeight: 'n'` IS A BUG ON ANDROID, NOT A STYLE CHOICE.** RN does not synthesise weights
+  there — the family NAME must carry it, so `fontWeight` alone selects no face and silently falls
+  back to something that looks *nearly* right. **Use `...font('sans', n)`.** Step 10 converted 34
+  of them in one screen; **other unconverted screens almost certainly still carry this**, so grep
+  `fontWeight: '` before declaring a screen converted.
+- ⚠️ **`OfferDetailsScreen` imports `SafeAreaView` from `react-native`, not safe-area-context** —
+  a no-op on Android, which is precisely what hides double-inset bugs. Harmless today; move it
+  when that screen is next touched.
+- 📋 **The artboard's DETAIL SHEET is still unbuilt.** It belongs over `MyOrdersScreen`, and two of
+  its three actions (alarm ping, in-app message) have no backend. Its own card once they exist.
+
+### 🔴 What step 9 changed for the steps after it
+
+- **`SegmentedModes` exists in both apps** — the mode strip with mono count pills.
+  ⚠️ **It is NOT the `Qidiruv` boards' filter strip.** Both carry a count pill, but those are
+  `radius 12px 12px 0 0` with `border-bottom:none` — TABS welded to the panel below. Measured side
+  by side. **Step 17 must build that variant separately, not bend this component.**
+- **`surfaceTrack` (`#E4E0D7`)** is in both palettes — the segmented-control groove.
+- **The status-tone table in `MyOrdersScreen` is the corrected one.** Any screen showing an order
+  status should read it from there rather than re-deriving: two of the pairs it inherited from the
+  old screens were below AA.
+- **`utils/orderLifecycle.ts` is where "which mode is this order in?" lives.** Step 10's screens
+  answer the same question and must not grow a second copy of it.
 
 ### How to convert a screen (the pattern that works)
 
 **Small screen (<500 lines): rebuild it. Large screen: convert the VALUES, touch no logic.**
-`SearchOffers` was 1 937 lines of working search — rewriting it would have risked real features for
-a repaint. The proof it stayed safe: `git diff` showed **125 insertions / 124 deletions**, every
-changed line a colour, the extra one the import.
+⚠️ **STEP 9 IS THE EXCEPTION THAT PROVES THE RULE.** Both screens were ~1 000 lines and were
+rewritten anyway — because the artboard *reorganised* them rather than restyling them. **When a
+rewrite is unavoidable, enumerate the fixes being carried over** (step 9 lists eight by card number
+in the new file's header): a rewrite is exactly where hard-won behaviour goes missing.
 
-🔴 **MAP BY ROLE, NOT BY VALUE — `DESIGN-TOKENS.md` §2.10.** The same literal maps differently
-depending on the CSS property: `color:` needs an **ink** token (`*Ink`, `text.*`, `actionPressed`,
-`dangerText`), while `backgroundColor:`/`borderColor:` take the **fill** token. Ignoring this
-shipped text at **1.65:1**. `warnBorder`, `brand`, `dangerBorder`, `text.chevron` and
-`text.disabled` are **never** body text.
-🔴 **AFTER ANY FIND-AND-REPLACE, CHECK THE FILE IMPORTS `theme`.** This bit four times across two
-days. Find-and-replace produces code that *looks* right; only the baseline notices.
-🔴 **BEWARE DOUBLE-QUOTED STRINGS.** A naive replace turns `backgroundColor: "#FFF"` into JSX
-braces inside a StyleSheet object — `tsc` went 6 → 34 that way.
-⚠️ **Map from an EXPLICIT table (§2.9), never by hue**, and report what you cannot map rather than
-guessing. Every accessibility failure this card found was found this way — including two where the
-obvious fix would have made different states render identically.
-⚠️ **Verify with the three baselines every time** (`tsc`, lint, the token script) and **never
-rebaseline upward** to accommodate a change.
+🔴 **MAP BY ROLE, NOT BY VALUE — `DESIGN-TOKENS.md` §2.10.** `color:` needs an **ink** token
+(`*Ink`, `text.*`, `actionPressed`, `dangerText`); `backgroundColor:`/`borderColor:` take the
+**fill**. `warnBorder`, `brand`, `danger`, `dangerBorder`, `text.chevron` and `text.disabled` are
+**never** body text. *Step 9 found this violated twice in already-shipped code.*
+🔴 **MEASURE CONTRAST FROM THE REAL PALETTE, NOT FROM HEXES YOU TYPE.** Two of step 9's own probes
+used wrong values (`dangerTint` is `#FBE2DE`, not `#FDE7E1`) and would have "confirmed" a wrong
+answer. Bundle the palette with esbuild and read the tokens.
+🔴 **A COMMENT'S MEASUREMENT CAN BE WRONG.** `driver_found` carried "6.96:1" for a pair that really
+measured **2.24:1** — the number was real, but for a different token than the code used.
+🔴 **A CHECKER THAT CANNOT GO RED PROVES NOTHING.** Step 9's i18n checker passed while the very key
+it guards was renamed, because its pattern only matched literal `t('…')` calls. **Always break the
+thing on purpose once.**
+🔴 **AFTER ANY FIND-AND-REPLACE, CHECK THE FILE IMPORTS `theme`.** ⚠️ Beware double-quoted strings.
+⚠️ **Verify with the baselines every time, and never rebaseline upward.**
 
 ### Owner decisions already banked — do NOT re-ask
 
-dark mode dropped (and `palettes/dark.ts` **deleted** in both apps) · user + driver only, no new
-roles · `UserMenuNeW` is canonical · CTA uses `action` not `brand` · `expo-linear-gradient` +
-`react-native-svg` approved · fonts bundled as `.ttf`, no dependency · **services AND scopes are
-both carousels**, unbuilt services dimmed · adm3 = `GeoSettlement` · "Yaqin" = a neighbours table ·
-"Hoziroq" = a real field · **splash screens redesigned light** (no artboard defines one) ·
-**the ink ladder was darkened on delegated authority** — reasoning in `DESIGN-TOKENS.md` §2.11 so
-it can be reversed on sight.
+dark mode dropped (`palettes/dark.ts` **deleted** in both apps) · user + driver only, no new roles ·
+`UserMenuNeW` is canonical · CTA uses `action` not `brand` · `expo-linear-gradient` +
+`react-native-svg` approved · fonts bundled as `.ttf` · services AND scopes are both carousels ·
+adm3 = `GeoSettlement` · "Yaqin" = a neighbours table · "Hoziroq" = a real field, and its exemption
+from the 31-minute minimum is the RULE, not a loophole · splash screens redesigned light · the ink
+ladder was darkened on delegated authority (`DESIGN-TOKENS.md` §2.11) · the stats row stays out
+until the wallet exists (step 19) · the drag-strip time picker is deliberately chips instead ·
+**step 9: full merge into one tab, and build only what has a backend.**
 
 ### Blocked on backend — these are NOT T-101's to fix
 
 🛑 **T-102** — the four order scopes look right and **all behave identically**. `DriverOffer` has no
 geo columns; search is `ILIKE` on free text. Don't present them as working.
-🛑 **T-103** — "Hoziroq" on driver offers doesn't exist. It is a THIRD concept, distinct from
-passenger `is_urgent` and driver `departs_when_full`.
-🛑 **The search offer card cannot match its artboard yet** — needs per-seat gender, `hex_code` on
-the offer response, and `vehicle_class`.
+🛑 **T-103** — "Hoziroq" on driver offers doesn't exist; it is a THIRD concept.
+🛑 **The search offer card cannot match its artboard yet** — needs per-seat gender, `hex_code` and
+`vehicle_class` on the offer response.
+🛑 **Four `UserMyOrder` features have no API** — the tax receipt ("Chek", fiscal mark), the alarm
+ping, the in-app message sheet, and the like/dislike+tags rating. Owner 2026-09-03: build only what
+has a backend. **The stars-and-comment rating IS real and was built.**
+⚠️ `arrive_from` is supported by the API but still never sent by the order form.
 
 ### Traps recorded so they are not rediscovered
 
-⚠️ **Manrope has no 900** — the artboards ask for it 113×, Google Fonts serves 800. Folding 900→800
-*reproduces* the design. Don't hunt for a Manrope Black.
-🔴 ~~**`LocationCard` is NOT a `GeoSheet` candidate**~~ — **OBSOLETE 2026-09-01 (step 8c).** The
-branch it could not express was the **mahalla**, and the owner removed that on the design's own
-logic. `LocationCard` now uses `GeoSheet` like every other geo control; the landmark stays on the
-row as free text and the country is skipped with `startLevel="province"` (OR-004).
-*A "not a candidate" note is only true until the reason behind it is retired — re-read the reason,
-not the verdict.*
+⚠️ **Manrope has no 900** — the artboards ask 113×, Google serves 800. Folding 900→800 *reproduces*
+the design. Don't hunt for a Manrope Black.
+⚠️ **`TopBar`'s gradient is NOT universal** — landing screens gradient, form screens flat. Any
+screen mounting it under safe-area-context's `SafeAreaView` must pass
+`edges={['left','right','bottom']}` or the top inset is applied twice.
 ⚠️ **`GeoPickerModal` already consolidated 7 copies in T-036** and has a multi-select `GeoSheet`
 lacks. Leave it.
-⚠️ **`menu-items/index.ts` is stale English placeholder data** pointing at a non-existent `Activity`
-route. Untouched; worth its own card.
-⚠️ **`expired` and `archived` statuses render identically** in `MyPassengerOffers` — pre-existing,
-possibly deliberate, left alone.
+⚠️ **`menu-items/index.ts` is stale English placeholder data** pointing at a non-existent route.
+⚠️ **`expired` and `archived` render identically** — pre-existing, and `completed` joined them in
+step 9. All three are genuinely "over" and their LABELS differ, so they stay distinguishable.
 ⚠️ **Three tall driver modals** (`DriverLicense`, `DriverVehicle`, `PhoneRegistration`, all
-`maxHeight: '70%'`) are at risk of the nav-bar overlap fixed elsewhere. Step 21's screens.
+`maxHeight: '70%'`) risk the nav-bar overlap fixed elsewhere. Step 21's screens.
+⚠️ **React Native cannot draw the artboards' dashed route connector**
+(`repeating-linear-gradient`); step 9 used a solid brand hairline as the nearest honest equivalent.
 
 ### Still unaudited
 
-`docs/DESIGN-TOKENS.md` is **measured but never adversarially checked** — the spend limit killed all
-three checkers. The **9 driver document/registration artboards were never measured at all** (steps
-21-22 will hit this).
+`docs/DESIGN-TOKENS.md` is **measured but never adversarially checked**. The **9 driver
+document/registration artboards were never measured at all** (steps 21-22).

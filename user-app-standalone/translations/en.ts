@@ -300,6 +300,9 @@ export default {
     title: 'Notifications',
     noNotifications: 'No notifications',
     markAllRead: 'Mark all as read',
+    /** T-101 step 11 — short form for the panel row. */
+    markAllShort: 'Mark all read',
+    unreadCount: '{count} unread',
     markAllReadConfirm: 'Do you want to mark all notifications as read?',
     allMarkedRead: 'All notifications marked as read',
     markReadError: 'Failed to mark notification as read',
@@ -435,6 +438,51 @@ export default {
   },
 
   // My Bookings Screen
+  /** T-101 step 9 — the merged order list. */
+  /** T-101 step 11 — the slide-in drawer. */
+  drawer: {
+    open: 'Menu',
+    close: 'Close menu',
+    soon: 'Coming soon',
+    groupOrder: 'Orders',
+    orderCreate: 'Place an order',
+    orderMine: 'My orders',
+    groupMessages: 'Messages',
+    messagesAll: 'Messages',
+    messagesService: 'Service messages',
+    chat: 'Chat',
+    balance: 'Balance',
+    promo: 'Promo',
+    promotions: 'Offers',
+    contacts: 'Contacts',
+    settings: 'Settings',
+    prices: 'Prices',
+    guides: 'Guides',
+  },
+
+  myOrders: {
+    title: 'My orders',
+    modeJarayon: 'In progress',
+    modeAktiv: 'Active',
+    modeTarix: 'History',
+    listJarayon: 'Orders awaiting a driver',
+    listAktiv: 'Across all routes',
+    listTarix: 'Completed orders',
+    listCount: '{count} orders',
+    emptyJarayonTitle: 'No orders in progress',
+    emptyJarayonBody:
+      'Once you send your order terms, orders awaiting a driver appear here.',
+    emptyAktivTitle: 'No active orders',
+    emptyAktivBody: 'Orders a driver has accepted move here.',
+    emptyTarixTitle: 'History is empty',
+    emptyTarixBody: 'Your completed trips are kept here.',
+    myRequest: 'My order',
+    driversInterested: '{count} drivers responded',
+    awaitingDrivers: 'Waiting for a driver',
+    seatsNeeded: '{count} seats',
+    newOrder: 'New order',
+  },
+
   myBookings: {
     title: 'My Bookings',
     pending: 'Pending',

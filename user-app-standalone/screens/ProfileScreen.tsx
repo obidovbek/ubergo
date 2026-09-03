@@ -3,17 +3,9 @@
  * User profile and settings
  */
 
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Platform,
-  StatusBar,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
@@ -21,8 +13,8 @@ import { showToast } from '../utils/toast';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { useNavigation } from '@react-navigation/native';
 import type { MainNavigationProp, ParamlessRoute } from '../navigation/types';
-import { MenuButton } from '../components/MenuButton';
-import { BackButton } from '../components/BackButton';
+import { TopBar } from '../components/chrome/TopBar';
+import { NavDrawer } from '../components/chrome/NavDrawer';
 
 const theme = createTheme('light');
 
@@ -30,6 +22,7 @@ export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const navigation = useNavigation<MainNavigationProp>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Get user display data
   const displayName = (user as any)?.display_name || (user as any)?.name || t('menu.guest');
@@ -89,351 +82,212 @@ export const ProfileScreen: React.FC = () => {
     { id: 'settings', title: t('profile.settings'), iconType: 'settings' },
   ];
 
-  const renderIcon = (iconType: string) => {
-    switch (iconType) {
-      case 'bell':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.warnTint }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.warnBorder }]} />
-            </View>
-          </View>
-        );
-      case 'edit':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.blueTint }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.male }]} />
-            </View>
-          </View>
-        );
-      case 'card':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.blueTint }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.paid }]} />
-            </View>
-          </View>
-        );
-      case 'history':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.dangerTint }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.female }]} />
-            </View>
-          </View>
-        );
-      case 'help':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.warnTint }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.warnBorder }]} />
-            </View>
-          </View>
-        );
-      case 'settings':
-        return (
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { backgroundColor: theme.palette.borders.strong }]}>
-              <View style={[styles.iconDot, { backgroundColor: theme.palette.text.secondary }]} />
-            </View>
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
-        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        <MenuButton color={theme.palette.action} />
-        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    /*
+     * ⚠️ `edges` WITHOUT 'top' — `TopBar` applies the top inset itself. The step-8
+     * double-inset defect.
+     */
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/*
+        ⚠️ This is a TAB destination, so it gets no back arrow — the old header had one
+        beside a MenuButton, which on a tab was a route to nowhere in particular. The
+        hamburger now opens the real drawer (step 11).
+      */}
+      <TopBar
+        title={t('profile.title')}
+        initials={userInitial}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
-        <View style={styles.profileCard}>
+        {/*
+          The artboard's identity block: a near-black avatar disc, the name, and the phone
+          in MONO. `UserMainMenu.dc.html` line 92-97 — the avatar is `text.primary` with
+          `text.onDark` initials, NOT a tinted circle.
+        */}
+        <View style={styles.identity}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{userInitial}</Text>
           </View>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.email}>{userEmail}</Text>
-          <Text style={styles.phone}>{userPhone}</Text>
-          {user?.id && (
-            <View style={styles.idContainer}>
-              <Text style={styles.idLabel}>{t('profile.userId')}</Text>
-              <Text style={styles.idValue}>{user.id}</Text>
-            </View>
-          )}
+          <View style={styles.identityText}>
+            <Text style={styles.name} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={styles.phone} numberOfLines={1}>
+              {userPhone}
+            </Text>
+            {!!userEmail && (
+              <Text style={styles.email} numberOfLines={1}>
+                {userEmail}
+              </Text>
+            )}
+          </View>
         </View>
 
-        {/* Menu Items Card */}
+        {user?.id && (
+          <View style={styles.idRow}>
+            <Text style={styles.idLabel}>{t('profile.userId')}</Text>
+            <Text style={styles.idValue}>{user.id}</Text>
+          </View>
+        )}
+
+        {/*
+          🔴 THE COLOURED ICON CIRCLES ARE GONE, and that is the point of this step.
+
+          Each row used to carry a tinted disc with a coloured dot — amber, blue, indigo,
+          pink, grey. `UserMainMenu.dc.html`'s menu has **no icon circles at all**: it is
+          monochrome ink with green accents, verified by counting the artboard's own
+          literals. The pairs were mapped to the nearest tokens in the 2026-08-31 repaint
+          only to clear the ratchet, with a note that deleting them belonged to this step.
+
+          ⚠️ They were also not carrying information: `bell` and `help` rendered the SAME
+          amber pair, and `edit` and `card` the same blue tint. Five colours encoding six
+          rows, two of them duplicated — decoration reading as a system.
+        */}
         <View style={styles.menuCard}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.menuItem,
-                index === menuItems.length - 1 && styles.menuItemLast
-              ]}
-              onPress={() => {
-                if (item.navigate) {
-                  navigation.navigate(item.navigate);
-                } else {
-                  console.log(`Navigate to ${item.id}`);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              {renderIcon(item.iconType)}
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
-          ))}
+          {menuItems.map((item, index) => {
+            const unbuilt = !item.navigate;
+            return (
+              <Pressable
+                key={item.id}
+                style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
+                disabled={unbuilt}
+                onPress={() => item.navigate && navigation.navigate(item.navigate)}
+                accessibilityRole="link"
+              >
+                <Text style={[styles.menuTitle, unbuilt && styles.menuTitleUnbuilt]}>
+                  {item.title}
+                </Text>
+                {/*
+                  ⚠️ An unbuilt row says so, exactly as the drawer's do (step 11). The old
+                  code ran `console.log('Navigate to …')` on tap — indistinguishable from a
+                  broken app to anyone holding the phone.
+                */}
+                {unbuilt ? (
+                  <Text style={styles.soon}>{t('drawer.soon')}</Text>
+                ) : (
+                  <Text style={styles.chevron}>›</Text>
+                )}
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
-        </TouchableOpacity>
+        {/* The artboard's one red row. `dangerText` is the ink tier, not the `danger` fill. */}
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
+        </Pressable>
 
-        {/* App Info */}
-        <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>{t('profile.appVersion')}</Text>
-        </View>
+        <Text style={styles.appInfo}>{t('profile.appVersion')}</Text>
       </ScrollView>
+
+      <NavDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.palette.ground,
+  container: { flex: 1, backgroundColor: theme.palette.ground },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 40, gap: 12 },
+
+  // ---------------------------------------------------------------- identity
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderHairline,
+    borderColor: theme.palette.borders.chrome,
+    borderRadius: theme.borderRadius.card,
   },
-  scrollView: {
-    flex: 1,
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.palette.text.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
+  avatarText: { fontSize: 17, ...theme.font('sans', 800), color: theme.palette.text.onDark },
+  identityText: { flex: 1, minWidth: 0, gap: 2 },
+  name: { fontSize: 15, ...theme.font('sans', 800), color: theme.palette.text.primary },
+  phone: {
+    ...theme.typography.monoMeta,
+    ...theme.font('mono', 500),
+    color: theme.palette.text.secondary,
   },
-  header: {
+  email: { fontSize: 12, ...theme.font('sans', 500), color: theme.palette.text.tertiary },
+
+  idRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 4,
+  },
+  idLabel: { fontSize: 11, ...theme.font('sans', 600), color: theme.palette.text.tertiary },
+  idValue: {
+    ...theme.typography.monoMeta,
+    ...theme.font('mono', 600),
+    color: theme.palette.text.secondary,
+  },
+
+  // ---------------------------------------------------------------- menu
+  menuCard: {
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderHairline,
+    borderColor: theme.palette.borders.chrome,
+    borderRadius: theme.borderRadius.card,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  menuItem: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 10,
+    paddingHorizontal: 10,
+    borderRadius: theme.borderRadius.md,
+    borderBottomWidth: theme.sizes.borderHairline,
+    borderBottomColor: theme.palette.borders.chrome,
   },
-  // T-071 — layout only; the tile itself comes from <BackButton />.
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    width: 60,
-  },
-  profileCard: {
-    alignItems: 'center',
-    padding: 32,
-    paddingTop: 40,
-    marginBottom: 20,
-    backgroundColor: theme.palette.surface,
-    borderRadius: 20,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.palette.action,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    borderWidth: 4,
-    borderColor: theme.palette.surface,
-    shadowColor: theme.palette.action,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: theme.palette.surface,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.palette.text.primary,
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  email: {
-    fontSize: 15,
-    color: theme.palette.text.secondary,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  phone: {
-    fontSize: 15,
-    color: theme.palette.text.secondary,
-    marginBottom: 16,
-    fontWeight: '500',
-  },
-  idContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: theme.palette.ground,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-  },
-  idLabel: {
-    fontSize: 13,
-    color: theme.palette.text.secondary,
-    marginRight: 8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  idValue: {
-    fontSize: 14,
-    color: theme.palette.text.primary,
-    fontFamily: 'monospace',
-    fontWeight: '600',
-  },
-  menuCard: {
-    backgroundColor: theme.palette.surface,
-    borderRadius: 20,
-    marginBottom: 20,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.surfaceSunken,
-  },
-  menuItemLast: {
-    borderBottomWidth: 0,
-  },
-  iconContainer: {
-    marginRight: 16,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
+  menuItemLast: { borderBottomWidth: 0 },
   menuTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 13.5,
+    ...theme.font('sans', 600),
     color: theme.palette.text.primary,
-    fontWeight: '600',
   },
-  menuArrow: {
-    fontSize: 24,
+  menuTitleUnbuilt: { color: theme.palette.text.tertiary },
+  chevron: { fontSize: 17, color: theme.palette.text.chevron },
+  soon: {
+    ...theme.typography.monoTiny,
+    ...theme.font('mono', 500),
     color: theme.palette.text.tertiary,
-    fontWeight: '300',
   },
+
+  // ---------------------------------------------------------------- logout
   logoutButton: {
-    backgroundColor: theme.palette.danger,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    marginBottom: 20,
+    minHeight: 48,
     alignItems: 'center',
-    shadowColor: theme.palette.danger,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    justifyContent: 'center',
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderEmphasis,
+    borderColor: theme.palette.dangerBorder,
+    borderRadius: theme.borderRadius.field,
   },
-  logoutButtonText: {
-    fontSize: 16,
-    color: theme.palette.surface,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  logoutText: { fontSize: 14, ...theme.font('sans', 800), color: theme.palette.dangerText },
+
   appInfo: {
-    padding: 20,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
-  appInfoText: {
-    fontSize: 13,
+    textAlign: 'center',
+    ...theme.typography.helper,
     color: theme.palette.text.tertiary,
-    fontWeight: '500',
   },
 });
-

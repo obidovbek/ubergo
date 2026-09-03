@@ -5,6 +5,103 @@
 
 ---
 
+## 2026-09-03 — four screens, and four cards that were wrong until measured
+
+- **Task:** T-101 steps 9, 10, 11 and 12 — the user app's remaining list, detail, chrome and
+  profile screens.
+
+### The pattern of the day
+
+**Every one of the four cards described the work incorrectly, and each was only visible by
+measuring rather than reading.**
+
+- **Step 9** said "two screens → one artboard". It was a **merge**: the artboard's three modes are
+  *lifecycle stages* read off its own `buildList()`, and they cut ACROSS the two screens, not along
+  them. The two screens sliced the same journey by SOURCE — an implementation detail — and
+  disagreed with each other about their own tabs (all/pending/confirmed vs
+  all/published/completed/cancelled).
+- **Step 10** said "→ UserMyOrder detail states". The artboard's detail is a **read-only sheet over
+  the order list**; `OfferDetails` is a *join form reached from search*. The artboard specifies
+  neither screen the card names. Recorded on the card rather than papered over.
+- **Step 11** said "MenuScreen + NotificationsScreen". `MenuScreen` was already rebuilt in step 6;
+  what was missing was a **drawer that did not exist anywhere in the app**.
+- **Step 12** said the artboard has no coloured icon circles, and was right — but for a second
+  reason nobody had recorded (below).
+
+### The one that had been wrong on screen for eight steps
+
+🔴 **`TopBar`'s hamburger never opened anything.** `MenuButton.tsx` said so outright — *"the app
+has no drawer navigator"* — yet the bar has drawn a hamburger since step 3. On the home screen it
+opened the **profile**, which is exactly what the avatar beside it already did; on the orders tab
+it navigated Home (my own step-9 code, for want of anything better).
+
+**No artboard told me this.** Reading the design showed a menu; only following the button to what
+it actually called showed there was nothing behind it.
+
+### Two contrast defects, and a comment that measured the wrong thing
+
+🔴 **`driver_found` carried the comment "6.96:1" for a pair that really measures 2.24:1.** The
+number was real — but for `actionPressed`, while the code used `brand` (the bright `#05BB42`, which
+the palette's own note calls "NOT a button fill"). So T-101's earlier fix for a 2.42:1 defect had
+landed on a value barely better than the one it replaced.
+
+**A comment's measurement can be wrong. Re-measure from the palette, not from the prose.** Two of
+my own probes then used hand-typed hexes that were also wrong (`dangerTint` is `#FBE2DE`, not
+`#FDE7E1`) — so the final sweep bundles the real palette with esbuild and reads the tokens.
+
+### A whole colour class the ratchet cannot see
+
+🔴 **`colour + '20'` — a fill built at RUNTIME by string concatenation.** `check-design-tokens.mjs`
+scans for *literals*; there is no literal, so `NotificationsScreen` counted as **clean at 0 while
+shipping five untokenised fills**.
+
+The useful move was not fixing those five. It was **sweeping for the class** —
+`palette\.[a-zA-Z.]* *\+ *['"]` across both apps — which found two more in `NetworkStatus.tsx`.
+Both apps are clean of the pattern now, and the grep is recorded in the Resume point.
+*Finding an instance is a fix; sweeping for the class is the fix.*
+
+### Colours that encoded nothing
+
+`ProfileScreen` painted a tinted disc and coloured dot per menu row. The card said delete them
+because the artboard has none. **Counting them gave a second reason:** `bell` and `help` rendered
+the *same* amber pair, `edit` and `card` the *same* blue tint — five colours for six rows, two
+duplicated. Decoration that read as a system, so deleting it lost nothing.
+
+### The checker that was twice the bug it exists to catch
+
+✅ 18 lifecycle cases · 69 i18n keys × 3 locales · 8 ride-time. Every one **proven able to go red**.
+
+🔴 **But the i18n checker failed that test twice.** v1 anchored on a literal `t('…')` call, so it
+silently skipped the three mode labels that reach `t()` through a ternary — renaming `modeAktiv`
+left it **green**. v2, generalised to several files, emitted an **unescaped dot**, so `drawerXopen`
+would have matched and been reported as a phantom missing key; the count was identical either way,
+so only testing the regex against a probe string found it.
+
+### Deliberate non-actions
+
+- **Four `UserMyOrder` features have no backend** (tax receipt, alarm ping, in-app message,
+  like/dislike rating). Owner: build only what has an API. The stars rating is real and was kept.
+- **One `fontWeight: '300'` left alone** — the `×` hairline. Manrope's bundled range starts at 500,
+  so `font()` would have folded it *upward* and rendered it heavier. Mechanical conversion would
+  have silently changed it.
+- **Both old order screens and `menu-items/index.ts` are orphaned but not deleted** (rule 4).
+  Worth knowing: 2 of the user app's 6 baseline `tsc` errors live inside one orphan.
+
+### Verification
+
+**All six baselines unchanged all day: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 /
+lint 280 / tokens 3.** Three lint warnings appeared during step 9 and were **fixed, not
+rebaselined**. Contrast measured from the real palette at every step: 20/20, 17/17, 11/11, 12/12.
+
+🛑 **NOTHING FROM STEPS 6b, 8e, 8f, 9, 10, 11 OR 12 HAS RUN ON A DEVICE.** The queue is six steps
+deep and now includes brand-new interaction surface (the drawer) and a converted booking form.
+
+⚠️ **Step 13 is the auth flow.** The OR-003 SMS-Retriever hash and the T-061/T-063 validators live
+there, and **no baseline, checker or contrast run can see a broken OTP autofill** — only a real
+phone receiving a real SMS can. A device pass belongs before it, not after.
+
+---
+
 ## 2026-09-01 (7) — the owner questioned the design's logic, and the design was wrong
 
 - **Task:** T-101 step 8f — *"change this owner design date time selection logically correct

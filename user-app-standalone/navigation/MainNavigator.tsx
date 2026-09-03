@@ -20,7 +20,7 @@ import { MainTabs } from './MainTabs';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import OfferDetailsScreen from '../screens/OfferDetailsScreen';
 import { CreatePassengerOfferScreen } from '../screens/CreatePassengerOfferScreen';
-import { MyPassengerOffersScreen } from '../screens/MyPassengerOffersScreen';
+import MyOrdersScreen from '../screens/MyOrdersScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import OfferDriversScreen from '../screens/OfferDriversScreen';
 
@@ -60,9 +60,19 @@ export const MainNavigator: React.FC = () => {
           headerShown: false,
         }}
       />
+      {/*
+        T-101 step 9 — `MyPassengerOffers` NO LONGER HAS ITS OWN SCREEN. The passenger's
+        ride requests are now one lifecycle mode inside the merged `MyBookings` tab, so
+        this route is kept only as a REDIRECT for any lingering caller (the home screen's
+        text link, a push deep-link) and renders the same merged screen.
+
+        📋 Delete the route once nothing navigates to it — that is a cleanup card
+        (T-105), not this step: removing a route name is the kind of change that strands
+        a deep link silently.
+      */}
       <Stack.Screen
         name="MyPassengerOffers"
-        component={MyPassengerOffersScreen}
+        component={MyOrdersScreen}
         options={{
           headerShown: false,
         }}

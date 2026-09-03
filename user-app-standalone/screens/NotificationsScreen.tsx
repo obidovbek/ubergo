@@ -10,19 +10,17 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Pressable,
   SafeAreaView,
   RefreshControl,
   ActivityIndicator,
   ScrollView,
-  Platform,
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { MenuButton } from '../components/MenuButton';
-import { BackButton } from '../components/BackButton';
 import { useAuth } from '../hooks/useAuth';
-import { createTheme } from '../themes';
+import { TopBar } from '../components/chrome/TopBar';
+import { createTheme, font } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { useNotifications, Notification } from '../contexts/NotificationContext';
 import { AppModal } from '../components/AppModal';
@@ -172,17 +170,35 @@ export const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const getNotificationColor = (type: string) => {
+  /**
+   * T-101 step 11 — an INK and a TINT, not one colour plus a runtime alpha.
+   *
+   * 🔴 THE OLD CODE BUILT ITS BACKGROUNDS AS `colour + '20'` — string concatenation that
+   * appends 12.5% alpha at runtime, in five places. That is a raw colour the token
+   * ratchet cannot see: `check-design-tokens.mjs` scans for literals, and there is no
+   * literal here, so the screen counted as clean while shipping five untokenised fills.
+   * It also mapped by VALUE rather than role (§2.10) — `danger` and `warnBorder` are
+   * FILLS being used as ink over a tint derived from themselves.
+   *
+   * Each type now names the measured pair the palette already carries.
+   */
+  const getNotificationTone = (
+    type: string,
+  ): { ink: string; tint: string } => {
     switch (type) {
-      case 'success': return theme.palette.action;
-      case 'error': return theme.palette.danger;
-      case 'warning': return theme.palette.warnBorder;
-      default: return theme.palette.male;
+      case 'success':
+        return { ink: theme.palette.actionPressed, tint: theme.palette.successTint };
+      case 'error':
+        return { ink: theme.palette.dangerText, tint: theme.palette.dangerTint };
+      case 'warning':
+        return { ink: theme.palette.warnInk, tint: theme.palette.warnTint };
+      default:
+        return { ink: theme.palette.male, tint: theme.palette.blueTint };
     }
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
-    const iconColor = getNotificationColor(item.type);
+    const tone = getNotificationTone(item.type);
     return (
       <TouchableOpacity
         style={[
@@ -192,8 +208,8 @@ export const NotificationsScreen: React.FC = () => {
         onPress={() => handleNotificationPress(item)}
         activeOpacity={0.7}
       >
-        <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
-          <Text style={[styles.icon, { color: iconColor }]}>
+        <View style={[styles.iconContainer, { backgroundColor: tone.tint }]}>
+          <Text style={[styles.icon, { color: tone.ink }]}>
             {getNotificationIcon(item.type)}
           </Text>
         </View>
@@ -236,40 +252,43 @@ export const NotificationsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
-      <View style={styles.header}>
-        {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
-        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        <MenuButton color={theme.palette.action} />
-        <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
-        {/*
-          T-072 — an ICON, not the sentence.
+      {/*
+        T-101 step 11 — the shared `TopBar`, replacing a hand-rolled header that carried a
+        back arrow, a MenuButton AND a mark-all button in one crowded row.
+        ⚠️ `background="flat"`: this screen is pushed, not a landing board.
+      */}
+      <TopBar
+        title={t('notifications.title')}
+        background="flat"
+        onBackPress={() => navigation.goBack()}
+      />
 
-          🔴 The label is a whole sentence — uz "Barchasini o'qilgan deb
-          belgilash" (33 chars), ru "Отметить все как прочитанные" (28) — and it
-          sat in a `flexDirection: 'row'` beside a `flex: 1`, 24px, weight-800
-          title. At 13px plus 32px of padding the button claimed ~230px, leaving
-          the title ~100px on a 360dp screen, so it wrapped (owner, 2026-08-12).
-          This header is the more crowded of the two: it also carries MenuButton.
+      {/*
+        T-072 STILL HOLDS, and this is where the artboard puts it anyway.
 
-          ✅ The sentence is not lost — `handleMarkAllAsRead` already opens a
-          confirm dialog whose title IS `notifications.markAllRead`, so the words
-          appear the moment the icon is tapped.
-          ⚠️ `accessibilityLabel` keeps it reachable for screen readers.
-        */}
-        {unreadCount > 0 ? (
-          <TouchableOpacity
-            style={styles.markAllButton}
+        🔴 The mark-all label is a whole sentence — uz "Barchasini o'qilgan deb belgilash"
+        (33 chars), ru "Отметить все как прочитанные" (28). In the old header it sat beside
+        a flex:1 title and wrapped it onto two lines (owner, 2026-08-12), so T-072 reduced
+        it to an icon. The artboard's notification panel gives it a row of its own with the
+        words "Hammasini o'qildi" — so the sentence comes BACK, at full width, where it
+        cannot crowd anything. *T-072's fix was right for the layout it was in; the layout
+        changed.*
+      */}
+      {unreadCount > 0 && (
+        <View style={styles.panelHead}>
+          <Text style={styles.panelHeadCount}>
+            {t('notifications.unreadCount').replace('{count}', String(unreadCount))}
+          </Text>
+          <Pressable
             onPress={handleMarkAllAsRead}
-            activeOpacity={0.8}
             accessibilityLabel={t('notifications.markAllRead')}
             accessibilityRole="button"
+            hitSlop={8}
           >
-            <Ionicons name="checkmark-done" size={20} color={theme.palette.surface} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
-      </View>
+            <Text style={styles.markAllText}>{t('notifications.markAllShort')}</Text>
+          </Pressable>
+        </View>
+      )}
 
       {notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -327,8 +346,8 @@ export const NotificationsScreen: React.FC = () => {
         {selectedNotification && (
               <>
                 <View style={styles.modalHeader}>
-                  <View style={[styles.modalIconContainer, { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }]}>
-                    <Text style={[styles.modalIcon, { color: getNotificationColor(selectedNotification.type) }]}>
+                  <View style={[styles.modalIconContainer, { backgroundColor: getNotificationTone(selectedNotification.type).tint }]}>
+                    <Text style={[styles.modalIcon, { color: getNotificationTone(selectedNotification.type).ink }]}>
                       {getNotificationIcon(selectedNotification.type)}
                     </Text>
                   </View>
@@ -343,8 +362,8 @@ export const NotificationsScreen: React.FC = () => {
 
                   <View style={styles.modalSection}>
                     <Text style={styles.modalSectionTitle}>{t('notifications.type')}</Text>
-                    <View style={[styles.modalTypeBadge, { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }]}>
-                      <Text style={[styles.modalTypeText, { color: getNotificationColor(selectedNotification.type) }]}>
+                    <View style={[styles.modalTypeBadge, { backgroundColor: getNotificationTone(selectedNotification.type).tint }]}>
+                      <Text style={[styles.modalTypeText, { color: getNotificationTone(selectedNotification.type).ink }]}>
                         {selectedNotification.type.toUpperCase()}
                       </Text>
                     </View>
@@ -371,7 +390,11 @@ export const NotificationsScreen: React.FC = () => {
 
                   <View style={styles.modalSection}>
                     <Text style={styles.modalSectionTitle}>{t('notifications.status')}</Text>
-                    <View style={[styles.modalStatusBadge, { backgroundColor: selectedNotification.read ? theme.palette.success.main + '20' : theme.palette.warning.main + '20' }]}>
+                    <View style={[styles.modalStatusBadge, {
+                        backgroundColor: selectedNotification.read
+                          ? theme.palette.successTint
+                          : theme.palette.warnTint,
+                      }]}>
                       <Text style={[styles.modalStatusText, { color: selectedNotification.read ? theme.palette.success.main : theme.palette.warning.main }]}>
                         {selectedNotification.read ? t('notifications.read') : t('notifications.unread')}
                       </Text>
@@ -400,58 +423,28 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: theme.palette.text.secondary,
     fontSize: 15,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
-  header: {
+  /*
+   * The artboard's panel head — a full-width row above the list, not a header slot.
+   * `markAllShort` gets the whole right side, so the long form cannot crowd a title.
+   */
+  panelHead: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  // T-071 — layout only; the tile itself comes from <BackButton />.
-  backButton: {
-    marginRight: 12,
+  panelHeadCount: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    // T-072 — matches the icon button's footprint so the title sits in the same
-    // place whether or not there are unread notifications.
-    width: 40,
-  },
-  markAllButton: {
-    // T-072 — a square icon button (~40px) instead of a ~230px sentence.
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.palette.action,
-    borderRadius: 12,
-    shadowColor: theme.palette.action,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+  markAllText: {
+    fontSize: 12,
+    color: theme.palette.action,
   },
   listContent: {
     padding: 16,
@@ -490,7 +483,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 22,
-    fontWeight: '700',
+    ...font('sans', 700),
   },
   content: {
     flex: 1,
@@ -499,12 +492,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginBottom: 6,
     lineHeight: 22,
   },
   unreadTitle: {
-    fontWeight: '700',
+    ...font('sans', 700),
   },
   message: {
     fontSize: 14,
@@ -515,7 +508,7 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
     color: theme.palette.text.tertiary,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   unreadDot: {
     width: 10,
@@ -541,6 +534,12 @@ const styles = StyleSheet.create({
   deleteIcon: {
     fontSize: 24,
     color: theme.palette.text.tertiary,
+    /*
+     * ⚠️ DELIBERATELY still a platform `fontWeight`, not `font('sans', n)`.
+     * This is the `×` glyph and the hairline is the point. Manrope's bundled range starts
+     * at 500, so `font()` would fold 300 UPWARD and render it heavier — the opposite of
+     * what is wanted. The system face's own light weight is the right thing here.
+     */
     fontWeight: '300',
   },
   emptyContainer: {
@@ -556,7 +555,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.text.primary,
     marginBottom: 8,
     textAlign: 'center',
@@ -617,7 +616,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...theme.typography.h3,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     marginBottom: theme.spacing(2),
   },
   modalSection: {
@@ -626,7 +625,7 @@ const styles = StyleSheet.create({
   modalSectionTitle: {
     ...theme.typography.body2,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginBottom: theme.spacing(1),
     textTransform: 'uppercase',
     fontSize: 12,
@@ -645,7 +644,7 @@ const styles = StyleSheet.create({
   },
   modalTypeText: {
     ...theme.typography.caption,
-    fontWeight: '700',
+    ...font('sans', 700),
     fontSize: 11,
   },
   modalDate: {
@@ -664,7 +663,7 @@ const styles = StyleSheet.create({
   modalDataKey: {
     ...theme.typography.body2,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginRight: theme.spacing(1),
     minWidth: 100,
   },
@@ -681,7 +680,7 @@ const styles = StyleSheet.create({
   },
   modalStatusText: {
     ...theme.typography.caption,
-    fontWeight: '700',
+    ...font('sans', 700),
     fontSize: 11,
   },
   modalFooter: {
@@ -701,7 +700,7 @@ const styles = StyleSheet.create({
   modalActionText: {
     ...theme.typography.button,
     color: theme.palette.surface,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   modalDeleteButton: {
     backgroundColor: theme.palette.error.main,

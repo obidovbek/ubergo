@@ -52,6 +52,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "../hooks/useTranslation";
 import { useNotifications } from "../contexts/NotificationContext";
 import { TopBar } from "../components/chrome/TopBar";
+import { NavDrawer } from "../components/chrome/NavDrawer";
 import { Carousel } from "../components/Carousel";
 import { Button } from "../components/Button";
 import {
@@ -148,6 +149,14 @@ export const MenuScreen: React.FC = () => {
 
   const handleProfilePress = () => navigation.navigate("Profile");
 
+  /*
+   * T-101 step 11 — the hamburger opens the DRAWER, not the profile.
+   * 🔴 It used to call `handleProfilePress`, so the menu button and the avatar did the
+   * SAME thing while every artboard drew a navigation menu behind the hamburger. There
+   * was no drawer in the app to open until this step built one.
+   */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* T-101: the top bar's gradient runs up under the status bar, so the bar is
@@ -166,7 +175,7 @@ export const MenuScreen: React.FC = () => {
         title={t("menu.screenTitle")}
         initials={userInitial}
         notificationCount={unreadCount}
-        onMenuPress={handleProfilePress}
+        onMenuPress={() => setDrawerOpen(true)}
         onBellPress={() => navigation.navigate("Notifications")}
         onAvatarPress={handleProfilePress}
       />
@@ -220,26 +229,12 @@ export const MenuScreen: React.FC = () => {
         />
 
         {/*
-          🔴 THIS LINK IS WHAT KEEPS `MyPassengerOffers` REACHABLE.
-
-          The owner removed the four action cards on 2026-08-30 because the tab bar and
-          drawer already cover them. That is true for three of the four — SearchOffers
-          and MyBookings are TABS, and CreatePassengerOffer is this screen's own CTA —
-          but `MyPassengerOffers` is a STACK-ONLY route with no other entry point, so
-          deleting its card outright would have stranded a working screen.
-
-          Checked, not assumed: nothing else in the app navigates to it, `MyBookings`
-          has no ride-requests section, and the drawer config is stale placeholder data.
-          The right long-term home is a segment inside MyBookings — that belongs to
-          step 9, which rebuilds both screens together. Until then, one text link.
+          ✅ T-101 step 9 — THE TEXT-LINK WORKAROUND IS RETIRED, exactly as the note that
+          stood here predicted. `MyPassengerOffers` no longer has a screen of its own: the
+          passenger's ride requests are now the "Jarayonda" / "Faol" modes of the merged
+          orders tab, which is the segment-inside-MyBookings this comment asked for.
+          The tab bar reaches it, so no link is needed here.
         */}
-        <Button
-          title={t("passengerOffers.myRideRequests")}
-          variant="text"
-          size="sm"
-          fullWidth
-          onPress={() => navigation.navigate("MyPassengerOffers")}
-        />
 
         {/*
           ---- the active order ----
@@ -324,6 +319,7 @@ export const MenuScreen: React.FC = () => {
           </>
         )}
       </ScrollView>
+      <NavDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
   );
 };

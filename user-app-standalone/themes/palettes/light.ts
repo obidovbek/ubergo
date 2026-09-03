@@ -29,6 +29,13 @@ export const lightPalette = {
   surface: '#FFFFFF', // cards, popovers, chip-off state, control tiles
   surfaceInput: '#FDFCFA', // input fields ONLY — never a card
   surfaceSunken: '#EDEAE3', // progress track, scroll arrows, "completed" pill
+  /**
+   * T-101 step 9 — the SEGMENTED-CONTROL TRACK, one step darker than `surfaceSunken`.
+   * Measured on `UserMyOrder` (the order-mode strip) and `UserQidiruv`; 2 uses.
+   * The selected segment is a white `surface` tile riding on it, so the track has to
+   * sit below the card ground to read as a groove rather than another card.
+   */
+  surfaceTrack: '#E4E0D7',
 
   // ---------------------------------------------------------------- text
   text: {

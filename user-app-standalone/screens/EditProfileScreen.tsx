@@ -19,7 +19,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { isValidEmail } from '../utils/validation';
 import { useAuth } from '../hooks/useAuth';
@@ -29,7 +29,7 @@ import { showToast } from '../utils/toast';
 import { ApiError, handleBackendError, parseValidationErrors } from '../utils/errorHandler';
 import { checkOwnPromoCode, checkUsername, PROMO_CODE_LENGTH, USERNAME_MAX_LENGTH } from '../utils/identifiers';
 import { useCountries } from '../hooks/useCountries';
-import { BackButton } from '../components/BackButton';
+import { TopBar } from '../components/chrome/TopBar';
 import type { CountryOption } from '../types/country';
 import { CountryPickerModal } from '../components/CountryPickerModal';
 import { DateWheelModal } from '../components/DateWheelModal';
@@ -638,12 +638,11 @@ export const EditProfileScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
-        <View style={styles.header}>
-          {/* T-071 — was a green `←` that scaled with the system font. */}
-          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-          <Text style={styles.headerTitle}>{t('profile.editProfile')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <TopBar
+          title={t('profile.editProfile')}
+          background="flat"
+          onBackPress={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
@@ -655,13 +654,17 @@ export const EditProfileScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        {/* T-071 — was a green `←` that scaled with the system font. */}
-        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        <Text style={styles.headerTitle}>{t('profile.editProfile')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      {/*
+        T-101 step 12 — the shared `TopBar` replaces the hand-rolled header, in BOTH the
+        loading branch and here. ⚠️ `background="flat"`: a pushed form screen, not a
+        landing board. T-071's grievance (a green `←` that scaled with the system font)
+        stays fixed — `TopBar`'s back control is a fixed-size tile.
+      */}
+      <TopBar
+        title={t('profile.editProfile')}
+        background="flat"
+        onBackPress={() => navigation.goBack()}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -1060,38 +1063,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.ground,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  // T-071 — layout only; the tile itself comes from <BackButton />.
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    width: 60,
-  },
   keyboardAvoiding: {
     flex: 1,
   },
@@ -1116,7 +1087,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body2,
     color: theme.palette.text.primary,
     marginBottom: theme.spacing(1),
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   required: {
     color: theme.palette.error.main,
@@ -1164,7 +1135,7 @@ const styles = StyleSheet.create({
   identifierTitle: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     marginBottom: theme.spacing(0.5),
   },
   identifierInfo: {
@@ -1236,7 +1207,7 @@ const styles = StyleSheet.create({
   },
   genderTextActive: {
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   phoneRow: {
     flexDirection: 'row',
@@ -1265,7 +1236,7 @@ const styles = StyleSheet.create({
   countryCode: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   countryName: {
     ...theme.typography.body1,
@@ -1311,7 +1282,7 @@ const styles = StyleSheet.create({
   addPhoneText: {
     fontSize: 18,
     color: theme.palette.surface,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   dateInputContainer: {
     flexDirection: 'row',
@@ -1362,7 +1333,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.primary,
   },
   modalButton: {
@@ -1371,7 +1342,7 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     color: theme.palette.action,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   datePickerContainer: {
     flexDirection: 'row',
@@ -1386,7 +1357,7 @@ const styles = StyleSheet.create({
   pickerLabel: {
     textAlign: 'center',
     fontSize: 14,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
@@ -1410,11 +1381,11 @@ const styles = StyleSheet.create({
   pickerItemText: {
     fontSize: 15,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   pickerItemTextSelected: {
     color: theme.palette.surface,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   phoneItem: {
     flexDirection: 'row',
@@ -1443,7 +1414,7 @@ const styles = StyleSheet.create({
   removePhoneText: {
     color: theme.palette.surface,
     fontSize: 16,
-    fontWeight: '600',
+    ...font('sans', 600),
     lineHeight: 16,
   },
   submitButton: {
@@ -1468,7 +1439,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: theme.palette.surface,
     fontSize: 16,
-    fontWeight: '700',
+    ...font('sans', 700),
     letterSpacing: 0.3,
   },
   pickerOverlay: {
@@ -1505,7 +1476,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
 });
 

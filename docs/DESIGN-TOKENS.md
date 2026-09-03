@@ -250,8 +250,10 @@ character is unchanged — only lightness moved.
   the user is reading. `text.tertiary` is still clearly non-interactive beside the link colour.
 
 **Legitimately exempt, verified individually:** the `TopBar` wordmark (a logotype — `brand` green
-is the mark itself), the GeoSheet `›` chevron, and two `<Ionicons>` glyphs. Decorative or
-non-text; contrast minimums do not apply.
+is the mark itself), **the `NavDrawer` wordmark (T-101 step 11 — the same logotype, same
+exemption; it measures 2.29:1 on `ground` and that is the mark, not a contrast defect)**, the
+GeoSheet `›` chevron, and two `<Ionicons>` glyphs. Decorative or non-text; contrast minimums do
+not apply.
 
 🔴 **THE SEAT MARKERS ARE THREE STATES, NOT TWO.** Neutral, male and female each need their own
 fill *and* border (`successTint`+`brand`, `maleTint`+`male`, `femaleTint`+`female`). The tints and
