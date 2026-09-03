@@ -11,18 +11,11 @@
  */
 
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { DateWheelModal } from "../DateWheelModal";
-import { TimeWheelModal } from "../TimeWheelModal";
-import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TimeSheet } from "./TimeSheet";
 import { useTranslation } from "../../hooks/useTranslation";
-import { CheckRow } from "./CheckRow";
-import { theme } from '../../themes';
+import { Chip } from "../Chip";
+import { theme } from "../../themes";
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
@@ -32,14 +25,12 @@ export const formatDateNumeric = (date: Date): string =>
 export const formatTime = (date: Date): string =>
   `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
-/** Combine a picked day with a picked clock time into one Date. */
-export const combineDateTime = (date: Date, time: Date): Date => {
-  const combined = new Date(date);
-  combined.setHours(time.getHours(), time.getMinutes(), 0, 0);
-  return combined;
-};
-
-type PickerTarget = "date" | "from" | "until";
+/*
+  T-101 step 8f — `combineDateTime` moved to `utils/rideTime` with the time rules that
+  depend on it, and is re-exported here so its existing importers do not have to move.
+  Two identical copies of the same date arithmetic is how the form and its rules drift.
+*/
+export { combineDateTime } from "../../utils/rideTime";
 
 interface TimeWindowCardProps {
   variant: "departure" | "arrival";
@@ -75,9 +66,8 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
   error,
 }) => {
   const { t } = useTranslation();
-  const [picker, setPicker] = useState<PickerTarget | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   /** The value the open wheel is editing; committed only on Confirm. */
-  const [draft, setDraft] = useState<Date>(new Date());
 
   const isDeparture = variant === "departure";
   const weekdays = t("passengerOffers.weekdays").split(",");
@@ -106,41 +96,11 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
     return `${formatFullDate(date)} ${formatTime(untilTime)} ${t("passengerOffers.arrivalSummarySuffix")}`;
   };
 
-  /**
-   * ⚠️ The fallback for an unset time is the FLOOR, not `new Date()`. Opening
-   * the wheel with "now" while the floor sits 31 minutes ahead would highlight
-   * a row that is no longer in the list, so nothing would look selected.
-   */
-  const valueFor = (target: PickerTarget): Date => {
-    const fallback = minimumDate ?? new Date();
-    if (target === "date") return date ?? fallback;
-    if (target === "from") return fromTime ?? fallback;
-    return untilTime ?? fromTime ?? fallback;
-  };
-
-  /**
-   * The wheels are controlled: `draft` holds the in-progress pick and nothing
-   * reaches the form until Confirm. That is the opposite of the OS picker this
-   * replaced, which fired `onChange` per spin on iOS — so cancelling used to be
-   * impossible once the user had scrolled.
-   */
-  const openPicker = (target: PickerTarget) => {
-    setDraft(valueFor(target));
-    setPicker(target);
-  };
-
-  const closePicker = () => setPicker(null);
-
-  const commitDraft = () => {
-    const target = picker;
-    setPicker(null);
-    if (!target) return;
-
-    if (target === "date") onDateChange(draft);
-    else if (target === "from") onFromTimeChange?.(draft);
-    else onUntilTimeChange(draft);
-  };
-
+  /*
+    T-101 step 8e — `draft`, `valueFor`, `openPicker`, `closePicker` and `commitDraft`
+    moved into `TimeSheet` with the wheels they served. The "commit only on confirm"
+    contract they existed to provide is now the sheet's `onApply`.
+  */
   const controlsDisabled = isDeparture && urgent;
 
   /**
@@ -174,134 +134,87 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {isDeparture && onUrgentChange && (
-        <View style={styles.urgentRow}>
-          <Ionicons name="flash" size={22} color={theme.palette.text.primary} />
-          <CheckRow
+      {/*
+        T-101 step 8c — the artboard's header row: a mono eyebrow on the left, the
+        "Hoziroq" toggle on the right as a CHIP rather than the old flash-icon +
+        checkbox. `Chip` carries the artboards' own selected/unselected treatment.
+      */}
+      <View style={styles.headerRow}>
+        <Text style={styles.eyebrow}>
+          {(isDeparture
+            ? t("passengerOffers.departTitle")
+            : t("passengerOffers.arriveTitle")
+          ).toUpperCase()}
+        </Text>
+
+        {isDeparture && onUrgentChange && (
+          <Chip
             label={t("passengerOffers.urgent")}
-            checked={urgent}
+            selected={urgent}
             onPress={() => onUrgentChange(!urgent)}
-            style={styles.urgentCheck}
           />
-        </View>
-      )}
+        )}
+      </View>
 
       <View style={[styles.card, !!error && styles.cardError]}>
-        {!isDeparture && <View style={styles.arrivalMarker} />}
-
         <Text style={styles.summary}>{summary()}</Text>
 
+        {/*
+          T-101 step 8e — ONE row opens the sheet, replacing the three inline
+          date/time/until buttons. The artboard has no inline controls here at all: the
+          summary panel IS the control, and everything is picked in the sheet.
+        */}
         {!controlsDisabled && (
-          <View style={styles.controls}>
-            <TouchableOpacity
-              style={styles.control}
-              onPress={() => openPicker("date")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="calendar-outline" size={16} color={theme.palette.text.muted} />
-              <Text style={styles.controlText}>
-                {date ? formatDateNumeric(date) : t("passengerOffers.pickDate")}
-              </Text>
-            </TouchableOpacity>
-
-            {isDeparture && (
-              <TouchableOpacity
-                style={styles.control}
-                onPress={() => openPicker("from")}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="time-outline" size={16} color={theme.palette.text.muted} />
-                <Text style={styles.controlText}>
-                  {fromTime
-                    ? formatTime(fromTime)
-                    : t("passengerOffers.pickTimeFrom")}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.control}
-              onPress={() => openPicker("until")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="time-outline" size={16} color={theme.palette.text.muted} />
-              <Text style={styles.controlText}>
-                {untilTime
-                  ? formatTime(untilTime)
-                  : t("passengerOffers.pickTimeUntil")}
-              </Text>
-            </TouchableOpacity>
-
-            {!!untilTime && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => onUntilTimeChange(null)}
-                activeOpacity={0.7}
-                hitSlop={8}
-              >
-                <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <TouchableOpacity
+            style={styles.openRow}
+            onPress={() => setSheetOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={styles.openRowText}>
+              {t("passengerOffers.pickDate")}
+            </Text>
+            <Text style={styles.openRowChevron}>›</Text>
+          </TouchableOpacity>
         )}
 
         {!!error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
-      {/* T-057 — the app's own wheels, not the stock OS dialog. */}
-      <DateWheelModal
-        visible={picker === "date"}
-        value={draft}
-        onChange={setDraft}
-        title={t("passengerOffers.pickDate")}
-        // A trip is not a birthday: offer this year and the next, nothing else.
-        earliestYear={new Date().getFullYear()}
-        latestYear={new Date().getFullYear() + 1}
-        /*
-          T-069 — a departure cannot be in the past.
+      {/*
+        T-101 step 8e — the artboard's time sheet, replacing the two wheel modals.
 
-          🔴 `validateForm` already REFUSES a past time at submit
-          (`CreatePassengerOfferScreen:377`, 31-minute minimum, message
-          "Vaqt kamida 30 daqiqadan keyin bo'lishi kerak"). The defect the owner
-          hit is that the wheel still OFFERED those dates, so the refusal only
-          arrived after filling the whole form. The driver app's wizard has
-          restricted its own wheels all along; this brings the passenger side
-          into line. Submit stays the real guard — this only stops the user
-          choosing something that is going to be rejected.
-        */
-        minimumDate={minimumDate ?? new Date()}
-        onConfirm={commitDraft}
-        onCancel={closePicker}
-      />
+        🔴 THREE THINGS THE OWNER REPORTED FROM A DEVICE, all correct:
+        ① it did not look like the design — the design has DATE CARDS, not a wheel;
+        ② the picker opened CENTRED (`AppModal` is `justifyContent: 'center'`);
+        ③ it should rise from the bottom "like county/city" — i.e. like `GeoSheet`.
+        All three are the same root cause: this used the dialog shell, not the sheet one.
 
-      <TimeWheelModal
-        visible={picker === "from" || picker === "until"}
-        value={draft}
-        onChange={setDraft}
+        The shell is now the shared `BottomSheet`, extracted from `GeoSheet` so the two
+        pickers cannot drift — and so the safe-area fix in it is not re-lost here.
+      */}
+      <TimeSheet
+        visible={sheetOpen}
         title={
-          picker === "until"
-            ? t("passengerOffers.pickTimeUntil")
-            : t("passengerOffers.pickTimeFrom")
+          isDeparture
+            ? t("passengerOffers.departTitle")
+            : t("passengerOffers.arriveTitle")
         }
-        // T-069 — quarter-hours only (owner, 2026-08-12). A departure window
-        // does not need per-minute precision, and 4 rows beat 12.
-        minuteStep={15}
-        /*
-          The time floor, so the hours already gone are not offered on today.
-
-          ⚠️ It is the minimum instant moved onto the DAY BEING EDITED. The
-          wheel compares by calendar day, and `draft` for a from/until pick
-          carries the day the user chose above — so passing the raw minimum
-          would leave today unrestricted whenever `draft` had drifted to
-          another date.
-
-          🔴 Departure only. The arrival card is a "must arrive by" time and is
-          bounded by the departure (`errorArrivalTime`), not by the clock — a
-          floor here would be a different rule invented on the way past.
-        */
-        minimumDate={timeFloor}
-        onConfirm={commitDraft}
-        onCancel={closePicker}
+        isDeparture={isDeparture}
+        date={date}
+        fromTime={fromTime ?? null}
+        untilTime={untilTime}
+        minimumDate={minimumDate}
+        timeFloor={timeFloor}
+        onApply={(next) => {
+          // The sheet commits everything at once: nothing reaches the form until the
+          // passenger confirms, which is the same contract the wheels had.
+          onDateChange(next.date);
+          if (isDeparture) onFromTimeChange?.(next.fromTime as Date);
+          onUntilTimeChange(next.untilTime);
+          setSheetOpen(false);
+        }}
+        onClose={() => setSheetOpen(false)}
       />
     </View>
   );
@@ -309,70 +222,63 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginVertical: 8,
-  },
-  urgentRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
   },
-  urgentCheck: {
-    flex: 1,
+  /** Eyebrow on the left, the "Hoziroq" chip on the right (artboard header row). */
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
   },
+  eyebrow: {
+    ...theme.typography.eyebrow,
+    color: theme.palette.text.tertiary,
+  },
+  /**
+   * T-101 step 8c — the artboard's inner panel: the neutral GROUND, radius 13, pad 11.
+   * It was a blue tint, a colour that appears nowhere on this screen in the design.
+   */
   card: {
-    borderWidth: 1,
-    borderColor: theme.palette.blueTintSoft,
-    borderRadius: 10,
-    backgroundColor: theme.palette.blueTint,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 13,
+    backgroundColor: theme.palette.ground,
+    padding: 11,
   },
   cardError: {
-    borderColor: theme.palette.danger,
-  },
-  arrivalMarker: {
-    position: "absolute",
-    left: -18,
-    top: 14,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.palette.brand,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.dangerBorder,
   },
   summary: {
-    fontSize: 15,
-    lineHeight: 21,
+    ...theme.typography.bodyStrong,
+    lineHeight: 18,
     color: theme.palette.text.primary,
   },
-  controls: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 8,
-  },
-  control: {
+  /** T-101 step 8e — the single row that opens the sheet. */
+  openRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    minHeight: 40,
+    justifyContent: "space-between",
+    minHeight: 44,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
+    borderRadius: 11,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.borders.control,
     backgroundColor: theme.palette.surface,
   },
-  controlText: {
-    fontSize: 14,
+  openRowText: {
+    ...theme.typography.caption,
     color: theme.palette.text.primary,
   },
-  clearButton: {
-    paddingHorizontal: 4,
+  openRowChevron: {
+    fontSize: 15,
+    color: theme.palette.text.chevron,
   },
   errorText: {
     marginTop: 6,
-    fontSize: 12,
-    color: theme.palette.danger,
+    ...theme.typography.helper,
+    // A fill token on text is the defect class from DESIGN-TOKENS.md §2.10 — `danger`
+    // is the fill, `dangerText` the ink. This read 1.9:1 before.
+    color: theme.palette.dangerText,
   },
 });
 

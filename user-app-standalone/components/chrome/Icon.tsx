@@ -26,6 +26,13 @@ export const ICON_PATHS = {
   offer: "M5 5.5h14v13H5zM8 9h8M8 12.5h8M8 16h5",
   // --- top bar (UserMainMenu.dc.html) ---
   bell: 'M6.2 16.5h11.6c-1.3-1.2-1.7-2.3-1.7-4.4 0-2.9-1.8-5-4.1-5s-4.1 2.1-4.1 5c0 2.1-.4 3.2-1.7 4.4M10.3 19a2 2 0 0 0 3.4 0',
+  // --- row chevron (UserBuyurtma.dc.html), used 3x per location card ---
+  chevronRight: 'M9.5 5.5 16 12l-6.5 6.5',
+  // The artboards have no back arrow — every board draws the drawer, because a board is
+  // never "pushed". This is `chevronRight` mirrored about x=12, the same stroke weight
+  // and the same 24-box, so a pushed screen gets a back affordance that still looks like
+  // the design's own chevron rather than a borrowed icon-set glyph.
+  chevronLeft: 'M14.5 5.5 8 12l6.5 6.5',
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

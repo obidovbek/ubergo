@@ -5,6 +5,497 @@
 
 ---
 
+## 2026-09-01 (7) — the owner questioned the design's logic, and the design was wrong
+
+- **Task:** T-101 step 8f — *"change this owner design date time selection logically correct
+  because i dont see correct logic"*. **Four defects, and the owner's instinct was right on all
+  four.** This is the first time this card changed BEHAVIOUR rather than appearance.
+
+### The one that would have shipped a broken promise
+
+🔴 **"Leave between 08:00 and 11:00, arrive by 09:00" was ACCEPTED.** The check was
+`arriveUntilDate < startAtDate` — arrival against the **START** of the departure window. 09:00 is
+after 08:00, so it passed. But the order explicitly permits the driver to set off at 11:00, at
+which point the arrival is already impossible — **at submit time, not later**.
+
+Now compared against `latestDeparture`: the end of the window, which is the only departure the
+passenger has actually committed to being no later than.
+
+### The one that was two contradictory rules
+
+🔴 **"Hoziroq" both was and was not allowed.** `MIN_ADVANCE_MS` refused any departure sooner
+than 31 minutes, while an urgent order set `start_at = now` and `if (!isUrgent)` skipped the check.
+Same form, two rules, a toggle deciding which applied.
+
+**The resolution was a product question, not a code one**, so I asked. Owner: Hoziroq genuinely
+means *"I am ready now"* — an on-demand hail. The minimum is a rule about **scheduled** orders (it
+stops one being posted too late for any driver to plan around) and has nothing to say about a
+passenger standing at the kerb. **So the exemption was right all along and merely undocumented** —
+resolved rather than patched, and now written where it is enforced.
+
+### The two quieter ones
+
+- **"Arrival time" was really "arrive by".** The API has `arrive_from` AND `arrive_until`; the form
+  only ever sent `arrive_until`. The heading promised a window that never existed. Relabelled.
+  ⚠️ `arrive_from` is **still never sent** — the backend supports an arrival window neither the
+  design nor the form offers. Recorded, not silently "fixed".
+- **Departure and arrival had independent dates**, so "leave 5 Sept, arrive 3 Sept" was
+  expressible. The arrival day now defaults to the departure day; overnight stays possible and has
+  a case covering it.
+
+### Why this needed extraction, not just a fix
+
+Three of the four were invisible **because the rules lived inline among the form's state**. Pulled
+into `utils/rideTime.ts` as pure functions, they can be read in one place and checked without a
+React tree. `combineDateTime` went with them — there were two identical copies, which is exactly
+how a form and its rules drift apart.
+
+✅ **`scripts/check-ride-time.mjs`: 8 cases, importing the REAL module.** A checker with its own
+copy of the logic passes while the app is broken — the failure that made the 2026-08-30 i18n
+checker useless until it was rewritten to execute the real translations. **Proven able to fail
+against the real source:** `latestDeparture` reverted to `departFrom` → red, exit 1; restored →
+green, `git diff` clean.
+
+⚠️ **The user app has no test runner** (CLAUDE.md: only the API does), so this is a script rather
+than a `*.test.ts`. It should become one the moment a runner is approved — **worth asking, since
+this is the first pure logic this card has produced.**
+
+### What I want to remember
+
+**"Follow the design" is not the same as "the design is right".** Six steps of this card were spent
+reproducing the artboards faithfully, and that was correct work — but the artboards are a drawing
+of a form, not a specification of its rules, and nobody had checked whether the rules behind them
+cohere. **The owner asked the question I should have asked at step 8.**
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline**, plus the new ride-time check at 8/8. 🛑 **Not seen on a device.**
+
+---
+
+## 2026-09-01 (6) — three device complaints, one root cause: the wrong modal shell
+
+- **Task:** T-101 step 8e — the date/time picker, after the owner ran the order screen.
+
+### Three symptoms, one bug
+
+The owner reported three things: it *"do not look like design"*, the calendar was *"always in
+center"*, and it should *"appear from bottom like county/city/..."*.
+
+**All three were the same defect.** The wheels were built on `AppModal` — the DIALOG shell,
+`justifyContent: 'center'` — where the design specifies the SHEET shell. The centring was symptom
+② directly; the "not from the bottom" was ③; and because a dialog is small, the date had to be a
+spinning wheel rather than the artboard's four day cards, which was ①. *Three reports that look
+like three tasks and are one — worth finding before building three fixes.*
+
+### The extraction, and why it was not optional
+
+`GeoSheet` already had the correct shell inline. Copying it into a second sheet would have been the
+obvious move and the wrong one:
+
+🔴 **the safe-area padding in it is a device bug already fixed once.** The system navigation
+bar sits OVER the sheet, and `Modal` renders outside the SafeAreaProvider, so the inset has to be
+applied by hand — found on an S24 Ultra with a ~48px bar. **A hand-rolled second sheet would have
+re-introduced it**, which is exactly the history of the geo cascade: seven copies before `GeoSheet`
+existed. So the shell became `components/BottomSheet.tsx` and `GeoSheet` was refactored onto it.
+
+⚠️ **One deliberate visual change came out of that refactor.** `GeoSheet` centred its header
+text; the artboard's header block is a plain left-aligned column. I checked the artboard rather than
+preserving the existing behaviour by habit, so the geo sheet's title moved left to match.
+
+### What had to survive, and did
+
+- **The T-069 floors.** `timeFloor` — the floor re-based onto the day being edited — is the fix for
+  the owner's 2026-08-13 report of an arrival offered before the departure. Passed through and
+  honoured when building the slots.
+- **The commit contract.** Nothing reaches the form until confirm. The wheels worked that way
+  because the OS picker they replaced fired per-spin on iOS, making cancel impossible once scrolled.
+- Changing the DAY now **rebases** the chosen hours instead of clearing them, and an end slot that
+  would precede the new start is dropped, so the window cannot become incoherent.
+
+### Deliberately not built
+
+The artboard's time row is a **draggable strip of 15-minute blocks** with a ruler and a "keyingi
+kun" marker. Owner chose tap-to-pick chips instead: a custom pan-gesture control is the most
+intricate thing in the design and the easiest to get subtly wrong on a touchscreen. **The data model
+is identical**, so the strip can replace the chips later without touching the form.
+
+### Mistakes and a check that got better
+
+- 🔴 **I used `monthsShort` before checking it existed.** It did not. *Second time this week I
+  have reached for a translation key on assumption.* Added `weekdaysShort` and `monthsShort` to all
+  three locales — the full weekday names overflow a quarter-width day card.
+- ✅ **The i18n checker now asserts LIST LENGTH too** (7 weekdays, 12 months). A short list renders
+  blank cards silently and no other check would catch it. **Proven able to fail** by truncating the
+  uz months → red, exit 1; restored.
+- ✅ **Checked before orphaning:** `TimeWheelModal` now has zero call sites, but `DateWheelModal` is
+  **still used** by `EditProfile` and `UserDetails` for the birth date. Neither deleted (rule 4);
+  `TimeWheelModal` added to T-105.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline.** 9 i18n keys × 3 locales resolve with correct list lengths.
+
+🛑 **NOT SEEN ON A DEVICE.**
+
+---
+
+## 2026-09-01 (5) — "a lot of free space": the artboard's answer was fake data, so I built the real one
+
+- **Task:** T-101 step 6b — the home screen's empty area, after the owner ran it on a device.
+
+### The gap was deliberate, and the deliberation was half right
+
+The artboard fills that space with three blocks — an **active-trip banner**, **recent routes**, and
+a **balance/promo/trips** row — and draws all three with **invented data** ("Toshkent → Samarqand ·
+Sardor A. · Malibu 01 A 777"). Step 6 shipped none of them for that reason, which was right.
+
+**What step 6 did not do was ask whether the data could be real.** It can, for two of the three:
+`getMyPassengerOffers` already exists, and `status` distinguishes `published` (waiting for drivers)
+from `driver_found` (a driver is confirmed, ride not yet happened). *"The artboard shows fiction"
+and "this feature must show fiction" are different claims, and only the first was verified.*
+
+The stats row stays out until the wallet exists (owner, and step 19 owns it).
+
+**Both blocks render nothing when the user has no orders.** An empty home screen is honest; a fake
+trip is not. Enlarging the fonts, which is where this started, would have enlarged the gap.
+
+### Four things I got wrong first, each caught by checking rather than by a baseline
+
+- 🔴 **I was about to put the banner ABOVE the carousels.** Measured: in `UserMenuNeW.dc.html` it
+  sits at line 293, **below** the carousels (232/265) and below the CTA.
+- 🔴 **The navigation target was wrong.** I sent the banner to `OfferDetails` — which shows a
+  **driver's** offer with a join button. A passenger's own order belongs to `OfferDrivers` ("who has
+  responded"), which is exactly where `MyPassengerOffersScreen` sends its own rows.
+  ***`tsc` cannot catch a route that exists but means something else.***
+- 🔴 **`text.onDark` is the same value as `ground`** (`#F4F2ED`), so the banner's supporting line
+  would have rendered **identically to its headline** — the "two tiers, one colour" trap this card
+  already hit on the status labels. The artboard uses `#B7B2A6`; added as `text.onDarkMuted`,
+  measured 8.76:1 against the near-black card, headline 16.56:1.
+- 🔴 **Step 6 had already added the i18n keys** — `activeTrip`, `recentRoutes`, `balance`,
+  `promoCodes`, `trips`, translated in all three locales and never used. **`tsc` caught me adding
+  duplicates** (TS1117). Only `activeWaiting` and `activeDriverFound` were genuinely new.
+  *A previous step had already done part of this work and left no note where I would look.*
+
+### What I deliberately did NOT do
+
+**The recent-route chips open the order form but do not pre-fill the route.** Pre-filling needs the
+geo ids, and `from_text` is a display string. **Half-wiring it would look like a feature and behave
+like a bug** — so the shortcut is the screen, not the addresses, and that is written down.
+
+Failure of the whole fetch is silent by design: these blocks are decoration over a working screen,
+so a failed request hides them and leaves the CTA alone. Logged, never surfaced.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline.** 4 i18n keys × 3 locales resolve, **checker proven able to fail** (renamed
+`activeWaiting` in ru → ru red, uz/en green, exit 1; restored). Both palettes re-diffed after the
+shared token: the only delta is still the documented `brandSuffix` comment.
+
+🛑 **NOT SEEN ON A DEVICE.**
+
+---
+
+## 2026-09-01 (4) — the order screen finished, and the palette already had the colour I was about to invent
+
+- **Task:** T-101 step 8d — `SpecialOrderPanel`, the last un-converted block of the order screen.
+- **Also:** the owner asked that the mahalla not be dropped from the database. **It was not, and
+  could not have been** — T-101 is presentation only and touched no model, migration or endpoint.
+  Verified rather than asserted: `geo_neighborhoods`, the `GeoNeighborhood` model, the
+  `/geo/city-districts/:id/neighborhoods` endpoint, `fetchGeoNeighborhoods()` and
+  `DriverProfile.address_neighborhood_id` (**drivers still pick a mahalla**) are all untouched.
+  **Boarded as T-104** so the reasoning and the one-component path back stay findable.
+  ⚠️ **My earlier wording was too broad.** I wrote "mahalla removed" when the truth was "removed
+  from the passenger order form". The two sound identical and only one would have been serious.
+
+### The finding: a patchwork where the design has one accent
+
+`UserBuyurtma.dc.html` draws the whole "Maxsus buyurtma" block in **purple `#5B2E9D`** — 6 uses on
+this board, present on **9 of the 33**. The panel in code was **four accent families in one card**:
+a green border on mint, blue price inputs, an amber waiting field, and a **red** price notice.
+
+🟢 **And `palette.paid` had been sitting there since step 1b.** The token was extracted in the
+original measurement pass and then never used, because the panel was never converted. *The colour
+audit found the value; only building the screen revealed that nothing consumed it.*
+
+One genuinely new token, measured: **`paidBorder` = `rgba(91,46,157,.22)`**, the artboard's card
+border. Added to both palettes together; the only remaining delta between them is still the
+documented `brandSuffix` comment.
+
+**Money now reads in mono**, as every number in these artboards does — a price column only lines up
+in a monospaced face.
+
+**Contrast measured, not assumed:** white on `paid` **9.04:1**, `paid` on surface **9.04:1**, on
+ground **8.08:1**. And the error text moved from `danger` (a fill) to `dangerText` — the §2.10
+defect class, **third instance in this card**.
+
+### 🔴 The same mistake twice, which makes it a method problem
+
+**I truncated a file's `export default` for the second time.** Both times I replaced a trailing
+`StyleSheet.create` block by slicing to the end of the file — which silently drops whatever came
+after it. `tsc` stayed green both times, because a named export was still there and nothing in this
+repo imports these by default.
+
+Caught by the deletion review, then I checked **every edited file's last line**; the rest are
+intact. *One slip is a slip; the same slip twice is a technique that needs changing — replacing a
+stylesheet wholesale now means re-checking what followed it.*
+
+🔴 **`tsc` also caught me inventing `paidBorder` before it existed** — I wrote the style first
+and the palette second. The baseline noticed, not me.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline.** Both palettes re-diffed after the shared token edit.
+
+🛑 **NOT SEEN ON A DEVICE.** Steps 8b–8d changed **interaction**, not just paint — the sheet
+picker on both directions, tapping seats, the "Hoziroq" chip, the special-order flow. A screenshot
+will not settle those; they need a walk.
+
+### Next
+
+1. **The device walk on the order screen** — the whole of steps 8-8d.
+2. **Steps 9-14**: the rest of the user app's screens.
+3. **T-104** (mahalla, reversible) and **T-105** (`GeoSelectModal` now has zero call sites) are
+   boarded in *Later*.
+
+---
+
+## 2026-09-01 (3) — the owner remembered the component I had forgotten, and it settled the mahalla
+
+- **Task:** T-101 step 8c — the rest of the order screen, plus the mahalla decision.
+
+### The owner was right about `GeoSheet`, and it changed the whole approach
+
+*"On passenger search we create country/city step-by-step selection, I think there are similar on
+design."* — exactly right. **`components/geo/GeoSheet.tsx` already exists**, is already the
+artboards' picker, and is already what the search screen uses. Its own header says it was built
+because **the geo cascade had been implemented seven times** across the two apps.
+
+**My step-8b row was the eighth copy, built beside the thing designed to end them.** I had even read
+the note saying `LocationCard` was "NOT a `GeoSheet` candidate" and accepted the verdict without
+re-testing the reason behind it.
+
+### The mahalla question answered itself once I checked
+
+The owner delegated the call to "the design's best logic". Four independent sources agreed, and
+none of them was my preference:
+
+1. **`UserBuyurtma.dc.html` mentions mahalla/MFY zero times** — its adm3 step is "mavze/QFY".
+2. **`GeoSheet`'s own level list**, written for these artboards, records mahalla as *"a sibling, not
+   a depth"*.
+3. **It has no id column (T-029)**, so `hydrateLocation` could never restore it — opening an order
+   for edit **already** dropped it from the form. The behaviour was dishonest before I touched it.
+4. **Nothing can match on it**, now or after T-102.
+
+And the mahalla was **the only reason `LocationCard` was excluded from `GeoSheet`**. Removing it
+unblocked the reuse — one decision closed two problems.
+
+⚠️ **`LocationValue.neighborhood` is KEPT, deprecated and always null.** Orders created before
+today carry a mahalla inside their stored `from_text`, and `handleSubmit` only resends that text
+when the passenger re-picks the location. Deleting the field would rewrite those strings and lose
+real addresses. *Removing a feature is not the same as removing its data.*
+
+### The rest of the screen
+
+- **The route and time blocks are two cards now**, as the artboard draws them. The times had been
+  sitting *interleaved between* the two locations — which is what made the block read as a stack of
+  forms rather than a route.
+- **`TimeWindowCard`:** mono eyebrow, "Hoziroq" as a `Chip`, and the inner panel moved to the
+  neutral ground — it had been a **blue tint, a colour that appears nowhere on this screen in the
+  design**. Its error text also moved from `danger` (a fill) to `dangerText` (the ink): the
+  §2.10 defect class, found yet again.
+- **`SeatStepper`: seats are tappable**, as the artboard draws them. An occupied seat is
+  unambiguous, so it goes back with no sheet; an empty one still asks. **The +/− stepper stays** —
+  it is the only control that works when a row is full, and it is the one already proven on a device.
+- **Every section heading is the artboard eyebrow now.** One of the last two was **red**
+  (`cardTitleDanger`); no heading in any artboard is red, danger is for errors.
+
+### Notes to self
+
+- 🔴 **A "not a candidate" note is only true while its reason holds.** I read it, believed it, and
+  built a duplicate. **Re-read the reason, not the verdict.**
+- 🔴 **A heredoc ate an apostrophe** (`mo'ljal`) and aborted a file write mid-command. The file
+  was untouched, so nothing was lost — but shell quoting has now bitten this project three times.
+  Used the file-writing tool instead.
+- ✅ **The mechanical diff review ran again** and this time found nothing: every deleted line in
+  `SeatStepper` and `TimeWindowCard` is presentational. It is worth running precisely because it
+  found four real losses last round.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline.** 16 i18n keys × 3 locales resolve, **checker proven able to fail** (renamed `departTitle`
+in uz → uz red, ru/en green, exit 1; restored).
+
+📋 **`GeoSelectModal` now has zero call sites** — this step replaced its last one. **Not deleted**
+(rule 4). Same for the `selectNeighborhood` / `selectCity` keys. Worth a small cleanup card.
+🛑 **Not seen on a device**, and this round is mostly INTERACTION change — the sheet picker,
+tapping seats, the "Hoziroq" chip. That needs a real walk, not a screenshot.
+🛑 **`SpecialOrderPanel` (284 lines) is still the old layout** — its own step.
+
+---
+
+## 2026-09-01 (2) — the device said "this doesn't look like the design", and it was right
+
+- **Task:** T-101 step 8b — rebuild the from/to card, after the owner ran step 8 on a real phone.
+
+### The correction that matters
+
+**Step 8 changed ~15% of that screen and I marked it "done".** The top bar, two button rows and the
+section labels — while the body, ~1 600 lines across `LocationCard` (472), `TimeWindowCard` (379),
+`SpecialOrderPanel` (284) and `SeatStepper` (204), was untouched. My summary did list what was not
+rebuilt, but listing it underneath the word "done" is not the same as saying **the screen will still
+look wrong**. *Report which PART of a screen is finished — "step 8 done" and "the order screen is
+done" are different claims and only one of them was true.*
+
+### What the rebuild actually was
+
+The design's route block is **two tappable rows in one card**. The code had **four stacked dropdowns
+plus a landmark field per direction** — eight boxes down the page. A different interaction, not a
+different colour, which is why no amount of tokenizing was ever going to close the gap.
+
+✅ **The data contract is what made it safe.** `LocationValue`, `emptyLocation` and
+`buildLocationText` are unchanged, and the screen only ever reads those — so the whole UI could be
+replaced without touching validation or submission. All four geo-loading effects, the
+cascade-clearing in `handleSelect` and `GeoSelectModal` are reused as-is. **The artboard's 4-step
+wizard maps 1:1 onto the levels that already existed** (viloyat → `province`, tuman →
+`cityDistrict`, mavze → `settlement`, orientir → `landmark`).
+
+### 🔴 A rewrite loses behaviour that no baseline can see
+
+**My rewrite silently dropped four things, and the mechanical diff review caught all four:**
+
+1. **The `settlements.length > 0` / `neighborhoods.length > 0` guards.** Many districts have
+   neither. Without them the row offers a chip that opens an empty list — which reads as *broken*,
+   not as *not applicable*.
+2. **Both clear (✕) buttons**, so an optional level could no longer be un-picked.
+3. **`maxLength={255}`**, the stored column's limit — the refusal would have come from the server.
+4. **The `export default`.**
+
+**Every one of them compiled, linted and token-checked clean.** `tsc`, ESLint and the colour ratchet
+all stayed exactly at baseline while four real behaviours were missing. *This is the argument for the
+plan's own rule that large screens convert values rather than get rewritten — and when a rewrite is
+the right call anyway, reading the deleted lines is the only check that finds this class of loss.*
+
+### The design and the code genuinely disagree about one thing
+
+**The artboard has no mahalla step; the code has one.** Dropping it to match the design would delete
+a field users can fill today — and it is the fragile one: the mahalla **has no id column (T-029)**,
+so `hydrateLocation` cannot restore it, and `handleSubmit` carries an explicit guard to stop an edit
+erasing it. Settlement and mahalla **branch off the district**; a linear 4-step wizard cannot express
+a branch without losing one of them. Kept as a sibling chip and **handed to the owner as a question**
+rather than resolved by me.
+
+### Also
+
+🔴 **`common.clear` did not exist — I used the key before checking.** `clear` lives under
+`searchOffers`. Added to all three locales rather than borrowing another screen's namespace. The
+i18n checker caught it; `tsc` did not, though it **would** have caught adding it to only one locale,
+since `translations/index.ts` types the three against each other.
+🔴 **A JSX comment among element attributes** — `{/* ... */}` between props is a parse error.
+One-line fix, but a reminder that a comment is not free everywhere.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six at
+baseline, none rebaselined.** 9 i18n keys × 3 locales resolve, **checker proven able to fail**
+(renamed `clear` in ru → ru red, uz/en green, exit 1; restored).
+
+🛑 **Not seen on a device**, and the rest of that screen — time card, seat picker,
+special-order panel — is **still the old layout**. The screen is closer to the design, not done.
+
+### Next
+
+1. **The device pass on the rebuilt route card.**
+2. **`TimeWindowCard`, `SeatStepper`, `SpecialOrderPanel`** — the rest of this screen's body.
+3. **Owner question: does the mahalla survive the redesign?**
+
+---
+
+## 2026-09-01 — T-101 step 8: the first artboard rebuild, and three defects that only measuring found
+
+- **Task:** T-101 step 8 — `CreatePassengerOfferScreen` → `UserBuyurtma.dc.html`. **The first step
+  of the VISIBLE half of the card**; everything before it was colour and foundation.
+- **Scope, chosen by the owner:** layout + control shapes, **logic untouched**. The screen is 1 221
+  lines carrying T-031, T-040, T-069 and OR-012 fixes; the plan's own rule says large screens
+  convert values and do not get rewritten.
+
+### The owner question on the card, answered by measuring
+
+**Four near-identical artboards → ONE screen with a mode** (owner, 2026-09-01). Not just a
+preference: `diff` on tag-split copies puts the four at **22-78 differing lines out of ~138 KB**.
+What actually differs is the top-bar subtitle and how deep the location sheet opens. `ORDER_SCOPES`
+moved out of `MenuScreen` into `types/orderScope.ts` now that a second screen reads it.
+
+### Three findings that reading would not have produced
+
+- 🔴 **THE GRADIENT HEADER IS NOT UNIVERSAL.** `TopBar` hardcoded
+  `linear-gradient(180deg,#1D9846,#F4F2ED)` because the two boards checked in step 3 both had it.
+  Measured across the boards: `UserMenuNeW` and `UserMyOrder` carry the gradient; **`UserBuyurtma`
+  and `UserQidiruv` are a flat `#F4F2ED`.** Landing screens get the gradient, form screens the flat
+  ground. `TopBar` gained `background="gradient" | "flat"`. **This lands again at step 17.**
+- 🔴 **A DOUBLE SAFE-AREA INSET, CAUGHT BEFORE THE DEVICE RATHER THAN BY IT.** The screen wraps in
+  *safe-area-context*'s `SafeAreaView`, which pads on **both** platforms; `MenuScreen` uses **React
+  Native's**, which is a **no-op on Android**. That difference is why the owner's Android screenshot
+  of the chrome looked correct and would not have warned us. With `TopBar` applying `insets.top`
+  itself, this screen's header would have sat a status-bar too low. Fixed with
+  `edges={['left','right','bottom']}`. *Two imports with the same name and different behaviour.*
+- 🟢 **CHECKING THE ARTBOARD'S HANDLER PREVENTED A SILENT REVERT OF T-031.** Its two payment chips
+  *render* as a radio group — one selected, one not — and I was converting checkboxes into exactly
+  that shape. Their handler is `pick: () => set({ [k]: !on })`: a **toggle**. The artboard agrees
+  with the owner's 2026-08-13 decision that payment options are independent. **Had I mapped the
+  rendering instead of the behaviour, I would have re-introduced the bug T-031 was opened to fix**,
+  and the repaint would have looked perfect. `dost` likewise turned out to be its own control in
+  the artboard, not a third payment chip — which is how the code already had it.
+
+### The step-3 pattern, found once more
+
+**The screen had its own hand-rolled header** — the same thing that made `TopBar` render nowhere on
+2026-08-30. Deleted, along with 4 now-dead style blocks. *Third time this card that building a
+component and mounting it proved to be two different jobs.*
+
+`Chip` also got **its first call sites**: it shipped in step 5 with none. Car class uses its `dark`
+tone per the artboards' own `sel()`.
+
+### Mistakes worth carrying forward
+
+- 🔴 **A blanket regex rename corrupted a doc filename inside a comment.** Renaming `SCOPES` →
+  `ORDER_SCOPES` with `re.sub(r"SCOPES", ...)` also rewrote `docs/PLAN-T101-SCOPES.md` into
+  `docs/PLAN-T101-ORDER_SCOPES.md`. Caught by reading the result, not by any check — *`tsc` and
+  lint cannot see inside a comment.*
+- 🔴 **I added a new lint warning and the baseline caught it** (216 → 217): `ReadonlyArray<T>` where
+  this repo's config wants `readonly T[]`. Fixed rather than rebaselined.
+- 🔴 **My first i18n checker hung for two minutes** on hand-rolled TS parsing. Rewritten to *execute*
+  the compiled translation objects — the approach that has worked every previous time.
+- ⚠️ **I first read the artboard's payment row as single-choice** and said so, before opening the
+  handler. The correction cost nothing here only because I checked before writing the code.
+
+### Verification
+
+**user `tsc` 6 · lint 216/0 · tokens 1 · driver `tsc` 28 · lint 280/0 · tokens 3 — all six exactly
+at baseline, none rebaselined.** All four `components/chrome/` files re-verified byte-identical
+across the two apps. **Every deletion in the screen's diff proven presentational** by filtering the
+diff mechanically. **14 i18n keys × 3 locales resolve, and the checker was proven able to fail**
+(renamed `classTourist` in uz → uz red, ru/en green, exit 1; restored, `git diff` clean).
+
+🛑 **NOT SEEN ON A DEVICE** — and the three riskiest parts are exactly the ones only a device
+settles: the flat header, the back arrow on a pushed screen, and the safe-area fix.
+🛑 **Still not rebuilt on this screen:** the seat picker is still `SeatStepper`, not the artboard's
+3-state seat-square grid (owner deferred it as an interaction change); the location cards, time
+sheet and special-order panel keep their current layouts.
+
+### Next
+
+1. 🛑 **The device pass** — now with three step-8 items added to it.
+2. **Step 9-14**, the rest of the user app's rebuild.
+3. **Step 23** as its own card · **T-102 / T-103** still gate the search screens.
+
+---
+
 ## 2026-08-31 — T-101: both apps off 1 803 hardcoded colours, and four contrast defects found by measuring
 
 - **Task:** T-101 — the colour half of the redesign, finished. **User 839 → 1 · driver 964 → 3**,

@@ -1,35 +1,53 @@
 /**
- * Location Card ("Qayerdan:" / "Qayerga:")
+ * Location row ("Qayerdan" / "Qayerga") — the route block of the order screen.
  *
- * The route block of the new order screen, drawn inline on the main screen as
- * in K_buyurtma001Yangi.png (owner decision 2026-07-29: no separate popup).
+ * T-101 step 8c — rebuilt onto the shared `GeoSheet`, the same picker the passenger
+ * SEARCH screen uses. Before this it was the eighth hand-rolled copy of the geo cascade
+ * (four stacked dropdowns per direction) and the last one left in the user app.
  *
- * Cascade: viloyat → shahar/tuman → mavze/QFY (optional, many districts have
- * none) + a free-text landmark ("mo'ljal"). The country is fixed to Uzbekistan
- * by the screen and never shown — same rule as OR-004.
+ * 🔴 **THE MAHALLA (neighborhood) IS GONE — owner decision 2026-09-01, taken on the
+ * design's own logic.** Four independent lines of evidence agreed:
+ *   ① `UserBuyurtma.dc.html` mentions mahalla/MFY **zero** times; its adm3 step is
+ *      labelled "mavze/QFY", i.e. the settlement.
+ *   ② `GeoSheet`'s own level list — written for these artboards — records mahalla as
+ *      "a sibling, not a depth".
+ *   ③ It has **no id column** (T-029), so `hydrateLocation` could never restore it:
+ *      opening an order for edit already dropped it from the form.
+ *   ④ Nothing can match on it, now or after T-102.
+ * It was the ONLY reason this component could not use `GeoSheet` (see the trap note in
+ * docs/PLAN.md: "picks settlement AND neighborhood as siblings — a branch").
+ *
+ * ⚠️ `LocationValue` KEEPS its `neighborhood` field, set to null and never written.
+ * `buildLocationText` still reads it. That is deliberate: orders created before today
+ * have the mahalla inside their stored `from_text`/`to_text`, and `handleSubmit`'s guard
+ * only resends that text when the passenger re-picks the location. Deleting the field
+ * would rewrite those strings and lose real addresses.
+ *
+ * The country is fixed to Uzbekistan by the screen and never shown (OR-004), so the
+ * sheet opens at province.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from '../../hooks/useTranslation';
-import * as GeoAPI from '../../api/geo';
-import type { GeoOption } from '../../api/geo';
-import { GeoSelectModal } from './GeoSelectModal';
-import { theme } from '../../themes';
+} from "react-native";
+import { useTranslation } from "../../hooks/useTranslation";
+import type { GeoOption } from "../../api/geo";
+import { GeoSheet, type GeoPath } from "../geo/GeoSheet";
+import { theme } from "../../themes";
 
 export interface LocationValue {
   province: GeoOption | null;
   cityDistrict: GeoOption | null;
   settlement: GeoOption | null;
-  /** Mahalla. A sibling of `settlement`, not a child — both hang off the district. */
+  /**
+   * @deprecated Mahalla. No longer selectable (see the header). Kept so the text of
+   * orders created before 2026-09-01 still composes correctly.
+   */
   neighborhood: GeoOption | null;
   landmark: string;
 }
@@ -39,12 +57,15 @@ export const emptyLocation: LocationValue = {
   cityDistrict: null,
   settlement: null,
   neighborhood: null,
-  landmark: '',
+  landmark: "",
 };
 
 /**
- * "Farg'ona viloyat, Farg'ona tumani, Chimyon QFY, Yangiobod MFY/ Natarius yonida"
+ * "Farg'ona viloyat, Farg'ona tumani, Chimyon QFY/ Natarius yonida"
  * Country is intentionally left out (OR-004).
+ *
+ * ⚠️ UNCHANGED by step 8c, including the `neighborhood` term — this is what the API
+ * stores, and a hydrated legacy order can still carry one.
  */
 export const buildLocationText = (value: LocationValue): string => {
   const parts = [
@@ -57,10 +78,8 @@ export const buildLocationText = (value: LocationValue): string => {
   const landmark = value.landmark.trim();
   if (parts.length === 0) return landmark;
 
-  return landmark ? `${parts.join(', ')}/ ${landmark}` : parts.join(', ');
+  return landmark ? `${parts.join(", ")}/ ${landmark}` : parts.join(", ");
 };
-
-type PickerType = 'province' | 'cityDistrict' | 'settlement' | 'neighborhood';
 
 interface LocationCardProps {
   label: string;
@@ -68,8 +87,8 @@ interface LocationCardProps {
   countryId: number | null;
   value: LocationValue;
   onChange: (value: LocationValue) => void;
-  /** Colour of the marker in front of the label (start vs. end of the route). */
-  accent: 'start' | 'end';
+  /** Marker style: the origin is a hollow ring, the destination a filled one. */
+  accent: "start" | "end";
   error?: string;
 }
 
@@ -82,390 +101,209 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   error,
 }) => {
   const { t } = useTranslation();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const [provinces, setProvinces] = useState<GeoOption[]>([]);
-  const [cityDistricts, setCityDistricts] = useState<GeoOption[]>([]);
-  const [settlements, setSettlements] = useState<GeoOption[]>([]);
-  const [neighborhoods, setNeighborhoods] = useState<GeoOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [picker, setPicker] = useState<PickerType | null>(null);
-  // A failed load used to be console.error only, which left the user staring at
-  // an empty list that reads exactly like "this district has no settlements".
-  const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * `GeoSheet` speaks in `GeoPath`, this screen in `LocationValue`. The two are the same
+   * levels under different names, so the mapping is a rename — except `country`, which
+   * the sheet needs as an ancestor but this screen never displays (OR-004).
+   */
+  const toPath = (): GeoPath => ({
+    country: countryId ? ({ id: countryId, name: "" } as GeoOption) : undefined,
+    province: value.province ?? undefined,
+    district: value.cityDistrict ?? undefined,
+    settlement: value.settlement ?? undefined,
+  });
 
-  // Deps are plain ids on purpose — passing the objects would re-fire these
-  // effects on every parent render (the T-017 loop).
-  const provinceId = value.province?.id ?? null;
-  const cityDistrictId = value.cityDistrict?.id ?? null;
-
-  useEffect(() => {
-    if (!countryId) {
-      setProvinces([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    GeoAPI.fetchGeoProvinces(countryId)
-      .then((items) => {
-        if (cancelled) return;
-        setProvinces(items);
-        setLoadFailed(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load provinces:', err);
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [countryId]);
-
-  useEffect(() => {
-    if (!provinceId) {
-      setCityDistricts([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    GeoAPI.fetchGeoCityDistricts(provinceId)
-      .then((items) => {
-        if (cancelled) return;
-        setCityDistricts(items);
-        setLoadFailed(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load city districts:', err);
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [provinceId]);
-
-  useEffect(() => {
-    if (!cityDistrictId) {
-      setSettlements([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    GeoAPI.fetchGeoSettlements(cityDistrictId)
-      .then((items) => {
-        if (cancelled) return;
-        setSettlements(items);
-        setLoadFailed(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load settlements:', err);
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cityDistrictId]);
-
-  // Mahallas hang off the same district as settlements, so this mirrors the
-  // effect above rather than chaining off it.
-  useEffect(() => {
-    if (!cityDistrictId) {
-      setNeighborhoods([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    GeoAPI.fetchGeoNeighborhoods(cityDistrictId)
-      .then((items) => {
-        if (cancelled) return;
-        setNeighborhoods(items);
-        setLoadFailed(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load neighborhoods:', err);
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cityDistrictId]);
-
-  const handleSelect = (option: GeoOption) => {
-    switch (picker) {
-      case 'province':
-        // Everything below the changed level is no longer valid
-        onChange({
-          ...value,
-          province: option,
-          cityDistrict: null,
-          settlement: null,
-          neighborhood: null,
-        });
-        break;
-      case 'cityDistrict':
-        onChange({ ...value, cityDistrict: option, settlement: null, neighborhood: null });
-        break;
-      case 'settlement':
-        onChange({ ...value, settlement: option });
-        break;
-      case 'neighborhood':
-        onChange({ ...value, neighborhood: option });
-        break;
-    }
-    setPicker(null);
+  const handleDone = (path: GeoPath) => {
+    onChange({
+      ...value,
+      province: path.province ?? null,
+      cityDistrict: path.district ?? null,
+      settlement: path.settlement ?? null,
+      // Re-picking the location retires any legacy mahalla: the address the passenger
+      // just chose is the address, and keeping the old one would append a mahalla from
+      // a district they may no longer be in.
+      neighborhood: null,
+    });
+    setSheetOpen(false);
   };
 
-  const pickerTitle =
-    picker === 'province'
-      ? t('passengerOffers.selectProvince')
-      : picker === 'cityDistrict'
-        ? t('passengerOffers.selectCity')
-        : picker === 'neighborhood'
-          ? t('passengerOffers.selectNeighborhood')
-          : t('passengerOffers.selectSettlement');
-
-  const pickerOptions =
-    picker === 'province'
-      ? provinces
-      : picker === 'cityDistrict'
-        ? cityDistricts
-        : picker === 'neighborhood'
-          ? neighborhoods
-          : settlements;
-
-  const pickerSelectedId =
-    picker === 'province'
-      ? (value.province?.id ?? null)
-      : picker === 'cityDistrict'
-        ? (value.cityDistrict?.id ?? null)
-        : picker === 'neighborhood'
-          ? (value.neighborhood?.id ?? null)
-          : (value.settlement?.id ?? null);
-
-  const summary = buildLocationText(value);
+  // Line 1 is the most specific place chosen, line 2 the path above it — the artboard's
+  // two-line row. `buildLocationText` still builds the single string the API stores;
+  // this is a display split only and the two must not be conflated.
+  const chosen = value.settlement ?? value.cityDistrict ?? value.province;
+  const line1 = chosen?.name ?? "";
+  const line2 = [
+    value.province?.name,
+    value.cityDistrict?.name,
+    value.settlement?.name,
+  ]
+    .filter((part): part is string => !!part && part !== line1)
+    .join(", ");
 
   return (
-    <View style={[styles.card, !!error && styles.cardError]}>
-      <View style={styles.labelRow}>
-        <View style={[styles.marker, accent === 'end' && styles.markerEnd]} />
-        <Text style={styles.label}>{label}</Text>
-        {loading && <ActivityIndicator size="small" color={theme.palette.action} />}
-      </View>
-
+    <View>
       <TouchableOpacity
-        style={styles.select}
-        onPress={() => setPicker('province')}
+        style={[styles.row, !!error && styles.rowError]}
+        onPress={() => setSheetOpen(true)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={label}
       >
-        <Text style={[styles.selectText, !value.province && styles.selectPlaceholder]}>
-          {value.province?.name || t('passengerOffers.selectProvince')}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
+        <View style={styles.markerColumn}>
+          <View style={[styles.marker, accent === "end" && styles.markerEnd]}>
+            {accent === "end" && <View style={styles.markerCore} />}
+          </View>
+        </View>
+
+        <View style={styles.rowBody}>
+          <Text style={styles.eyebrow}>{label.toUpperCase()}</Text>
+          <Text
+            style={[styles.line1, !line1 && styles.line1Placeholder]}
+            numberOfLines={2}
+          >
+            {line1 || t("passengerOffers.selectProvince")}
+          </Text>
+          {!!line2 && (
+            <Text style={styles.line2} numberOfLines={2}>
+              {line2}
+            </Text>
+          )}
+        </View>
+
+        <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
-
-      {!!value.province && (
-        <TouchableOpacity
-          style={styles.select}
-          onPress={() => setPicker('cityDistrict')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.selectText, !value.cityDistrict && styles.selectPlaceholder]}>
-            {value.cityDistrict?.name || t('passengerOffers.selectCity')}
-          </Text>
-          <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
-        </TouchableOpacity>
-      )}
-
-      {/* Only offered where the district actually has settlements */}
-      {!!value.cityDistrict && settlements.length > 0 && (
-        <TouchableOpacity
-          style={styles.select}
-          onPress={() => setPicker('settlement')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.selectText, !value.settlement && styles.selectPlaceholder]}>
-            {value.settlement?.name || t('passengerOffers.selectSettlement')}
-          </Text>
-          {!!value.settlement ? (
-            <TouchableOpacity
-              onPress={() => onChange({ ...value, settlement: null })}
-              hitSlop={8}
-            >
-              <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Mahalla — same rule as settlements: only offered where the district has any */}
-      {!!value.cityDistrict && neighborhoods.length > 0 && (
-        <TouchableOpacity
-          style={styles.select}
-          onPress={() => setPicker('neighborhood')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.selectText, !value.neighborhood && styles.selectPlaceholder]}>
-            {value.neighborhood?.name || t('passengerOffers.selectNeighborhood')}
-          </Text>
-          {!!value.neighborhood ? (
-            <TouchableOpacity
-              onPress={() => onChange({ ...value, neighborhood: null })}
-              hitSlop={8}
-            >
-              <Ionicons name="close-circle" size={18} color={theme.palette.text.tertiary} />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="chevron-down" size={18} color={theme.palette.text.secondary} />
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* The landmark row had no icon at all, so nothing marked it as the place
-          you type a location into (OR-012 item 7). */}
-      <View style={styles.landmarkRow}>
-        <Ionicons
-          name="location-outline"
-          size={18}
-          color={accent === 'end' ? theme.palette.brand : theme.palette.text.secondary}
-          style={styles.landmarkIcon}
-        />
-        <TextInput
-          style={styles.landmarkInput}
-          value={value.landmark}
-          onChangeText={(text) => onChange({ ...value, landmark: text })}
-          placeholder={t('passengerOffers.landmarkPlaceholder')}
-          placeholderTextColor={theme.palette.text.tertiary}
-          maxLength={255}
-        />
-      </View>
-
-      {!!summary && <Text style={styles.summary}>{summary}</Text>}
-
-      {loadFailed && !loading && (
-        <Text style={styles.errorText}>{t('passengerOffers.errorLoad')}</Text>
-      )}
 
       {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-      <GeoSelectModal
-        visible={picker !== null}
-        title={pickerTitle}
-        options={pickerOptions}
-        selectedId={pickerSelectedId}
-        loading={loading}
-        onSelect={handleSelect}
-        onClose={() => setPicker(null)}
+      {/*
+        The landmark ("mo'ljal") — step 4/4 of the artboard's sheet, kept on the row
+        because it is free text rather than a list and the passenger often edits it after
+        the address is settled. Only offered once there is an address to qualify.
+      */}
+      {!!value.cityDistrict && (
+        <View style={styles.landmarkRow}>
+          <TextInput
+            style={styles.landmarkInput}
+            value={value.landmark}
+            onChangeText={(text) => onChange({ ...value, landmark: text })}
+            placeholder={t("passengerOffers.landmarkPlaceholder")}
+            placeholderTextColor={theme.palette.text.tertiary}
+            // The stored column is 255; without this the refusal came from the server.
+            maxLength={255}
+          />
+        </View>
+      )}
+
+      {/*
+        `endLevel="settlement"` is adm3 — one level deeper than the search screen, whose
+        own comment says "the order screen goes to adm3". `startLevel="province"` skips
+        the country, which is fixed (OR-004).
+      */}
+      <GeoSheet
+        visible={sheetOpen}
+        title={label}
+        startLevel="province"
+        endLevel="settlement"
+        initialPath={toPath()}
+        onDone={handleDone}
+        onClose={() => setSheetOpen(false)}
       />
     </View>
   );
 };
 
+/**
+ * Measured off `UserBuyurtma.dc.html`'s route card: row padding 12/10/12/12 · radius 15 ·
+ * origin marker an 11px ring with a 3px stroke, destination a 20px ring with an 8px core ·
+ * eyebrow mono uppercase · line 1 14.5/700 · line 2 12.5/500. The card itself is the
+ * screen's `routeCard`; this component is one row inside it.
+ */
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1.5,
-    borderColor: theme.palette.action,
-    borderRadius: 12,
-    backgroundColor: theme.palette.surface,
-    padding: 12,
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingTop: 12,
+    paddingRight: 10,
+    paddingBottom: 12,
+    paddingLeft: 12,
+    borderRadius: 15,
   },
-  cardError: {
-    borderColor: theme.palette.danger,
+  rowError: {
+    backgroundColor: theme.palette.dangerTint,
   },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
+  markerColumn: {
+    width: 22,
+    alignItems: "center",
+    paddingTop: 4,
   },
   marker: {
-    width: 12,
-    height: 12,
-    backgroundColor: theme.palette.text.primary,
+    width: 11,
+    height: 11,
+    borderRadius: 99,
+    borderWidth: 3,
+    borderColor: theme.palette.action,
+    alignItems: "center",
+    justifyContent: "center",
   },
   markerEnd: {
-    borderRadius: 6,
-    backgroundColor: theme.palette.brand,
+    width: 20,
+    height: 20,
   },
-  label: {
+  markerCore: {
+    width: 8,
+    height: 8,
+    borderRadius: 99,
+    backgroundColor: theme.palette.action,
+  },
+  rowBody: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.palette.male,
+    minWidth: 0,
+    gap: 3,
   },
-  select: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-    borderRadius: 10,
-    backgroundColor: theme.palette.ground,
-    marginBottom: 8,
-    gap: 8,
-  },
-  selectText: {
-    flex: 1,
-    fontSize: 15,
-    color: theme.palette.text.primary,
-  },
-  selectPlaceholder: {
+  eyebrow: {
+    ...theme.typography.eyebrow,
+    fontSize: 11,
     color: theme.palette.text.tertiary,
   },
-  // The border moved from the input to the row, so the pin sits INSIDE the
-  // field rather than floating next to it.
-  landmarkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-    borderRadius: 10,
-    backgroundColor: theme.palette.surface,
+  line1: {
+    ...theme.typography.placeLine,
+    color: theme.palette.text.primary,
+    lineHeight: 20,
   },
-  landmarkIcon: {
-    marginRight: 8,
+  line1Placeholder: {
+    color: theme.palette.text.tertiary,
+  },
+  line2: {
+    ...theme.typography.secondary,
+    color: theme.palette.text.secondary,
+  },
+  chevron: {
+    fontSize: 15,
+    color: theme.palette.text.chevron,
+    paddingTop: 8,
+  },
+  landmarkRow: {
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
   landmarkInput: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: 15,
-    color: theme.palette.text.primary,
-  },
-  summary: {
-    marginTop: 10,
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 11,
+    backgroundColor: theme.palette.ground,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.borders.control,
+    ...theme.typography.caption,
     color: theme.palette.text.primary,
   },
   errorText: {
-    marginTop: 6,
-    fontSize: 12,
-    color: theme.palette.danger,
+    ...theme.typography.helper,
+    color: theme.palette.dangerText,
+    paddingHorizontal: 12,
+    paddingBottom: 6,
   },
 });
 

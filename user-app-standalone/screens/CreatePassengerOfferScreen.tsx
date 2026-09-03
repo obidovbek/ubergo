@@ -18,7 +18,11 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { MainStackParamList } from "../navigation/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,7 +62,15 @@ import {
 } from "../components/passengerOffer/SpecialOrderPanel";
 import { showToast } from "../utils/toast";
 import { showConfirmDialog } from "../utils/confirmDialog";
-import { theme } from '../themes';
+import { theme } from "../themes";
+import {
+  MIN_ADVANCE_MS,
+  latestDeparture,
+  arrivalIsReachable,
+} from "../utils/rideTime";
+import { TopBar } from "../components/chrome/TopBar";
+import { Chip } from "../components/Chip";
+import { DEFAULT_ORDER_SCOPE, orderScopeLabelKey } from "../types/orderScope";
 
 /*
  * T-028 — the shared list, not a local copy. The copy that used to sit here
@@ -74,7 +86,23 @@ type CreateRouteProp = RouteProp<MainStackParamList, "CreatePassengerOffer">;
  * The client asks for a minute more so a form submitted right on the boundary
  * cannot pass here and then fail server-side with an untranslated 400.
  */
-const MIN_ADVANCE_MS = 31 * 60 * 1000;
+// T-101 step 8f — MIN_ADVANCE_MS moved to `utils/rideTime` with the rules that use it.
+
+/**
+ * The five car classes, in `UserBuyurtma.dc.html`'s own order (its `CLASSES` array:
+ * Standart · Comfort · Biznes · Econom · Turistik). Listed once rather than as five
+ * hand-written controls so the order and the union cannot drift apart.
+ */
+const VEHICLE_CLASS_CHIPS: readonly {
+  value: PassengerOfferVehicleClass;
+  labelKey: string;
+}[] = [
+  { value: "standard", labelKey: "passengerOffers.classStandard" },
+  { value: "comfort", labelKey: "passengerOffers.classComfort" },
+  { value: "business", labelKey: "passengerOffers.classBusiness" },
+  { value: "econom", labelKey: "passengerOffers.classEconom" },
+  { value: "tourist", labelKey: "passengerOffers.classTourist" },
+];
 
 export const CreatePassengerOfferScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -84,6 +112,19 @@ export const CreatePassengerOfferScreen: React.FC = () => {
   // T-040: one screen, two modes. `offerId` present = editing that order.
   const offerId = route.params?.offerId;
   const isEdit = offerId !== undefined;
+
+  /**
+   * T-101 step 8 — the order scope, chosen on the home carousel.
+   *
+   * The four `UserBuyurtma*` artboards are ONE screen with a mode (owner, 2026-09-01):
+   * measured, they differ in 22-78 lines out of ~138 KB, and the difference is the top
+   * bar's subtitle plus how deep the location sheet opens.
+   *
+   * ⚠️ TODAY IT ONLY NAMES THE SCREEN. It changes no matching and no validation — all
+   * four scopes still behave identically until **T-102** gives `DriverOffer` real geo
+   * columns. Do not read this as the scopes being wired up.
+   */
+  const scope = route.params?.scope ?? DEFAULT_ORDER_SCOPE;
   const [isPreparing, setIsPreparing] = useState(isEdit);
   /**
    * The order as it was loaded. Used to answer "did the passenger actually
@@ -274,9 +315,13 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         setIsUrgent(!!offer.is_urgent);
         setDepartDate(startAt);
         setDepartFrom(startAt);
-        setDepartUntil(offer.depart_until ? new Date(offer.depart_until) : null);
+        setDepartUntil(
+          offer.depart_until ? new Date(offer.depart_until) : null,
+        );
         setArriveDate(offer.arrive_until ? new Date(offer.arrive_until) : null);
-        setArriveUntil(offer.arrive_until ? new Date(offer.arrive_until) : null);
+        setArriveUntil(
+          offer.arrive_until ? new Date(offer.arrive_until) : null,
+        );
 
         /*
          * T-031 — prefer the flags, but fall back to the deprecated
@@ -319,12 +364,18 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         if (special) {
           setSpecialExpanded(true);
           setSpecialOrder({
-            priceFront: special.price_front != null ? String(special.price_front) : "",
-            priceBack: special.price_back != null ? String(special.price_back) : "",
+            priceFront:
+              special.price_front != null ? String(special.price_front) : "",
+            priceBack:
+              special.price_back != null ? String(special.price_back) : "",
             priceBackSalon:
-              special.price_back_salon != null ? String(special.price_back_salon) : "",
+              special.price_back_salon != null
+                ? String(special.price_back_salon)
+                : "",
             priceWholeSalon:
-              special.price_whole_salon != null ? String(special.price_whole_salon) : "",
+              special.price_whole_salon != null
+                ? String(special.price_whole_salon)
+                : "",
             reviewDriverOffers: !!special.review_driver_offers,
             fixedPrice: !!special.fixed_price,
             waitingFeePerMin:
@@ -381,11 +432,26 @@ export const CreatePassengerOfferScreen: React.FC = () => {
    * ⚠️ When "hoziroq" is ticked the departure is `now`, so the arrival floor
    * follows it rather than sitting at a stale picked time.
    */
-  const arrivalFloor = isUrgent
-    ? new Date()
-    : departFrom
-      ? combineDateTime(departDate, departFrom)
-      : departFloor;
+  /*
+    T-101 step 8f — the floor is the LATEST possible departure, not the earliest.
+
+    🔴 It used to be the START of the departure window, which let a passenger promise
+    something impossible: "leave between 08:00 and 11:00, arrive by 09:00" passed
+    validation, because 09:00 is after the 08:00 start. If the driver leaves at 11:00 —
+    which the order explicitly permits — the arrival is already broken at submit time.
+
+    The end of the window is the only departure the passenger has actually committed to
+    being no later than, so it is the only honest floor for "I must be there by".
+  */
+  const latestDepartureAt = latestDeparture({
+    isUrgent,
+    departDate,
+    departFrom,
+    departUntil,
+    floor: departFloor,
+  });
+
+  const arrivalFloor = latestDepartureAt;
 
   /** Departure moment: "now" when urgent, otherwise the day + window start. */
   const getStartAtDate = (): Date => {
@@ -401,8 +467,17 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
   /** "…gacha yetib borish kerak" — needs both a day and a time. */
   const getArriveUntilDate = (): Date | null => {
-    if (!arriveDate || !arriveUntil) return null;
-    return combineDateTime(arriveDate, arriveUntil);
+    if (!arriveUntil) return null;
+    /*
+      T-101 step 8f — the arrival DAY defaults to the departure day.
+
+      🔴 They were two independent pickers with nothing tying them together, so
+      "leave 5 Sept, arrive 3 Sept" was expressible; only the (broken) comparison below
+      stood between that and the API. Almost every ride arrives on the day it departs,
+      so the departure day is the right default and an overnight trip is the exception
+      the passenger sets explicitly.
+    */
+    return combineDateTime(arriveDate ?? departDate, arriveUntil);
   };
 
   const validateForm = (withSpecialOrder: boolean): boolean => {
@@ -419,6 +494,21 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
     const startAtDate = getStartAtDate();
 
+    /*
+      T-101 step 8f — the 31-minute minimum applies to SCHEDULED orders ONLY, and that
+      is now a stated rule rather than an accident of `if (!isUrgent)`.
+
+      🔴 The form used to both forbid and allow an immediate departure: `MIN_ADVANCE_MS`
+      refused anything sooner than 31 minutes, while `getStartAtDate()` returned `now`
+      for an urgent order and this block skipped the check. Two contradictory rules in
+      one form, with a toggle deciding which applied.
+
+      Owner, 2026-09-01: **Hoziroq genuinely means "I am ready now"** — an on-demand
+      hail, like flagging a taxi. The minimum exists to stop a SCHEDULED order being
+      posted so late that no driver can plan around it; it has nothing to say about a
+      passenger who is standing at the kerb. So the exemption is correct — it was only
+      ever undocumented.
+    */
     if (!isUrgent) {
       if (!departFrom) {
         newErrors.start_at = t("passengerOffers.errorTime");
@@ -432,8 +522,15 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       }
     }
 
+    /*
+      T-101 step 8f — compared against the LATEST departure, not the earliest.
+
+      🔴 The old check was `arriveUntilDate < startAtDate`, i.e. against the START of the
+      departure window. "Leave 08:00–11:00, arrive by 09:00" therefore passed: an order
+      that is impossible to fulfil the moment the driver uses the window it was granted.
+    */
     const arriveUntilDate = getArriveUntilDate();
-    if (arriveUntilDate && arriveUntilDate < startAtDate) {
+    if (!arrivalIsReachable(arriveUntilDate, latestDepartureAt)) {
       newErrors.arrive_until = t("passengerOffers.errorArrivalTime");
     }
 
@@ -508,12 +605,17 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         side: "from" | "to",
         value: LocationValue,
       ): boolean =>
-        (loaded[`${side}_province_id`] ?? null) === (value.province?.id ?? null) &&
-        (loaded[`${side}_city_id`] ?? null) === (value.cityDistrict?.id ?? null) &&
-        (loaded[`${side}_settlement_id`] ?? null) === (value.settlement?.id ?? null);
+        (loaded[`${side}_province_id`] ?? null) ===
+          (value.province?.id ?? null) &&
+        (loaded[`${side}_city_id`] ?? null) ===
+          (value.cityDistrict?.id ?? null) &&
+        (loaded[`${side}_settlement_id`] ?? null) ===
+          (value.settlement?.id ?? null);
 
-      const keepFromText = !!loadedOffer && sameGeo(loadedOffer, "from", fromLocation);
-      const keepToText = !!loadedOffer && sameGeo(loadedOffer, "to", toLocation);
+      const keepFromText =
+        !!loadedOffer && sameGeo(loadedOffer, "from", fromLocation);
+      const keepToText =
+        !!loadedOffer && sameGeo(loadedOffer, "to", toLocation);
 
       const offerData: CreatePassengerOfferData = {
         from_text: buildLocationText(fromLocation),
@@ -638,11 +740,15 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       });
     } catch (error: any) {
       console.error(
-        isEdit ? "Error updating passenger offer:" : "Error creating passenger offer:",
+        isEdit
+          ? "Error updating passenger offer:"
+          : "Error creating passenger offer:",
         error,
       );
       showToast.error(
-        isEdit ? t("passengerOffers.errorUpdate") : t("passengerOffers.errorCreate"),
+        isEdit
+          ? t("passengerOffers.errorUpdate")
+          : t("passengerOffers.errorCreate"),
         // The server's 400s are already translated (including "this order can no
         // longer be edited" and the ≥30-minutes rule), so show them verbatim.
         error.message ||
@@ -656,25 +762,38 @@ export const CreatePassengerOfferScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
+    /*
+      T-101 step 8 — `edges` EXCLUDES 'top' because `TopBar` applies `insets.top` itself.
+      This screen uses safe-area-context's SafeAreaView, which pads on BOTH platforms
+      (React Native's own, used by MenuScreen, is a no-op on Android). Left as-is, the
+      inset would be applied twice and the header would sit a status-bar too low.
+    */
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={theme.palette.ground}
+      />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.palette.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEdit
+      {/*
+        T-101 step 8 — the shared `TopBar`, replacing this screen's own hand-rolled
+        header. That hand-rolled header is exactly the pattern that made `TopBar`
+        invisible on `MenuScreen` (2026-08-30): building the chrome and mounting it are
+        two different jobs, and only the second one is visible.
+
+        `background="flat"` because THIS board is flat — measured, `UserBuyurtma` and
+        `UserQidiruv` use `#F4F2ED` while `UserMenuNeW` and `UserMyOrder` carry the green
+        gradient. The subtitle is the scope name, which is the only thing separating the
+        four near-identical `UserBuyurtma*` artboards.
+      */}
+      <TopBar
+        background="flat"
+        title={
+          isEdit
             ? t("passengerOffers.editRideRequest")
-            : t("passengerOffers.createRideRequest")}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+            : t(orderScopeLabelKey(scope))
+        }
+        onBackPress={() => navigation.goBack()}
+      />
 
       {/* T-040: while the order is being fetched and the geo cascade resolved,
           the form would otherwise show its create-mode defaults — a passenger
@@ -685,354 +804,374 @@ export const CreatePassengerOfferScreen: React.FC = () => {
           <ActivityIndicator size="large" color={theme.palette.action} />
         </View>
       ) : (
-      <>
-      {/* This screen had NO KeyboardAvoidingView, so the keyboard simply covered
+        <>
+          {/* This screen had NO KeyboardAvoidingView, so the keyboard simply covered
           whatever was near the bottom — the road-pickup note, the additional
           info and the special-order fields could not be reached or read while
           typing (OR-012 items 2-4). `keyboardShouldPersistTaps` lets a tap on a
           checkbox register on the first press instead of only dismissing the
           keyboard. */}
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoiding}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 48 : 0}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Route + times — inline, exactly as drawn on K_buyurtma001Yangi.png */}
-          <View style={styles.routeCard}>
-            <LocationCard
-              label={t("passengerOffers.fromLabel")}
-              countryId={countryId}
-              value={fromLocation}
-              onChange={setFromLocation}
-              accent="start"
-              error={errors.from_text}
-            />
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoiding}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 48 : 0}
+          >
+            <ScrollView
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Route + times — inline, exactly as drawn on K_buyurtma001Yangi.png */}
+              {/*
+            T-101 step 8c — the artboard has TWO cards here, not one: the route card
+            (from → to, joined by a divider) and a separate time card below it. The
+            times used to sit interleaved between the two locations, which is what made
+            the block read as a stack of forms rather than a route.
+          */}
+              <View style={styles.routeCard}>
+                <LocationCard
+                  label={t("passengerOffers.fromLabel")}
+                  countryId={countryId}
+                  value={fromLocation}
+                  onChange={setFromLocation}
+                  accent="start"
+                  error={errors.from_text}
+                />
 
-            <TimeWindowCard
-              variant="departure"
-              date={departDate}
-              onDateChange={setDepartDate}
-              fromTime={departFrom}
-              onFromTimeChange={setDepartFrom}
-              untilTime={departUntil}
-              onUntilTimeChange={setDepartUntil}
-              urgent={isUrgent}
-              onUrgentChange={setIsUrgent}
-              /*
-                The wheels must offer exactly what `validateForm` accepts, so
-                the same MIN_ADVANCE_MS is the floor. Without it the picker
-                offered hours already gone and the refusal only arrived at
-                submit, after the whole form was filled (the T-069 complaint,
-                which fixed the date wheel and left the time wheels open).
-              */
-              minimumDate={departFloor}
-              error={errors.start_at}
-            />
+                <View style={styles.routeDivider} />
 
-            <LocationCard
-              label={t("passengerOffers.toLabel")}
-              countryId={countryId}
-              value={toLocation}
-              onChange={setToLocation}
-              accent="end"
-              error={errors.to_text}
-            />
+                <LocationCard
+                  label={t("passengerOffers.toLabel")}
+                  countryId={countryId}
+                  value={toLocation}
+                  onChange={setToLocation}
+                  accent="end"
+                  error={errors.to_text}
+                />
+              </View>
 
-            <TimeWindowCard
-              variant="arrival"
-              date={arriveDate}
-              onDateChange={setArriveDate}
-              untilTime={arriveUntil}
-              onUntilTimeChange={setArriveUntil}
-              /*
-                You cannot arrive before you leave. `validateForm` has always
-                refused it (`errorArrivalTime`), but the wheels still OFFERED
-                those dates and times, so the refusal only arrived at submit —
-                the owner hit this on 2026-08-13 with an arrival of 12.08
-                against a departure on 13.08.
+              <View style={styles.timeCard}>
+                <TimeWindowCard
+                  variant="departure"
+                  date={departDate}
+                  onDateChange={setDepartDate}
+                  fromTime={departFrom}
+                  onFromTimeChange={setDepartFrom}
+                  untilTime={departUntil}
+                  onUntilTimeChange={setDepartUntil}
+                  urgent={isUrgent}
+                  onUrgentChange={setIsUrgent}
+                  /*
+            The wheels must offer exactly what `validateForm` accepts, so
+            the same MIN_ADVANCE_MS is the floor. Without it the picker
+            offered hours already gone and the refusal only arrived at
+            submit, after the whole form was filled (the T-069 complaint,
+            which fixed the date wheel and left the time wheels open).
+            */
+                  minimumDate={departFloor}
+                  error={errors.start_at}
+                />
 
-                ⚠️ The floor is the DEPARTURE moment, not "now": for a trip next
-                week, arriving tomorrow is just as wrong as arriving yesterday.
-              */
-              minimumDate={arrivalFloor}
-              error={errors.arrive_until}
-            />
-          </View>
+                <View style={styles.routeDivider} />
 
-          {/* Payment ("To'lov turi") — single choice, the Figma draws checkboxes */}
-          <View style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>
-              {t("passengerOffers.paymentTitle")}
-            </Text>
+                <TimeWindowCard
+                  variant="arrival"
+                  date={arriveDate}
+                  onDateChange={setArriveDate}
+                  untilTime={arriveUntil}
+                  onUntilTimeChange={setArriveUntil}
+                  /*
+            You cannot arrive before you leave. `validateForm` has always
+            refused it (`errorArrivalTime`), but the wheels still OFFERED
+            those dates and times, so the refusal only arrived at submit —
+            the owner hit this on 2026-08-13 with an arrival of 12.08
+            against a departure on 13.08.
 
-            {/*
+            ⚠️ The floor is the DEPARTURE moment, not "now": for a trip next
+            week, arriving tomorrow is just as wrong as arriving yesterday.
+            */
+                  minimumDate={arrivalFloor}
+                  error={errors.arrive_until}
+                />
+              </View>
+
+              {/* Payment ("To'lov turi") — a chip row in `UserBuyurtma.dc.html`. */}
+              <View style={styles.detailsCard}>
+                <Text style={styles.eyebrow}>
+                  {t("passengerOffers.paymentTitle").toUpperCase()}
+                </Text>
+
+                {/*
               T-031 — three INDEPENDENT toggles (owner, 2026-08-13).
               They used to share one `paymentType` value, so they behaved as a
               radio group: ticking "Do'stimga" silently cleared "Naqd", and
               cash + card could never both be on.
-            */}
-            <View style={styles.inlineRow}>
-              <CheckRow
-                label={t("passengerOffers.paymentCash")}
-                checked={paymentCash}
-                onPress={() => setPaymentCash(!paymentCash)}
-              />
-              <CheckRow
-                label={t("passengerOffers.paymentClickPayme")}
-                checked={paymentCard}
-                onPress={() => setPaymentCard(!paymentCard)}
-              />
-            </View>
 
-            {/*
+              🟢 T-101 step 8 — THE ARTBOARD AGREES, which was worth checking rather
+              than assuming: its two payment chips look like a radio group but their
+              handler is `pick: () => set({ [k]: !on })` — a TOGGLE. So converting the
+              checkboxes to chips is a repaint, not a behaviour change. Had the artboard
+              been a real radio group it would have silently reverted T-031.
+            */}
+                <View style={styles.chipRow}>
+                  <Chip
+                    label={t("passengerOffers.paymentCash")}
+                    selected={paymentCash}
+                    grow
+                    onPress={() => setPaymentCash(!paymentCash)}
+                  />
+                  <Chip
+                    label={t("passengerOffers.paymentClickPayme")}
+                    selected={paymentCard}
+                    grow
+                    onPress={() => setPaymentCard(!paymentCard)}
+                  />
+                </View>
+
+                {/*
               "Do'stimga" is its own point, not a payment method — a friend
               still pays in cash or by card, so it sits apart from the two
               above and does not clear them.
             */}
-            <CheckRow
-              label={t("passengerOffers.paymentFriend")}
-              checked={paidByFriend}
-              onPress={() => setPaidByFriend(!paidByFriend)}
-            />
+                <CheckRow
+                  label={t("passengerOffers.paymentFriend")}
+                  checked={paidByFriend}
+                  onPress={() => setPaidByFriend(!paidByFriend)}
+                />
 
-            {/* The friend may well be abroad — the number is typed in full */}
-            {paidByFriend && (
-              <TextInput
-                style={[
-                  styles.plainInput,
-                  !!errors.payer_phone && styles.inputError,
-                ]}
-                value={payerPhone}
-                onChangeText={setPayerPhone}
-                placeholder={t("passengerOffers.payerPhonePlaceholder")}
-                placeholderTextColor={theme.palette.text.tertiary}
-                keyboardType="phone-pad"
-                maxLength={20}
-              />
-            )}
+                {/* The friend may well be abroad — the number is typed in full */}
+                {paidByFriend && (
+                  <TextInput
+                    style={[
+                      styles.plainInput,
+                      !!errors.payer_phone && styles.inputError,
+                    ]}
+                    value={payerPhone}
+                    onChangeText={setPayerPhone}
+                    placeholder={t("passengerOffers.payerPhonePlaceholder")}
+                    placeholderTextColor={theme.palette.text.tertiary}
+                    keyboardType="phone-pad"
+                    maxLength={20}
+                  />
+                )}
 
-            {!!errors.payment_type && (
-              <Text style={styles.errorText}>{errors.payment_type}</Text>
-            )}
-            {!!errors.payer_phone && (
-              <Text style={styles.errorText}>{errors.payer_phone}</Text>
-            )}
-          </View>
+                {!!errors.payment_type && (
+                  <Text style={styles.errorText}>{errors.payment_type}</Text>
+                )}
+                {!!errors.payer_phone && (
+                  <Text style={styles.errorText}>{errors.payer_phone}</Text>
+                )}
+              </View>
 
-          {/* Vehicle class — one deselectable group of five */}
-          <View style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>
-              {t("passengerOffers.vehicleClass")}
-            </Text>
+              {/*
+            Vehicle class — one deselectable group of five, drawn as a WRAPPING chip row
+            in `UserBuyurtma.dc.html` (its `CLASSES` array is the same five, in this
+            order). `toggleVehicleClass` already de-selects on a second tap, which is
+            what the artboard does too, so only the control's shape changes.
 
-            <View style={styles.inlineRow}>
-              <CheckRow
-                label={t("passengerOffers.classStandard")}
-                shape="radio"
-                checked={vehicleClass === "standard"}
-                onPress={() => toggleVehicleClass("standard")}
-              />
-              <CheckRow
-                label={t("passengerOffers.classComfort")}
-                shape="radio"
-                checked={vehicleClass === "comfort"}
-                onPress={() => toggleVehicleClass("comfort")}
-              />
-              <CheckRow
-                label={t("passengerOffers.classBusiness")}
-                shape="radio"
-                checked={vehicleClass === "business"}
-                onPress={() => toggleVehicleClass("business")}
-              />
-            </View>
+            ⚠️ `tone="dark"` IS NOT A TYPO. Car-class chips select to near-black while
+            payment chips select to green — consistent across all four UserBuyurtma
+            artboards and DriverElon, distinguishing a *mode* choice from a *feature*
+            one. See the note on `Chip`; do not unify without asking the owner.
+          */}
+              <View style={styles.detailsCard}>
+                <Text style={styles.eyebrow}>
+                  {t("passengerOffers.vehicleClass").toUpperCase()}
+                </Text>
 
-            <CheckRow
-              label={t("passengerOffers.classEconom")}
-              shape="radio"
-              checked={vehicleClass === "econom"}
-              onPress={() => toggleVehicleClass("econom")}
-            />
-            <CheckRow
-              label={t("passengerOffers.classTourist")}
-              shape="radio"
-              checked={vehicleClass === "tourist"}
-              onPress={() => toggleVehicleClass("tourist")}
-            />
-          </View>
-
-          {/* Seats */}
-          <View style={styles.detailsCard}>
-            <View style={styles.seatsHeader}>
-              <Text style={styles.cardTitle}>
-                {t("passengerOffers.seatsTitle")}
-              </Text>
-              {totalSeats > 0 && !seatsLocked && (
-                <View style={styles.seatTotalBadge}>
-                  <Text style={styles.seatTotalText}>{totalSeats}</Text>
+                <View style={styles.chipRow}>
+                  {VEHICLE_CLASS_CHIPS.map((c) => (
+                    <Chip
+                      key={c.value}
+                      label={t(c.labelKey)}
+                      tone="dark"
+                      selected={vehicleClass === c.value}
+                      onPress={() => toggleVehicleClass(c.value)}
+                    />
+                  ))}
                 </View>
-              )}
-            </View>
+              </View>
 
-            <SeatStepper
-              label={t("passengerOffers.seatRowFront")}
-              counts={frontCounts}
-              capacity={1}
-              disabled={seatsLocked}
-              onChange={setFrontCounts}
-            />
-            <SeatStepper
-              label={t("passengerOffers.seatRowBack")}
-              counts={backCounts}
-              capacity={3}
-              disabled={seatsLocked}
-              onChange={setBackCounts}
-            />
-
-            <CheckRow
-              label={t("passengerOffers.seatPositionAny")}
-              checked={seatPositionAny}
-              onPress={() => setSeatPositionAny(!seatPositionAny)}
-              disabled={seatsLocked}
-            />
-
-            <View style={styles.inlineRow}>
-              <CheckRow
-                label={t("passengerOffers.salonWhole")}
-                shape="radio"
-                checked={salonScope === "whole_salon"}
-                onPress={() => toggleSalonScope("whole_salon")}
-              />
-              <CheckRow
-                label={t("passengerOffers.salonBackFull")}
-                shape="radio"
-                checked={salonScope === "back_salon_full"}
-                onPress={() => toggleSalonScope("back_salon_full")}
-              />
-            </View>
-
-            <CheckRow
-              label={t("passengerOffers.womanInCar")}
-              checked={womanInCar}
-              onPress={() => setWomanInCar(!womanInCar)}
-            />
-
-            {!!errors.seats && (
-              <Text style={styles.errorText}>{errors.seats}</Text>
-            )}
-          </View>
-
-          {/* Baggage, animals, pitak */}
-          <View style={styles.detailsCard}>
-            <CheckRow
-              label={t("passengerOffers.baggage")}
-              checked={largeBaggage}
-              onPress={() => setLargeBaggage(!largeBaggage)}
-            />
-
-            <View style={styles.inlineRow}>
-              <CheckRow
-                label={t("passengerOffers.roofRack")}
-                checked={roofRackNeeded}
-                onPress={() => setRoofRackNeeded(!roofRackNeeded)}
-              />
-              <CheckRow
-                label={t("passengerOffers.trailer")}
-                checked={trailer}
-                onPress={() => setTrailer(!trailer)}
-              />
-            </View>
-
-            <CheckRow
-              label={t("passengerOffers.animals")}
-              checked={pets}
-              onPress={() => setPets(!pets)}
-            />
-
-            <CheckRow
-              label={t("passengerOffers.roadPickup")}
-              checked={roadPickup}
-              onPress={() => setRoadPickup(!roadPickup)}
-              emphasis="danger"
-            />
-
-            {roadPickup && (
-              <TextInput
-                style={styles.noteInput}
-                value={roadPickupNote}
-                onChangeText={setRoadPickupNote}
-                placeholder={t("passengerOffers.roadPickupPlaceholder")}
-                placeholderTextColor={theme.palette.text.tertiary}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            )}
-          </View>
-
-          {/* Qo'shimcha ma'lumot */}
-          <View style={styles.detailsCard}>
-            <Text style={[styles.cardTitle, styles.cardTitleDanger]}>
-              {t("passengerOffers.additionalInfo")}
-            </Text>
-            <TextInput
-              style={styles.noteInput}
-              placeholder={t("passengerOffers.additionalInfoPlaceholder")}
-              placeholderTextColor={theme.palette.text.tertiary}
-              value={note}
-              onChangeText={setNote}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* Both buttons scroll with the form, as drawn — the green one first,
-            then the special order below it */}
-          <View style={styles.submitWrapper}>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                isLoading && styles.submitButtonDisabled,
-              ]}
-              onPress={() => handleSubmit(false)}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={theme.palette.surface} size="small" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={22} color={theme.palette.surface} />
-                  <Text style={styles.submitButtonText}>
-                    {isEdit
-                      ? t("passengerOffers.saveChanges")
-                      : t("passengerOffers.submitOrder")}
+              {/* Seats */}
+              <View style={styles.detailsCard}>
+                <View style={styles.seatsHeader}>
+                  <Text style={styles.eyebrow}>
+                    {t("passengerOffers.seatsTitle").toUpperCase()}
                   </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+                  {totalSeats > 0 && !seatsLocked && (
+                    <View style={styles.seatTotalBadge}>
+                      <Text style={styles.seatTotalText}>{totalSeats}</Text>
+                    </View>
+                  )}
+                </View>
 
-          <SpecialOrderPanel
-            expanded={specialExpanded}
-            onToggle={() => setSpecialExpanded(!specialExpanded)}
-            value={specialOrder}
-            onChange={setSpecialOrder}
-            onSubmit={() => handleSubmit(true)}
-            disabled={isLoading}
-            error={errors.special_order}
-          />
+                <SeatStepper
+                  label={t("passengerOffers.seatRowFront")}
+                  counts={frontCounts}
+                  capacity={1}
+                  disabled={seatsLocked}
+                  onChange={setFrontCounts}
+                />
+                <SeatStepper
+                  label={t("passengerOffers.seatRowBack")}
+                  counts={backCounts}
+                  capacity={3}
+                  disabled={seatsLocked}
+                  onChange={setBackCounts}
+                />
 
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-      </>
+                <CheckRow
+                  label={t("passengerOffers.seatPositionAny")}
+                  checked={seatPositionAny}
+                  onPress={() => setSeatPositionAny(!seatPositionAny)}
+                  disabled={seatsLocked}
+                />
+
+                <View style={styles.inlineRow}>
+                  <CheckRow
+                    label={t("passengerOffers.salonWhole")}
+                    shape="radio"
+                    checked={salonScope === "whole_salon"}
+                    onPress={() => toggleSalonScope("whole_salon")}
+                  />
+                  <CheckRow
+                    label={t("passengerOffers.salonBackFull")}
+                    shape="radio"
+                    checked={salonScope === "back_salon_full"}
+                    onPress={() => toggleSalonScope("back_salon_full")}
+                  />
+                </View>
+
+                <CheckRow
+                  label={t("passengerOffers.womanInCar")}
+                  checked={womanInCar}
+                  onPress={() => setWomanInCar(!womanInCar)}
+                />
+
+                {!!errors.seats && (
+                  <Text style={styles.errorText}>{errors.seats}</Text>
+                )}
+              </View>
+
+              {/* Baggage, animals, pitak */}
+              <View style={styles.detailsCard}>
+                <CheckRow
+                  label={t("passengerOffers.baggage")}
+                  checked={largeBaggage}
+                  onPress={() => setLargeBaggage(!largeBaggage)}
+                />
+
+                <View style={styles.inlineRow}>
+                  <CheckRow
+                    label={t("passengerOffers.roofRack")}
+                    checked={roofRackNeeded}
+                    onPress={() => setRoofRackNeeded(!roofRackNeeded)}
+                  />
+                  <CheckRow
+                    label={t("passengerOffers.trailer")}
+                    checked={trailer}
+                    onPress={() => setTrailer(!trailer)}
+                  />
+                </View>
+
+                <CheckRow
+                  label={t("passengerOffers.animals")}
+                  checked={pets}
+                  onPress={() => setPets(!pets)}
+                />
+
+                <CheckRow
+                  label={t("passengerOffers.roadPickup")}
+                  checked={roadPickup}
+                  onPress={() => setRoadPickup(!roadPickup)}
+                  emphasis="danger"
+                />
+
+                {roadPickup && (
+                  <TextInput
+                    style={styles.noteInput}
+                    value={roadPickupNote}
+                    onChangeText={setRoadPickupNote}
+                    placeholder={t("passengerOffers.roadPickupPlaceholder")}
+                    placeholderTextColor={theme.palette.text.tertiary}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                )}
+              </View>
+
+              {/* Qo'shimcha ma'lumot */}
+              <View style={styles.detailsCard}>
+                {/*
+                  T-101 step 8c — was `cardTitleDanger`, i.e. RED. No section heading in
+                  the artboards is red; danger is reserved for errors. It is now the same
+                  eyebrow as every other section.
+                */}
+                <Text style={styles.eyebrow}>
+                  {t("passengerOffers.additionalInfo").toUpperCase()}
+                </Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder={t("passengerOffers.additionalInfoPlaceholder")}
+                  placeholderTextColor={theme.palette.text.tertiary}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Both buttons scroll with the form, as drawn — the green one first,
+            then the special order below it */}
+              <View style={styles.submitWrapper}>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    isLoading && styles.submitButtonDisabled,
+                  ]}
+                  onPress={() => handleSubmit(false)}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator
+                      color={theme.palette.surface}
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={22}
+                        color={theme.palette.surface}
+                      />
+                      <Text style={styles.submitButtonText}>
+                        {isEdit
+                          ? t("passengerOffers.saveChanges")
+                          : t("passengerOffers.submitOrder")}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <SpecialOrderPanel
+                expanded={specialExpanded}
+                onToggle={() => setSpecialExpanded(!specialExpanded)}
+                value={specialOrder}
+                onChange={setSpecialOrder}
+                onSubmit={() => handleSubmit(true)}
+                disabled={isLoading}
+                error={errors.special_order}
+              />
+
+              <View style={styles.bottomSpacing} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </>
       )}
     </SafeAreaView>
   );
@@ -1048,39 +1187,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.ground,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop:
-      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 16 : 16,
-    paddingBottom: 16,
-    backgroundColor: theme.palette.ground,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.palette.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 28,
-    fontWeight: "700",
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  /*
+    T-101 step 8 — `header`, `backButton`, `headerTitle` and `headerSpacer` were deleted
+    with the hand-rolled header they styled. `TopBar` carries all four now.
+  */
   keyboardAvoiding: {
     flex: 1,
   },
@@ -1092,28 +1202,68 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
+  /**
+   * T-101 step 8b — the artboard's route card: radius 20, a 6px inner pad (its rows
+   * carry their own 12px padding), a hairline border and a barely-there shadow. The old
+   * 20px pad plus each row's own box is what made the block look like a stack of forms
+   * rather than one card.
+   */
   routeCard: {
     backgroundColor: theme.palette.surface,
     borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.borders.chrome,
+    padding: 6,
+    marginHorizontal: 18,
+    marginBottom: 14,
     marginTop: 8,
     shadowColor: theme.palette.text.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.palette.text.primary,
-    marginBottom: 16,
+  /**
+   * The time card — same shell as the route card (artboard: both are white, radius 20,
+   * hairline border), but padded 14 rather than 6 because its children are not rows.
+   */
+  timeCard: {
+    backgroundColor: theme.palette.surface,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.borders.chrome,
+    padding: 14,
+    gap: 10,
+    marginHorizontal: 18,
+    marginBottom: 14,
+    shadowColor: theme.palette.text.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  // T-018 — sections of the Figma order screen
-  cardTitleDanger: {
-    color: theme.palette.dangerText,
+  /** The hairline between the two location rows (artboard: inset, not full-bleed). */
+  routeDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.palette.borders.chrome,
+    marginHorizontal: 12,
+  },
+  // T-101 step 8c — `cardTitle`/`cardTitleDanger` died with the last two headings.
+  /**
+   * T-101 step 8 — the artboard's section label: mono, uppercase, wide tracking, and
+   * `text.tertiary`. It replaced the old 18px/700 `cardTitle` on EVERY section of this
+   * screen. `typography.eyebrow` already carries the measured values.
+   */
+  eyebrow: {
+    ...theme.typography.eyebrow,
+    color: theme.palette.text.tertiary,
+    marginBottom: 9,
+  },
+  /** The artboards' chip rows: 7px gaps, wrapping. */
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
   },
   // Wraps instead of overflowing: the labels differ a lot in length per language
   inlineRow: {

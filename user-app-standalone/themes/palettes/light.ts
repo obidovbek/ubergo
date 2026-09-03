@@ -58,6 +58,14 @@ export const lightPalette = {
     tertiary: '#716D64', // INACTIVE TAB, eyebrow labels, timestamps, meta
     muted: '#5B5750', // list titles, key-value labels, inactive segment
     onDark: '#F4F2ED', // text sitting on a `text.primary` fill
+    /**
+     * T-101 step 6b — the SECOND tier on a dark fill, measured `#B7B2A6` in
+     * `UserMenuNeW.dc.html`'s active-trip banner. It exists because `onDark` is the
+     * same value as `ground`: without a distinct muted tier the banner's supporting
+     * line renders identically to its headline — the "two tiers, one colour" trap this
+     * card already hit once on the status labels. 8.76:1 on `text.primary`.
+     */
+    onDarkMuted: '#B7B2A6',
     onAccent: '#FFFFFF', // text sitting on `action` / `danger` / `brandSuffix`
     chevron: '#B6B1A5', // disclosure glyphs — DECORATIVE ONLY (1.91:1)
     disabled: '#C9C4B8',
@@ -111,6 +119,11 @@ export const lightPalette = {
   blueTint: '#DCEEFB',
   timeInRange: '#2D6CDF', // selected blocks on the 15-minute grid
   paid: '#5B2E9D', // the paid "Maxsus buyurtma" flow
+  /**
+   * T-101 step 8c — the paid accent at .22, the border of the special-order card.
+   * Measured: `rgba(91,46,157,.22)` in `UserBuyurtma.dc.html`. A border, never text.
+   */
+  paidBorder: 'rgba(91, 46, 157, 0.22)',
 
   // ---------------------------------------------------------------- borders & scrims
   /**

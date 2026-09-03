@@ -15,6 +15,7 @@ export default {
   common: {
     continue: "Davom etish",
     cancel: "Bekor qilish",
+    clear: "Tozalash",
     confirm: "Tasdiqlash",
     ok: "OK",
     error: "Xato",
@@ -218,6 +219,8 @@ export default {
     scopeViloyat: "Viloyat ichi",
     scopeYaqin: "Yaqin hududlar",
     scopesLabel: "Yo'nalish turi",
+    activeWaiting: "Haydovchi qidirilmoqda",
+    activeDriverFound: "Haydovchi tasdiqlandi",
     recentRoutes: "So'nggi yo'nalishlar",
     activeTrip: "Faol safar",
     balance: "Balans",
@@ -572,6 +575,9 @@ export default {
     landmarkPlaceholder: "Mo'ljal (masalan: Notarius yonida)",
     geoNoResults: "Hech narsa topilmadi",
     urgent: "hoziroq (srochno)",
+    departTitle: "Yurish vaqti",
+    /* T-101 step 8f — a DEADLINE, not a window: the form sends only `arrive_until`. */
+    arriveTitle: "Qachongacha yetib borish",
     departNow: "Hoziroq yo'lga chiqaman",
     timeNotSet: "Vaqt belgilanmagan",
     pickDate: "Sana",
@@ -581,6 +587,8 @@ export default {
     arrivalSummarySuffix: "gacha yetib borish kerak",
     // Yakshanbadan boshlanadi — Date.getDay() bilan bir xil tartib
     weekdays: "Yakshanba,Dushanba,Seshanba,Chorshanba,Payshanba,Juma,Shanba",
+    weekdaysShort: "Yak,Dush,Sesh,Chor,Pay,Juma,Shan",
+    monthsShort: "yan,fev,mar,apr,may,iyun,iyul,avg,sen,okt,noy,dek",
     errorDepartureTime:
       "Yurish vaqtining tugashi boshlanishidan keyin bo'lishi kerak",
     errorArrivalTime: "Yetib borish vaqti yurish vaqtidan keyin bo'lishi kerak",

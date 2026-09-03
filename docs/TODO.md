@@ -111,7 +111,120 @@
   📋 **Step 23 (delete the compat aliases) measured at ~370 call sites → wants its own card.**
   🛑 **T-102 and T-103 remain open** and gate the search screens looking right.
 
-  📓 **The full narrative — every measurement, every mistake — is in `docs/JOURNAL.md` 2026-08-31.**
+  🟢 **2026-09-01 — THE VISIBLE HALF HAS STARTED: step 8 is the first rebuilt screen.**
+  `CreatePassengerOfferScreen` → `UserBuyurtma.dc.html`: the shared `TopBar` replaces its
+  hand-rolled header, payment and car class became `Chip` rows (**`Chip`'s first call sites**),
+  section labels became the artboards' mono eyebrow. **Owner: the four `UserBuyurtma*` artboards
+  are ONE screen with a mode** — measured, they differ by 22-78 lines out of ~138 KB.
+  **Logic untouched** (T-031/T-040/T-069/OR-012 all intact, verified mechanically). Three findings
+  that only measuring produced: **the gradient header is NOT universal** (form boards are flat —
+  affects step 17), **a double safe-area inset** (safe-area-context pads on both platforms, RN's
+  own is a no-op on Android), and **the artboard's payment chips are toggles, not a radio group** —
+  mapping the rendering would have silently reverted T-031.
+  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
+
+  🔴 **2026-09-01 (2) — THE OWNER RAN IT ON A PHONE: "does not look like the design". CORRECT.**
+  Step 8 changed the top bar, two button rows and the section labels — **~15% of that screen**. The
+  ~1 600 lines of body components were untouched, so it still looked like the old form.
+  *"Step 8 done" and "the order screen is done" are different claims; only the first was true.*
+  ✅ **STEP 8b: the from/to card rebuilt** — 8 stacked dropdowns → 2 tappable rows in one card,
+  picker opens as a sheet. **Data contract untouched** (`LocationValue` / `buildLocationText`
+  unchanged), so validation and submission never moved; the geo-loading effects and `GeoSelectModal`
+  are reused as-is.
+  🔴 **The rewrite silently dropped 4 behaviours — all caught by reading the diff, none by any
+  baseline:** the "district has no settlements/mahallas" guards, both clear (✕) buttons,
+  `maxLength={255}`, and the `export default`. **`tsc`, lint and the ratchet stayed green throughout.**
+  ❓ **OWNER QUESTION: does the mahalla survive the redesign?** The artboard has no step for it; the
+  code does, and it is the fragile field (no id column — T-029). Kept for now.
+  ✅ **2026-09-01 (3) — STEP 8c: the rest of the screen, and the owner found the real fix.**
+  *"On passenger search we create country/city step-by-step selection"* — **correct: `GeoSheet`
+  already existed**, already the artboards' picker, already used by search. My 8b row was the
+  **eighth** hand-rolled copy of a cascade built beside the component made to end them.
+  🔴 **MAHALLA REMOVED**, decided on the design's own logic — four sources agreed: the artboard
+  never mentions it, `GeoSheet` calls it "a sibling, not a depth", it has **no id column (T-029)** so
+  editing an order already dropped it, and nothing can match on it. **It was the only thing blocking
+  `GeoSheet` reuse.** The stored field is KEPT (deprecated, always null) so old orders' saved
+  addresses are not rewritten.
+  ✅ **Route and time are two cards now** (times had been interleaved between the two locations);
+  **`TimeWindowCard`** got the eyebrow + "Hoziroq" chip and lost a blue tint that is nowhere in the
+  design; **seats are tappable** (the +/− stepper stays — it is the only control that works when a
+  row is full); **every heading is the artboard eyebrow**, including one that was RED.
+  **All six baselines unchanged.** 16 i18n keys × 3 locales verified, checker proven able to fail.
+  📋 **`GeoSelectModal` now has ZERO call sites** — not deleted (rule 4). Small cleanup card.
+  🛑 **NOT SEEN ON A DEVICE, and this round is mostly INTERACTION change** — the sheet picker,
+  tapping seats, the chip. Needs a real walk.
+  ✅ **2026-09-01 (4) — STEP 8d: `SpecialOrderPanel`. THE ORDER SCREEN IS NOW FULLY CONVERTED.**
+  The design draws that whole block **purple**; the code had **four accent families in one card**
+  (green border on mint, blue inputs, amber waiting field, a RED notice). **`palette.paid` had
+  existed since step 1b and nothing consumed it** — the colour audit found the value, only building
+  the screen revealed the gap. One new measured token: `paidBorder`, added to both palettes.
+  Money reads in mono now; contrast measured at 9.04:1 / 8.08:1.
+  🔴 **I truncated a file's `export default` for the SECOND time** — same cause both times
+  (replacing a trailing stylesheet by slicing to end-of-file). Caught by the deletion review, then
+  every edited file's last line was checked. *A slip repeated is a method problem, not a slip.*
+  **All six baselines unchanged.**
+
+  🟢 **MAHALLA IS NOT DROPPED FROM THE DATABASE** (owner asked, 2026-09-01). It could not have
+  been — T-101 touched no model, migration or endpoint. The table, the model, the endpoint, the
+  driver-side `address_neighborhood_id` and every stored order address are intact; only the
+  passenger ORDER FORM stopped offering it. **→ T-104** records the reasoning and the one-component
+  path back. **→ T-105**: `GeoSelectModal` now has zero call sites (not deleted — rule 4).
+
+  🛑 **NOT SEEN ON A DEVICE, and steps 8b–8d changed INTERACTION, not just paint** — the sheet
+  picker, tapping seats, the chip, the special-order flow. A screenshot will not settle these.
+
+  ✅ **2026-09-01 (5) — STEP 6b: the home screen's empty space, from the owner's device run.**
+  The artboard fills that area with an active-trip banner, recent routes and a stats row — **all
+  drawn with invented data**, which is why step 6 shipped none. 🟢 **Re-checked: two of the three
+  can be REAL** (`getMyPassengerOffers` exists; `driver_found` = a driver is confirmed). Both now
+  ship and **both render nothing when the user has no orders**. Stats row stays out until the
+  wallet (step 19) — owner's call.
+  🔴 **Four first-pass errors, none caught by a baseline:** banner position (it sits BELOW the
+  carousels, measured) · **wrong navigation target** (`OfferDetails` is a DRIVER's offer; a
+  passenger's own order belongs to `OfferDrivers`) · **`text.onDark` equals `ground`**, so the
+  supporting line would have rendered identically to the headline (new measured token
+  `onDarkMuted`, 8.76:1) · **step 6 had already added the i18n keys** and `tsc` caught the
+  duplicates.
+  ⚠️ **The route chips open the order form but do NOT pre-fill the route** — that needs geo ids
+  and `from_text` is a display string. Half-wiring it would look like a feature and behave like a
+  bug. → own card if wanted.
+  **All six baselines unchanged.** 🛑 **Not seen on a device.**
+
+  🔴 **2026-09-01 (7) — STEP 8f: THE OWNER QUESTIONED THE DESIGN'S LOGIC AND WAS RIGHT.**
+  *"i dont see correct logic"* — four defects in the time model, three invisible while the rules
+  sat inline in the form:
+  ① **"Hoziroq" both WAS and WAS NOT allowed** (a 31-min minimum plus a toggle that skipped it).
+  → Owner: Hoziroq means "I am ready now"; the minimum is a SCHEDULED-order rule. Exemption was
+  right, just undocumented.
+  ② "Arrival time" actually meant "arrive by" — relabelled. ⚠️ `arrive_from` is still never sent.
+  🔴 ③ **"Leave 08:00–11:00, arrive by 09:00" was ACCEPTED** — arrival was compared against the
+  window's START. Now against its END.
+  ④ Departure/arrival had independent dates ("leave 5 Sept, arrive 3 Sept" was expressible).
+  ✅ Rules extracted to **`utils/rideTime.ts`** (pure) + **`scripts/check-ride-time.mjs`**, 8 cases,
+  **importing the real module** and **proven able to fail against the real source**.
+  ⚠️ **No test runner in the user app** — this wants to be a `*.test.ts`; needs owner approval.
+  **All six baselines unchanged** + the new check at 8/8. 🛑 **Not seen on a device.**
+
+  ✅ **2026-09-01 (6) — STEP 8e: the date/time picker. THREE OWNER REPORTS, ONE ROOT CAUSE.**
+  *"do not look like design"* + *"calender always in center"* + *"should appear from bottom like
+  county/city"* — **all three were the same defect**: the wheels used the DIALOG shell (`AppModal`,
+  centred) where the design specifies the SHEET shell. Fixing the shell fixed all three.
+  ✅ **`BottomSheet` extracted from `GeoSheet`** and `GeoSheet` refactored onto it, so the two
+  pickers cannot drift. 🔴 **The real reason to share it: its safe-area padding is a device bug
+  already fixed once** (nav bar over the sheet, S24 Ultra) — a copied second sheet would have
+  re-introduced it, exactly as the geo cascade was re-implemented 7 times before `GeoSheet`.
+  ✅ **`TimeSheet`**: 4 date cards + quarter-hour chips, per the artboard. **The T-069 time floors
+  and the commit-on-confirm contract both survive.**
+  ⚠️ **The artboard's DRAGGABLE 15-minute strip is deliberately not built** — owner chose chips;
+  same data model, so it can be swapped in later without touching the form.
+  ⚠️ `GeoSheet`'s title is now LEFT-aligned (it was centred; the artboard is left).
+  🔴 **I used `monthsShort` before checking it existed — second time this week.** Added
+  `weekdaysShort`/`monthsShort` to all 3 locales; **the i18n checker now asserts list LENGTH too**
+  (a short list renders blank cards silently), proven able to fail.
+  **All six baselines unchanged.** 🛑 **Not seen on a device.**
+
+  📓 **The full narrative — every measurement, every mistake — is in `docs/JOURNAL.md` 2026-08-31
+  and 2026-09-01.**
   ✅ **OWNER DECISIONS 2026-08-30 (asked and answered before the plan was written):**
   **① dark mode is DROPPED** (the 33 artboards have no dark variant) · **② scope is user + driver
   only, admin maybe later — "do nothing for new roles, think like there is no other new roles"**
@@ -2166,6 +2279,37 @@ masofalar'`). **2 of the 6 were on
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+
+- [ ] T-104 (P3) 📍 **Mahalla in the passenger order form — reversible, revisit if wanted**
+  🟢 **NOTHING WAS DROPPED FROM THE DATABASE, and this card exists so that stays findable.**
+  T-101 step 8c removed the mahalla **as a choice on the passenger order form only** (2026-09-01,
+  owner delegated the call to the design's logic). Owner then asked — rightly — that it not be
+  dropped from the database. **It was not, and could not have been: T-101 is presentation only and
+  touched no model, migration or endpoint.**
+  **Still live and untouched:** the `geo_neighborhoods` table + `GeoNeighborhood` model ·
+  `GET /geo/city-districts/:id/neighborhoods` · `fetchGeoNeighborhoods()` in the app ·
+  `DriverProfile.address_neighborhood_id` — **drivers still pick a mahalla** · every existing
+  order's stored `from_text`/`to_text`, mahalla included.
+  ⚠️ **`LocationValue.neighborhood` is deliberately KEPT in the app** (deprecated, always null) so
+  `buildLocationText` still composes old orders correctly. **Do not "tidy" it away** — deleting it
+  rewrites the saved address strings of pre-2026-09-01 orders.
+  **Why it went:** the artboard never mentions mahalla/MFY (adm3 = "mavze/QFY") · `GeoSheet` records
+  it as "a sibling, not a depth" · **it has no id column (T-029)**, so `hydrateLocation` never
+  restored it and editing an order already dropped it · nothing can match on it.
+  **To bring it back:** re-add the picker in `components/passengerOffer/LocationCard.tsx`. One
+  component, no migration, no data recovery. The ①-④ reasoning is in that file's header.
+  🔴 **The real blocker is T-029, not the design** — without an id column the mahalla can never
+  round-trip an edit or be matched on. Fix that first if it is to become a real field.
+
+- [ ] T-105 (P3) 🧹 **`GeoSelectModal` has zero call sites — delete it (needs owner OK)**
+  T-101 step 8c replaced its last user (`LocationCard` moved to the shared `GeoSheet`). Left in place
+  because rule 4 says ask before deleting files.
+  Also now unused: the `passengerOffers.selectNeighborhood` and `selectCity` keys in all 3 locales.
+  ➕ **`TimeWheelModal` joined the list 2026-09-01** — step 8e replaced its last call site with
+  `TimeSheet`. ⚠️ **`DateWheelModal` is NOT unused** — `EditProfile` and `UserDetails` still use
+  it for the birth date. Checked, not assumed.
+  ⚠️ **Check `GeoPickerModal` in the driver app is NOT the same thing** — it consolidated 7 copies
+  in T-036 and has a multi-select `GeoSheet` lacks. **That one stays.**
 
 > 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
 > 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —

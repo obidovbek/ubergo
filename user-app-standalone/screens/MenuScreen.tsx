@@ -34,24 +34,32 @@
  * invented data.
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Text,
+  View,
+  TouchableOpacity,
   StyleSheet,
   ScrollView,
   StatusBar,
   SafeAreaView,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../navigation/types';
-import { theme } from '../themes';
-import { useAuth } from '../hooks/useAuth';
-import { useTranslation } from '../hooks/useTranslation';
-import { useNotifications } from '../contexts/NotificationContext';
-import { TopBar } from '../components/chrome/TopBar';
-import { Carousel } from '../components/Carousel';
-import { Button } from '../components/Button';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { MainStackParamList } from "../navigation/types";
+import { theme } from "../themes";
+import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from "../hooks/useTranslation";
+import { useNotifications } from "../contexts/NotificationContext";
+import { TopBar } from "../components/chrome/TopBar";
+import { Carousel } from "../components/Carousel";
+import { Button } from "../components/Button";
+import {
+  ORDER_SCOPES,
+  DEFAULT_ORDER_SCOPE,
+  type OrderScope,
+} from "../types/orderScope";
+import { useHomeOrders, shortPlace } from "../hooks/useHomeOrders";
 
 /*
  * T-028 — the shared list, not a local copy.
@@ -62,7 +70,10 @@ import { Button } from '../components/Button';
  * typed `CreatePassengerOffer` as taking no params when T-040 gave it an
  * `offerId`. A per-screen copy of the route table is a lie waiting to be told.
  */
-type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
+type MenuScreenNavigationProp = NativeStackNavigationProp<
+  MainStackParamList,
+  "Home"
+>;
 
 /**
  * The services from `UserMenuNeW.dc.html`, in the artboard's order.
@@ -72,35 +83,44 @@ type MenuScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'H
  * record of what the owner drew.
  */
 const SERVICES = [
-  { key: 'taxi', labelKey: 'menu.serviceTaxi', ctaKey: 'menu.ctaTaxi', enabled: true },
-  { key: 'jonatma', labelKey: 'menu.serviceJonatma', ctaKey: 'menu.ctaJonatma', enabled: false },
-  { key: 'ustalar', labelKey: 'menu.serviceUstalar', ctaKey: 'menu.ctaUstalar', enabled: false },
-  { key: 'texnika', labelKey: 'menu.serviceTexnika', ctaKey: 'menu.ctaTexnika', enabled: false },
-  { key: 'yuk', labelKey: 'menu.serviceYuk', ctaKey: 'menu.ctaYuk', enabled: false },
+  {
+    key: "taxi",
+    labelKey: "menu.serviceTaxi",
+    ctaKey: "menu.ctaTaxi",
+    enabled: true,
+  },
+  {
+    key: "jonatma",
+    labelKey: "menu.serviceJonatma",
+    ctaKey: "menu.ctaJonatma",
+    enabled: false,
+  },
+  {
+    key: "ustalar",
+    labelKey: "menu.serviceUstalar",
+    ctaKey: "menu.ctaUstalar",
+    enabled: false,
+  },
+  {
+    key: "texnika",
+    labelKey: "menu.serviceTexnika",
+    ctaKey: "menu.ctaTexnika",
+    enabled: false,
+  },
+  {
+    key: "yuk",
+    labelKey: "menu.serviceYuk",
+    ctaKey: "menu.ctaYuk",
+    enabled: false,
+  },
 ] as const;
 
-type ServiceKey = (typeof SERVICES)[number]['key'];
+type ServiceKey = (typeof SERVICES)[number]["key"];
 
 /**
- * The four scopes, in the artboard's own order.
- *
- * ⚠️ `matchLevel` IS RECORDED BUT NOT YET SENT ANYWHERE. It is the adm level the
- * backend will match on once **T-102** exists (`DriverOffer` has no geo columns today
- * and search is an `ILIKE` on free text, so no scope can be honoured). It lives here so
- * the mapping the owner defined on 2026-08-30 is captured in code next to the labels it
- * belongs to, rather than only in docs/PLAN-T101-SCOPES.md.
- *
- * **Do not read this as "the scope is wired up".** When T-102 lands, pass it to
- * `CreatePassengerOffer` and delete this warning.
+ * T-101 step 8 — the four scopes moved to `../types/orderScope` when the order screen
+ * became a second reader of them. Their caveats (T-102, `matchLevel`) live there.
  */
-const SCOPES = [
-  { key: 'tuman', labelKey: 'menu.scopeTuman', matchLevel: 'adm3' },
-  { key: 'aro', labelKey: 'menu.scopeAro', matchLevel: 'adm2' },
-  { key: 'viloyat', labelKey: 'menu.scopeViloyat', matchLevel: 'adm2' },
-  { key: 'yaqin', labelKey: 'menu.scopeYaqin', matchLevel: 'adm3' },
-] as const;
-
-type ScopeKey = (typeof SCOPES)[number]['key'];
 
 export const MenuScreen: React.FC = () => {
   const { user } = useAuth();
@@ -108,17 +128,25 @@ export const MenuScreen: React.FC = () => {
   const { t } = useTranslation();
   const { unreadCount } = useNotifications();
 
-  const [service, setService] = useState<ServiceKey>('taxi');
+  const [service, setService] = useState<ServiceKey>("taxi");
   // Defaults to the artboard's own default scope.
-  const [scope, setScope] = useState<ScopeKey>('aro');
+  const [scope, setScope] = useState<OrderScope>(DEFAULT_ORDER_SCOPE);
 
   const currentService = SERVICES.find((s) => s.key === service) ?? SERVICES[0];
 
+  /*
+    T-101 step 6b — the two blocks that fill the space below the CTA. Both come from ONE
+    request for the user's own orders, and both render nothing when there are none.
+    Step 6 left this area empty on purpose because the artboard fills it with invented
+    data; these are the same blocks built from real data instead.
+  */
+  const { activeOffer, recentRoutes } = useHomeOrders();
+
   const displayName =
-    (user as any)?.display_name || (user as any)?.name || t('menu.guest');
+    (user as any)?.display_name || (user as any)?.name || t("menu.guest");
   const userInitial = displayName.charAt(0).toUpperCase();
 
-  const handleProfilePress = () => navigation.navigate('Profile');
+  const handleProfilePress = () => navigation.navigate("Profile");
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,15 +155,19 @@ export const MenuScreen: React.FC = () => {
           colour that is no longer anywhere on screen (#F5F5F5 predates the redesign).
           `dark-content` stays: against the gradient's top (#1D9846) dark glyphs measure
           4.97:1 and white only 3.73:1, so dark is the more legible of the two. */}
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* Deliberately OUTSIDE the ScrollView: fixed chrome, not content. */}
       <TopBar
-        title={t('menu.screenTitle')}
+        title={t("menu.screenTitle")}
         initials={userInitial}
         notificationCount={unreadCount}
         onMenuPress={handleProfilePress}
-        onBellPress={() => navigation.navigate('Notifications')}
+        onBellPress={() => navigation.navigate("Notifications")}
         onAvatarPress={handleProfilePress}
       />
 
@@ -144,7 +176,9 @@ export const MenuScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* ---- service ---- */}
-        <Text style={styles.eyebrow}>{t('menu.servicesLabel').toUpperCase()}</Text>
+        <Text style={styles.eyebrow}>
+          {t("menu.servicesLabel").toUpperCase()}
+        </Text>
         <Carousel
           items={SERVICES.map((s) => ({
             key: s.key,
@@ -157,11 +191,16 @@ export const MenuScreen: React.FC = () => {
         />
 
         {/* ---- scope ---- */}
-        <Text style={styles.eyebrow}>{t('menu.scopesLabel').toUpperCase()}</Text>
+        <Text style={styles.eyebrow}>
+          {t("menu.scopesLabel").toUpperCase()}
+        </Text>
         <Carousel
-          items={SCOPES.map((s) => ({ key: s.key, label: t(s.labelKey) }))}
+          items={ORDER_SCOPES.map((s) => ({
+            key: s.key,
+            label: t(s.labelKey),
+          }))}
           selectedKey={scope}
-          onSelect={(k) => setScope(k as ScopeKey)}
+          onSelect={(k) => setScope(k as OrderScope)}
           testID="scope-carousel"
         />
 
@@ -171,9 +210,11 @@ export const MenuScreen: React.FC = () => {
           size="lg"
           fullWidth
           onPress={() =>
-            // The scope travels now so the wiring is ready; the order screen
-            // consumes it once T-102 makes the four scopes behave differently.
-            navigation.navigate('CreatePassengerOffer', {})
+            // T-101 step 8 — the scope now really does travel; before, this said it
+            // did and navigated with `{}`. The order screen uses it to NAME itself
+            // (the four artboards differ in that subtitle). It still does not change
+            // matching — that stays blocked on T-102.
+            navigation.navigate("CreatePassengerOffer", { scope })
           }
           style={styles.cta}
         />
@@ -193,12 +234,95 @@ export const MenuScreen: React.FC = () => {
           step 9, which rebuilds both screens together. Until then, one text link.
         */}
         <Button
-          title={t('passengerOffers.myRideRequests')}
+          title={t("passengerOffers.myRideRequests")}
           variant="text"
           size="sm"
           fullWidth
-          onPress={() => navigation.navigate('MyPassengerOffers')}
+          onPress={() => navigation.navigate("MyPassengerOffers")}
         />
+
+        {/*
+          ---- the active order ----
+
+          Position is measured, not guessed: in `UserMenuNeW.dc.html` the banner sits
+          BELOW the carousels and the CTA, not above them.
+
+          Near-black card, radius 22, a green dot, a mono eyebrow and the route — the
+          artboard's own treatment. Its third line there is invented ("Sardor A. ·
+          Malibu 01 A 777 · 12 daqiqada"); ours is the real status, which is the whole
+          reason this block can ship now and could not in step 6.
+        */}
+        {!!activeOffer && (
+          <TouchableOpacity
+            style={styles.activeCard}
+            /*
+              `OfferDrivers`, NOT `OfferDetails`. `OfferDetails` shows a DRIVER's offer
+              with a join button — the passenger's own order has no such page. This is
+              where `MyPassengerOffersScreen` sends its own rows too, and it is the
+              screen that answers the banner's question: who has responded?
+            */
+            onPress={() =>
+              navigation.navigate("OfferDrivers", { offerId: activeOffer.id })
+            }
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <View style={styles.activeDot} />
+
+            <View style={styles.activeBody}>
+              <Text style={styles.activeEyebrow}>
+                {t("menu.activeTrip").toUpperCase()}
+              </Text>
+              <Text style={styles.activeRoute} numberOfLines={2}>
+                {shortPlace(activeOffer.from_text)} →{" "}
+                {shortPlace(activeOffer.to_text)}
+              </Text>
+              <Text style={styles.activeMeta} numberOfLines={1}>
+                {activeOffer.status === "driver_found"
+                  ? t("menu.activeDriverFound")
+                  : t("menu.activeWaiting")}
+              </Text>
+            </View>
+
+            <Text style={styles.activeChevron}>›</Text>
+          </TouchableOpacity>
+        )}
+
+        {/*
+          ---- order again ----
+
+          The artboard declares a `routes` list and then leaves its markup EMPTY, so the
+          design defines the data and not the appearance. Drawn here as compact chips,
+          which is the shape the rest of this screen already uses.
+
+          Tapping one opens the order form; it does NOT pre-fill the route yet — that
+          needs the geo ids, and `from_text` is a display string. Kept honest rather
+          than half-wired: the shortcut is the screen, not the addresses.
+        */}
+        {recentRoutes.length > 0 && (
+          <>
+            <Text style={styles.eyebrow}>
+              {t("menu.recentRoutes").toUpperCase()}
+            </Text>
+            <View style={styles.recentRow}>
+              {recentRoutes.map((route) => (
+                <TouchableOpacity
+                  key={route.id}
+                  style={styles.recentChip}
+                  onPress={() =>
+                    navigation.navigate("CreatePassengerOffer", { scope })
+                  }
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.recentText} numberOfLines={2}>
+                    {route.fromText} → {route.toText}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -213,7 +337,70 @@ const styles = StyleSheet.create({
     color: theme.palette.text.tertiary,
   },
 
+  /**
+   * T-101 step 6b — the active-order banner, measured off `UserMenuNeW.dc.html`:
+   * near-black `#16130E` (= `text.primary`), radius 22, pad 14, a 38px green marker.
+   * It is the one dark surface on this screen, which is what makes it read as urgent.
+   */
+  activeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 22,
+    backgroundColor: theme.palette.text.primary,
+    marginTop: 4,
+  },
+  activeDot: {
+    width: 38,
+    height: 38,
+    borderRadius: 99,
+    backgroundColor: theme.palette.brand,
+  },
+  activeBody: { flex: 1, minWidth: 0, gap: 3 },
+  activeEyebrow: {
+    ...theme.typography.eyebrow,
+    // On the dark card the eyebrow is a light green, not the grey used on the ground.
+    color: theme.palette.successTint,
+  },
+  activeRoute: {
+    ...theme.typography.placeLine,
+    color: theme.palette.ground,
+    lineHeight: 18,
+  },
+  activeMeta: {
+    ...theme.typography.secondary,
+    // NOT `onDark` — that is the same value as `ground`, so this line would render
+    // identically to the route above it. Measured tier, 8.76:1.
+    color: theme.palette.text.onDarkMuted,
+  },
+  activeChevron: {
+    fontSize: 20,
+    color: theme.palette.ground,
+  },
 
+  /** "Order again" — the artboard declares the list but draws no markup for it. */
+  recentRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  recentChip: {
+    flexGrow: 1,
+    flexBasis: "30%",
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.palette.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.palette.borders.control,
+  },
+  recentText: {
+    ...theme.typography.caption,
+    color: theme.palette.text.primary,
+  },
 
   cta: { marginTop: 4 },
 });

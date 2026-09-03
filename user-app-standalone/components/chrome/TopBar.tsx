@@ -26,6 +26,23 @@ import { Badge } from './Badge';
 interface TopBarProps {
   /** Shown under the wordmark, e.g. "Asosiy menyu". */
   title?: string;
+  /**
+   * T-101 step 8 — the gradient is NOT universal, which reading the spec would not tell
+   * you. Measured across the artboards: `UserMenuNeW` and `UserMyOrder` carry
+   * `linear-gradient(180deg,#1D9846,#F4F2ED)`; `UserBuyurtma` and `UserQidiruv` are a
+   * FLAT `#F4F2ED`. Form screens sit on the flat ground, landing screens on the
+   * gradient.
+   */
+  background?: 'gradient' | 'flat';
+  /**
+   * T-101 step 8 — a back arrow in place of the hamburger.
+   *
+   * ⚠️ NOT IN THE ARTBOARDS, and deliberately so. Every board draws the drawer-first
+   * chrome because each is a standalone frame; it does not model being PUSHED. In the
+   * real navigator `CreatePassengerOffer` pushes OVER the tab bar, so without this the
+   * screen has no way back at all — a dead end the artboard cannot show.
+   */
+  onBackPress?: () => void;
   /** Driver app passes "Driver". Omitted in the user app. */
   suffix?: string;
   /** Initials. The artboards have no image variant of the avatar. */
@@ -38,6 +55,8 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({
   title,
+  background = 'gradient',
+  onBackPress,
   suffix,
   initials = '',
   notificationCount,
@@ -47,27 +66,35 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  return (
-    <LinearGradient
-      colors={theme.palette.headerGradient}
-      // The artboards' gradient is 180deg — straight down.
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={[styles.bar, { paddingTop: insets.top + 12 }]}
-    >
+  const barStyle = [styles.bar, { paddingTop: insets.top + 12 }];
+
+  const content = (
+    <>
       {/* left cluster */}
       <View style={styles.side}>
-        <Pressable
-          onPress={onMenuPress}
-          style={styles.menuButton}
-          accessibilityRole="button"
-          accessibilityLabel="Menyu"
-          hitSlop={4}
-        >
-          <View style={styles.menuBar} />
-          <View style={styles.menuBar} />
-          <View style={styles.menuBar} />
-        </Pressable>
+        {onBackPress ? (
+          <Pressable
+            onPress={onBackPress}
+            style={styles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel="Orqaga"
+            hitSlop={4}
+          >
+            <Icon name="chevronLeft" size={22} color={theme.palette.text.primary} />
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={onMenuPress}
+            style={styles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel="Menyu"
+            hitSlop={4}
+          >
+            <View style={styles.menuBar} />
+            <View style={styles.menuBar} />
+            <View style={styles.menuBar} />
+          </Pressable>
+        )}
 
         <Pressable
           onPress={onBellPress}
@@ -108,6 +135,24 @@ export const TopBar: React.FC<TopBarProps> = ({
           <Text style={styles.avatarText}>{initials}</Text>
         </Pressable>
       </View>
+    </>
+  );
+
+  // A flat header is a plain View: wrapping it in a one-colour LinearGradient would
+  // render the same pixels through an extra native view for no reason.
+  if (background === 'flat') {
+    return <View style={[barStyle, styles.flat]}>{content}</View>;
+  }
+
+  return (
+    <LinearGradient
+      colors={theme.palette.headerGradient}
+      // The artboards' gradient is 180deg — straight down.
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={barStyle}
+    >
+      {content}
     </LinearGradient>
   );
 };
@@ -126,6 +171,7 @@ const styles = StyleSheet.create({
   // what keeps the wordmark optically centred rather than pushed off by the two-button
   // left cluster.
   side: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  flat: { backgroundColor: theme.palette.ground },
   sideEnd: { flex: 1, alignItems: 'flex-end' },
 
   menuButton: {

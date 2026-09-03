@@ -5,6 +5,7 @@
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { GeoOption } from '../api/geo';
+import type { OrderScope } from '../types/orderScope';
 
 // Auth Stack Parameter List
 export type AuthStackParamList = {
@@ -62,8 +63,14 @@ export type MainStackParamList = MainTabParamList & {
   EditProfile: undefined;
   Notifications: undefined;
   OfferDetails: { offerId: number };
-  /** T-040 — an id turns the create screen into an editor for that order. */
-  CreatePassengerOffer: { offerId?: number } | undefined;
+  /**
+   * T-040 — an id turns the create screen into an editor for that order.
+   * T-101 step 8 — `scope` is the order scope chosen on the home carousel. It is
+   * PRESENTATION ONLY: it names the screen in the top bar (the four UserBuyurtma
+   * artboards differ in that subtitle and in where the location sheet opens).
+   * It does NOT change matching — that is still blocked on T-102.
+   */
+  CreatePassengerOffer: { offerId?: number; scope?: OrderScope } | undefined;
   MyPassengerOffers: undefined;
   /** T-024 — the drivers who bid on one passenger offer. */
   OfferDrivers: { offerId: number };

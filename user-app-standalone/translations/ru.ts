@@ -14,6 +14,7 @@ export default {
   common: {
     continue: 'Продолжить',
     cancel: 'Отмена',
+    clear: 'Очистить',
     confirm: 'Подтвердить',
     ok: 'ОК',
     error: 'Ошибка',
@@ -200,6 +201,8 @@ export default {
     scopeViloyat: "В области",
     scopeYaqin: "Ближние районы",
     scopesLabel: "Тип маршрута",
+    activeWaiting: "Ищем водителя",
+    activeDriverFound: "Водитель подтверждён",
     recentRoutes: "Недавние маршруты",
     activeTrip: "Активная поездка",
     balance: "Баланс",
@@ -524,6 +527,8 @@ export default {
     landmarkPlaceholder: 'Ориентир (например: рядом с нотариусом)',
     geoNoResults: 'Ничего не найдено',
     urgent: 'сейчас (срочно)',
+    departTitle: 'Время выезда',
+    arriveTitle: 'Прибыть не позже',
     departNow: 'Выезжаю прямо сейчас',
     timeNotSet: 'Время не указано',
     pickDate: 'Дата',
@@ -533,6 +538,8 @@ export default {
     arrivalSummarySuffix: '— нужно прибыть',
     // Начинается с воскресенья — как Date.getDay()
     weekdays: 'Воскресенье,Понедельник,Вторник,Среда,Четверг,Пятница,Суббота',
+    weekdaysShort: 'Вс,Пн,Вт,Ср,Чт,Пт,Сб',
+    monthsShort: 'янв,фев,мар,апр,май,июн,июл,авг,сен,окт,ноя,дек',
     errorDepartureTime: 'Конец интервала выезда должен быть позже его начала',
     errorArrivalTime: 'Время прибытия должно быть позже времени выезда',
     // Оплата

@@ -14,6 +14,8 @@ export default {
   common: {
     continue: 'Continue',
     cancel: 'Cancel',
+    /** T-101 step 8b — the ✕ that un-picks an optional geo level. */
+    clear: 'Clear',
     confirm: 'Confirm',
     ok: 'OK',
     error: 'Error',
@@ -200,6 +202,13 @@ export default {
     scopeViloyat: "Within region",
     scopeYaqin: "Nearby districts",
     scopesLabel: "Route type",
+    /*
+      T-101 step 6b — the home screen's two live blocks. Both are built from the user's
+      OWN orders and render nothing when there are none; the artboard draws them with
+      invented data, which is why step 6 shipped neither.
+    */
+    activeWaiting: "Looking for a driver",
+    activeDriverFound: "Driver confirmed",
     recentRoutes: "Recent routes",
     activeTrip: "Active trip",
     balance: "Balance",
@@ -524,6 +533,10 @@ export default {
     landmarkPlaceholder: 'Landmark (e.g. next to the notary)',
     geoNoResults: 'Nothing found',
     urgent: 'right now (urgent)',
+    /** T-101 step 8c — the artboard's two time-section headings. */
+    departTitle: 'Departure time',
+    /* T-101 step 8f — a DEADLINE, not a window: the form sends only `arrive_until`. */
+    arriveTitle: 'Arrive by',
     departNow: 'Leaving right now',
     timeNotSet: 'Time not set',
     pickDate: 'Date',
@@ -533,6 +546,13 @@ export default {
     arrivalSummarySuffix: 'arrival deadline',
     // Starts on Sunday — same order as Date.getDay()
     weekdays: 'Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+    /*
+      T-101 step 8e — SHORT forms for the sheet's day cards. The full names overflow a
+      card roughly a quarter of the screen wide; the artboard shows abbreviations.
+      Both lists are Sunday-first / January-first, matching Date.getDay()/getMonth().
+    */
+    weekdaysShort: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+    monthsShort: 'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec',
     errorDepartureTime: 'The end of the departure window must be after its start',
     errorArrivalTime: 'The arrival time must be after the departure time',
     // Payment
