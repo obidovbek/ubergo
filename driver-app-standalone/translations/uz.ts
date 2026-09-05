@@ -904,5 +904,33 @@ export default {
     bookingNotAvailable: 'Band qilish hozircha mavjud emas',
     rating: 'Reyting',
   },
+  /**
+   * T-101 step 15 — the drawer behind the hamburger. Labels are the artboard's
+   * `UBX_NAV`, label for label and in its order (htmlDesign/DriverMenu.dc.html).
+   */
+  drawer: {
+    open: "Menyu",
+    close: "Menyuni yopish",
+    /** Shown on entries that have no screen yet — the artboard dims unbuilt services too. */
+    soon: "Tez orada",
+    groupOffers: "E'lonlar",
+    offerCreate: "E'lon berish",
+    offerMine: "Mening e'lonlarim",
+    groupOrders: "Buyurtmalar",
+    ordersIncoming: "Kelgan buyurtmalar",
+    ordersMine: "Mening buyurtmalarim",
+    cars: "Mening mashinalarim",
+    messages: "Xabarlar",
+    balance: "Balans",
+    income: "Daromad va xarajatlar",
+    profile: "Profilim",
+    groupDocs: "Mening hujjatlarim",
+    docsAll: "Barcha hujjatlar",
+    docsPassport: "Pasport",
+    docsLicense: "Haydovchilik guvohnomasi",
+    docsTechPassport: "Tex.passport",
+    docsTaxiLicense: "Litsenziya",
+    settings: "Sozlamalar",
+    guides: "Yo'riqnomalar",
+  },
 };
-

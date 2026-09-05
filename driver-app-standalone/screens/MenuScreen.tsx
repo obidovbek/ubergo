@@ -23,6 +23,7 @@ import { createTheme } from '../themes';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { TopBar } from '../components/chrome/TopBar';
+import { NavDrawer } from '../components/chrome/NavDrawer';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { DriverOffer } from '../api/driverOffers';
 import { showToast } from '../utils/toast';
@@ -48,6 +49,9 @@ export const MenuScreen: React.FC = () => {
   const [activeOffers, setActiveOffers] = useState<DriverOffer[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // T-101 step 15 — the drawer behind the hamburger. It replaces `handleProfilePress`,
+  // which made the hamburger a second copy of the avatar beside it.
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Taxi options with translation keys - My Offers first
@@ -193,7 +197,7 @@ export const MenuScreen: React.FC = () => {
         title={t('menu.screenTitle')}
         suffix="Driver"
         initials={userInitial}
-        onMenuPress={handleProfilePress}
+        onMenuPress={() => setDrawerOpen(true)}
         onBellPress={() => navigation.navigate('Notifications')}
         onAvatarPress={handleProfilePress}
       />
@@ -260,6 +264,8 @@ export const MenuScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      <NavDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
   );
 };
@@ -279,7 +285,7 @@ const styles = StyleSheet.create({
   // same lockup rather than as a heading of its own.
   logoSuffix: {
     fontSize: 14,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     color: theme.palette.action,
     letterSpacing: 3,
     textTransform: 'uppercase',
@@ -306,7 +312,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    ...theme.font('sans', 800),
     color: theme.palette.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -314,7 +320,7 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 15,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...theme.font('sans', 500),
   },
   countrySelector: {
     flexDirection: 'row',
@@ -343,7 +349,7 @@ const styles = StyleSheet.create({
   countryName: {
     fontSize: 17,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
   },
   optionsGrid: {
     flexDirection: 'row',
@@ -373,7 +379,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -453,7 +459,7 @@ const styles = StyleSheet.create({
   offersBadgeText: {
     color: theme.palette.text.onAccent,
     fontSize: 11,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
   },
 });
 

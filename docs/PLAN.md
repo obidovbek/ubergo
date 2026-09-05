@@ -1123,7 +1123,47 @@ Edit both copies together and verify with `diff -q`.
       🛑 **NOT SEEN ON A DEVICE.** ⚠️ **And the font trap is invisible anywhere else** — a wrong
       weight renders as *nearly* right, so these 22 conversions can only be confirmed on a real
       Android device beside a correct screen.
-- [ ] **15.** `HomeScreen` → `DriverMenu.dc.html`
+- [x] **15.** `HomeScreen` → `DriverMenu.dc.html` — **the card named the wrong screen, and most of
+      the artboard has no backend.** Done 2026-09-05.
+      🔴 **`HomeScreen` IS AN ORPHAN.** Exported from `screens/index.ts`, imported by nothing,
+      routed nowhere — the Home tab renders **`MenuScreen`** (`navigation/MainTabs.tsx:48`).
+      **This is the SAME trap step 14 found in the user app**, in the other app, and neither the
+      card nor the artboard could show it: only following the route table did. Not deleted
+      (rule 4) → **T-105**, which now holds a 4th orphaned screen + 3 more components
+      (`RideCard`, `sections/home/RideTypeSelector`, `sections/profile/ProfileHeader`, all
+      zero-importer and verified).
+      🔴 **THE HAMBURGER OPENED THE PROFILE — the identical defect step 11 fixed in the user app.**
+      `MenuScreen` passed `onMenuPress={handleProfilePress}`, so the hamburger was a second copy
+      of the avatar beside it, and the menu every artboard draws behind it did not exist.
+      ✅ **`components/chrome/NavDrawer.tsx` (new)** — ported from the user app's step-11 drawer
+      (chrome is duplicated per app on purpose); same layout, driver's own `UBX_NAV` table.
+      🛑 **SIX OF THE DRAWER'S ENTRIES HAVE NO SCREEN AND ARE DIMMED**, not hidden: Balans and
+      Daromad (step 19, genuinely new work on T-087's ledger), Xabarlar (no chat exists — the API
+      has ONE notification feed, which the bell already opens), Mening mashinalarim (the profile
+      holds a SINGLE vehicle, there is no list → step 21), Barcha hujjatlar (no hub screen; the
+      four documents under it ARE routed), Yo'riqnomalar.
+      ⚠️ **The artboard's own `UBX_GO` sends "Kelgan buyurtmalar" and "Mening buyurtmalarim" to the
+      SAME file.** They are different things here — incoming is `SearchPassengerOffers`, own is
+      `MyJoinRequests`. Following the design literally would have shipped two rows to one screen.
+      🛑 **THE REST OF `DriverMenu` IS BACKEND-BLOCKED — NOT BUILT, ON PURPOSE** (owner 2026-09-03,
+      "build only what has a backend"). See the new blocked list below: the online/offline toggle
+      is the artboard's central mechanic and **does not exist anywhere** — not in `api/driver.ts`,
+      not on the API models.
+      ✅ **`scripts/check-font-weights.mjs` ported to the driver app, with TWO gaps closed** that
+      the user app's copy still has: `fontWeight: 700` (the **unquoted** numeral — a legal 4th
+      spelling its regex cannot see) and the `sections/` + `utils/` directories, which were never
+      scanned. **Proven able to fail in all four spellings.**
+      🔴 **MY OWN FIRST MEASUREMENT WAS WRONG: I reported "only 6 files" from a mis-quoted grep;
+      the checker found 235 occurrences across 30 files.** The plan's warning was right. Only
+      `MenuScreen`'s 6 were converted — the other 29 files are owned by steps 16-22 and each
+      carries an exemption **naming the step that retires it**.
+      ✅ **`scripts/check-drawer.mjs` (new)** — 10 routes exist *and are paramless*, 21 keys resolve
+      in uz/en/ru. **Proven able to fail** on all three (bad route, param-needing route, missing
+      key). 🔴 **Its first draft grepped the `drawer: {` block and reported all 63 keys missing** —
+      the regex stopped at the first nested `},`. It now **bundles and evaluates** the real
+      modules. *A grep cannot see nesting — the same trap as step 14's i18n checker, redressed.*
+      ✅ Baselines all hold: **driver `tsc` 28 · lint 0 errors / 280 warnings · tokens 3.**
+      🛑 **NOT SEEN ON A DEVICE.**
 - [ ] **16.** `OfferWizardScreen` → `DriverElon.dc.html`
       🛑 **The single biggest artboard (~128 KB, the design doc calls it ~1800 lines) and the app's
       most complex screen.** Expect this to be several sessions; split it into its own plan file if
@@ -1231,6 +1271,28 @@ of truth — do not edit the owner's artboards).
 ---
 
 ## Session notes
+
+### 2026-09-05 (1) — step 15: the card named an orphan, and the artboard needs a backend
+
+- **Step 15 done, in the only shape it could honestly take.** The card said
+  `HomeScreen → DriverMenu.dc.html`; `HomeScreen` is an **orphan** and the Home tab renders
+  `MenuScreen`. The screen's real content is **backend-blocked** (online/offline, shablon
+  templates, per-car usage), so what shipped is the **drawer** (new, `NavDrawer.tsx` — the
+  hamburger had opened the profile, the user app's step-11 defect in the other app),
+  `MenuScreen`'s 6 font weights, and **two checkers** (`check-font-weights.mjs` ported with two
+  gaps closed, `check-drawer.mjs` new). All baselines hold; nothing seen on a device yet.
+- 🔴 **I mis-measured the font scope and said so in the plan.** A mis-quoted grep gave "6 files";
+  the checker gave **235 occurrences in 30 files**. *The checker was right and my grep was not —
+  which is the entire argument for having written it.*
+- 🔴 **My drawer checker's first draft was the bug it exists to catch**: it grepped the
+  `drawer: {` block, the regex stopped at the first nested `},`, and it reported **63 phantom
+  missing keys**. Rewritten to bundle and evaluate the real modules. *Same lesson as step 14's
+  i18n checker: an i18n check must EVALUATE, not grep.*
+- ⚠️ **A stray `tmp/tr.mjs`** (an esbuild probe I wrote into the repo) put **5 lint errors** on a
+  project whose baseline is 0. Deleted; the packaged checker writes to `node_modules/.cache/` and
+  removes its own output. *Measure the baseline after your own scaffolding is gone.*
+- 📋 **Port back to the user app** (recorded in step 15): the unquoted-numeral regex and the
+  `sections/` + `utils/` directories, both missing from its `check-font-weights.mjs`.
 
 ### 2026-09-03 (6) — step 14: the trap had three spellings and I had only ever grepped one
 
@@ -1342,7 +1404,7 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-09-03 at the end of step 14, for a brand-new chat session.**
+> **Written 2026-09-05 at the end of step 15, for a brand-new chat session.**
 > Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
@@ -1350,7 +1412,8 @@ of truth — do not edit the owner's artboards).
 **The COLOUR half of T-101 is complete in both apps** (1 803 raw literals removed; both ceilings
 at their floor and enforced by `scripts/check-design-tokens.mjs`).
 
-**The VISIBLE half has started, user app first. Screens rebuilt so far:**
+**The VISIBLE half: the USER APP is done (steps 6-14). The DRIVER APP has just started
+(step 15 of 15-22).** Screens rebuilt so far:
 
 | step | screen | note |
 |---|---|---|
@@ -1363,18 +1426,38 @@ at their floor and enforced by `scripts/check-design-tokens.mjs`).
 | **13** | auth flow (3 screens) | **values only** — the artboard was deliberately not followed twice |
 | **14** | `BlockedScreen` + live components | closes the strays — **but see the gap below** |
 
+**Driver app:**
+
+| step | screen | note |
+|---|---|---|
+| **15** | **`NavDrawer`** (new) + `MenuScreen` weights | the card named an ORPHAN; most of the artboard is backend-blocked |
+
 **Baselines, all six at their long-standing values:**
 user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **280** · tokens **3**.
+**Re-measured 2026-09-05 after step 15 — unchanged.** ⚠️ Measure the driver app's lint only after
+deleting any scratch file you wrote into it: a stray esbuild bundle in `driver-app-standalone/tmp/`
+showed **5 errors** on a project whose baseline is **0**.
 🔴 **Never rebaseline upward.** Three lint warnings appeared during step 9 (`catch (error: any)`
 carried over from the old screens) and were **fixed**, not accommodated — `unknown` is safe there
 because `isAuthError`/`getErrorMessage` both accept `any`.
 
-**Checkers that must stay green** (all `node scripts/…` in `user-app-standalone`, no new dep):
-`check-design-tokens.mjs` · `check-font-weights.mjs` · `check-ride-time.mjs` (8) ·
+**Checkers that must stay green** (all `node scripts/…`, no new dep):
+**user app** — `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-ride-time.mjs` (8) ·
 `check-order-lifecycle.mjs` (18) · `check-i18n-myorders.mjs` (69 keys × 3 locales).
+**driver app** — `check-design-tokens.mjs` · **`check-font-weights.mjs`** (new, step 15) ·
+**`check-drawer.mjs`** (new, step 15: 10 routes + 21 keys × 3 locales).
 **Every one has been proven able to go red.**
+📋 **Port back to the user app's `check-font-weights.mjs`** the two gaps the driver copy closed:
+the **unquoted** `fontWeight: 700` spelling, and scanning `sections/` + `utils/`.
 
 ### ▶️ Next actions, in the order they are worth doing
+
+0. 🛑 **DECIDE WHAT `DriverMenu` IS WITHOUT A BACKEND.** Step 15 shipped the drawer and left the
+   artboard's whole centre unbuilt — the **online/offline toggle**, the two **shablon** route
+   templates, the **per-car usage** select and the aggregator/activity selects have **no columns,
+   no endpoints, nothing**. That is most of the screen. It needs an owner decision and probably a
+   migration; see "Blocked on backend". **Steps 16-22 will keep hitting this** — the driver
+   artboards assume a richer model than the API has.
 
 1. 🛑 **A DEVICE PASS. This is still the real gate, and it keeps growing** — nothing from steps 6b,
    8e, 8f, 9 or 10 has been seen on a device. **Step 10 adds two screens to walk:** the rebuilt
@@ -1395,6 +1478,12 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
    `Mening buyurtmalarim` TAB shows (both bookings and the passenger's own ride requests, in three
    modes) and removes the home screen's ride-requests text link. Check each mode holds the right
    rows, the count pills are right, and cancel / edit / rate still work from the merged card.
+   🆕 **Step 15 opens the DRIVER app's walk, and its drawer is new interaction surface too**:
+   open it from the hamburger (it used to open the profile — confirm it no longer does, and that
+   the avatar still does), expand **E'lonlar**, **Buyurtmalar** and **Mening hujjatlarim**, confirm
+   the **six dimmed entries do nothing**, and check that **Kelgan buyurtmalar** and **Mening
+   buyurtmalarim** land on **different** screens. `MenuScreen`'s 6 font conversions need the same
+   side-by-side check as step 14's.
 2. 🔴 **THE USER APP HAS AN UNPLANNED SCREEN: `SearchOffersScreen`.** Found in step 14 — 1 937
    lines, 42 `fontWeight` literals, and **`UserQidiruv.dc.html` exists as its artboard** — but
    **no step in this plan covers it.** Step 17 is the DRIVER's search
@@ -1567,6 +1656,19 @@ geo columns; search is `ILIKE` on free text. Don't present them as working.
 ping, the in-app message sheet, and the like/dislike+tags rating. Owner 2026-09-03: build only what
 has a backend. **The stars-and-comment rating IS real and was built.**
 ⚠️ `arrive_from` is supported by the API but still never sent by the order form.
+
+🛑 **`DriverMenu`'s CENTRAL MECHANIC HAS NO BACKEND — found in step 15, 2026-09-05.** The artboard
+is built around a driver **online/offline** state: it gates "+Elon Yaratish" and both route
+templates, drives the ISHNI BOSHLADIM / LINIYADAMASMAN banner, and colours the primary button.
+**It exists nowhere** — not in `driver-app-standalone/api/driver.ts`, not on the API models.
+Three more pieces of that screen are blocked with it:
+  • **the two "Shablon" route templates** — saved from/to pairs that prefill the offer wizard.
+    No storage, no endpoint; the artboard fakes them in `localStorage`.
+  • **the per-vehicle "Qo'llanish sohasi" select** — the artboard reads a usage list off each
+    saved CAR. The driver profile carries **one** vehicle and no usage field.
+  • **"Taxi agrigator" / "Faoliyat"** — two selects with no column behind them.
+*Per the owner's 2026-09-03 rule these were NOT built. The screen ships what has a backend: the
+menu rows, the offer counts, and the new drawer.* → needs a card, and probably a migration.
 
 ### Traps recorded so they are not rediscovered
 
