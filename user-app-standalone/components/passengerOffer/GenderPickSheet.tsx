@@ -12,7 +12,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppModal } from '../AppModal';
 import { useTranslation } from '../../hooks/useTranslation';
-import { createTheme } from '../../themes';
+import { createTheme, font } from '../../themes';
 
 const theme = createTheme('light');
 const m = theme.modal;
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 15,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: m.rowText,
   },
 });

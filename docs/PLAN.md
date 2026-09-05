@@ -1024,41 +1024,105 @@ Edit both copies together and verify with `diff -q`.
       **Baselines unchanged: user `tsc` 6 / lint 216 / tokens 1 · driver `tsc` 28 / lint 280 /
       tokens 3.**
       🛑 **NOT SEEN ON A DEVICE.**
-- [ ] **13.** Auth flow: `PhoneRegistrationScreen` → `UserR1`, `OTPVerificationScreen` → `UserR2OTP`,
-      `UserDetailsScreen` → `UserR3Fio`. ⚠️ **Touching OTP risks the T-061/T-063 validators and the
-      OR-003 SMS-Retriever hash — do not change field names or autofill behaviour.**
-      🟡 **2026-08-31 — `UserDetailsScreen` IS TOKENIZED (47 → 0), NOT REBUILT.** Colours only;
-      no field name, validator or autofill behaviour was touched.
-- [ ] **14.** `BlockedScreen` + remaining strays; **user raw-hex ceiling reaches 0.**
-      🟢 **2026-08-31 — 111 → 15.** `Notifications` 35 · `Blocked` 19 · auth pair 19 · the
-      `shadowColor: '#000'` strays the earlier screens left · `themed-text` · `RideCard` ·
-      `BackButton` · `MenuButton`. All tokenized, `tsc` 6, lint 217.
-      ✅ **`shadowColor: '#000'` → `text.primary`, and that is not a repaint but a CORRECTION:**
+- [x] **13. Auth flow: `PhoneRegistration` → `UserR1`, `OTPVerification` → `UserR2OTP`,
+      `UserDetails` → `UserR3Fio`. ✅ DONE 2026-09-03 — VALUES ONLY, and the artboard was
+      deliberately NOT followed in two places.**
+      ✅ **Owner decision 2026-09-03: values only; field names, validators, autofill props and the
+      SMS hash are untouchable regardless of line count.**
+      ✅ **PROVEN, NOT ASSERTED. 56 insertions / 43 deletions across 2 659 lines, and grepping the
+      diff for `autoComplete|textContentType|importantForAutofill|maxLength|keyboardType|
+      onChangeText|onKeyPress|validat|verifyOtp|sendOtp|phone_e164|smsRetriever|startOtpListener|
+      first_name|last_name` returns NOTHING but my own comment text.** T-061/T-063 and OR-003 are
+      untouched by construction, and the grep is the evidence.
+      🔴 **THE ARTBOARD ASKS FOR A 5-DIGIT CODE. THE SERVER GENERATES 4.**
+      `UserR2OTP.dc.html` draws **5 cells** (`hint-placeholder-count="5"`, `code.length === 5`);
+      `config.otp.codeLength` defaults to **4** (`OTP_CODE_LENGTH`, API `src/config/index.ts:36`).
+      **Building the artboard's five boxes would have broken verification outright** — the app
+      would collect a digit the SMS never contains. Left at 4. *Checked the backend rather than
+      the drawing; nothing in the app could have revealed this.*
+      🔴 **THE ARTBOARD'S CUSTOM KEYPAD WOULD DESTROY SMS AUTOFILL.** `UserR2OTP` draws its own
+      3×4 numeric pad of `<div>`s and no system keyboard. A `View` grid cannot carry
+      `autoComplete="sms-otp"` or `textContentType="oneTimeCode"`, so building it would silently
+      remove OR-003's zero-tap fill — **a regression no baseline, checker or contrast run can
+      see.** Not built. *The design is a drawing of a screen, not a specification of its input
+      behaviour.*
+      ✅ **What DID change, all of it presentation:** **28 `fontWeight` literals → `font()`** across
+      the three screens (the Android trap; imports handled per-file this time, so the seventh
+      instance of that trap did not recur) · the **OTP box measured from the artboard** — 64px
+      tall, radius 14, 1.5px border, `surfaceSunken` when empty, and **the digit in MONO at 30px**,
+      as every number in these boards is · the indicator bar onto `borders.emphasis`/`full`.
+      ✅ **FIVE DEPRECATED `grey[]` ALIASES REPLACED BY ROLE** (§2.10) — `grey[50]`→`surfaceInput`,
+      `grey[100]`→`ground`, `grey[200]`→`surfaceSunken`, `grey[300]`→`disabled`. All five were
+      fills or borders, never ink, so the mapping is unambiguous. **That is 5 fewer call sites for
+      step 23.**
+      ✅ **NO STRUCTURAL CHANGE, AND THE ARTBOARD AGREES.** The auth boards have **no `TopBar`** —
+      no hamburger, bell or avatar, just a centred wordmark (`UserR1` line 25). The existing
+      screens already have exactly that shape, so unlike steps 10-12 there was no header to
+      replace. *Worth recording: "convert this screen" does not always imply the shared chrome.*
+      ✅ **Contrast 5/5 pass AA.** Baselines unchanged: **user `tsc` 6 / lint 216 / tokens 1 ·
+      driver `tsc` 28 / lint 280 / tokens 3.**
+      🛑 **NOT SEEN ON A DEVICE — AND THIS SCREEN IS THE ONE WHERE THAT MATTERS MOST.** Green
+      checks prove least here: only a real phone receiving a real SMS can show that OTP autofill
+      still works. **Walk it before trusting it**, even though nothing in the diff should have
+      affected it.
+- [x] **14. `BlockedScreen` + remaining strays. ✅ DONE 2026-09-03 — and the card's headline goal
+      was already met before the step started.**
+      🔴 **"USER RAW-HEX CEILING REACHES 0" IS WRONG AS WRITTEN.** Measured with
+      `check-design-tokens.mjs --report`: the ceiling is **1**, and that one is
+      `FACEBOOK_BRAND_BLUE = '#1877F2'` in `PhoneRegistrationScreen` — **Facebook's brand colour**,
+      required exactly by Meta's guidelines and already documented at its definition. **1 is the
+      FLOOR, not a debt.** *(Earlier prose in this card named `VEHICLE_SWATCH_FALLBACK` among the
+      survivors; that constant no longer exists. The script is the truth, the prose was stale.)*
+      🟢 **THE 2026-08-31 TOKENIZATION HALF OF THIS CARD WAS ALREADY DONE — 111 → 15**
+      (`Notifications` 35 · `Blocked` 19 · the auth pair 19 · `themed-text` · `RideCard` ·
+      `BackButton` · `MenuButton` · the `shadowColor: '#000'` strays).
+      ✅ **`shadowColor: '#000'` → `text.primary` was a CORRECTION, not a repaint:**
       `themes/index.ts`'s own `shadow()` helper already casts `#16130E`, so the loose call sites
       were casting a *different* shadow from the tokens beside them. They now agree.
-      🔵 **`#1877F2` IS EXEMPT ON PURPOSE — it is Facebook's brand blue** on the Facebook login
-      button, and Meta's guidelines require it exactly. Named `FACEBOOK_BRAND_BLUE` rather than
-      tokenized, so it reads as a third-party constant instead of a missed conversion.
-      ✅ **`BlockedScreen`'s three states (blocked/pending-delete/suspended) fold onto TWO palette
-      families** — safe only because each state also carries its own emoji (🚫/⏳/⚠️) and its own
-      translated title, so colour is not the sole signal. Checked before collapsing them.
-      ✅ **SPLASH REDESIGNED LIGHT — owner decided 2026-08-31.** Was dark navy `#0a1929`. Now on
-      `ground` with `successTint` bloom circles, a `surface` logo disc and `theme.shadows.raised`.
-      **Every animation and the T-050 wordmark fix were preserved** — only colour and depth moved.
-      🔴 **AND MEASURING IT CAUGHT THREE CONTRAST FAILURES THE MAPPING WOULD HAVE SHIPPED:**
-      the 36px wordmark in `brand` was **2.56:1** (the exact failure `light.ts` warns about — it is
-      the logo green, not a text green) → `action` **5.29:1**; the 18px tagline in `text.secondary`
-      **3.98:1** and the 14px loading label in `text.tertiary` **3.28:1** — *18px regular is not
-      "large text"*, which needs 24px — both → `text.muted` **6.41:1**. All four elements now pass.
-      🛑 **THE DRIVER APP HAS THE SAME DARK SPLASH** (`#0d1b2a`, teal instead of blue) and it is
-      still dark. It sits inside the driver's 951 and gets the same treatment in phase 3 — *this is
-      exactly the twin the `fix-the-class-not-the-instance` memory is about.*
-      ✅ **`themes/palettes/dark.ts` DELETED in both apps (owner approved 2026-08-31)**, along with
-      the now-unused `darkPalette` alias in both `themes/index.ts`. Nothing imported either.
-      **Goal 4 is now genuinely met** — dark mode is gone, not just unreachable.
-
-### Phase 3 — driver app pages, one screen per step
-
+      ✅ **`BlockedScreen`'s three states (blocked / pending-delete / suspended) fold onto TWO
+      palette families** — safe **only** because each state also carries its own emoji (🚫/⏳/⚠️)
+      and its own translated title, so colour is never the sole signal. Checked before collapsing.
+      ✅ **Owner decision 2026-09-03: convert `BlockedScreen` + the genuinely LIVE components;
+      leave the orphans and defer `SearchOffers`.** Converting dead code has no user-visible effect.
+      🔴 **I DEFERRED IT TO "STEP 17" AND STEP 17 IS THE DRIVER'S SEARCH SCREEN.** The user app's
+      `SearchOffersScreen` (1 937 lines, 42 weights, artboard `UserQidiruv.dc.html`) has **NO STEP
+      IN THIS PLAN AT ALL** — see *Next actions*, item 2. The deferral still stands (T-102/T-103
+      gate it), but it is deferred to an unwritten card, not to step 17.
+      ✅ **22 `fontWeight` literals converted across 11 live files** — `BlockedScreen` (4),
+      `AppModal` (2), `ModalList`, `LanguageSelector`, `themed-text` (3), `CheckRow`,
+      `GenderPickSheet`, `DateWheelModal` (2), `NotificationsScreen` (2),
+      `CreatePassengerOfferScreen` (4), `SeatStepper` (1). **All nine import sites verified
+      individually**, not assumed from a green `tsc`.
+      🔴 **THE ANDROID FONT TRAP HAD THREE SPELLINGS AND I HAD ONLY EVER GREPPED ONE.**
+      Steps 10-13 converted 88 of these matching `fontWeight: '700'` — single quotes, numerals.
+      Step 14 found more in screens **already declared converted**:
+      • `fontWeight: "700"` — **double quotes**, 5 of them, in `CreatePassengerOffer` (step 8) and
+        `SeatStepper` (step 8c);
+      • `fontWeight: 'bold'` — **the keyword**, 4 of them, including 2 in `NotificationsScreen`
+        which step 11 had "finished".
+      *A hand-run grep is only as good as the spelling you happen to think of.*
+      ✅ **`scripts/check-font-weights.mjs` — SO THIS CANNOT RECUR.** One regex covering every
+      spelling (`'700'` · `"700"` · `'bold'` · `'normal'`), run over `screens/` and `components/`.
+      **Proven able to fail in all three spellings that actually slipped past me**: each injected
+      into `BlockedScreen` in turn → red, exit 1; restored → green, `git diff` shows only the 5
+      intended conversions.
+      ⚠️ **The checker carries TWO kinds of exemption, each with a written reason and an expiry:**
+      **7 files** (3 orphans + `SearchOffers` + 3 zero-importer components) and **one LINE** —
+      `NotificationsScreen:543`, the `×` hairline at weight 300, because Manrope's bundled range
+      starts at 500 and `font()` would fold it **UPWARD** and render it heavier. *A stale exemption
+      hides a real defect; drop each one when its reason expires.*
+      📋 **A THIRD ORPHAN FOUND: `screens/HomeScreen.tsx`** — exported from `screens/index.ts` but
+      **never routed**; the `Home` tab renders `MenuScreen` (`MainTabs.tsx:48`). Also confirmed
+      zero-importer: `components/cards/RideCard.tsx` and `components/@extended/NetworkStatus.tsx`.
+      **None deleted — rule 4.** → **T-105**, which now holds 3 orphaned screens + 3 components.
+      ⚠️ **THE DRIVER APP HAS 298 `fontWeight` OCCURRENCES.** Not a regression — its screens are
+      steps 15-22, all unconverted. **The checker is user-app-only for now; copy it to the driver
+      app when step 15 starts**, so the same three spellings cannot slip through there.
+      ✅ **Contrast 6/6 pass AA.** Baselines unchanged: **user `tsc` 6 / lint 216 / tokens 1 ·
+      driver `tsc` 28 / lint 280 / tokens 3.**
+      🛑 **NOT SEEN ON A DEVICE.** ⚠️ **And the font trap is invisible anywhere else** — a wrong
+      weight renders as *nearly* right, so these 22 conversions can only be confirmed on a real
+      Android device beside a correct screen.
 - [ ] **15.** `HomeScreen` → `DriverMenu.dc.html`
 - [ ] **16.** `OfferWizardScreen` → `DriverElon.dc.html`
       🛑 **The single biggest artboard (~128 KB, the design doc calls it ~1800 lines) and the app's
@@ -1168,6 +1232,39 @@ of truth — do not edit the owner's artboards).
 
 ## Session notes
 
+### 2026-09-03 (6) — step 14: the trap had three spellings and I had only ever grepped one
+
+- **Step 14 done.** 22 `fontWeight` literals converted across 11 live files, and
+  **`scripts/check-font-weights.mjs`** written so the trap cannot recur — **proven able to fail in
+  all three spellings.**
+- 🔴 **Steps 10-13 converted 88 of these matching only `fontWeight: '700'`.** Step 14 found more in
+  screens **already declared converted**: `fontWeight: "700"` (double quotes — 5, in step 8's and
+  8c's files) and `fontWeight: 'bold'` (the keyword — 4, including 2 in `NotificationsScreen`,
+  which step 11 had "finished"). *A hand-run grep is only as good as the spelling you think of;
+  that is what makes it a checker's job, not a habit's.*
+- 🔴 **The card's headline goal was already met, and stated wrongly.** "User raw-hex ceiling
+  reaches 0" — the ceiling is **1**, and it is Facebook's brand blue, correctly exempt. **1 is the
+  floor.** The card's own prose named a constant that no longer exists.
+- 📋 **A third orphan: `HomeScreen.tsx`** — exported but never routed. With `RideCard` and
+  `NetworkStatus` (zero importers), **T-105 now holds 3 screens + 3 components.** None deleted.
+- ⚠️ **The driver app has 298 `fontWeight` occurrences** — expected (steps 15-22), but **copy the
+  checker there when step 15 starts.**
+- All six baselines unchanged; contrast 6/6 AA.
+
+### 2026-09-03 (5) — step 13: the artboard asked for a 5-digit code and the server sends 4
+
+- **Step 13 done, values only** (owner's call). **56+/43- across 2 659 lines**, and grepping the
+  diff for every validator, field name and autofill prop returns **nothing but my own comments** —
+  T-061/T-063 and OR-003 untouched by construction.
+- 🔴 **`UserR2OTP` draws FIVE OTP cells; `config.otp.codeLength` defaults to FOUR.** Building the
+  artboard would have broken verification outright. Found by checking the API, not the drawing.
+- 🔴 **The artboard's custom `<div>` keypad would destroy SMS autofill** — a `View` grid cannot
+  carry `autoComplete="sms-otp"`. Not built. **A regression no baseline could have seen.**
+- ✅ **No structural change, and the artboard agrees**: the auth boards have no `TopBar` at all,
+  and the screens already matched. *"Convert this screen" does not always mean the shared chrome.*
+- **28 `fontWeight` → `font()`; 5 deprecated `grey[]` aliases retired by role** (5 fewer step-23
+  call sites). All six baselines unchanged; contrast 5/5 AA.
+
 ### 2026-09-03 (4) — step 12: colours that encoded nothing, and a class swept instead of an instance
 
 - **Step 12 done.** `ProfileScreen` **rebuilt** (439 lines) on the artboard's monochrome language;
@@ -1245,7 +1342,7 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-09-03 at the end of step 12, for a brand-new chat session.**
+> **Written 2026-09-03 at the end of step 14, for a brand-new chat session.**
 > Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
@@ -1263,6 +1360,8 @@ at their floor and enforced by `scripts/check-design-tokens.mjs`).
 | **10** | **`OfferDriversScreen`** | **rebuilt**; `OfferDetailsScreen` converted (values only) |
 | **11** | **`NavDrawer`** (new) + `NotificationsScreen` | the drawer never existed; the hamburger was wired wrong |
 | **12** | **`ProfileScreen`** | **rebuilt**; `EditProfileScreen` converted (values only) |
+| **13** | auth flow (3 screens) | **values only** — the artboard was deliberately not followed twice |
+| **14** | `BlockedScreen` + live components | closes the strays — **but see the gap below** |
 
 **Baselines, all six at their long-standing values:**
 user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **280** · tokens **3**.
@@ -1271,8 +1370,9 @@ carried over from the old screens) and were **fixed**, not accommodated — `unk
 because `isAuthError`/`getErrorMessage` both accept `any`.
 
 **Checkers that must stay green** (all `node scripts/…` in `user-app-standalone`, no new dep):
-`check-design-tokens.mjs` · `check-ride-time.mjs` (8) · `check-order-lifecycle.mjs` (18) ·
-`check-i18n-myorders.mjs` (19 keys × 3 locales). **Every one has been proven able to go red.**
+`check-design-tokens.mjs` · `check-font-weights.mjs` · `check-ride-time.mjs` (8) ·
+`check-order-lifecycle.mjs` (18) · `check-i18n-myorders.mjs` (69 keys × 3 locales).
+**Every one has been proven able to go red.**
 
 ### ▶️ Next actions, in the order they are worth doing
 
@@ -1285,18 +1385,33 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
    expand both groups, confirm the six dimmed entries do nothing, and check the notification
    panel's mark-all row.
    **Step 12 adds the profile tab** (its four dimmed rows, the drawer from its hamburger) and
-   **`EditProfile`, whose form was converted — saving a profile must still work**. **Step 9 is the biggest thing to walk**: it changes what the
+   **`EditProfile`, whose form was converted — saving a profile must still work**.
+   🛑 **Step 13 adds the AUTH FLOW, and it is the highest-value walk in the queue**: register with
+   a real number and confirm **the SMS code still autofills with zero taps** (OR-003). Nothing in
+   the diff touched an autofill prop, but only a real phone can prove it.
+   ⚠️ **Step 14's 22 font conversions are invisible everywhere except a device** — a wrong weight
+   renders as *nearly* right, so they can only be confirmed on real Android, beside a correct
+   screen. **Step 9 is the biggest thing to walk**: it changes what the
    `Mening buyurtmalarim` TAB shows (both bookings and the passenger's own ride requests, in three
    modes) and removes the home screen's ride-requests text link. Check each mode holds the right
    rows, the count pills are right, and cancel / edit / rate still work from the merged card.
-2. **Step 13 — the AUTH FLOW, and it is the most dangerous step in this card.**
-   🛑 **`PhoneRegistration` / `OTPVerification` / `UserDetails` carry the T-061/T-063 validators
-   and the OR-003 SMS-Retriever hash.** Do NOT change field names or autofill behaviour: the hash
-   is device-confirmed (`asNtyBnPVzB`) and a renamed field silently breaks OTP autofill, which no
-   baseline can see. **Convert values; do not rebuild the form logic**, whatever the line count
-   says.
-3. **T-105 (cleanup card) has grown** — see below.
-4. **Step 23** (~370 call sites) as its own card. **T-102 / T-103** still gate the search screens.
+2. 🔴 **THE USER APP HAS AN UNPLANNED SCREEN: `SearchOffersScreen`.** Found in step 14 — 1 937
+   lines, 42 `fontWeight` literals, and **`UserQidiruv.dc.html` exists as its artboard** — but
+   **no step in this plan covers it.** Step 17 is the DRIVER's search
+   (`OffersListScreen` + `SearchPassengerOffersScreen` → `DriverQidiruv`), which is a different
+   screen in a different app. *Two places in these notes said "SearchOffers → step 17"; both were
+   wrong, and it is the same class of error the board-vs-prose warnings keep catching.*
+   **It needs a step of its own — call it 14b — before the user app can be called done.**
+   ⚠️ It is also **gated by T-102/T-103**: the four order scopes all behave identically and the
+   offer card cannot match its artboard without per-seat gender, `hex_code` and `vehicle_class`.
+   So the honest order is: **T-102/T-103 first, then 14b.**
+3. **Step 15 — the DRIVER app** (`HomeScreen` → `DriverMenu.dc.html`). ⚠️ **Copy
+   `check-font-weights.mjs` into the driver app first**: it has **298** `fontWeight` occurrences
+   and the same three spellings will slip through a hand grep. Its chrome components (`TopBar`,
+   `SegmentedModes`) already exist there; the wordmark takes `suffix="Driver"`, and that blue is
+   the ONLY colour difference between the apps.
+4. **T-105 (cleanup card) has grown** — see below.
+5. **Step 23** (~370 call sites) as its own card. **T-102 / T-103** still gate the search screens.
 
 ### 📋 What step 9 handed to the cleanup card (T-105)
 
@@ -1310,10 +1425,39 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
   `NavDrawer` supersedes it.
 - **`MenuButton.tsx`** — its whole reason for existing was that "the app has no drawer navigator".
   It now has one. **Counted, not guessed: 4 call sites, and 2 are the orphaned step-9 screens** —
-  so it really has **2** (`ProfileScreen` → step 12, `SearchOffersScreen` → step 17). Both should
+  so it really has **2** (`ProfileScreen` → step 12, `SearchOffersScreen` → **14b, unplanned —
+  see Next actions**). Both should
   take `TopBar`+`NavDrawer` instead, after which the component dies with the orphans.
 - Already on the card from earlier steps: `GeoSelectModal` and `TimeWheelModal` have **zero call
   sites**; `DateWheelModal` is still used by `EditProfile`/`UserDetails` (**checked, not assumed**).
+
+### 🔴 What step 14 established
+
+- 🔴 **`fontWeight` HAS THREE SPELLINGS**: `'700'`, `"700"` and `'bold'`. Four steps of hand-greps
+  matched only the first, and left defects in screens declared converted.
+  **`node scripts/check-font-weights.mjs` now covers all of them — run it, don't grep.**
+- **Exemptions must carry a reason and expire.** The checker exempts 7 files (orphans, and screens
+  a later step rebuilds) and one LINE (a 300 hairline that `font()` would fold upward and render
+  heavier). **Drop each entry when its reason dies** — a stale exemption hides a real defect, the
+  same mechanism as the stale-baseline trap.
+- 🔴 **A CARD'S STATED GOAL CAN ALREADY BE MET, OR BE WRONG.** Step 14's "ceiling reaches 0" was
+  both: the tokenization was done in August, and 1 is the floor (Facebook's brand blue), not a
+  debt. **Measure with `--report` before working toward a number in prose.**
+- **Don't convert code a later step rebuilds.** `SearchOffers` (42 weights) is step 17's; the
+  orphans are nobody's until T-105 deletes them.
+
+### 🔴 What step 13 established
+
+- 🔴 **CHECK THE BACKEND BEFORE BUILDING AN ARTBOARD'S INPUT.** `UserR2OTP` draws 5 OTP cells;
+  the API generates 4 (`config.otp.codeLength`). The drawing cannot know the server's shape, and
+  nothing in the app would have revealed the mismatch.
+- 🔴 **A DESIGN CAN SPECIFY A CONTROL THAT REMOVES A FEATURE.** The artboard's custom `<div>`
+  keypad would have silently killed OR-003's SMS autofill, because a `View` cannot carry
+  `autoComplete="sms-otp"`. **Ask what a control does, not just what it looks like.**
+- ✅ **Not every screen wants the shared chrome.** The auth boards have no `TopBar` — measured, not
+  assumed. Steps 10-12 all swapped headers; step 13 correctly did not.
+- **`grey[]` aliases can be retired opportunistically** — 5 went in step 13, all fills/borders with
+  unambiguous role mappings. Step 23 shrinks every time a screen is converted properly.
 
 ### 🔴 What step 12 established
 

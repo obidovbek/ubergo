@@ -18,7 +18,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { UserDetailsNavigationProp } from '../navigation/types';
 import { isValidEmail } from '../utils/validation';
@@ -1054,7 +1054,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 38,
-    fontWeight: '800',
+    ...font('sans', 800),
     color: theme.palette.action,
     marginBottom: 12,
     letterSpacing: 0.5,
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     color: theme.palette.text.primary,
-    fontWeight: '800',
+    ...font('sans', 800),
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -1074,7 +1074,7 @@ const styles = StyleSheet.create({
     color: theme.palette.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   form: {
     width: '100%',
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body2,
     color: theme.palette.text.primary,
     marginBottom: theme.spacing(1),
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   required: {
     color: theme.palette.error.main,
@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
   identifierTitle: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     marginBottom: theme.spacing(0.5),
   },
   identifierInfo: {
@@ -1211,7 +1211,7 @@ const styles = StyleSheet.create({
   },
   genderTextActive: {
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   infoBox: {
     backgroundColor: theme.palette.warnTint,
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
   },
   infoHighlight: {
     color: theme.palette.error.main,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   phoneRow: {
     flexDirection: 'row',
@@ -1277,7 +1277,7 @@ const styles = StyleSheet.create({
   countryCode: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   countryName: {
     ...theme.typography.body1,
@@ -1318,12 +1318,12 @@ const styles = StyleSheet.create({
   },
   addPhoneButtonDisabled: {
     backgroundColor: 'transparent',
-    borderBottomColor: theme.palette.grey[300],
+    borderBottomColor: theme.palette.disabled,
   },
   addPhoneText: {
     fontSize: 18,
     color: theme.palette.surface,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   dateInputContainer: {
     flexDirection: 'row',
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.primary,
   },
   modalButton: {
@@ -1383,7 +1383,7 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     color: theme.palette.action,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   datePickerContainer: {
     flexDirection: 'row',
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
   pickerLabel: {
     textAlign: 'center',
     fontSize: 14,
-    fontWeight: '600',
+    ...font('sans', 600),
     color: theme.palette.text.secondary,
     marginBottom: 10,
     paddingBottom: 8,
@@ -1422,19 +1422,19 @@ const styles = StyleSheet.create({
   pickerItemText: {
     fontSize: 15,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   pickerItemTextSelected: {
     color: theme.palette.surface,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   phoneItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.palette.grey[50],
+    backgroundColor: theme.palette.surfaceInput,
     borderBottomWidth: 1,
-    borderBottomColor: theme.palette.grey[200],
+    borderBottomColor: theme.palette.surfaceSunken,
     paddingVertical: theme.spacing(1.5),
     paddingHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(1),
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
   removePhoneText: {
     color: theme.palette.surface,
     fontSize: 16,
-    fontWeight: '600',
+    ...font('sans', 600),
     lineHeight: 16,
   },
   submitButton: {
@@ -1480,7 +1480,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: theme.palette.surface,
     fontSize: 16,
-    fontWeight: '700',
+    ...font('sans', 700),
     letterSpacing: 0.3,
   },
   pickerOverlay: {

@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 
 const theme = createTheme('light');
 const m = theme.modal;
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: m.heading,
     textAlign: 'center',
   },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 16,
-    fontWeight: '700',
+    ...font('sans', 700),
   },
   actionTextPrimary: {
     color: m.primaryText,

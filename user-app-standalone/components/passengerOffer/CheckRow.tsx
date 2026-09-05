@@ -6,7 +6,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../themes';
+import { theme, font } from '../../themes';
 
 interface CheckRowProps {
   label: string;
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   },
   labelDanger: {
     color: theme.palette.dangerText,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   labelDisabled: {
     color: theme.palette.text.tertiary,

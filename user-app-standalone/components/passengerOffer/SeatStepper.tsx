@@ -11,7 +11,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "../../hooks/useTranslation";
 import { GenderPickSheet, type SeatGender } from "./GenderPickSheet";
-import { theme } from "../../themes";
+import { theme, font } from "../../themes";
 
 export interface SeatRowCounts {
   male: number;
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     minWidth: 28,
     textAlign: "center",
     fontSize: 16,
-    fontWeight: "700",
+    ...font('sans', 700),
     color: theme.palette.text.primary,
   },
 });

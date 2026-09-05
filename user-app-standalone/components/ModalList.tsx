@@ -21,7 +21,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AppModal } from './AppModal';
 import { useTranslation } from '../hooks/useTranslation';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 
 const theme = createTheme('light');
 const m = theme.modal;
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     color: m.rowText,
   },
   rowTextSelected: {
-    fontWeight: '700',
+    ...font('sans', 700),
     color: m.rowSelectedText,
   },
   rowSub: {

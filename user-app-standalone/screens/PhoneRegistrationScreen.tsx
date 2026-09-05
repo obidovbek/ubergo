@@ -18,7 +18,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { useNavigation } from '@react-navigation/native';
 import type { PhoneRegistrationNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
@@ -420,14 +420,14 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 24,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.action,
     marginBottom: theme.spacing(2),
   },
   title: {
     ...theme.typography.h3,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     marginBottom: theme.spacing(1),
   },
   subtitle: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
   },
   phoneCodeBox: {
-    backgroundColor: theme.palette.grey[100],
+    backgroundColor: theme.palette.ground,
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(2),
     borderRadius: theme.borderRadius.md,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   phoneCode: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   phoneInput: {
     flex: 1,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   socialText: {
     ...theme.typography.body1,
     color: theme.palette.text.primary,
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   facebookText: {
     color: FACEBOOK_BRAND_BLUE,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   loginLink: {
     ...theme.typography.body2,
     color: theme.palette.action,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   pickerOverlay: {
     flex: 1,

@@ -62,7 +62,7 @@ import {
 } from "../components/passengerOffer/SpecialOrderPanel";
 import { showToast } from "../utils/toast";
 import { showConfirmDialog } from "../utils/confirmDialog";
-import { theme } from "../themes";
+import { theme, font } from "../themes";
 import {
   MIN_ADVANCE_MS,
   latestDeparture,
@@ -1301,7 +1301,7 @@ const styles = StyleSheet.create({
   },
   seatTotalText: {
     fontSize: 15,
-    fontWeight: "700",
+    ...font('sans', 700),
     color: theme.palette.surface,
   },
   submitWrapper: {
@@ -1316,7 +1316,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.palette.danger,
     marginTop: 6,
-    fontWeight: "600",
+    ...font('sans', 600),
   },
   detailsCard: {
     backgroundColor: theme.palette.surface,
@@ -1339,7 +1339,7 @@ const styles = StyleSheet.create({
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.ground,
     minHeight: 100,
-    fontWeight: "500",
+    ...font('sans', 500),
   },
   bottomSpacing: {
     height: 100,
@@ -1366,6 +1366,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: theme.palette.surface,
     fontSize: 17,
-    fontWeight: "700",
+    ...font('sans', 700),
   },
 });

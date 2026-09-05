@@ -16,7 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { getSupportContact } from '../api/support';
 import { showToast } from '../utils/toast';
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     ...theme.typography.h2,
     textAlign: 'center',
     marginBottom: 24,
-    fontWeight: '700',
+    ...font('sans', 700),
     fontSize: 28,
   },
   descriptionCard: {
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   supportTitle: {
     ...theme.typography.h5,
-    fontWeight: '700',
+    ...font('sans', 700),
     fontSize: 18,
   },
   supportInfo: {
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   clickableText: {
     color: theme.palette.male,
     textDecorationLine: 'underline',
-    fontWeight: '500',
+    ...font('sans', 500),
   },
   primaryButton: {
     width: '100%',
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...theme.typography.button,
     color: theme.palette.surface,
-    fontWeight: '700',
+    ...font('sans', 700),
     fontSize: 17,
     letterSpacing: 0.5,
   },

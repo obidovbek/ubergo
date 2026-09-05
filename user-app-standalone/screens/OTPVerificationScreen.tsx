@@ -15,7 +15,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { OTPVerificationNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
@@ -414,14 +414,14 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 24,
-    fontWeight: '700',
+    ...font('sans', 700),
     color: theme.palette.action,
     marginBottom: theme.spacing(2),
   },
   title: {
     ...theme.typography.h3,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...font('sans', 700),
     marginBottom: theme.spacing(1),
   },
   subtitle: {
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.palette.grey[100],
+    backgroundColor: theme.palette.ground,
     padding: theme.spacing(2),
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing(4),
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   phoneNumber: {
     ...theme.typography.h4,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...font('sans', 600),
     marginRight: theme.spacing(2),
   },
   editIcon: {
@@ -459,22 +459,35 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing(0.5),
     alignItems: 'center',
   },
+  /*
+   * T-101 step 13 — measured from `UserR2OTP.dc.html` line 39: a 54x64 tile, radius 14,
+   * 1.5px border, and the DIGIT IN MONO at 30px/700. Every number in these artboards is
+   * monospaced, and a row of digit boxes only reads as even when the face is.
+   *
+   * ⚠️ VALUES ONLY. Not one prop on the `TextInput` itself was touched — `maxLength`,
+   * `textContentType="oneTimeCode"`, `autoComplete="sms-otp"` and `importantForAutofill`
+   * are what make OR-003's zero-tap SMS fill work, and nothing in `tsc`, ESLint, the token
+   * ratchet or a contrast run can see them break. Only a real phone receiving a real SMS
+   * can, so they are not a repaint's business.
+   */
   otpInput: {
     width: '100%',
-    aspectRatio: 1,
-    backgroundColor: theme.palette.grey[100],
-    borderRadius: theme.borderRadius.md,
-    ...theme.typography.h2,
+    height: 64,
+    backgroundColor: theme.palette.surfaceSunken,
+    borderWidth: theme.sizes.borderEmphasis,
+    borderColor: theme.palette.borders.default,
+    borderRadius: theme.borderRadius.field,
+    fontSize: 30,
+    ...font('mono', 700),
     textAlign: 'center',
     color: theme.palette.text.primary,
-    fontWeight: '700',
   },
   otpIndicator: {
-    marginTop: theme.spacing(1),
+    marginTop: 7,
     height: 4,
     width: '100%',
-    backgroundColor: theme.palette.grey[300],
-    borderRadius: 2,
+    backgroundColor: theme.palette.borders.emphasis,
+    borderRadius: theme.borderRadius.full,
   },
   otpIndicatorFilled: {
     backgroundColor: theme.palette.action,
@@ -504,7 +517,7 @@ const styles = StyleSheet.create({
   },
   resendLink: {
     color: theme.palette.action,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   // Deliberately not the link blue — it must not read as tappable while counting down.
   // But `text.disabled` (1.55:1) achieved that by being nearly invisible, and this is a
@@ -512,7 +525,7 @@ const styles = StyleSheet.create({
   // non-interactive next to the link colour, and is legible.
   resendCountdown: {
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   attemptsContainer: {
     backgroundColor: theme.palette.warnTint,
@@ -528,7 +541,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body2,
     // ink, not border: 1.50:1 on the dangerTint background it sits on.
     color: theme.palette.warnInk,
-    fontWeight: '600',
+    ...font('sans', 600),
   },
   attemptsTextWarning: {
     color: theme.palette.error.main,

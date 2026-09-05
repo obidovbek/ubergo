@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   },
   modalIcon: {
     fontSize: 24,
-    fontWeight: 'bold',
+    ...font('sans', 700),
   },
   modalCloseButton: {
     width: 32,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 18,
     color: theme.palette.text.primary,
-    fontWeight: 'bold',
+    ...font('sans', 700),
   },
   modalBody: {
     padding: theme.spacing(2),

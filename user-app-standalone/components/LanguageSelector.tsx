@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from '../hooks/useTranslation';
 import { AVAILABLE_LANGUAGES, Language } from '../config/languages';
-import { createTheme } from '../themes';
+import { createTheme, font } from '../themes';
 import { ModalList, type ModalListOption } from './ModalList';
 
 const theme = createTheme('light');
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     },
     code: {
         ...theme.typography.caption,
-        fontWeight: '600',
+        ...font('sans', 600),
         color: theme.palette.text.primary,
     },
 });
