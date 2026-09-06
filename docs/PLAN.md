@@ -7,6 +7,7 @@
 > 📦 **T-088 (Paynet) IS NOT FINISHED — it moved to `docs/PLAN-T088.md` on 2026-08-30.** It is still
 > in *Now*. Its one remaining Claude coding step is **`ChangePassword` persistence**; the rest is
 > **T-100** (proxy layer) and Paynet's credentials. Resume it from that file.
+> 📦 **T-101 STEP 16 (the offer wizard) → `PLAN-T101-step16.md`, split 2026-09-05.** Not started.
 > ✅ **T-092** → `PLAN-T092.md`. ✅ **T-091** → `PLAN-T091.md`. ✅ **T-087** → `PLAN-T087.md`.
 > ✅ **T-081** → `PLAN-T081.md`. ✅ **T-078** → `PLAN-T078.md`. ✅ **T-077** → `PLAN-T077.md`.
 > ✅ **T-065** → `PLAN-T065.md`. ✅ **T-066+T-067** → `PLAN-T066-T067.md`. ✅ **T-061** → `PLAN-T061.md`.
@@ -1165,9 +1166,22 @@ Edit both copies together and verify with `diff -q`.
       ✅ Baselines all hold: **driver `tsc` 28 · lint 0 errors / 280 warnings · tokens 3.**
       🛑 **NOT SEEN ON A DEVICE.**
 - [ ] **16.** `OfferWizardScreen` → `DriverElon.dc.html`
-      🛑 **The single biggest artboard (~128 KB, the design doc calls it ~1800 lines) and the app's
-      most complex screen.** Expect this to be several sessions; split it into its own plan file if
-      it does not fit one step.
+      📦 **SPLIT OUT 2026-09-05 → `docs/PLAN-T101-step16.md`.** It did not fit one step, exactly as
+      this card predicted. **Resume it from that file**; this card stays unchecked until 16a-16g are.
+      🔴 **MEASURED, AND THE CARD'S PREMISE IS WRONG THE SAME WAY STEPS 9-12's WERE.** The artboard
+      is **ONE scrolling form**; the screen is a **4-step paginated wizard**. The artboard has no
+      step concept at all. This is a RESTRUCTURE, not a repaint. **Owner chose the artboard's
+      single form** (2026-09-05), and **backend-only** for its content.
+      🛑 **THE TRAP THAT MUST NOT BE GOT WRONG: `handleSave` calls `validateStep(currentStep)` —
+      only the CURRENT step.** The wizard makes that safe (you cannot reach step 4 without passing
+      1-3); collapsing to one form destroys the guarantee, and submit would validate one section
+      and let the rest through. **`validateAll()` lands FIRST (16a), before the pagination goes.**
+      🛑 **Not backed, left out and boarded:** the per-seat **gender** grid (the API has only
+      `seats_total`/`seats_free`) — ⚠️ **the same gap this plan already records on the SEARCH side,
+      so it is ONE card, not two** — plus the "Maxsus buyurtma" block, `dost`avka, and inline
+      multi-vehicle (step 21's territory). *The rest of the screen IS backed: the offer API is
+      genuinely rich, unlike step 15's.*
+      Scale: **1 800 artboard lines / ~180 render keys** against **3 883 screen lines / 41 `useState`**.
 - [ ] **17.** `OffersListScreen` + `SearchPassengerOffersScreen` → `DriverQidiruv.dc.html`
 - [ ] **18.** `MyJoinRequestsScreen` + `OfferPassengersScreen` + `PassengerOfferDetailsScreen`
       → `DriverMyOrder.dc.html` + `DriverOrder.dc.html` *(the latter lives ONLY in
@@ -1271,6 +1285,17 @@ of truth — do not edit the owner's artboards).
 ---
 
 ## Session notes
+
+### 2026-09-05 (2) — step 16 scoped and split; no code written
+
+- **Measured before touching anything**, and found two things the card did not say:
+  the artboard is **ONE scrolling form** against a **4-step wizard** (a restructure, not a
+  repaint — the same wrong premise steps 9-12 each had), and **`handleSave` validates only the
+  CURRENT step**, which the pagination is silently making safe. Collapsing the form without a
+  `validateAll()` first would ship a submit that checks one section.
+- **Owner chose** the artboard's single form, and backend-only content.
+- **Split to `docs/PLAN-T101-step16.md`** with steps 16a-16g, 16a being the validation safety net.
+  **No code yet** (rule 3). **Next: 16a.**
 
 ### 2026-09-05 (1) — step 15: the card named an orphan, and the artboard needs a backend
 
@@ -1404,7 +1429,7 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-09-05 at the end of step 15, for a brand-new chat session.**
+> **Written 2026-09-05 after scoping step 16, for a brand-new chat session.**
 > Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
@@ -1445,14 +1470,23 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
 **user app** — `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-ride-time.mjs` (8) ·
 `check-order-lifecycle.mjs` (18) · `check-i18n-myorders.mjs` (69 keys × 3 locales).
 **driver app** — `check-design-tokens.mjs` · **`check-font-weights.mjs`** (new, step 15) ·
-**`check-drawer.mjs`** (new, step 15: 10 routes + 21 keys × 3 locales).
+**`check-drawer.mjs`** (new, step 15: 10 routes + 21 keys × 3 locales) ·
+**`check-offer-validation.mjs`** (new, step 16a: ~30 assertions on the wizard's rules).
 **Every one has been proven able to go red.**
 📋 **Port back to the user app's `check-font-weights.mjs`** the two gaps the driver copy closed:
 the **unquoted** `fontWeight: 700` spelling, and scanning `sections/` + `utils/`.
 
 ### ▶️ Next actions, in the order they are worth doing
 
-0. 🛑 **DECIDE WHAT `DriverMenu` IS WITHOUT A BACKEND.** Step 15 shipped the drawer and left the
+0. ▶️ **STEP 16 IS THE LIVE TASK, AND IT LIVES IN `docs/PLAN-T101-step16.md`.**
+   **16a is DONE** (2026-09-05): the wizard's rules are now pure in
+   `utils/offerWizardValidation.ts`, `handleSave` validates **every** section, and
+   `scripts/check-offer-validation.mjs` asserts on them (**proven able to fail on 5 mutations**).
+   **Next: 16b** — cut `renderStep1..4` into the artboard's sections, wizard still paginating.
+   Owner has already decided: **one scrolling form**, **backend-only content**.
+   ⚠️ **A new checker joins the must-stay-green list: `check-offer-validation.mjs`.**
+
+0b. 🛑 **DECIDE WHAT `DriverMenu` IS WITHOUT A BACKEND.** Step 15 shipped the drawer and left the
    artboard's whole centre unbuilt — the **online/offline toggle**, the two **shablon** route
    templates, the **per-car usage** select and the aggregator/activity selects have **no columns,
    no endpoints, nothing**. That is most of the screen. It needs an owner decision and probably a

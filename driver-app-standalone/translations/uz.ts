@@ -812,6 +812,10 @@ export default {
     fromPlaceholder: 'Boshlang\'ich nuqta',
     toLabel: 'Qayerga',
     toPlaceholder: 'Yakuniy nuqta',
+    // T-101 step 16c — the endpoint row and its sheet.
+    selectPlace: 'Manzilni tanlang',
+    swapRoute: 'Yo\'nalishni almashtirish',
+    stopLabel: 'To\'xtash',
     stopsLabel: 'Orasidagi to\'xtash joylari (ixtiyoriy)',
     addStop: 'Qo\'shish',
     stop: 'To\'xtash',
@@ -839,6 +843,8 @@ export default {
     departsWhenFullLabel: 'To\'lishi bilan yuraman (srochno)',
     departsWhenFullHelper: 'Aniq vaqt emas — o\'rinlar to\'lishi bilan yo\'lga chiqasiz.',
     // T-078 — the mockup's Narxlar list, payment and class.
+    // T-101 step 16b — the artboard's single eyebrow over the whole price block.
+    pricesSectionTitle: 'Narxlar',
     priceBackSalonLabel: 'Orqa salon narxi (ixtiyoriy)',
     priceBackSalonHelper: 'Butun orqa o\'rindiqni bir kishi band qilsa',
     priceWholeSalonLabel: 'Butun salon narxi (ixtiyoriy)',

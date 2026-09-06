@@ -766,6 +766,9 @@ export default {
     fromPlaceholder: 'Точка отправления',
     toLabel: 'Куда',
     toPlaceholder: 'Пункт назначения',
+    selectPlace: 'Выберите место',
+    swapRoute: 'Поменять направление',
+    stopLabel: 'Остановка',
     stopsLabel: 'Промежуточные остановки (необязательно)',
     addStop: 'Добавить',
     stop: 'Остановка',
@@ -793,6 +796,7 @@ export default {
     departsWhenFullLabel: 'Еду, как только заполнится (срочно)',
     departsWhenFullHelper: 'Без точного времени — выезжаете, как только займут все места.',
     // T-078 — the mockup's Narxlar list, payment and class.
+    pricesSectionTitle: 'Цены',
     priceBackSalonLabel: 'Цена за задний салон (необязательно)',
     priceBackSalonHelper: 'Если весь задний ряд бронирует один человек',
     priceWholeSalonLabel: 'Цена за весь салон (необязательно)',

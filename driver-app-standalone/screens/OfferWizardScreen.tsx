@@ -7,7 +7,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
@@ -15,8 +14,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Modal,
-  FlatList,
   StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -25,6 +22,31 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+// T-101 step 16a — the wizard's rules, lifted out pure so they can be executed and proven
+// able to fail (`scripts/check-offer-validation.mjs`). See that file for WHY submit must
+// use `validateAll` before step 16d removes the pagination.
+import {
+  buildLocationText,
+  clampSeats,
+  resolveEndpointSelection,
+  resolveLocationText,
+  validateStepNumber,
+  validateAll,
+  isValid,
+  type OfferValidationInput,
+} from '../utils/offerWizardValidation';
+// T-101 step 16b — the form's sections, cut out in the order `DriverElon.dc.html`
+// draws them. The wizard still paginates over them; step 16d deletes the pagination.
+import {
+  CarSection,
+  ChipSelectSection,
+  FormField,
+  NumberField,
+  RouteEndpointSection,
+  RouteSwapButton,
+  SectionCard,
+  ToggleSection,
+} from '../components/offerWizard';
 import { BackButton } from '../components/BackButton';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatDateByLanguage, formatTimeByLanguage, formatDateTime, getLocaleFromLanguage } from '../utils/date';
@@ -33,7 +55,10 @@ import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
 import type { DriverProfile, GeoOption } from '../api/driver';
 import { AppModal } from '../components/AppModal';
-import { GeoPickerModal } from '../components/GeoPickerModal';
+// T-101 step 16c — the app's own geo cascade, adopted at last. Its header lists
+// this screen as one of the seven places that had re-implemented it by hand;
+// `GeoPickerModal` and the three copies behind it are gone from this screen.
+import { GeoSheet, type GeoPath } from '../components/geo/GeoSheet';
 
 const theme = createTheme('light');
 
@@ -60,6 +85,16 @@ const VEHICLE_CLASSES = [
   'econom',
   'tourist',
 ] as const;
+
+/**
+ * T-101 step 16b — the two INDEPENDENT checkbox groups, named once.
+ *
+ * 🔴 These are the arrays `ChipSelectSection` filters to decide what is on. They must
+ * stay in step with the chip lists in `renderStep3`: a key present there and missing
+ * here renders a chip that can never look selected.
+ */
+const PAYMENT_KEYS = ['payment_cash', 'payment_card'] as const;
+const AMENITY_KEYS = ['air_conditioner', 'wifi', 'roof_rack_needed', 'trailer'] as const;
 
 const numOrUndef = (raw: unknown): number | undefined => {
   if (raw === null || raw === undefined || raw === '') return undefined;
@@ -95,37 +130,21 @@ export const OfferWizardScreen: React.FC = () => {
   const [tempTime, setTempTime] = useState(new Date());
 
   // Geo selection states for "From" location
-  const [fromGeoModal, setFromGeoModal] = useState<{ type: 'country' | 'province' | 'city'; multiSelect?: boolean } | null>(null);
-  const [fromGeoSearch, setFromGeoSearch] = useState('');
-  const [fromCountries, setFromCountries] = useState<GeoOption[]>([]);
-  const [fromProvinces, setFromProvinces] = useState<GeoOption[]>([]);
-  const [fromCities, setFromCities] = useState<GeoOption[]>([]);
   const [fromCountry, setFromCountry] = useState<GeoOption | null>(null);
   const [fromProvince, setFromProvince] = useState<GeoOption | null>(null);
   const [fromCity, setFromCity] = useState<GeoOption | null>(null);
   const [selectedFromCities, setSelectedFromCities] = useState<GeoOption[]>([]);
 
   // Geo selection states for "To" location
-  const [toGeoModal, setToGeoModal] = useState<{ type: 'country' | 'province' | 'city'; multiSelect?: boolean } | null>(null);
-  const [toGeoSearch, setToGeoSearch] = useState('');
-  const [toCountries, setToCountries] = useState<GeoOption[]>([]);
-  const [toProvinces, setToProvinces] = useState<GeoOption[]>([]);
-  const [toCities, setToCities] = useState<GeoOption[]>([]);
   const [toCountry, setToCountry] = useState<GeoOption | null>(null);
   const [toProvince, setToProvince] = useState<GeoOption | null>(null);
   const [toCity, setToCity] = useState<GeoOption | null>(null);
   const [selectedToCities, setSelectedToCities] = useState<GeoOption[]>([]);
-  const [geoLoading, setGeoLoading] = useState(false);
 
   // Stops selection states
   const [stops, setStops] = useState<Array<{ id: string; city: GeoOption | null; selectedCities?: GeoOption[]; country: GeoOption | null; province: GeoOption | null; label_text: string; lat?: number; lng?: number }>>([]);
-  const [stopGeoModal, setStopGeoModal] = useState<{ stopId: string; type: 'country' | 'province' | 'city'; multiSelect?: boolean } | null>(null);
-  const [stopGeoSearch, setStopGeoSearch] = useState('');
-  const [stopCountries, setStopCountries] = useState<GeoOption[]>([]);
   const [stopProvinces, setStopProvinces] = useState<Record<string, GeoOption[]>>({});
   const [stopCities, setStopCities] = useState<Record<string, GeoOption[]>>({});
-  const [selectedCities, setSelectedCities] = useState<GeoOption[]>([]); // For multi-select cities
-  const [multiSelectMode, setMultiSelectMode] = useState<{ stopId: string; country: GeoOption; province: GeoOption } | null>(null);
 
   // Form data
   const [formData, setFormData] = useState<Partial<CreateOfferData>>({
@@ -169,9 +188,6 @@ export const OfferWizardScreen: React.FC = () => {
   const loadGeoCountries = async () => {
     try {
       const countries = await DriverAPI.fetchGeoCountries();
-      setFromCountries(countries);
-      setToCountries(countries);
-      setStopCountries(countries);
       
       // Set Uzbekistan as default for "From" if not already set
       const uzbekistan = countries.find(country => 
@@ -197,53 +213,21 @@ export const OfferWizardScreen: React.FC = () => {
 
   const loadFromProvinces = async (countryId: number) => {
     try {
-      setGeoLoading(true);
       const provinces = await DriverAPI.fetchGeoProvinces(countryId);
-      setFromProvinces(provinces);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
       showToast.error('Xatolik', 'Viloyatlarni yuklashda xatolik');
     } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadFromCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const cities = await DriverAPI.fetchGeoCityDistricts(provinceId);
-      setFromCities(cities);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error('Xatolik', 'Shaharlarni yuklashda xatolik');
-    } finally {
-      setGeoLoading(false);
     }
   };
 
   const loadToProvinces = async (countryId: number) => {
     try {
-      setGeoLoading(true);
       const provinces = await DriverAPI.fetchGeoProvinces(countryId);
-      setToProvinces(provinces);
     } catch (error: any) {
       console.error('Failed to load provinces:', error);
       showToast.error('Xatolik', 'Viloyatlarni yuklashda xatolik');
     } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadToCities = async (provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const cities = await DriverAPI.fetchGeoCityDistricts(provinceId);
-      setToCities(cities);
-    } catch (error: any) {
-      console.error('Failed to load cities:', error);
-      showToast.error('Xatolik', 'Shaharlarni yuklashda xatolik');
-    } finally {
-      setGeoLoading(false);
     }
   };
 
@@ -271,9 +255,6 @@ export const OfferWizardScreen: React.FC = () => {
         
         // Load countries first and get the result directly
         const countries = await DriverAPI.fetchGeoCountries();
-        setFromCountries(countries);
-        setToCountries(countries);
-        setStopCountries(countries);
         
         // Pre-fill form data
         const startDate = new Date(offer.start_at);
@@ -353,12 +334,10 @@ export const OfferWizardScreen: React.FC = () => {
               loadedFromCountry = firstCityGeo.country;
               setFromCountry(firstCityGeo.country);
               const provinces = await DriverAPI.fetchGeoProvinces(firstCityGeo.country.id);
-              setFromProvinces(provinces);
               
               loadedFromProvince = firstCityGeo.province;
               setFromProvince(firstCityGeo.province);
               const cities = await DriverAPI.fetchGeoCityDistricts(firstCityGeo.province.id);
-              setFromCities(cities);
 
               // Parse all cities from from_text
               for (const cityName of fromTextParts) {
@@ -379,12 +358,10 @@ export const OfferWizardScreen: React.FC = () => {
               loadedFromCountry = fromGeo.country;
               setFromCountry(fromGeo.country);
               const provinces = await DriverAPI.fetchGeoProvinces(fromGeo.country.id);
-              setFromProvinces(provinces);
               if (fromGeo.province) {
                 loadedFromProvince = fromGeo.province;
                 setFromProvince(fromGeo.province);
                 const cities = await DriverAPI.fetchGeoCityDistricts(fromGeo.province.id);
-                setFromCities(cities);
                 if (fromGeo.city) {
                   loadedFromCity = fromGeo.city;
                   setFromCity(fromGeo.city);
@@ -416,12 +393,10 @@ export const OfferWizardScreen: React.FC = () => {
               loadedToCountry = firstCityGeo.country;
               setToCountry(firstCityGeo.country);
               const provinces = await DriverAPI.fetchGeoProvinces(firstCityGeo.country.id);
-              setToProvinces(provinces);
               
               loadedToProvince = firstCityGeo.province;
               setToProvince(firstCityGeo.province);
               const cities = await DriverAPI.fetchGeoCityDistricts(firstCityGeo.province.id);
-              setToCities(cities);
 
               // Parse all cities from to_text
               for (const cityName of toTextParts) {
@@ -442,12 +417,10 @@ export const OfferWizardScreen: React.FC = () => {
               loadedToCountry = toGeo.country;
               setToCountry(toGeo.country);
               const provinces = await DriverAPI.fetchGeoProvinces(toGeo.country.id);
-              setToProvinces(provinces);
               if (toGeo.province) {
                 loadedToProvince = toGeo.province;
                 setToProvince(toGeo.province);
                 const cities = await DriverAPI.fetchGeoCityDistricts(toGeo.province.id);
-                setToCities(cities);
                 if (toGeo.city) {
                   loadedToCity = toGeo.city;
                   setToCity(toGeo.city);
@@ -621,62 +594,43 @@ export const OfferWizardScreen: React.FC = () => {
     }
   };
 
-  const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
+  /**
+   * T-101 step 16a — the current state, in the shape the pure rules read.
+   *
+   * Gathering it in ONE place is what stops `validateStep` and `validateAll` drifting apart:
+   * both are handed the same snapshot, so a rule cannot see different data depending on which
+   * entry point called it.
+   */
+  const validationInput = (): OfferValidationInput => ({
+    form: formData,
+    from: {
+      country: fromCountry,
+      province: fromProvince,
+      city: fromCity,
+      cities: selectedFromCities,
+    },
+    to: { country: toCountry, province: toProvince, city: toCity, cities: selectedToCities },
+  });
 
-    switch (step) {
-      case 1:
-        // Validate from location - either geo selected (single or multiple) or text provided
-        const fromLocationText = fromCity
-          ? buildLocationText(fromCountry, fromProvince, fromCity)
-          : selectedFromCities.length > 0
-          ? selectedFromCities.map(c => c.name).join(', ')
-          : formData.from_text?.trim() || '';
-        
-        if (!fromLocationText) {
-          newErrors.from_text = t('offerWizard.errorMissingFields');
-        }
-        
-        // Validate to location - either geo selected (single or multiple) or text provided
-        const toLocationText = toCity
-          ? buildLocationText(toCountry, toProvince, toCity)
-          : selectedToCities.length > 0
-          ? selectedToCities.map(c => c.name).join(', ')
-          : formData.to_text?.trim() || '';
-        
-        if (!toLocationText) {
-          newErrors.to_text = t('offerWizard.errorMissingFields');
-        }
-        break;
-
-      case 2:
-        if (!formData.start_at) {
-          newErrors.start_at = t('offerWizard.errorMissingFields');
-        } else {
-          const startDate = new Date(formData.start_at);
-          const minDate = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-          if (startDate < minDate) {
-            newErrors.start_at = t('offerWizard.errorMinAdvance');
-          }
-        }
-        break;
-
-      case 3:
-        if (!formData.vehicle_id) {
-          newErrors.vehicle_id = t('offerWizard.errorMissingFields');
-        }
-        if (!formData.seats_total || formData.seats_total < 1 || formData.seats_total > 8) {
-          newErrors.seats_total = t('offerWizard.errorInvalidSeats');
-        }
-        if (!formData.price_per_seat || formData.price_per_seat < 5000) {
-          newErrors.price_per_seat = t('offerWizard.errorInvalidPrice');
-        }
-        break;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  /** Translate the rules' KEYS into the messages the form shows. */
+  const applyErrors = (raw: Record<string, string>): boolean => {
+    const translated: Record<string, string> = {};
+    for (const [field, key] of Object.entries(raw)) translated[field] = t(key);
+    setErrors(translated);
+    return isValid(raw);
   };
+
+  /** One step — Back/Next, while the wizard still paginates (step 16d removes it). */
+  const validateStep = (step: number): boolean =>
+    applyErrors(validateStepNumber(step, validationInput()));
+
+  /**
+   * 🛑 EVERY rule. This is what submit uses.
+   *
+   * The old `handleSave` called `validateStep(currentStep)` — one step's worth of checks. The
+   * pagination made that safe by accident, and step 16d removes the pagination.
+   */
+  const validateEverything = (): boolean => applyErrors(validateAll(validationInput()));
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
@@ -878,82 +832,6 @@ export const OfferWizardScreen: React.FC = () => {
     }));
   };
 
-  const formatPrice = (value?: number) => {
-    if (value === undefined || value === null) return '';
-    const str = Math.floor(value).toString();
-    return str.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  };
-
-  /**
-   * T-078 — one numeric field, reused for the five new `Narxlar` rows.
-   *
-   * ⚠️ Written as a helper rather than five more copies of the existing
-   * 25-line price block: this screen is already 3500+ lines, and five more
-   * hand-rolled copies is five more places for the "saves but never loads"
-   * bug to hide.
-   *
-   * @param allowZero `pickup_fee` and `free_waiting_min` accept **0** as a real
-   *   answer (free pickup / no free minutes). Without this, clearing them to 0
-   *   would read as "unset" and the value would not round-trip.
-   */
-  const numberField = (
-    key: 'price_back_salon' | 'price_whole_salon' | 'waiting_fee_per_min'
-      | 'free_waiting_min' | 'pickup_fee' | 'parcel_price' | 'parcel_max_kg',
-    label: string,
-    helper?: string,
-    opts?: { allowZero?: boolean }
-  ) => (
-    <View style={styles.inputGroup} key={key}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="0"
-        keyboardType="numeric"
-        value={formatPrice(formData[key])}
-        onChangeText={(text) => {
-          const digits = text.replace(/[^\d]/g, '');
-          if (digits === '') {
-            setFormData(prev => ({ ...prev, [key]: undefined }));
-            return;
-          }
-          const num = parseInt(digits, 10);
-          if (!isNaN(num)) {
-            setFormData(prev => ({ ...prev, [key]: num }));
-            setErrors(prev => ({ ...prev, [key]: '' }));
-          }
-        }}
-        onBlur={() => {
-          setFormData(prev => {
-            const value = prev[key];
-            if (value === undefined || value === null || isNaN(value)) {
-              return { ...prev, [key]: undefined };
-            }
-            if (value < 0) return { ...prev, [key]: 0 };
-            if (value === 0 && !opts?.allowZero) {
-              // A salon or a waiting RATE of zero is not a price — treat it as
-              // "not offered" rather than storing a free salon by accident.
-              return { ...prev, [key]: undefined };
-            }
-            return prev;
-          });
-        }}
-      />
-      {!!helper && <Text style={styles.helperText}>{helper}</Text>}
-      {!!errors[key] && <Text style={styles.errorText}>{errors[key]}</Text>}
-    </View>
-  );
-
-  const buildLocationText = (
-    country: GeoOption | null,
-    province: GeoOption | null,
-    city: GeoOption | null
-  ): string => {
-    const parts: string[] = [];
-    if (city) parts.push(city.name);
-    if (province) parts.push(province.name);
-    if (country) parts.push(country.name);
-    return parts.join(', ') || '';
-  };
 
   // Parse location text and find matching geo options
   // Supports formats: "City, Province" or "City, Province, Country"
@@ -1118,322 +996,6 @@ export const OfferWizardScreen: React.FC = () => {
     return { country, province, city };
   };
 
-  const handleFromGeoSelection = async (
-    type: 'country' | 'province' | 'city',
-    option: GeoOption
-  ) => {
-    try {
-      switch (type) {
-        case 'country':
-          setFromCountry(option);
-          setFromProvince(null);
-          setFromCity(null);
-          setFromProvinces([]);
-          setFromCities([]);
-          setFormData(prev => ({ ...prev, from_text: '', from_lat: undefined, from_lng: undefined }));
-          await loadFromProvinces(option.id);
-          break;
-        case 'province':
-          setFromProvince(option);
-          setFromCity(null);
-          setFromCities([]);
-          setFormData(prev => ({ ...prev, from_text: '', from_lat: undefined, from_lng: undefined }));
-          await loadFromCities(option.id);
-          break;
-        case 'city':
-          // If in multi-select mode, handle differently
-          if (fromGeoModal?.multiSelect) {
-            // Toggle city selection
-            const cityIndex = selectedFromCities.findIndex(c => c.id === option.id);
-            if (cityIndex >= 0) {
-              setSelectedFromCities(selectedFromCities.filter(c => c.id !== option.id));
-            } else {
-              setSelectedFromCities([...selectedFromCities, option]);
-            }
-            return; // Don't close modal, allow more selections
-          } else {
-            // Single select mode
-            setFromCity(option);
-            const locationText = buildLocationText(fromCountry, fromProvince, option);
-            setFormData(prev => ({
-              ...prev,
-              from_text: locationText,
-              from_lat: option.latitude || undefined,
-              from_lng: option.longitude || undefined,
-            }));
-            setErrors(prev => ({ ...prev, from_text: '' }));
-            setFromGeoModal(null);
-            setFromGeoSearch('');
-            return; // Close modal
-          }
-      }
-      setFromGeoModal(null);
-      setFromGeoSearch('');
-    } catch (error: any) {
-      console.error('Failed to handle geo selection:', error);
-    }
-  };
-
-  const handleToGeoSelection = async (
-    type: 'country' | 'province' | 'city',
-    option: GeoOption
-  ) => {
-    try {
-      switch (type) {
-        case 'country':
-          setToCountry(option);
-          setToProvince(null);
-          setToCity(null);
-          setToProvinces([]);
-          setToCities([]);
-          setFormData(prev => ({ ...prev, to_text: '', to_lat: undefined, to_lng: undefined }));
-          await loadToProvinces(option.id);
-          break;
-        case 'province':
-          setToProvince(option);
-          setToCity(null);
-          setToCities([]);
-          setFormData(prev => ({ ...prev, to_text: '', to_lat: undefined, to_lng: undefined }));
-          await loadToCities(option.id);
-          break;
-        case 'city':
-          // If in multi-select mode, handle differently
-          if (toGeoModal?.multiSelect) {
-            // Toggle city selection
-            const cityIndex = selectedToCities.findIndex(c => c.id === option.id);
-            if (cityIndex >= 0) {
-              setSelectedToCities(selectedToCities.filter(c => c.id !== option.id));
-            } else {
-              setSelectedToCities([...selectedToCities, option]);
-            }
-            return; // Don't close modal, allow more selections
-          } else {
-            // Single select mode
-            setToCity(option);
-            const locationText = buildLocationText(toCountry, toProvince, option);
-            setFormData(prev => ({
-              ...prev,
-              to_text: locationText,
-              to_lat: option.latitude || undefined,
-              to_lng: option.longitude || undefined,
-            }));
-            setErrors(prev => ({ ...prev, to_text: '' }));
-            setToGeoModal(null);
-            setToGeoSearch('');
-            return; // Close modal
-          }
-      }
-      setToGeoModal(null);
-      setToGeoSearch('');
-    } catch (error: any) {
-      console.error('Failed to handle geo selection:', error);
-    }
-  };
-
-  const openFromGeoModal = async (type: 'country' | 'province' | 'city', multiSelect = false) => {
-    setFromGeoSearch('');
-    if (type === 'province' && !fromCountry) {
-      showToast.error('Xatolik', 'Avval mamlakatni tanlang');
-      return;
-    }
-    if (type === 'city' && !fromProvince) {
-      showToast.error('Xatolik', 'Avval viloyatni tanlang');
-      return;
-    }
-
-    // If multi-select for cities, ensure cities are loaded
-    if (multiSelect && type === 'city') {
-      if (fromCities.length === 0 && fromProvince) {
-        await loadFromCities(fromProvince.id);
-      }
-      // Pre-select existing cities if editing
-      if (selectedFromCities.length === 0 && fromCity) {
-        setSelectedFromCities([fromCity]);
-      } else {
-        setSelectedFromCities([]);
-      }
-    } else {
-      setSelectedFromCities([]);
-    }
-
-    setFromGeoModal({ type, multiSelect });
-  };
-
-  const openToGeoModal = async (type: 'country' | 'province' | 'city', multiSelect = false) => {
-    setToGeoSearch('');
-    if (type === 'province' && !toCountry) {
-      showToast.error('Xatolik', 'Avval mamlakatni tanlang');
-      return;
-    }
-    if (type === 'city' && !toProvince) {
-      showToast.error('Xatolik', 'Avval viloyatni tanlang');
-      return;
-    }
-
-    // If multi-select for cities, ensure cities are loaded
-    if (multiSelect && type === 'city') {
-      if (toCities.length === 0 && toProvince) {
-        await loadToCities(toProvince.id);
-      }
-      // Pre-select existing cities if editing
-      if (selectedToCities.length === 0 && toCity) {
-        setSelectedToCities([toCity]);
-      } else {
-        setSelectedToCities([]);
-      }
-    } else {
-      setSelectedToCities([]);
-    }
-
-    setToGeoModal({ type, multiSelect });
-  };
-
-  const getFromGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (!fromGeoModal) return [];
-    
-    switch (fromGeoModal.type) {
-      case 'country':
-        options = fromCountries;
-        break;
-      case 'province':
-        options = fromProvinces;
-        break;
-      case 'city':
-        options = fromCities;
-        break;
-      default:
-        return [];
-    }
-
-    if (fromGeoSearch.trim()) {
-      const query = fromGeoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
-    return options;
-  };
-
-  const getToGeoOptions = (): GeoOption[] => {
-    let options: GeoOption[] = [];
-    if (!toGeoModal) return [];
-    
-    switch (toGeoModal.type) {
-      case 'country':
-        options = toCountries;
-        break;
-      case 'province':
-        options = toProvinces;
-        break;
-      case 'city':
-        options = toCities;
-        break;
-      default:
-        return [];
-    }
-
-    if (toGeoSearch.trim()) {
-      const query = toGeoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
-    return options;
-  };
-
-  const confirmMultipleFromCities = () => {
-    if (selectedFromCities.length === 0) return;
-
-    // If only one city selected, treat as single selection
-    if (selectedFromCities.length === 1) {
-      const city = selectedFromCities[0];
-      setFromCity(city);
-      const locationText = buildLocationText(fromCountry, fromProvince, city);
-      setFormData(prev => ({
-        ...prev,
-        from_text: locationText,
-        from_lat: city.latitude || undefined,
-        from_lng: city.longitude || undefined,
-      }));
-      setSelectedFromCities([]);
-      setFromGeoModal(null);
-      setFromGeoSearch('');
-      setErrors(prev => ({ ...prev, from_text: '' }));
-      return;
-    }
-
-    // Multiple cities selected - keep them in selectedFromCities for display
-    // Use first city as primary from location
-    const firstCity = selectedFromCities[0];
-    setFromCity(null); // Clear single city selection
-    const locationText = selectedFromCities.map(city => city.name).join(', ');
-    setFormData(prev => ({
-      ...prev,
-      from_text: locationText,
-      from_lat: firstCity.latitude || undefined,
-      from_lng: firstCity.longitude || undefined,
-    }));
-
-    // Don't add From cities as stops - they're already in selectedFromCities
-    // Stops should only be for intermediate locations
-
-    setFromGeoModal(null);
-    setFromGeoSearch('');
-    setErrors(prev => ({ ...prev, from_text: '' }));
-  };
-
-  const confirmMultipleToCities = () => {
-    if (selectedToCities.length === 0) return;
-
-    // If only one city selected, treat as single selection
-    if (selectedToCities.length === 1) {
-      const city = selectedToCities[0];
-      setToCity(city);
-      const locationText = buildLocationText(toCountry, toProvince, city);
-      setFormData(prev => ({
-        ...prev,
-        to_text: locationText,
-        to_lat: city.latitude || undefined,
-        to_lng: city.longitude || undefined,
-      }));
-      setSelectedToCities([]);
-      setToGeoModal(null);
-      setToGeoSearch('');
-      setErrors(prev => ({ ...prev, to_text: '' }));
-      return;
-    }
-
-    // Multiple cities selected - keep them in selectedToCities for display
-    // Use first city as primary to location
-    const firstCity = selectedToCities[0];
-    setToCity(null); // Clear single city selection
-    const locationText = selectedToCities.map(city => city.name).join(', ');
-    setFormData(prev => ({
-      ...prev,
-      to_text: locationText,
-      to_lat: firstCity.latitude || undefined,
-      to_lng: firstCity.longitude || undefined,
-    }));
-
-    // Don't add To cities as stops - they're already in selectedToCities
-    // Stops should only be for intermediate locations
-
-    setToGeoModal(null);
-    setToGeoSearch('');
-    setErrors(prev => ({ ...prev, to_text: '' }));
-  };
-
-  const cancelFromMultiSelect = () => {
-    setSelectedFromCities([]);
-    setFromGeoModal(null);
-    setFromGeoSearch('');
-  };
-
-  const cancelToMultiSelect = () => {
-    setSelectedToCities([]);
-    setToGeoModal(null);
-    setToGeoSearch('');
-  };
-
   // Stop management functions
   const addStop = () => {
     const newStop = {
@@ -1459,205 +1021,9 @@ export const OfferWizardScreen: React.FC = () => {
     setStopCities(newStopCities);
   };
 
-  const loadStopProvinces = async (stopId: string, countryId: number) => {
-    try {
-      setGeoLoading(true);
-      const provinces = await DriverAPI.fetchGeoProvinces(countryId);
-      setStopProvinces(prev => ({ ...prev, [stopId]: provinces }));
-    } catch (error: any) {
-      console.error('Failed to load provinces for stop:', error);
-      showToast.error('Xatolik', 'Viloyatlarni yuklashda xatolik');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const loadStopCities = async (stopId: string, provinceId: number) => {
-    try {
-      setGeoLoading(true);
-      const cities = await DriverAPI.fetchGeoCityDistricts(provinceId);
-      setStopCities(prev => ({ ...prev, [stopId]: cities }));
-    } catch (error: any) {
-      console.error('Failed to load cities for stop:', error);
-      showToast.error('Xatolik', 'Shaharlarni yuklashda xatolik');
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
-  const openStopGeoModal = async (stopId: string, type: 'country' | 'province' | 'city', multiSelect = false) => {
-    const stop = stops.find(s => s.id === stopId);
-    if (!stop) return;
-
-    if (type === 'province' && !stop.country) {
-      showToast.error('Xatolik', 'Avval mamlakatni tanlang');
-      return;
-    }
-    if (type === 'city' && !stop.province) {
-      showToast.error('Xatolik', 'Avval viloyatni tanlang');
-      return;
-    }
-
-    // If multi-select for cities, ensure cities are loaded
-    if (multiSelect && type === 'city') {
-      if (!stopCities[stopId] || stopCities[stopId].length === 0) {
-        // Load cities if not already loaded
-        await loadStopCities(stopId, stop.province!.id);
-      }
-      // Pre-select existing cities if any
-      if (stop.selectedCities && stop.selectedCities.length > 0) {
-        setSelectedCities(stop.selectedCities);
-      } else if (stop.city) {
-        setSelectedCities([stop.city]);
-      } else {
-        setSelectedCities([]);
-      }
-      setMultiSelectMode({ stopId, country: stop.country!, province: stop.province! });
-    } else {
-      // Clear multi-select mode for single select
-      setMultiSelectMode(null);
-      setSelectedCities([]);
-    }
-
-    setStopGeoModal({ stopId, type, multiSelect });
-    setStopGeoSearch('');
-  };
-
-  const confirmMultipleCities = () => {
-    if (!multiSelectMode || selectedCities.length === 0) return;
-
-    const { stopId, country, province } = multiSelectMode;
-    const stopIndex = stops.findIndex(s => s.id === stopId);
-    if (stopIndex === -1) return;
-
-    const updatedStops = [...stops];
-    const stop = updatedStops[stopIndex];
-    
-    // Store multiple cities in the stop
-    if (selectedCities.length === 1) {
-      // Single city - use the city field
-      stop.city = selectedCities[0];
-      stop.selectedCities = undefined;
-      stop.label_text = buildLocationText(country, province, selectedCities[0]);
-      stop.lat = selectedCities[0].latitude || undefined;
-      stop.lng = selectedCities[0].longitude || undefined;
-    } else {
-      // Multiple cities - store in selectedCities array
-      stop.city = null; // Clear single city
-      stop.selectedCities = selectedCities;
-      stop.label_text = selectedCities.map(c => c.name).join(', ');
-      // Use first city's coordinates
-      stop.lat = selectedCities[0].latitude || undefined;
-      stop.lng = selectedCities[0].longitude || undefined;
-    }
-    
-    stop.country = country;
-    stop.province = province;
-
-    setStops(updatedStops);
-    setSelectedCities([]);
-    setMultiSelectMode(null);
-    setStopGeoModal(null);
-    setStopGeoSearch('');
-  };
-
-  const cancelMultiSelect = () => {
-    setSelectedCities([]);
-    setMultiSelectMode(null);
-    setStopGeoModal(null);
-    setStopGeoSearch('');
-  };
-
-  const handleStopGeoSelection = async (
-    stopId: string,
-    type: 'country' | 'province' | 'city',
-    option: GeoOption
-  ) => {
-    try {
-      const stopIndex = stops.findIndex(s => s.id === stopId);
-      if (stopIndex === -1) return;
-
-      const updatedStops = [...stops];
-      const stop = updatedStops[stopIndex];
-
-      switch (type) {
-        case 'country':
-          stop.country = option;
-          stop.province = null;
-          stop.city = null;
-          stop.label_text = '';
-          stop.lat = undefined;
-          stop.lng = undefined;
-          await loadStopProvinces(stopId, option.id);
-          break;
-        case 'province':
-          stop.province = option;
-          stop.city = null;
-          stop.label_text = '';
-          stop.lat = undefined;
-          stop.lng = undefined;
-          await loadStopCities(stopId, option.id);
-          break;
-        case 'city':
-          // If in multi-select mode, handle differently
-          if (stopGeoModal?.multiSelect) {
-            // Toggle city selection
-            const cityIndex = selectedCities.findIndex(c => c.id === option.id);
-            if (cityIndex >= 0) {
-              setSelectedCities(selectedCities.filter(c => c.id !== option.id));
-            } else {
-              setSelectedCities([...selectedCities, option]);
-            }
-            return; // Don't close modal, allow more selections
-          } else {
-            // Single select mode
-            stop.city = option;
-            stop.label_text = buildLocationText(stop.country, stop.province, option);
-            stop.lat = option.latitude || undefined;
-            stop.lng = option.longitude || undefined;
-            setStopGeoModal(null);
-            setStopGeoSearch('');
-            setStops(updatedStops);
-            return; // Close modal
-          }
-      }
-
-      setStops(updatedStops);
-      setStopGeoModal(null);
-      setStopGeoSearch('');
-    } catch (error: any) {
-      console.error('Failed to handle stop geo selection:', error);
-    }
-  };
-
-  const getStopGeoOptions = (stopId: string): GeoOption[] => {
-    if (!stopGeoModal || stopGeoModal.stopId !== stopId) return [];
-
-    let options: GeoOption[] = [];
-    switch (stopGeoModal.type) {
-      case 'country':
-        options = stopCountries;
-        break;
-      case 'province':
-        options = stopProvinces[stopId] || [];
-        break;
-      case 'city':
-        options = stopCities[stopId] || [];
-        break;
-      default:
-        return [];
-    }
-
-    if (stopGeoSearch.trim()) {
-      const query = stopGeoSearch.toLowerCase();
-      return options.filter(opt => opt.name.toLowerCase().includes(query));
-    }
-
-    return options;
-  };
-
   const handleSave = async () => {
-    if (!validateStep(currentStep)) {
+    // T-101 step 16a: EVERY section, not just the one on screen. See validateEverything.
+    if (!validateEverything()) {
       return;
     }
 
@@ -1774,6 +1140,154 @@ export const OfferWizardScreen: React.FC = () => {
     }
   };
 
+  /**
+   * ── T-101 step 16c: one sheet for every place on this screen ──────────────
+   *
+   * 🔴 `GeoSheet` ALREADY EXISTED IN THIS APP and its own header names
+   * `OfferWizardScreen` as one of the SEVEN places that had re-implemented the
+   * cascade by hand. `SearchPassengerOffersScreen` adopted it during T-101; this
+   * screen never did, and kept three more copies (from · to · every stop).
+   *
+   * The sheet owns the fetching, the "clear the child when the parent changes"
+   * rule, the search box and the multi-select. This screen now owns only the
+   * ANSWER.
+   */
+  const [geoSheet, setGeoSheet] = useState<
+    { endpoint: 'from' | 'to' } | { endpoint: 'stop'; stopId: string } | null
+  >(null);
+
+  /** The resolved place for an endpoint's row, or '' while nothing is picked. */
+  const endpointLine = (which: 'from' | 'to'): string =>
+    resolveLocationText(
+      which === 'from'
+        ? { country: fromCountry, province: fromProvince, city: fromCity, cities: selectedFromCities }
+        : { country: toCountry, province: toProvince, city: toCity, cities: selectedToCities },
+      undefined,
+    );
+
+  const stopLine = (stop: { country: GeoOption | null; province: GeoOption | null; city: GeoOption | null; selectedCities?: GeoOption[] }): string =>
+    resolveLocationText(
+      {
+        country: stop.country,
+        province: stop.province,
+        city: stop.city,
+        cities: stop.selectedCities ?? [],
+      },
+      undefined,
+    );
+
+  /** Everything one endpoint owns, so `swapEndpoints` cannot forget half of it. */
+  const applyGeoPath = (target: { endpoint: 'from' | 'to' } | { endpoint: 'stop'; stopId: string }, path: GeoPath) => {
+    // `districts` is the multi-select; `district` is the single. A caller that
+    // picked one still gets a one-element list, so there is one code path below.
+    const cities = path.districts ?? (path.district ? [path.district] : []);
+    const country = path.country ?? null;
+    const province = path.province ?? null;
+    const next = resolveEndpointSelection(cities, country, province);
+
+    if (target.endpoint === 'stop') {
+      setStops(prev =>
+        prev.map(s =>
+          s.id === target.stopId
+            ? {
+                ...s,
+                country,
+                province,
+                city: next.city as GeoOption | null,
+                selectedCities: cities,
+                label_text: next.text,
+                lat: next.lat,
+                lng: next.lng,
+              }
+            : s,
+        ),
+      );
+      return;
+    }
+
+    if (target.endpoint === 'from') {
+      setFromCountry(country);
+      setFromProvince(province);
+      setFromCity(next.city as GeoOption | null);
+      setSelectedFromCities(cities);
+      setFormData(prev => ({
+        ...prev,
+        from_text: next.text,
+        from_lat: next.lat,
+        from_lng: next.lng,
+      }));
+      setErrors(prev => ({ ...prev, from_text: '' }));
+      return;
+    }
+
+    setToCountry(country);
+    setToProvince(province);
+    setToCity(next.city as GeoOption | null);
+    setSelectedToCities(cities);
+    setFormData(prev => ({
+      ...prev,
+      to_text: next.text,
+      to_lat: next.lat,
+      to_lng: next.lng,
+    }));
+    setErrors(prev => ({ ...prev, to_text: '' }));
+  };
+
+  /**
+   * The artboard's ⇅. A driver who picked the route backwards should not have to
+   * re-enter both ends.
+   *
+   * ⚠️ It swaps the geo selections AND the persisted text/coordinates together.
+   * Swapping only `from_text`/`to_text` would leave the pickers showing the old
+   * order, and the next edit of either end would silently restore it.
+   */
+  const swapEndpoints = () => {
+    setFromCountry(toCountry);
+    setFromProvince(toProvince);
+    setFromCity(toCity);
+    setSelectedFromCities(selectedToCities);
+
+    setToCountry(fromCountry);
+    setToProvince(fromProvince);
+    setToCity(fromCity);
+    setSelectedToCities(selectedFromCities);
+
+    setFormData(prev => ({
+      ...prev,
+      from_text: prev.to_text,
+      from_lat: prev.to_lat,
+      from_lng: prev.to_lng,
+      to_text: prev.from_text,
+      to_lat: prev.from_lat,
+      to_lng: prev.from_lng,
+    }));
+    setErrors(prev => ({ ...prev, from_text: '', to_text: '' }));
+  };
+
+  /** What the open sheet should start from, so re-opening resumes where it was. */
+  const geoSheetInitialPath = (): GeoPath => {
+    if (!geoSheet) return {};
+    if (geoSheet.endpoint === 'stop') {
+      const stop = stops.find(s => s.id === geoSheet.stopId);
+      return {
+        country: stop?.country ?? undefined,
+        province: stop?.province ?? undefined,
+        districts: stop?.selectedCities ?? [],
+      };
+    }
+    return geoSheet.endpoint === 'from'
+      ? {
+          country: fromCountry ?? undefined,
+          province: fromProvince ?? undefined,
+          districts: selectedFromCities,
+        }
+      : {
+          country: toCountry ?? undefined,
+          province: toProvince ?? undefined,
+          districts: selectedToCities,
+        };
+  };
+
   const renderStepIndicator = () => {
     return (
       <View style={styles.stepIndicator}>
@@ -1808,385 +1322,92 @@ export const OfferWizardScreen: React.FC = () => {
     );
   };
 
+  /**
+   * Step 1 — the route. T-101 step 16c.
+   *
+   * Each endpoint is ONE tappable line that opens `GeoSheet`, as the artboard draws
+   * it. The three stacked dropdowns it replaces were the cascade rendered as a form,
+   * and there were THREE copies of them on this screen (from · to · every stop).
+   */
   const renderStep1 = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>{t('offerWizard.step1Title')}</Text>
 
-      {/* From Location */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.fromLabel')}</Text>
-        
-        {/* Country */}
-        <TouchableOpacity
-          style={[styles.selectInput, errors.from_text && styles.inputError]}
-          onPress={() => openFromGeoModal('country')}
-        >
-          <Text style={styles.selectInputText}>
-            {fromCountry?.name || 'Mamlakatni tanlang'}
-          </Text>
-        </TouchableOpacity>
+      <RouteEndpointSection
+        title={t('offerWizard.fromLabel')}
+        variant="from"
+        line={endpointLine('from')}
+        placeholder={t('offerWizard.selectPlace')}
+        onPress={() => setGeoSheet({ endpoint: 'from' })}
+        text={formData.from_text}
+        freeTextPlaceholder={t('offerWizard.fromPlaceholder')}
+        error={errors.from_text}
+        onChangeText={(text) => {
+          setFormData(prev => ({ ...prev, from_text: text }));
+          setErrors(prev => ({ ...prev, from_text: '' }));
+        }}
+      />
 
-        {/* Province */}
-        {fromCountry && (
-          <TouchableOpacity
-            style={[styles.selectInput, { marginTop: 8 }]}
-            onPress={() => openFromGeoModal('province')}
-            disabled={fromProvinces.length === 0}
-          >
-            <Text style={styles.selectInputText}>
-              {fromProvince?.name || 'Viloyatni tanlang'}
-            </Text>
-          </TouchableOpacity>
-        )}
+      <RouteSwapButton onPress={swapEndpoints} label={t('offerWizard.swapRoute')} />
 
-        {/* City - Multi Select Only */}
-        {fromProvince && (
-          <TouchableOpacity
-            style={[styles.selectInput, { marginTop: 8 }]}
-            onPress={() => openFromGeoModal('city', true)}
-            disabled={fromCities.length === 0}
-          >
-            <Text style={styles.selectInputText}>
-              {selectedFromCities.length > 0 
-                ? selectedFromCities.map(c => c.name).join(', ')
-                : t('offerWizard.selectMultiple') || 'Bir nechta tanlash'}
-            </Text>
-          </TouchableOpacity>
-        )}
+      <RouteEndpointSection
+        title={t('offerWizard.toLabel')}
+        variant="to"
+        line={endpointLine('to')}
+        placeholder={t('offerWizard.selectPlace')}
+        onPress={() => setGeoSheet({ endpoint: 'to' })}
+        text={formData.to_text}
+        freeTextPlaceholder={t('offerWizard.toPlaceholder')}
+        error={errors.to_text}
+        onChangeText={(text) => {
+          setFormData(prev => ({ ...prev, to_text: text }));
+          setErrors(prev => ({ ...prev, to_text: '' }));
+        }}
+      />
 
-        {/* Location text display/input */}
-        <View style={{ marginTop: 8 }}>
-          {fromCity ? (
-            <View style={styles.locationDisplay}>
-              <Text style={styles.locationText}>
-                {buildLocationText(fromCountry, fromProvince, fromCity)}
-              </Text>
+      {/* ── Orasidagi to'xtash joylari ───────────────────────────────────
+          The artboard draws no stops, so this keeps the screen's own shape —
+          but each stop is now the SAME row and the SAME sheet as the two
+          endpoints, instead of a third hand-rolled copy of the cascade. */}
+      <SectionCard title={t('offerWizard.stopsLabel')}>
+        {stops.map((stop, index) => (
+          <View key={stop.id} style={styles.stopRow}>
+            <View style={styles.stopMain}>
+              <RouteEndpointSection
+                title={`${t('offerWizard.stopLabel')} ${index + 1}`}
+                variant="stop"
+                line={stopLine(stop)}
+                placeholder={t('offerWizard.selectPlace')}
+                onPress={() => setGeoSheet({ endpoint: 'stop', stopId: stop.id })}
+                text={stop.label_text}
+                freeTextPlaceholder={t('offerWizard.selectPlace')}
+                onChangeText={(text) =>
+                  setStops(prev =>
+                    prev.map(s => (s.id === stop.id ? { ...s, label_text: text } : s)),
+                  )
+                }
+              />
             </View>
-          ) : selectedFromCities.length > 0 ? (
-            <View>
-              {/* Show country/province once if all cities are from same location */}
-              {(fromCountry || fromProvince) && (
-                <View style={styles.locationContext}>
-                  <Text style={styles.locationContextText}>
-                    {fromProvince ? `${fromProvince.name}${fromCountry ? `, ${fromCountry.name}` : ''}` : fromCountry?.name}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.multipleLocationsDisplay}>
-                {selectedFromCities.map((city, index) => (
-                  <View key={city.id} style={styles.locationChip}>
-                    <Text style={styles.locationChipText}>
-                      {city.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const updated = selectedFromCities.filter(c => c.id !== city.id);
-                        setSelectedFromCities(updated);
-                        if (updated.length === 0) {
-                          setFromCity(null);
-                          setFormData(prev => ({ ...prev, from_text: '', from_lat: undefined, from_lng: undefined }));
-                        } else if (updated.length === 1) {
-                          const singleCity = updated[0];
-                          setFromCity(singleCity);
-                          const locationText = buildLocationText(fromCountry, fromProvince, singleCity);
-                          setFormData(prev => ({
-                            ...prev,
-                            from_text: locationText,
-                            from_lat: singleCity.latitude || undefined,
-                            from_lng: singleCity.longitude || undefined,
-                          }));
-                        } else {
-                          // Update formData with just city names
-                          const locationText = updated.map(c => c.name).join(', ');
-                          setFormData(prev => ({
-                            ...prev,
-                            from_text: locationText,
-                          }));
-                        }
-                      }}
-                      style={styles.chipRemoveButton}
-                    >
-                      <Text style={styles.chipRemoveText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <TextInput
-              style={[styles.input, errors.from_text && styles.inputError]}
-              placeholder={t('offerWizard.fromPlaceholder')}
-              value={formData.from_text}
-              onChangeText={(text) => {
-                setFormData(prev => ({ ...prev, from_text: text }));
-                setErrors(prev => ({ ...prev, from_text: '' }));
-              }}
-            />
-          )}
-        </View>
-
-        {errors.from_text && (
-          <Text style={styles.errorText}>{errors.from_text}</Text>
-        )}
-      </View>
-
-      {/* To Location */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.toLabel')}</Text>
-        
-        {/* Country */}
-        <TouchableOpacity
-          style={[styles.selectInput, errors.to_text && styles.inputError]}
-          onPress={() => openToGeoModal('country')}
-        >
-          <Text style={styles.selectInputText}>
-            {toCountry?.name || 'Mamlakatni tanlang'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Province */}
-        {toCountry && (
-          <TouchableOpacity
-            style={[styles.selectInput, { marginTop: 8 }]}
-            onPress={() => openToGeoModal('province')}
-            disabled={toProvinces.length === 0}
-          >
-            <Text style={styles.selectInputText}>
-              {toProvince?.name || 'Viloyatni tanlang'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* City - Multi Select Only */}
-        {toProvince && (
-          <TouchableOpacity
-            style={[styles.selectInput, { marginTop: 8 }]}
-            onPress={() => openToGeoModal('city', true)}
-            disabled={toCities.length === 0}
-          >
-            <Text style={styles.selectInputText}>
-              {selectedToCities.length > 0 
-                ? selectedToCities.map(c => c.name).join(', ')
-                : t('offerWizard.selectMultiple') || 'Bir nechta tanlash'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Location text display/input */}
-        <View style={{ marginTop: 8 }}>
-          {toCity ? (
-            <View style={styles.locationDisplay}>
-              <Text style={styles.locationText}>
-                {buildLocationText(toCountry, toProvince, toCity)}
-              </Text>
-            </View>
-          ) : selectedToCities.length > 0 ? (
-            <View>
-              {/* Show country/province once if all cities are from same location */}
-              {(toCountry || toProvince) && (
-                <View style={styles.locationContext}>
-                  <Text style={styles.locationContextText}>
-                    {toProvince ? `${toProvince.name}${toCountry ? `, ${toCountry.name}` : ''}` : toCountry?.name}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.multipleLocationsDisplay}>
-                {selectedToCities.map((city, index) => (
-                  <View key={city.id} style={styles.locationChip}>
-                    <Text style={styles.locationChipText}>
-                      {city.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const updated = selectedToCities.filter(c => c.id !== city.id);
-                        setSelectedToCities(updated);
-                        if (updated.length === 0) {
-                          setToCity(null);
-                          setFormData(prev => ({ ...prev, to_text: '', to_lat: undefined, to_lng: undefined }));
-                        } else if (updated.length === 1) {
-                          const singleCity = updated[0];
-                          setToCity(singleCity);
-                          const locationText = buildLocationText(toCountry, toProvince, singleCity);
-                          setFormData(prev => ({
-                            ...prev,
-                            to_text: locationText,
-                            to_lat: singleCity.latitude || undefined,
-                            to_lng: singleCity.longitude || undefined,
-                          }));
-                        } else {
-                          // Update formData with just city names
-                          const locationText = updated.map(c => c.name).join(', ');
-                          setFormData(prev => ({
-                            ...prev,
-                            to_text: locationText,
-                          }));
-                        }
-                      }}
-                      style={styles.chipRemoveButton}
-                    >
-                      <Text style={styles.chipRemoveText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <TextInput
-              style={[styles.input, errors.to_text && styles.inputError]}
-              placeholder={t('offerWizard.toPlaceholder')}
-              value={formData.to_text}
-              onChangeText={(text) => {
-                setFormData(prev => ({ ...prev, to_text: text }));
-                setErrors(prev => ({ ...prev, to_text: '' }));
-              }}
-            />
-          )}
-        </View>
-
-        {errors.to_text && (
-          <Text style={styles.errorText}>{errors.to_text}</Text>
-        )}
-      </View>
-
-      {/* Intermediate Stops Section */}
-      <View style={styles.inputGroup}>
-        <View style={styles.stopsHeader}>
-          <Text style={styles.label}>{t('offerWizard.stopsLabel') || 'Orasidagi to\'xtash joylari (ixtiyoriy)'}</Text>
-          <TouchableOpacity
-            style={styles.addStopButton}
-            onPress={addStop}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.addStopButtonText}>+ {t('offerWizard.addStop') || 'Qo\'shish'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {stops.length === 0 && (
-          <Text style={styles.helperText}>
-            {t('offerWizard.stopsHelper') || 'Yo\'lda yo\'lovchilarni qabul qilish uchun to\'xtash joylarini qo\'shishingiz mumkin'}
-          </Text>
-        )}
-
-        {stops.map((stop, index) => {
-          // Check if this stop has cities that match From/To (to filter display)
-          const hasValidCities = stop.city || (stop.selectedCities && stop.selectedCities.length > 0);
-          const isDuplicate = hasValidCities && (
-            (fromCity && stop.city?.id === fromCity.id) ||
-            (selectedFromCities.some(c => stop.city?.id === c.id || stop.selectedCities?.some(sc => sc.id === c.id))) ||
-            (toCity && stop.city?.id === toCity.id) ||
-            (selectedToCities.some(c => stop.city?.id === c.id || stop.selectedCities?.some(sc => sc.id === c.id)))
-          );
-          
-          return (
-          <View key={stop.id} style={styles.stopCard}>
-            <View style={styles.stopHeader}>
-              <Text style={styles.stopNumber}>{t('offerWizard.stop') || 'To\'xtash'} {index + 1}</Text>
-              <TouchableOpacity
-                style={styles.removeStopButton}
-                onPress={() => removeStop(stop.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.removeStopButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Country */}
             <TouchableOpacity
-              style={[styles.selectInput, { marginTop: 8 }]}
-              onPress={() => openStopGeoModal(stop.id, 'country')}
+              style={styles.stopRemove}
+              onPress={() => removeStop(stop.id)}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.delete')}
             >
-              <Text style={styles.selectInputText}>
-                {stop.country?.name || 'Mamlakatni tanlang'}
-              </Text>
+              <Text style={styles.stopRemoveText}>×</Text>
             </TouchableOpacity>
-
-            {/* Province */}
-            {stop.country && (
-              <TouchableOpacity
-                style={[styles.selectInput, { marginTop: 8 }]}
-                onPress={() => openStopGeoModal(stop.id, 'province')}
-                disabled={!stopProvinces[stop.id] || stopProvinces[stop.id].length === 0}
-              >
-                <Text style={styles.selectInputText}>
-                  {stop.province?.name || 'Viloyatni tanlang'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* City - Multi Select Only */}
-            {stop.province && (
-              <TouchableOpacity
-                style={[styles.selectInput, { marginTop: 8 }]}
-                onPress={() => openStopGeoModal(stop.id, 'city', true)}
-                disabled={!stopCities[stop.id] || stopCities[stop.id].length === 0}
-              >
-                <Text style={styles.selectInputText}>
-                  {stop.selectedCities && stop.selectedCities.length > 0
-                    ? stop.selectedCities.map(c => c.name).join(', ')
-                    : stop.city?.name || t('offerWizard.selectMultiple') || 'Bir nechta tanlash'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Location display - show only city names if country/province are already selected above */}
-            {(stop.city || (stop.selectedCities && stop.selectedCities.length > 0)) && (
-              <View style={{ marginTop: 8 }}>
-                {/* Show country/province once if all cities are from same location */}
-                {(stop.country || stop.province) && (
-                  <View style={styles.locationContext}>
-                    <Text style={styles.locationContextText}>
-                      {stop.province ? `${stop.province.name}${stop.country ? `, ${stop.country.name}` : ''}` : stop.country?.name}
-                    </Text>
-                  </View>
-                )}
-                {stop.selectedCities && stop.selectedCities.length > 0 ? (
-                  <View style={styles.multipleLocationsDisplay}>
-                    {stop.selectedCities.map((city) => (
-                      <View key={city.id} style={styles.locationChip}>
-                        <Text style={styles.locationChipText}>
-                          {city.name}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => {
-                            const updated = stop.selectedCities!.filter(c => c.id !== city.id);
-                            const updatedStops = [...stops];
-                            const stopIndex = updatedStops.findIndex(s => s.id === stop.id);
-                            if (stopIndex >= 0) {
-                              if (updated.length === 0) {
-                                updatedStops[stopIndex].selectedCities = undefined;
-                                updatedStops[stopIndex].city = null;
-                                updatedStops[stopIndex].label_text = '';
-                              } else if (updated.length === 1) {
-                                updatedStops[stopIndex].city = updated[0];
-                                updatedStops[stopIndex].selectedCities = undefined;
-                                updatedStops[stopIndex].label_text = buildLocationText(stop.country, stop.province, updated[0]);
-                              } else {
-                                updatedStops[stopIndex].selectedCities = updated;
-                                updatedStops[stopIndex].label_text = updated.map(c => c.name).join(', ');
-                              }
-                              setStops(updatedStops);
-                            }
-                          }}
-                          style={styles.chipRemoveButton}
-                        >
-                          <Text style={styles.chipRemoveText}>×</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                ) : stop.city ? (
-                  <View style={[styles.locationDisplay, { marginTop: 0 }]}>
-                    <Text style={styles.locationText}>
-                      {stop.city.name}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
           </View>
-          );
-        })}
-      </View>
+        ))}
+
+        <TouchableOpacity
+          style={styles.addStopButton}
+          onPress={addStop}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+        >
+          <Text style={styles.addStopText}>+ {t('offerWizard.addStop')}</Text>
+        </TouchableOpacity>
+      </SectionCard>
     </View>
   );
 
@@ -2456,44 +1677,72 @@ export const OfferWizardScreen: React.FC = () => {
     </View>
   );
 
+  /**
+   * Step 3 — everything about the car, the seats and the money.
+   *
+   * T-101 step 16b: the sections are now `components/offerWizard/` pieces, in the
+   * order `DriverElon.dc.html` draws them (car · to'lov · avto turi · o'rindiqlar ·
+   * shartlar · ma'lumot · narxlar). The artboard puts the car FIRST of all, above
+   * the route — that move waits for 16d, because while the wizard still paginates a
+   * field rendered on step 1 would not be validated until step 3.
+   */
   const renderStep3 = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>{t('offerWizard.step3Title')}</Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.vehicleLabel')}</Text>
-        {vehicles.length > 0 ? (
-          <>
-            <View style={[styles.selectInput, errors.vehicle_id && styles.inputError]}>
-              <Text style={styles.selectInputText}>{vehicles[0].label}</Text>
-            </View>
-            <Text style={styles.helperText}>
-              Transport vositasi ma&apos;lumotlari profilingizdan avtomatik olinadi.
-            </Text>
-          </>
-        ) : (
-          <>
-            <View style={[styles.selectInput, errors.vehicle_id && styles.inputError]}>
-              <Text style={styles.selectInputText}>
-                Transport vositasi ma&apos;lumotlari topilmadi.
-              </Text>
-            </View>
-            <Text style={styles.helperText}>
-              Avval profil bo&apos;limida transport vositasini to&apos;ldiring, so&apos;ng e&apos;lon yarating.
-            </Text>
-          </>
-        )}
-        {errors.vehicle_id && (
-          <Text style={styles.errorText}>{errors.vehicle_id}</Text>
-        )}
-      </View>
+      <CarSection
+        title={t('offerWizard.vehicleLabel')}
+        vehicleLabel={vehicles.length > 0 ? vehicles[0].label : undefined}
+        helper="Transport vositasi ma'lumotlari profilingizdan avtomatik olinadi."
+        emptyLabel="Transport vositasi ma'lumotlari topilmadi."
+        emptyHelper="Avval profil bo'limida transport vositasini to'ldiring, so'ng e'lon yarating."
+        error={errors.vehicle_id}
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.seatsLabel')}</Text>
-        <TextInput
-          style={[styles.input, errors.seats_total && styles.inputError]}
+      {/* ── To'lov turi ─────────────────────────────────────────────────
+          Two INDEPENDENT toggles. T-031's lesson on the passenger side:
+          one shared value makes them behave as a radio group, so picking
+          card silently cleared cash. */}
+      <ChipSelectSection
+        title={t('offerWizard.paymentLabel')}
+        layout="fill"
+        options={[
+          { value: 'payment_cash', label: t('offerWizard.paymentCash') },
+          { value: 'payment_card', label: t('offerWizard.paymentCard') },
+        ]}
+        selected={PAYMENT_KEYS.filter((key) => formData[key] === true)}
+        onToggle={(key) =>
+          setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
+        }
+      />
+
+      {/* ── Avto sinfi — one radio, deselectable ───────────────────────── */}
+      <ChipSelectSection
+        title={t('offerWizard.vehicleClassLabel')}
+        options={VEHICLE_CLASSES.map((cls) => ({
+          value: cls,
+          label: t(`offerWizard.vehicleClass_${cls}`),
+        }))}
+        selected={formData.vehicle_class ? [formData.vehicle_class] : []}
+        onToggle={(cls) =>
+          setFormData(prev => ({
+            ...prev,
+            // Deselectable: tapping the active one clears it, matching
+            // the passenger screen's radio behaviour.
+            vehicle_class: prev.vehicle_class === cls ? undefined : cls,
+          }))
+        }
+      />
+
+      <SectionCard
+        title={t('offerWizard.seatsLabel')}
+        helper={t('offerWizard.seatsDescription')}
+        error={errors.seats_total}
+      >
+        <FormField
           placeholder="1-8"
           keyboardType="numeric"
+          invalid={!!errors.seats_total}
           value={formData.seats_total?.toString() || ''}
           onChangeText={(text) => {
             // Allow empty while typing; normalize on blur/validation
@@ -2506,332 +1755,170 @@ export const OfferWizardScreen: React.FC = () => {
             setErrors(prev => ({ ...prev, seats_total: '' }));
           }}
           onBlur={() => {
-            setFormData(prev => {
-              let seats = prev.seats_total;
-              if (!seats || isNaN(seats)) {
-                seats = 1;
-              }
-              if (seats < 1) seats = 1;
-              if (seats > 8) seats = 8;
-              return { ...prev, seats_total: seats };
-            });
-          }}
-        />
-        {errors.seats_total && (
-          <Text style={styles.errorText}>{errors.seats_total}</Text>
-        )}
-        <Text style={styles.helperText}>
-          {t('offerWizard.seatsDescription')}
-        </Text>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.priceLabel')}</Text>
-        <TextInput
-          style={[styles.input, errors.price_per_seat && styles.inputError]}
-          placeholder="5000"
-          keyboardType="numeric"
-          value={formatPrice(formData.price_per_seat)}
-          onChangeText={(text) => {
-            const digits = text.replace(/[^\d]/g, '');
-            if (digits.trim() === '') {
-              setFormData(prev => ({ ...prev, price_per_seat: undefined }));
-              return;
-            }
-            const num = parseInt(digits, 10);
-            if (!isNaN(num)) {
-              setFormData(prev => ({ ...prev, price_per_seat: num }));
-              setErrors(prev => ({ ...prev, price_per_seat: '' }));
-            }
-          }}
-          onBlur={() => {
-            setFormData(prev => {
-              let price = prev.price_per_seat;
-              if (!price || isNaN(price)) {
-                return { ...prev, price_per_seat: undefined };
-              }
-              if (price < 0) price = 0;
-              return { ...prev, price_per_seat: price };
-            });
-          }}
-        />
-        {errors.price_per_seat && (
-          <Text style={styles.errorText}>{errors.price_per_seat}</Text>
-        )}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Oldingi o&apos;rin uchun narx (ixtiyoriy)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Masalan, 60000"
-          keyboardType="numeric"
-          value={formatPrice(formData.front_price_per_seat)}
-          onChangeText={(text) => {
-            const digits = text.replace(/[^\d]/g, '');
-            if (digits.trim() === '') {
-              setFormData(prev => ({ ...prev, front_price_per_seat: undefined }));
-              return;
-            }
-            const num = parseInt(digits, 10);
-            if (!isNaN(num)) {
-              setFormData(prev => ({ ...prev, front_price_per_seat: num }));
-            }
-          }}
-          onBlur={() => {
-            setFormData(prev => {
-              let price = prev.front_price_per_seat;
-              if (price === undefined || price === null || isNaN(price)) {
-                return { ...prev, front_price_per_seat: undefined };
-              }
-              if (price < (prev.price_per_seat || 0)) {
-                // Ensure front seat price is not lower than regular; adjust up
-                price = prev.price_per_seat || price;
-              }
-              return { ...prev, front_price_per_seat: price };
-            });
-          }}
-        />
-        <Text style={styles.helperText}>
-          Oldingi o&apos;rindagi yo&apos;lovchilar uchun biroz yuqoriroq narx belgilashingiz mumkin.
-        </Text>
-      </View>
-
-      {/* ── T-078: the rest of the mockup's `Narxlar` list ─────────────── */}
-      {numberField(
-        'price_back_salon',
-        t('offerWizard.priceBackSalonLabel'),
-        t('offerWizard.priceBackSalonHelper')
-      )}
-      {numberField(
-        'price_whole_salon',
-        t('offerWizard.priceWholeSalonLabel'),
-        t('offerWizard.priceWholeSalonHelper')
-      )}
-
-      {/*
-        Kutish. 🔴 A rate the passenger is SHOWN — nothing charges it (owner,
-        2026-08-13). The helper text says so, so a driver does not expect the
-        app to collect it for them.
-      */}
-      {numberField(
-        'waiting_fee_per_min',
-        t('offerWizard.waitingFeeLabel'),
-        t('offerWizard.waitingFeeHelper')
-      )}
-      {numberField(
-        'free_waiting_min',
-        t('offerWizard.freeWaitingLabel'),
-        t('offerWizard.freeWaitingHelper'),
-        { allowZero: true }
-      )}
-      {numberField(
-        'pickup_fee',
-        t('offerWizard.pickupFeeLabel'),
-        t('offerWizard.pickupFeeHelper'),
-        { allowZero: true }
-      )}
-
-      {/* ── To'lov turi ─────────────────────────────────────────────────
-          Two INDEPENDENT checkboxes. T-031's lesson on the passenger side:
-          one shared value makes them behave as a radio group, so picking
-          card silently cleared cash. */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.paymentLabel')}</Text>
-        <View style={styles.wizardChipRow}>
-          {([
-            ['payment_cash', t('offerWizard.paymentCash')],
-            ['payment_card', t('offerWizard.paymentCard')],
-          ] as const).map(([key, label]) => {
-            const on = formData[key] === true;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[styles.wizardChip, on && styles.wizardChipOn]}
-                onPress={() =>
-                  setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
-                }
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ── Avto sinfi — one radio, deselectable ───────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.vehicleClassLabel')}</Text>
-        <View style={styles.wizardChipRow}>
-          {VEHICLE_CLASSES.map((cls) => {
-            const on = formData.vehicle_class === cls;
-            return (
-              <TouchableOpacity
-                key={cls}
-                style={[styles.wizardChip, on && styles.wizardChipOn]}
-                onPress={() =>
-                  setFormData(prev => ({
-                    ...prev,
-                    // Deselectable: tapping the active one clears it, matching
-                    // the passenger screen's radio behaviour.
-                    vehicle_class: prev.vehicle_class === cls ? undefined : cls,
-                  }))
-                }
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
-                  {t(`offerWizard.vehicleClass_${cls}`)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ── T-079: what the car offers ─────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.amenitiesLabel')}</Text>
-        <View style={styles.wizardChipRow}>
-          {([
-            ['air_conditioner', t('offerWizard.amenityAirCon')],
-            ['wifi', t('offerWizard.amenityWifi')],
-            ['roof_rack_needed', t('offerWizard.amenityRoofRack')],
-            ['trailer', t('offerWizard.amenityTrailer')],
-          ] as const).map(([key, label]) => {
-            const on = formData[key] === true;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[styles.wizardChip, on && styles.wizardChipOn]}
-                onPress={() =>
-                  setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
-                }
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.wizardChipText, on && styles.wizardChipTextOn]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ── T-079: Jo'natma (pochta) ────────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <TouchableOpacity
-          style={[
-            styles.wizardChip,
-            formData.parcel_accepted === true && styles.wizardChipOn,
-          ]}
-          onPress={() =>
             setFormData(prev => ({
               ...prev,
-              parcel_accepted: !(prev.parcel_accepted === true),
-            }))
-          }
-          activeOpacity={0.8}
-        >
-          <Text
-            style={[
-              styles.wizardChipText,
-              formData.parcel_accepted === true && styles.wizardChipTextOn,
-            ]}
-          >
-            {t('offerWizard.parcelAccepted')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      {/* The price and weight only make sense once parcels are accepted. */}
-      {formData.parcel_accepted === true && (
-        <>
-          {numberField('parcel_price', t('offerWizard.parcelPriceLabel'))}
-          {numberField(
-            'parcel_max_kg',
-            t('offerWizard.parcelMaxKgLabel'),
-            t('offerWizard.parcelMaxKgHelper')
-          )}
-        </>
-      )}
+              seats_total: clampSeats(prev.seats_total),
+            }));
+          }}
+        />
+      </SectionCard>
+
+      {/* ── Qo'shimcha shartlar — T-079 ─────────────────────────────────── */}
+      <ChipSelectSection
+        title={t('offerWizard.amenitiesLabel')}
+        options={[
+          { value: 'air_conditioner', label: t('offerWizard.amenityAirCon') },
+          { value: 'wifi', label: t('offerWizard.amenityWifi') },
+          { value: 'roof_rack_needed', label: t('offerWizard.amenityRoofRack') },
+          { value: 'trailer', label: t('offerWizard.amenityTrailer') },
+        ]}
+        selected={AMENITY_KEYS.filter((key) => formData[key] === true)}
+        onToggle={(key) =>
+          setFormData(prev => ({ ...prev, [key]: !(prev[key] === true) }))
+        }
+      />
+
+      {/* ── T-079: Jo'natma (pochta). The price and weight only mean
+          anything once parcels are accepted. ───────────────────────────── */}
+      <ToggleSection
+        label={t('offerWizard.parcelAccepted')}
+        on={formData.parcel_accepted === true}
+        onToggle={() =>
+          setFormData(prev => ({
+            ...prev,
+            parcel_accepted: !(prev.parcel_accepted === true),
+          }))
+        }
+      >
+        <NumberField
+          label={t('offerWizard.parcelPriceLabel')}
+          value={formData.parcel_price}
+          error={errors.parcel_price}
+          onChange={(value) => setFormData(prev => ({ ...prev, parcel_price: value }))}
+        />
+        <NumberField
+          label={t('offerWizard.parcelMaxKgLabel')}
+          helper={t('offerWizard.parcelMaxKgHelper')}
+          value={formData.parcel_max_kg}
+          error={errors.parcel_max_kg}
+          onChange={(value) => setFormData(prev => ({ ...prev, parcel_max_kg: value }))}
+        />
+      </ToggleSection>
 
       {/* ── T-079: "Faqat pitakdan yoki yo'lga chiqib tursa olaman" ─────── */}
-      <View style={styles.inputGroup}>
-        <TouchableOpacity
-          style={[
-            styles.wizardChip,
-            formData.road_pickup === true && styles.wizardChipOn,
-          ]}
-          onPress={() =>
-            setFormData(prev => ({ ...prev, road_pickup: !(prev.road_pickup === true) }))
+      <ToggleSection
+        label={t('offerWizard.roadPickupLabel')}
+        on={formData.road_pickup === true}
+        onToggle={() =>
+          setFormData(prev => ({ ...prev, road_pickup: !(prev.road_pickup === true) }))
+        }
+      >
+        <FormField
+          multiline
+          numberOfLines={3}
+          placeholder={t('offerWizard.roadPickupPlaceholder')}
+          value={formData.road_pickup_note || ''}
+          onChangeText={(text) =>
+            setFormData(prev => ({ ...prev, road_pickup_note: text }))
           }
-          activeOpacity={0.8}
-        >
-          <Text
-            style={[
-              styles.wizardChipText,
-              formData.road_pickup === true && styles.wizardChipTextOn,
-            ]}
-          >
-            {t('offerWizard.roadPickupLabel')}
-          </Text>
-        </TouchableOpacity>
-        {formData.road_pickup === true && (
-          <TextInput
-            style={[styles.input, styles.textArea, { marginTop: 8 }]}
-            placeholder={t('offerWizard.roadPickupPlaceholder')}
-            multiline
-            numberOfLines={3}
-            value={formData.road_pickup_note || ''}
-            onChangeText={(text) =>
-              setFormData(prev => ({ ...prev, road_pickup_note: text }))
-            }
-          />
-        )}
-      </View>
+        />
+      </ToggleSection>
 
       {/* ── T-080: "hozioq (to'lishi bilan yuraman)" ────────────────────── */}
-      <View style={styles.inputGroup}>
-        <TouchableOpacity
-          style={[
-            styles.wizardChip,
-            formData.departs_when_full === true && styles.wizardChipOn,
-          ]}
-          onPress={() =>
-            setFormData(prev => ({
-              ...prev,
-              departs_when_full: !(prev.departs_when_full === true),
-            }))
-          }
-          activeOpacity={0.8}
-        >
-          <Text
-            style={[
-              styles.wizardChipText,
-              formData.departs_when_full === true && styles.wizardChipTextOn,
-            ]}
-          >
-            {t('offerWizard.departsWhenFullLabel')}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.helperText}>{t('offerWizard.departsWhenFullHelper')}</Text>
-      </View>
+      <ToggleSection
+        label={t('offerWizard.departsWhenFullLabel')}
+        helper={t('offerWizard.departsWhenFullHelper')}
+        on={formData.departs_when_full === true}
+        onToggle={() =>
+          setFormData(prev => ({
+            ...prev,
+            departs_when_full: !(prev.departs_when_full === true),
+          }))
+        }
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.noteLabel')}</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder={t('offerWizard.notePlaceholder')}
+      {/* ── Qo'shimcha ma'lumot ─────────────────────────────────────────── */}
+      <SectionCard title={t('offerWizard.noteLabel')}>
+        <FormField
           multiline
           numberOfLines={4}
+          placeholder={t('offerWizard.notePlaceholder')}
           value={formData.note || ''}
-          onChangeText={(text) => {
-            setFormData(prev => ({ ...prev, note: text }));
+          onChangeText={(text) => setFormData(prev => ({ ...prev, note: text }))}
+        />
+      </SectionCard>
+
+      {/* ── Narxlar ──────────────────────────────────────────────────────
+          The artboard groups every price under ONE eyebrow, so they are one
+          section here rather than seven loose fields. T-078 landed the last
+          five; `price_per_seat` and `front_price_per_seat` are older and are
+          read by the passenger app — do NOT rename them. */}
+      <SectionCard title={t('offerWizard.pricesSectionTitle')}>
+        <NumberField
+          label={t('offerWizard.priceLabel')}
+          placeholder="5000"
+          value={formData.price_per_seat}
+          error={errors.price_per_seat}
+          onChange={(value) => {
+            setFormData(prev => ({ ...prev, price_per_seat: value }));
+            setErrors(prev => ({ ...prev, price_per_seat: '' }));
           }}
         />
-      </View>
+        <NumberField
+          label="Oldingi o'rin uchun narx (ixtiyoriy)"
+          helper="Oldingi o'rindagi yo'lovchilar uchun biroz yuqoriroq narx belgilashingiz mumkin."
+          placeholder="Masalan, 60000"
+          value={formData.front_price_per_seat}
+          // The front seat may not be cheaper than an ordinary one; on blur it is
+          // raised to match rather than rejected.
+          clampMin={formData.price_per_seat}
+          onChange={(value) =>
+            setFormData(prev => ({ ...prev, front_price_per_seat: value }))
+          }
+        />
+        <NumberField
+          label={t('offerWizard.priceBackSalonLabel')}
+          helper={t('offerWizard.priceBackSalonHelper')}
+          value={formData.price_back_salon}
+          error={errors.price_back_salon}
+          onChange={(value) => setFormData(prev => ({ ...prev, price_back_salon: value }))}
+        />
+        <NumberField
+          label={t('offerWizard.priceWholeSalonLabel')}
+          helper={t('offerWizard.priceWholeSalonHelper')}
+          value={formData.price_whole_salon}
+          error={errors.price_whole_salon}
+          onChange={(value) => setFormData(prev => ({ ...prev, price_whole_salon: value }))}
+        />
+        {/*
+          Kutish. 🔴 A rate the passenger is SHOWN — nothing charges it (owner,
+          2026-08-13). The helper text says so, so a driver does not expect the
+          app to collect it for them.
+        */}
+        <NumberField
+          label={t('offerWizard.waitingFeeLabel')}
+          helper={t('offerWizard.waitingFeeHelper')}
+          value={formData.waiting_fee_per_min}
+          error={errors.waiting_fee_per_min}
+          onChange={(value) => setFormData(prev => ({ ...prev, waiting_fee_per_min: value }))}
+        />
+        <NumberField
+          allowZero
+          label={t('offerWizard.freeWaitingLabel')}
+          helper={t('offerWizard.freeWaitingHelper')}
+          value={formData.free_waiting_min}
+          error={errors.free_waiting_min}
+          onChange={(value) => setFormData(prev => ({ ...prev, free_waiting_min: value }))}
+        />
+        <NumberField
+          allowZero
+          label={t('offerWizard.pickupFeeLabel')}
+          helper={t('offerWizard.pickupFeeHelper')}
+          value={formData.pickup_fee}
+          error={errors.pickup_fee}
+          onChange={(value) => setFormData(prev => ({ ...prev, pickup_fee: value }))}
+        />
+      </SectionCard>
     </View>
   );
 
@@ -2986,140 +2073,32 @@ export const OfferWizardScreen: React.FC = () => {
         </View>
       </KeyboardAvoidingView>
 
-      {/* From Location Geo Modal */}
-      <GeoPickerModal
-        visible={!!fromGeoModal}
-        title={
-          fromGeoModal?.type === 'country'
-            ? t('offerWizard.selectCountry')
-            : fromGeoModal?.type === 'province'
-              ? t('offerWizard.selectProvince')
-              : fromGeoModal?.multiSelect
-                ? `${t('offerWizard.selectMultiple')} (${selectedFromCities.length})`
-                : t('offerWizard.selectCity')
-        }
-        options={getFromGeoOptions()}
-        selectedId={
-          fromGeoModal?.type === 'country'
-            ? fromCountry?.id ?? null
-            : fromGeoModal?.type === 'province'
-              ? fromProvince?.id ?? null
-              : fromCity?.id ?? null
-        }
-        loading={geoLoading}
-        onSelect={(option) =>
-          fromGeoModal && handleFromGeoSelection(fromGeoModal.type, option)
-        }
-        onClose={() => {
-          if (fromGeoModal?.multiSelect) {
-            cancelFromMultiSelect();
-          } else {
-            setFromGeoModal(null);
-          }
-        }}
-        multiSelect={
-          fromGeoModal?.multiSelect && fromGeoModal.type === 'city'
-            ? {
-                selected: selectedFromCities,
-                onToggle: (option) => handleFromGeoSelection('city', option),
-                onConfirm: confirmMultipleFromCities,
-                confirmLabel: `${t('common.confirm')} (${selectedFromCities.length})`,
-                footerText:
-                  selectedFromCities.length > 0
-                    ? `${selectedFromCities.length} ${t('offerWizard.stop')}`
-                    : t('offerWizard.selectCities'),
-              }
-            : undefined
-        }
-      />
+      {/*
+        ── T-101 step 16c ──────────────────────────────────────────────────────
+        ONE sheet for all three kinds of place, replacing three `GeoPickerModal`
+        instances and the hand-rolled cascade behind them.
 
-      {/* To Location Geo Modal */}
-      <GeoPickerModal
-        visible={!!toGeoModal}
+        `multiSelectAt="district"` is what makes the adoption lossless: a driver
+        has always been able to name several tumans for one endpoint, and the
+        sheet had no multi-select until this step added it.
+      */}
+      <GeoSheet
+        visible={!!geoSheet}
+        multiSelectAt="district"
+        endLevel="district"
+        initialPath={geoSheetInitialPath()}
         title={
-          toGeoModal?.type === 'country'
-            ? t('offerWizard.selectCountry')
-            : toGeoModal?.type === 'province'
-              ? t('offerWizard.selectProvince')
-              : toGeoModal?.multiSelect
-                ? `${t('offerWizard.selectMultiple')} (${selectedToCities.length})`
-                : t('offerWizard.selectCity')
+          geoSheet?.endpoint === 'to'
+            ? t('offerWizard.toLabel')
+            : geoSheet?.endpoint === 'stop'
+              ? t('offerWizard.stopsLabel')
+              : t('offerWizard.fromLabel')
         }
-        options={getToGeoOptions()}
-        selectedId={
-          toGeoModal?.type === 'country'
-            ? toCountry?.id ?? null
-            : toGeoModal?.type === 'province'
-              ? toProvince?.id ?? null
-              : toCity?.id ?? null
-        }
-        loading={geoLoading}
-        onSelect={(option) =>
-          toGeoModal && handleToGeoSelection(toGeoModal.type, option)
-        }
-        onClose={() => {
-          if (toGeoModal?.multiSelect) {
-            cancelToMultiSelect();
-          } else {
-            setToGeoModal(null);
-          }
+        onClose={() => setGeoSheet(null)}
+        onDone={(path) => {
+          if (geoSheet) applyGeoPath(geoSheet, path);
+          setGeoSheet(null);
         }}
-        multiSelect={
-          toGeoModal?.multiSelect && toGeoModal.type === 'city'
-            ? {
-                selected: selectedToCities,
-                onToggle: (option) => handleToGeoSelection('city', option),
-                onConfirm: confirmMultipleToCities,
-                confirmLabel: `${t('common.confirm')} (${selectedToCities.length})`,
-                footerText:
-                  selectedToCities.length > 0
-                    ? `${selectedToCities.length} ${t('offerWizard.stop')}`
-                    : t('offerWizard.selectCities'),
-              }
-            : undefined
-        }
-      />
-
-      {/* Stop Location Geo Modal */}
-      <GeoPickerModal
-        visible={!!stopGeoModal}
-        title={
-          stopGeoModal?.type === 'country'
-            ? t('offerWizard.selectCountry')
-            : stopGeoModal?.type === 'province'
-              ? t('offerWizard.selectProvince')
-              : stopGeoModal?.multiSelect
-                ? `${t('offerWizard.selectMultiple')} (${selectedCities.length})`
-                : t('offerWizard.selectCity')
-        }
-        options={stopGeoModal ? getStopGeoOptions(stopGeoModal.stopId) : []}
-        loading={geoLoading}
-        onSelect={(option) =>
-          stopGeoModal &&
-          handleStopGeoSelection(stopGeoModal.stopId, stopGeoModal.type, option)
-        }
-        onClose={() => {
-          if (stopGeoModal?.multiSelect) {
-            cancelMultiSelect();
-          } else {
-            setStopGeoModal(null);
-          }
-        }}
-        multiSelect={
-          stopGeoModal?.multiSelect && stopGeoModal.type === 'city'
-            ? {
-                selected: selectedCities,
-                onToggle: (option) =>
-                  handleStopGeoSelection(stopGeoModal.stopId, 'city', option),
-                onConfirm: confirmMultipleCities,
-                confirmLabel: `${t('common.confirm')} (${selectedCities.length})`,
-                footerText:
-                  selectedCities.length > 0
-                    ? `${selectedCities.length} ${t('offerWizard.stop')}`
-                    : t('offerWizard.selectCities'),
-              }
-            : undefined
-        }
       />
     </SafeAreaView>
   );
@@ -3272,10 +2251,6 @@ const styles = StyleSheet.create({
     borderColor: theme.palette.danger,
     borderWidth: 2,
   },
-  textArea: {
-    height: 110,
-    textAlignVertical: 'top',
-  },
   selectInput: {
     backgroundColor: theme.palette.surface,
     borderWidth: 1.5,
@@ -3319,32 +2294,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.palette.text.primary,
     fontWeight: '500',
-  },
-  /* ── T-078: payment + class chips ──────────────────────────────────── */
-  wizardChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  wizardChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-    backgroundColor: theme.palette.surface,
-  },
-  wizardChipOn: {
-    borderColor: theme.palette.brand,
-    backgroundColor: theme.palette.successTint,
-  },
-  wizardChipText: {
-    fontSize: 14,
-    color: theme.palette.text.muted,
-  },
-  wizardChipTextOn: {
-    fontWeight: '700',
-    color: theme.palette.actionPressed,
   },
   helperText: {
     fontSize: 13,
@@ -3620,6 +2569,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  /* ── T-101 step 16c: a stop is the same row as an endpoint, plus a remove ── */
+  stopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  stopMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stopRemove: {
+    width: theme.sizes.touchTarget,
+    height: theme.sizes.touchTarget,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderHairline,
+    borderColor: theme.palette.borders.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopRemoveText: {
+    ...theme.typography.cardTitle,
+    color: theme.palette.text.tertiary,
+  },
+  addStopText: {
+    ...theme.typography.chipLabel,
+    color: theme.palette.text.onAccent,
+    textAlign: 'center',
   },
   addStopButton: {
     backgroundColor: theme.palette.action,

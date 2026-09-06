@@ -57,6 +57,14 @@ export interface GeoPath {
   province?: GeoOption;
   district?: GeoOption;
   settlement?: GeoOption;
+  /**
+   * Every district picked, when the caller opted into `multiSelectAt="district"`.
+   *
+   * ⚠️ `district` still holds the FIRST of them, so a caller that never asked for
+   * multi-select reads exactly what it always read. That is deliberate: the search
+   * screen predates this and must not change behaviour.
+   */
+  districts?: GeoOption[];
 }
 
 const ORDER: GeoLevel[] = ['country', 'province', 'district', 'settlement'];
@@ -69,6 +77,17 @@ interface GeoSheetProps {
   endLevel?: GeoLevel;
   /** Pre-chosen ancestors, e.g. the region fixed by a "Viloyat ichi" scope. */
   initialPath?: GeoPath;
+  /**
+   * Let the user pick SEVERAL at this level instead of one — T-101 step 16c.
+   *
+   * 🔴 The artboard's place sheet does exactly this at adm2 (`toggleAdm2`,
+   * `tmpAdm2s`, a "tanlangan ✓" row), and the offer wizard has always let a driver
+   * name several tumans for one endpoint. Without it, adopting this sheet in the
+   * wizard would DELETE a feature drivers already have.
+   *
+   * Rows toggle instead of advancing, and the sheet confirms on the footer button.
+   */
+  multiSelectAt?: GeoLevel;
   title: string;
   onDone: (path: GeoPath) => void;
   onClose: () => void;
@@ -79,6 +98,7 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   startLevel = 'country',
   endLevel = 'district',
   initialPath,
+  multiSelectAt,
   title,
   onDone,
   onClose,
@@ -90,12 +110,14 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [picked, setPicked] = useState<GeoOption[]>(initialPath?.districts ?? []);
 
   // Re-arm on each open so a sheet closed half-way does not reopen mid-cascade.
   useEffect(() => {
     if (visible) {
       setLevel(startLevel);
       setPath(initialPath ?? {});
+      setPicked(initialPath?.districts ?? []);
       setQuery('');
       setError(null);
     }
@@ -129,6 +151,19 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   }, [visible, level, path, load]);
 
   const pick = (option: GeoOption) => {
+    /*
+     * The multi-select level toggles and stays put — the cascade does NOT advance,
+     * because the user is still building one answer. Confirming is the footer's job.
+     */
+    if (level === multiSelectAt) {
+      setPicked((current) =>
+        current.some((o) => o.id === option.id)
+          ? current.filter((o) => o.id !== option.id)
+          : [...current, option],
+      );
+      return;
+    }
+
     const next: GeoPath = { ...path, [level]: option };
 
     /*
@@ -139,6 +174,14 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
     const from = ORDER.indexOf(level);
     for (const deeper of ORDER.slice(from + 1)) delete next[deeper];
 
+    // 🔴 The same rule, for the multi-selection: districts chosen under the OLD
+    // region do not belong under the new one. Forgetting this is how a driver ends
+    // up with an offer listing tumans from a province they no longer selected.
+    if (multiSelectAt && ORDER.indexOf(multiSelectAt) > from) {
+      setPicked([]);
+      delete next.districts;
+    }
+
     setPath(next);
     setQuery('');
 
@@ -148,6 +191,13 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
       return;
     }
     setLevel(nextLevel);
+  };
+
+  /** The footer's "Tayyor" — only reachable at the multi-select level. */
+  const confirmPicked = () => {
+    if (picked.length === 0) return;
+    // `district` keeps the first, so single-select callers read what they always read.
+    onDone({ ...path, [multiSelectAt as GeoLevel]: picked[0], districts: picked });
   };
 
   const back = () => {
@@ -248,7 +298,10 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
                 </Text>
               }
               renderItem={({ item }) => {
-                const selected = path[level]?.id === item.id;
+                const selected =
+                  level === multiSelectAt
+                    ? picked.some((o) => o.id === item.id)
+                    : path[level]?.id === item.id;
                 return (
                   <Pressable
                     onPress={() => pick(item)}
@@ -266,11 +319,39 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
                     >
                       {item.name}
                     </Text>
-                    <Text style={styles.rowChevron}>{selected ? '✓' : '›'}</Text>
+                    <Text style={styles.rowChevron}>
+                      {selected ? '✓' : level === multiSelectAt ? '+' : '›'}
+                    </Text>
                   </Pressable>
                 );
               }}
             />
+          )}
+
+          {/*
+            The multi-select level is the ONLY one with a confirm: every other level
+            advances the cascade on tap, so a button there would be a second way to do
+            the same thing. Disabled at zero, because an endpoint with no tuman is not
+            an answer the caller can use.
+          */}
+          {level === multiSelectAt && (
+            <View style={styles.footer}>
+              <Pressable
+                onPress={confirmPicked}
+                disabled={picked.length === 0}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: picked.length === 0 }}
+                style={({ pressed }) => [
+                  styles.confirm,
+                  picked.length === 0 && styles.confirmOff,
+                  pressed && { opacity: theme.states.pressedOpacity },
+                ]}
+              >
+                <Text style={styles.confirmText}>
+                  {picked.length > 0 ? `Tayyor (${picked.length})` : 'Tayyor'}
+                </Text>
+              </Pressable>
+            </View>
           )}
         </View>
       </View>
@@ -357,6 +438,25 @@ const styles = StyleSheet.create({
   rowLabel: { ...theme.typography.rowLabel, color: theme.palette.text.primary, flex: 1 },
   rowLabelSelected: { color: theme.palette.actionPressed },
   rowChevron: { ...theme.typography.cardTitle, color: theme.palette.text.chevron },
+
+  footer: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.palette.borders.chrome,
+  },
+  confirm: {
+    minHeight: theme.sizes.buttonLg,
+    borderRadius: theme.borderRadius.button,
+    backgroundColor: theme.palette.action,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmOff: { opacity: theme.states.disabledOpacity },
+  confirmText: {
+    ...theme.typography.button,
+    color: theme.palette.text.onAccent,
+  },
 
   state: { paddingVertical: 40, alignItems: 'center', gap: 10 },
   errorText: { ...theme.typography.secondary, color: theme.palette.dangerText },

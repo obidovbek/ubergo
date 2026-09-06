@@ -766,6 +766,9 @@ export default {
     fromPlaceholder: 'Starting Point',
     toLabel: 'To',
     toPlaceholder: 'Destination',
+    selectPlace: 'Choose a place',
+    swapRoute: 'Swap route',
+    stopLabel: 'Stop',
     stopsLabel: 'Intermediate Stops (Optional)',
     addStop: 'Add',
     stop: 'Stop',
@@ -793,6 +796,7 @@ export default {
     departsWhenFullLabel: 'I leave once the car fills up',
     departsWhenFullHelper: 'No fixed time — you set off as soon as the seats are taken.',
     // T-078 — the mockup's Narxlar list, payment and class.
+    pricesSectionTitle: 'Prices',
     priceBackSalonLabel: 'Back salon price (optional)',
     priceBackSalonHelper: 'When one passenger books the whole back row',
     priceWholeSalonLabel: 'Whole salon price (optional)',
