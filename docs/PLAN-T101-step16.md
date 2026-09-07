@@ -200,11 +200,52 @@ their loading rules (`?? undefined`, never `||`) must survive.
       ⚠️ **Left standing deliberately:** `loadExistingOffer` still calls `parseLocationText` and the
       remaining `load*Provinces` loaders to rehydrate an edited offer. That path is **16e's
       subject**, and it is the one place where breakage is silent (line 296).
-- [ ] **16c-2. The `time` and `arrive` sheets.**
-      ⚠️ The hard one: a 15-minute-block ruler with a draggable window
-      (`trackDown`/`rulerDown`/`winStartIdx`/`winEndIdx`). **Check `check-ride-time.mjs`'s 8 cases
-      still hold** — the user app has ride-time rules and this must not contradict them.
-      `renderStep2` (the date/time modals) is untouched by 16c-1 and is entirely this step's.
+- [x] **16c-2. The `time` and `arrive` sheets. ✅ DONE 2026-09-06.**
+      🔴 **THIS STEP GAVE THE DRIVER A CAPABILITY THEY NEVER HAD.** `driver_offers` has carried
+      `depart_until` / `arrive_from` / `arrive_until` since **T-080**, and `loadExistingOffer` +
+      `handleSave`'s `...formData` already round-tripped them — **but no control had ever SET
+      them.** A driver could say *"I leave at 08:00"* and never *"between 08:00 and 11:00"*, which
+      is what the artboard draws and what the passenger app already reads.
+      ⚠️ **Verified against `handleSave`, not assumed** — I expected a data-losing edit path and
+      there wasn't one. It was a hole in the form, not a bug in the save.
+      ✅ **`utils/offerSchedule.ts` (new, ~300 lines, pure)** — slots · window normalisation · drag
+      anchoring · `latestDeparture` · `arrivalIsReachable` · the payload · and `restoreSchedule`
+      for the edit path. **Written BEFORE any drag gesture existed to hide the rules in.**
+      ✅ **`scripts/check-offer-schedule.mjs` (new) — ~70 assertions, PROVEN RED ON 15 MUTATIONS**,
+      each reverted. The headline: **`latestDeparture` using the window START → 6 red** — that is
+      step 8f's defect ③, *"leave 08:00–11:00, arrive by 09:00"*, which shipped accepted on the
+      passenger side. The driver side never got the chance to.
+      🔴 **ONE MUTATION CAME BACK GREEN AND THAT WAS THE MOST USEFUL RESULT.** Deleting
+      `restoreSchedule`'s `Number.isNaN` guard broke nothing — an Invalid Date also fails
+      `dayIndexOf` and returns `-1`, so my "refuses an unparseable start" assertion had been
+      **passing for the wrong reason**. The shadowing is now pinned by explicit `dayIndexOf` cases
+      and the redundancy is documented on the guard rather than assumed away.
+      *(Same Invalid-Date blindness as 16a — third appearance in this task.)*
+      ✅ **A save→load ROUND TRIP is asserted over four windows** including an overnight
+      22:00→02:00. That is the assertion that would have caught every historical "saves but never
+      loads" defect on this screen (line 296).
+      ✅ **`components/offerWizard/TimeRuler.tsx`** — 192 blocks, `PanResponder` (not `Pressable`:
+      the drag crosses many children, so the track must claim the touch). **It owns pixels and
+      gestures only; every rule is imported.**
+      ✅ **`components/offerWizard/ScheduleSheet.tsx`** — one sheet serving both modes, with the
+      day strip, "Hoziroq", and the live rule breach shown *inside* the sheet.
+      ✅ **`MIN_ADVANCE_MS` named once.** It was hardcoded `30 * 60 * 1000` in **four** places in
+      the screen beside a fifth copy in `RULES.minAdvanceMs`.
+      ⚠️ **The user app uses 31 minutes and the driver 30. NOT reconciled** — an order and an offer
+      are different objects, and changing either without the owner is a behaviour change dressed as
+      a cleanup. Asserted as 30, and the reason is on the constant. **This is the "check
+      `check-ride-time.mjs` still holds" item: the two apps agree on the SHAPE (arrival is judged
+      against the latest departure); they differ on the floor, deliberately.**
+      🟢 **NET: −202 lines (2 832 → 2 630).** The two wheel modals, 12 generator/handler functions
+      and 6 state hooks are gone.
+      ✅ **Baselines: `tsc` 28 · lint 0 errors / 275 warnings · tokens 3 · fonts, drawer, both
+      validation checkers green.** 🟢 **275 is one below 16c-1's 276.**
+      ✅ **i18n evaluated:** step 2 + the sheet = 9 keys × 3 locales, plus both schedule error keys.
+      ✅ **`expo export` bundles clean.**
+      🔴 **MY OWN MUTATION SCRIPT LEFT RESIDUE IN THE REPO.** Its first run crashed on printing an
+      emoji *after* writing a mutation, and my "is it restored?" check looked at **one line**
+      instead of the whole file. `git diff` was blind because the file was untracked. **Lint found
+      it** (an orphan `// eslint-disable-line`). *A revert is not verified until the whole file is.*
 - [ ] **16d. Remove the pagination.** One `ScrollView`, sections in the artboard's order, one
       `Elon berish` button. Delete `currentStep`, `renderStepIndicator`, Back/Next.
       🛑 **Only after 16a is green**, or submit silently loses its validation.
@@ -228,13 +269,33 @@ their loading rules (`?? undefined`, never `||`) must survive.
 ⚠️ Measure lint only after deleting any scratch file written into the app — a stray esbuild
 bundle in `driver-app-standalone/tmp/` showed 5 errors on a project whose baseline is 0.
 
+🟢 **Lint is 275 after 16c-2 (2026-09-06) — five below the card's 280, never rebaselined up.**
+
 **Checkers that must stay green** (`node scripts/…` in `driver-app-standalone`):
 `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-drawer.mjs` ·
-`check-offer-validation.mjs`.
+`check-offer-validation.mjs` · `check-offer-schedule.mjs`.
 
 ---
 
 ## 6. Session notes
+
+### 2026-09-06 (3) — 16c-2: the rules before the ruler
+
+- **16c-2 done.** The departure WINDOW and the arrival deadline are settable for the first time —
+  three columns that have existed since T-080 and round-tripped fine with nothing to fill them.
+- 🔴 **The rules were written and executed before the drag gesture existed.** On the passenger
+  side these same rules lived inline in a form and three of step 8f's four defects were invisible
+  until they were pulled out. 15 mutations, all red; the worst — arrival judged against the
+  *start* of the window — takes 6 assertions down.
+- 🔴 **A mutation that stayed GREEN was the most valuable one.** It showed an assertion of mine
+  was passing for the wrong reason (an Invalid Date is caught by the day lookup, not by the NaN
+  guard I thought I was testing). *A checker's own coverage needs proving, not just its rules.*
+- 🔴 **My mutation script left an `// eslint-disable-line` in the repo** after crashing mid-loop
+  on an emoji print. I "verified" the revert by checking a single line; `git diff` couldn't see it
+  because the file was untracked. Lint caught it. *Verify a revert against the whole file.*
+- ⚠️ **30 vs 31 minutes** — the driver's advance floor and the passenger's differ. Left alone and
+  documented; reconciling them is the owner's call, not a tidy-up.
+- **Next: 16d (remove the pagination).**
 
 ### 2026-09-06 (2) — 16c-1: the sheet was already in the app
 

@@ -18,4 +18,6 @@ export { NumberField } from './NumberField';
 export { ChipSelectSection, type ChipOption } from './ChipSelectSection';
 export { ToggleSection } from './ToggleSection';
 export { CarSection } from './CarSection';
+export { TimeRuler } from './TimeRuler';
+export { ScheduleSheet, type ScheduleSheetLabels } from './ScheduleSheet';
 export { RouteEndpointSection, RouteSwapButton } from './RouteEndpointSection';

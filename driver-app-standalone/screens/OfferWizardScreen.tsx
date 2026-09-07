@@ -3,7 +3,7 @@
  * 4-step wizard for creating/editing driver offers
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -44,30 +44,36 @@ import {
   NumberField,
   RouteEndpointSection,
   RouteSwapButton,
+  ScheduleSheet,
   SectionCard,
   ToggleSection,
 } from '../components/offerWizard';
 import { BackButton } from '../components/BackButton';
 import { getErrorMessage } from '../utils/errorHandler';
-import { formatDateByLanguage, formatTimeByLanguage, formatDateTime, getLocaleFromLanguage } from '../utils/date';
+import { formatDateByLanguage, formatDateTime } from '../utils/date';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
 import type { DriverProfile, GeoOption } from '../api/driver';
-import { AppModal } from '../components/AppModal';
 // T-101 step 16c — the app's own geo cascade, adopted at last. Its header lists
 // this screen as one of the seven places that had re-implemented it by hand;
 // `GeoPickerModal` and the three copies behind it are gone from this screen.
 import { GeoSheet, type GeoPath } from '../components/geo/GeoSheet';
+// T-101 step 16c-2 — the departure window / arrival deadline rules, pure and executed
+// by `scripts/check-offer-schedule.mjs`. See that file for the defect they prevent.
+import {
+  clampSlot,
+  firstSelectableSlotToday,
+  restoreSchedule,
+  slotToDate,
+  slotToLabel,
+  toSchedulePayload,
+  validateScheduleWindow,
+  type ScheduleInput,
+  type WindowSelection,
+} from '../utils/offerSchedule';
 
 const theme = createTheme('light');
-
-/**
- * Departure minutes step in quarter hours (T-069, owner 2026-08-12).
- * ⚠️ Must divide 60 — `generateMinutes` rounds the "30 minutes' notice" floor up
- * to a multiple of this.
- */
-const MINUTE_STEP = 15;
 
 /**
  * T-078 — read a number the API may send as a DECIMAL **string**.
@@ -122,12 +128,6 @@ export const OfferWizardScreen: React.FC = () => {
   const [existingOffer, setExistingOffer] = useState<DriverOffer | null>(null);
 
   // Date/Time picker states
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState(new Date());
-  const [tempDate, setTempDate] = useState(new Date());
-  const [tempTime, setTempTime] = useState(new Date());
 
   // Geo selection states for "From" location
   const [fromCountry, setFromCountry] = useState<GeoOption | null>(null);
@@ -257,9 +257,31 @@ export const OfferWizardScreen: React.FC = () => {
         const countries = await DriverAPI.fetchGeoCountries();
         
         // Pre-fill form data
-        const startDate = new Date(offer.start_at);
-        setSelectedDate(startDate);
-        setSelectedTime(startDate);
+
+        /*
+         * T-101 step 16c-2 — put the saved instants back onto the ruler.
+         *
+         * 🛑 This is the half line 296 warns about: a field that saves but never loads
+         * back means the NEXT save silently blanks it. The departure window is the
+         * newest place that could happen, so the conversion is pure and asserted
+         * (`restoreSchedule`), not written inline here.
+         *
+         * ⚠️ `null` is a real answer — an offer whose start_at falls outside the four
+         * days the sheet offers keeps its stored value in `formData` and simply does
+         * not move the ruler, rather than snapping the driver to today.
+         */
+        const restored = restoreSchedule(
+          scheduleDays,
+          offer.start_at,
+          offer.depart_until,
+          offer.arrive_until,
+        );
+        if (restored) {
+          setDepartDayIndex(restored.dayIndex);
+          setDepartWindow(restored.window);
+          setArriveDayIndex(restored.arriveDayIndex);
+          setArriveSlot(restored.arriveSlot);
+        }
         
         setFormData({
           vehicle_id: offer.vehicle_id,
@@ -646,190 +668,6 @@ export const OfferWizardScreen: React.FC = () => {
     } else {
       navigation.goBack();
     }
-  };
-
-  const handleDateConfirm = () => {
-    setSelectedDate(tempDate);
-    updateDateTime(tempDate, selectedTime);
-    setShowDatePicker(false);
-  };
-
-  const handleDateCancel = () => {
-    setTempDate(selectedDate);
-    setShowDatePicker(false);
-  };
-
-  const handleTimeConfirm = () => {
-    setSelectedTime(tempTime);
-    updateDateTime(selectedDate, tempTime);
-    setShowTimePicker(false);
-  };
-
-  const handleTimeCancel = () => {
-    setTempTime(selectedTime);
-    setShowTimePicker(false);
-  };
-
-  const openDatePicker = () => {
-    // Ensure tempDate is at least today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dateToUse = selectedDate >= today ? selectedDate : today;
-    setTempDate(dateToUse);
-    setShowDatePicker(true);
-  };
-
-  const openTimePicker = () => {
-    // If selected date is today, ensure time is in the future
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateOnly = new Date(selectedDate);
-    selectedDateOnly.setHours(0, 0, 0, 0);
-    
-    let timeToUse = selectedTime;
-    if (selectedDateOnly.getTime() === today.getTime()) {
-      // If date is today, ensure time is at least 30 minutes from now
-      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-      if (selectedTime < minTime) {
-        timeToUse = minTime;
-      }
-    }
-    setTempTime(timeToUse);
-    setShowTimePicker(true);
-  };
-
-  const generateDays = () => {
-    const days = [];
-    const maxDay = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
-    
-    // For offer dates, only allow dates from today onwards
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
-    const currentDay = currentDate.getDate();
-    
-    let minDay = 1;
-    if (tempDate.getFullYear() === currentYear && tempDate.getMonth() === currentMonth) {
-      minDay = currentDay;
-    }
-    
-    for (let i = minDay; i <= maxDay; i++) {
-      days.push(i);
-    }
-    return days;
-  };
-
-  const generateMonths = () => {
-    const allMonths = [
-      { value: 0, label: t('common.monthJanuary') },
-      { value: 1, label: t('common.monthFebruary') },
-      { value: 2, label: t('common.monthMarch') },
-      { value: 3, label: t('common.monthApril') },
-      { value: 4, label: t('common.monthMay') },
-      { value: 5, label: t('common.monthJune') },
-      { value: 6, label: t('common.monthJuly') },
-      { value: 7, label: t('common.monthAugust') },
-      { value: 8, label: t('common.monthSeptember') },
-      { value: 9, label: t('common.monthOctober') },
-      { value: 10, label: t('common.monthNovember') },
-      { value: 11, label: t('common.monthDecember') },
-    ];
-
-    // For offer dates, if current year is selected, restrict months to current month and future
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
-
-    if (tempDate.getFullYear() === currentYear) {
-      return allMonths.filter(month => month.value >= currentMonth);
-    }
-
-    return allMonths;
-  };
-
-  const generateYears = () => {
-    const years = [];
-    const currentYear = new Date().getFullYear();
-    // For offer dates, show from current year to 10 years ahead
-    const endYear = currentYear + 10;
-    for (let year = currentYear; year <= endYear; year++) {
-      years.push(year);
-    }
-    return years;
-  };
-
-  const generateHours = () => {
-    const hours = [];
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateOnly = new Date(selectedDate);
-    selectedDateOnly.setHours(0, 0, 0, 0);
-    
-    // If selected date is today, restrict hours to future hours (at least 30 minutes from now)
-    let minHour = 0;
-    if (selectedDateOnly.getTime() === today.getTime()) {
-      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-      minHour = minTime.getHours();
-    }
-    
-    for (let hour = minHour; hour < 24; hour++) {
-      hours.push(hour);
-    }
-    return hours;
-  };
-
-  const generateMinutes = () => {
-    const minutes = [];
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateOnly = new Date(selectedDate);
-    selectedDateOnly.setHours(0, 0, 0, 0);
-    
-    // If selected date is today and selected hour is current hour, restrict minutes
-    let minMinute = 0;
-    if (
-      selectedDateOnly.getTime() === today.getTime() &&
-      tempTime.getHours() === now.getHours()
-    ) {
-      // Need at least 30 minutes from now
-      const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-      if (minTime.getHours() === now.getHours()) {
-        minMinute = minTime.getMinutes();
-      } else {
-        // If minTime is in next hour, start from 0
-        minMinute = 0;
-      }
-    }
-    
-    // T-069 — quarter-hours only (owner, 2026-08-12): 0 / 15 / 30 / 45.
-    //
-    // ⚠️ `minMinute` is a real floor (the 30-minute notice, when the trip is
-    // today and in the current hour), so the first offered quarter is the floor
-    // ROUNDED UP. Note this can legitimately yield an EMPTY list — e.g. a floor
-    // of 50 leaves no quarter in this hour — which is correct: `generateHours`
-    // has already excluded hours that cannot be used, and the hour column is
-    // what the driver moves next.
-    const firstQuarter = Math.ceil(minMinute / MINUTE_STEP) * MINUTE_STEP;
-    for (let minute = firstQuarter; minute < 60; minute += MINUTE_STEP) {
-      minutes.push(minute);
-    }
-    return minutes;
-  };
-
-  const updateDateTime = (date: Date, time: Date) => {
-    const combined = new Date(date);
-    combined.setHours(time.getHours());
-    combined.setMinutes(time.getMinutes());
-    combined.setSeconds(0);
-    combined.setMilliseconds(0);
-
-    setFormData(prev => ({
-      ...prev,
-      start_at: combined.toISOString(),
-    }));
   };
 
 
@@ -1288,6 +1126,87 @@ export const OfferWizardScreen: React.FC = () => {
         };
   };
 
+  /**
+   * ── T-101 step 16c-2: the departure window and the arrival deadline ──────────
+   *
+   * 🔴 Every rule below comes from `utils/offerSchedule.ts`, which is pure and asserted
+   * in `scripts/check-offer-schedule.mjs` — including the one that shipped broken on the
+   * passenger side until step 8f: an arrival is judged against the **latest** departure
+   * the offer permits, never the earliest.
+   */
+  const [scheduleSheet, setScheduleSheet] = useState<'depart' | 'arrive' | null>(null);
+  const [departWindow, setDepartWindow] = useState<WindowSelection>(() => {
+    const first = firstSelectableSlotToday(new Date()) + 2;
+    return { start: clampSlot(first), end: clampSlot(first + 4) };
+  });
+  const [departUrgent, setDepartUrgent] = useState(false);
+  const [departDayIndex, setDepartDayIndex] = useState(0);
+  /** Null means the driver gave no deadline — a legitimate and common answer. */
+  const [arriveSlot, setArriveSlot] = useState<number | null>(null);
+  const [arriveDayIndex, setArriveDayIndex] = useState(0);
+
+  /** The four days the artboard offers, starting today. */
+  const scheduleDays = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    return [0, 1, 2, 3].map(i => new Date(base.getTime() + i * 86400000));
+  }, []);
+
+  const scheduleInput = (): ScheduleInput => ({
+    departDate: scheduleDays[departDayIndex] ?? scheduleDays[0],
+    window: departWindow,
+    urgent: departUrgent,
+    arriveAt:
+      arriveSlot === null
+        ? null
+        : slotToDate(scheduleDays[arriveDayIndex] ?? scheduleDays[0], arriveSlot),
+    now: new Date(),
+  });
+
+  const departSummary = (): string => {
+    if (departUrgent) return t('offerWizard.urgentDeparture');
+    const day = formatDateByLanguage(
+      scheduleDays[departDayIndex] ?? scheduleDays[0],
+      currentLanguage,
+    );
+    return `${day} · ${slotToLabel(departWindow.start)}–${slotToLabel(departWindow.end)}`;
+  };
+
+  const arriveSummary = (): string => {
+    if (arriveSlot === null) return t('offerWizard.arriveNone');
+    const day = formatDateByLanguage(
+      scheduleDays[arriveDayIndex] ?? scheduleDays[0],
+      currentLanguage,
+    );
+    return `${day} · ${slotToLabel(arriveSlot)}`;
+  };
+
+  /**
+   * Push the schedule into `formData` so `handleSave`'s `...formData` carries it.
+   *
+   * ⚠️ Called on CONFIRM, not on every drag: `start_at` is validated, and writing a
+   * half-finished drag into the validated field would flash errors at the driver while
+   * their finger is still down.
+   */
+  const commitSchedule = () => {
+    const payload = toSchedulePayload(scheduleInput());
+    setFormData(prev => ({
+      ...prev,
+      start_at: payload.start_at,
+      depart_until: payload.depart_until,
+      arrive_until: payload.arrive_until,
+    }));
+    setErrors(prev => ({ ...prev, start_at: '', arrive_until: '' }));
+    setScheduleSheet(null);
+  };
+
+  /** The live rule breach, shown inside the sheet rather than only after confirming. */
+  const scheduleWarning = (): string | undefined => {
+    const errs = validateScheduleWindow(scheduleInput());
+    const key = scheduleSheet === 'arrive' ? errs.arrive_until : errs.start_at;
+    return key ? t(key) : undefined;
+  };
+
   const renderStepIndicator = () => {
     return (
       <View style={styles.stepIndicator}>
@@ -1411,269 +1330,57 @@ export const OfferWizardScreen: React.FC = () => {
     </View>
   );
 
+  /**
+   * Step 2 — when the offer leaves, and when it must arrive. T-101 step 16c-2.
+   *
+   * 🔴 THE DEPARTURE IS NOW A WINDOW, NOT AN INSTANT. `depart_until` and `arrive_until`
+   * have existed on `driver_offers` since T-080 and already round-tripped through
+   * `loadExistingOffer` / `handleSave` — but nothing has ever SET them. A driver could
+   * say "I leave at 08:00" and never "between 08:00 and 11:00", which is what the
+   * artboard draws and what the passenger app already reads.
+   *
+   * The two wheel modals this replaces are gone; the rules are in `utils/offerSchedule.ts`.
+   */
   const renderStep2 = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>{t('offerWizard.step2Title')}</Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.dateLabel')}</Text>
+      <SectionCard title={t('offerWizard.departLabel')} error={errors.start_at}>
         <TouchableOpacity
-          style={[styles.dateInput, errors.start_at && styles.inputError]}
-          onPress={openDatePicker}
+          style={[styles.scheduleRow, errors.start_at && styles.scheduleRowInvalid]}
+          onPress={() => setScheduleSheet('depart')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
         >
-          <Text style={styles.dateInputText}>
-            {formatDateByLanguage(selectedDate, currentLanguage)}
-          </Text>
+          <Text style={styles.scheduleValue}>{departSummary()}</Text>
+          <Text style={styles.scheduleChevron}>›</Text>
         </TouchableOpacity>
-        {errors.start_at && (
-          <Text style={styles.errorText}>{errors.start_at}</Text>
-        )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t('offerWizard.timeLabel')}</Text>
+      {/*
+        The arrival deadline is OPTIONAL and says so. Most drivers on a shared route do
+        not commit to one, and a required-looking field would invite a guess — which is
+        exactly the promise the passenger app would then render as fact.
+      */}
+      <SectionCard
+        title={t('offerWizard.arriveLabel')}
+        helper={t('offerWizard.arriveHelper')}
+        error={errors.arrive_until}
+      >
         <TouchableOpacity
-          style={[styles.dateInput, errors.start_at && styles.inputError]}
-          onPress={openTimePicker}
+          style={[styles.scheduleRow, errors.arrive_until && styles.scheduleRowInvalid]}
+          onPress={() => setScheduleSheet('arrive')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
         >
-          <Text style={styles.dateInputText}>
-            {formatTimeByLanguage(selectedTime, currentLanguage)}
+          <Text
+            style={[styles.scheduleValue, arriveSlot === null && styles.schedulePlaceholder]}
+          >
+            {arriveSummary()}
           </Text>
+          <Text style={styles.scheduleChevron}>›</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Date Picker Modal */}
-      <AppModal
-        visible={showDatePicker}
-        onClose={handleDateCancel}
-        title={t('offerWizard.dateLabel')}
-        showCloseIcon={false}
-        dismissOnBackdropPress={false}
-        actions={[
-          { label: t('common.confirm'), onPress: handleDateConfirm },
-          { label: t('common.cancel'), onPress: handleDateCancel, variant: 'cancel' },
-        ]}
-      >
-              <View style={styles.datePickerContainer}>
-                {/* Day Picker */}
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>{t('common.day')}</Text>
-                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {generateDays().map((day) => (
-                      <TouchableOpacity
-                        key={day}
-                        style={[
-                          styles.pickerItem,
-                          tempDate.getDate() === day && styles.pickerItemSelected
-                        ]}
-                        onPress={() => {
-                          const newDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), day);
-                          const currentDate = new Date();
-                          currentDate.setHours(0, 0, 0, 0);
-                          newDate.setHours(0, 0, 0, 0);
-                          if (newDate < currentDate) {
-                            return;
-                          }
-                          setTempDate(newDate);
-                        }}
-                      >
-                        <Text style={[
-                          styles.pickerItemText,
-                          tempDate.getDate() === day && styles.pickerItemTextSelected
-                        ]}>
-                          {day}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* Month Picker */}
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>{t('common.month')}</Text>
-                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {generateMonths().map((month) => (
-                      <TouchableOpacity
-                        key={month.value}
-                        style={[
-                          styles.pickerItem,
-                          tempDate.getMonth() === month.value && styles.pickerItemSelected
-                        ]}
-                        onPress={() => {
-                          const maxDay = new Date(tempDate.getFullYear(), month.value + 1, 0).getDate();
-                          const currentDate = new Date();
-                          const currentYear = currentDate.getFullYear();
-                          const currentMonth = currentDate.getMonth();
-                          const currentDay = currentDate.getDate();
-                          
-                          let day = tempDate.getDate();
-                          if (tempDate.getFullYear() === currentYear && month.value === currentMonth) {
-                            day = Math.max(day, currentDay);
-                          }
-                          day = Math.min(day, maxDay);
-                          
-                          const newDate = new Date(tempDate.getFullYear(), month.value, day);
-                          const newDateNormalized = new Date(newDate);
-                          newDateNormalized.setHours(0, 0, 0, 0);
-                          currentDate.setHours(0, 0, 0, 0);
-                          if (newDateNormalized < currentDate) {
-                            return;
-                          }
-                          setTempDate(newDate);
-                        }}
-                      >
-                        <Text style={[
-                          styles.pickerItemText,
-                          tempDate.getMonth() === month.value && styles.pickerItemTextSelected
-                        ]}>
-                          {month.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* Year Picker */}
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>{t('common.year')}</Text>
-                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {generateYears().map((year) => (
-                      <TouchableOpacity
-                        key={year}
-                        style={[
-                          styles.pickerItem,
-                          tempDate.getFullYear() === year && styles.pickerItemSelected
-                        ]}
-                        onPress={() => {
-                          const maxDay = new Date(year, tempDate.getMonth() + 1, 0).getDate();
-                          const currentDate = new Date();
-                          const currentYear = currentDate.getFullYear();
-                          const currentMonth = currentDate.getMonth();
-                          const currentDay = currentDate.getDate();
-                          
-                          let day = tempDate.getDate();
-                          if (year === currentYear && tempDate.getMonth() === currentMonth) {
-                            day = Math.max(day, currentDay);
-                          } else if (year === currentYear && tempDate.getMonth() < currentMonth) {
-                            return;
-                          }
-                          day = Math.min(day, maxDay);
-                          
-                          const newDate = new Date(year, tempDate.getMonth(), day);
-                          const newDateNormalized = new Date(newDate);
-                          newDateNormalized.setHours(0, 0, 0, 0);
-                          currentDate.setHours(0, 0, 0, 0);
-                          if (newDateNormalized < currentDate) {
-                            return;
-                          }
-                          setTempDate(newDate);
-                        }}
-                      >
-                        <Text style={[
-                          styles.pickerItemText,
-                          tempDate.getFullYear() === year && styles.pickerItemTextSelected
-                        ]}>
-                          {year}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-      </AppModal>
-
-      {/* Time Picker Modal */}
-      <AppModal
-        visible={showTimePicker}
-        onClose={handleTimeCancel}
-        title={t('offerWizard.timeLabel')}
-        showCloseIcon={false}
-        dismissOnBackdropPress={false}
-        actions={[
-          { label: t('common.confirm'), onPress: handleTimeConfirm },
-          { label: t('common.cancel'), onPress: handleTimeCancel, variant: 'cancel' },
-        ]}
-      >
-              <View style={styles.datePickerContainer}>
-                {/* Hour Picker */}
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>{t('common.hour')}</Text>
-                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {generateHours().map((hour) => (
-                      <TouchableOpacity
-                        key={hour}
-                        style={[
-                          styles.pickerItem,
-                          tempTime.getHours() === hour && styles.pickerItemSelected
-                        ]}
-                        onPress={() => {
-                          const newTime = new Date(tempTime);
-                          newTime.setHours(hour);
-                          
-                          // If selected date is today and hour is current hour, ensure minutes are valid
-                          const now = new Date();
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const selectedDateOnly = new Date(selectedDate);
-                          selectedDateOnly.setHours(0, 0, 0, 0);
-                          
-                          if (
-                            selectedDateOnly.getTime() === today.getTime() &&
-                            hour === now.getHours()
-                          ) {
-                            // Need at least 30 minutes from now
-                            const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-                            if (minTime.getHours() === now.getHours()) {
-                              newTime.setMinutes(Math.max(tempTime.getMinutes(), minTime.getMinutes()));
-                            } else {
-                              // If minTime is in next hour, set to 0
-                              newTime.setMinutes(0);
-                            }
-                          }
-                          
-                          setTempTime(newTime);
-                        }}
-                      >
-                        <Text style={[
-                          styles.pickerItemText,
-                          tempTime.getHours() === hour && styles.pickerItemTextSelected
-                        ]}>
-                          {hour.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* Minute Picker */}
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>{t('common.minute')}</Text>
-                  <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {generateMinutes().map((minute) => (
-                      <TouchableOpacity
-                        key={minute}
-                        style={[
-                          styles.pickerItem,
-                          tempTime.getMinutes() === minute && styles.pickerItemSelected
-                        ]}
-                        onPress={() => {
-                          const newTime = new Date(tempTime);
-                          newTime.setMinutes(minute);
-                          setTempTime(newTime);
-                        }}
-                      >
-                        <Text style={[
-                          styles.pickerItemText,
-                          tempTime.getMinutes() === minute && styles.pickerItemTextSelected
-                        ]}>
-                          {minute.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-      </AppModal>
+      </SectionCard>
     </View>
   );
 
@@ -2082,6 +1789,38 @@ export const OfferWizardScreen: React.FC = () => {
         has always been able to name several tumans for one endpoint, and the
         sheet had no multi-select until this step added it.
       */}
+      <ScheduleSheet
+        visible={!!scheduleSheet}
+        mode={scheduleSheet === 'arrive' ? 'arrive' : 'depart'}
+        days={scheduleDays}
+        dayIndex={scheduleSheet === 'arrive' ? arriveDayIndex : departDayIndex}
+        onPickDay={(index) =>
+          scheduleSheet === 'arrive' ? setArriveDayIndex(index) : setDepartDayIndex(index)
+        }
+        window={departWindow}
+        onChangeWindow={setDepartWindow}
+        urgent={departUrgent}
+        onToggleUrgent={() => setDepartUrgent(v => !v)}
+        arriveSlot={arriveSlot}
+        onPickArriveSlot={setArriveSlot}
+        warning={scheduleWarning()}
+        now={new Date()}
+        formatDay={(day) => formatDateByLanguage(day, currentLanguage)}
+        onConfirm={commitSchedule}
+        onClose={() => setScheduleSheet(null)}
+        labels={{
+          departTitle: t('offerWizard.departLabel'),
+          arriveTitle: t('offerWizard.arriveLabel'),
+          departCrumb: t('offerWizard.departCrumb'),
+          arriveCrumb: t('offerWizard.arriveCrumb'),
+          urgent: t('offerWizard.urgentDeparture'),
+          confirm: t('common.confirm'),
+          close: t('common.cancel'),
+          nextDay: t('offerWizard.nextDay'),
+          clear: t('offerWizard.arriveNone'),
+        }}
+      />
+
       <GeoSheet
         visible={!!geoSheet}
         multiSelectAt="district"
@@ -2570,6 +2309,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  /* ── T-101 step 16c-2: the two schedule rows ─────────────────────────────── */
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    minHeight: theme.sizes.buttonLg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: theme.borderRadius.field,
+    backgroundColor: theme.palette.surface,
+    borderWidth: theme.sizes.borderEmphasis,
+    borderColor: theme.palette.borders.control,
+  },
+  scheduleRowInvalid: {
+    borderColor: theme.palette.dangerText,
+  },
+  scheduleValue: {
+    ...theme.typography.placeLine,
+    color: theme.palette.text.primary,
+    flex: 1,
+  },
+  schedulePlaceholder: {
+    color: theme.palette.text.tertiary,
+  },
+  scheduleChevron: {
+    ...theme.typography.cardTitle,
+    color: theme.palette.text.chevron,
+  },
+
   /* ── T-101 step 16c: a stop is the same row as an endpoint, plus a remove ── */
   stopRow: {
     flexDirection: 'row',

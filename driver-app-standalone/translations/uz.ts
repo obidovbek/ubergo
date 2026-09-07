@@ -812,6 +812,17 @@ export default {
     fromPlaceholder: 'Boshlang\'ich nuqta',
     toLabel: 'Qayerga',
     toPlaceholder: 'Yakuniy nuqta',
+    // T-101 step 16c-2 — the departure window and the arrival deadline.
+    departLabel: 'Yurish vaqti',
+    departCrumb: 'Sana va vaqt oralig\'i',
+    arriveLabel: 'Yetib borish vaqti',
+    arriveCrumb: 'Sana va vaqt',
+    arriveHelper: 'Ixtiyoriy. Yetib borish vaqti muhim bo\'lsa kiriting.',
+    arriveNone: 'Belgilanmagan',
+    urgentDeparture: 'Hoziroq (to\'lishi bilan yuraman)',
+    nextDay: 'keyingi kun',
+    errorArriveBeforeDeparture:
+      'Yetib borish vaqti eng kech yurish vaqtidan oldin bo\'lishi mumkin emas',
     // T-101 step 16c — the endpoint row and its sheet.
     selectPlace: 'Manzilni tanlang',
     swapRoute: 'Yo\'nalishni almashtirish',
