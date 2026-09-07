@@ -246,11 +246,38 @@ their loading rules (`?? undefined`, never `||`) must survive.
       emoji *after* writing a mutation, and my "is it restored?" check looked at **one line**
       instead of the whole file. `git diff` was blind because the file was untracked. **Lint found
       it** (an orphan `// eslint-disable-line`). *A revert is not verified until the whole file is.*
-- [ ] **16d. Remove the pagination.** One `ScrollView`, sections in the artboard's order, one
-      `Elon berish` button. Delete `currentStep`, `renderStepIndicator`, Back/Next.
-      🛑 **Only after 16a is green**, or submit silently loses its validation.
-      ✅ **Move `CarSection` above the route** — 16b could not, because a field rendered on step 1
-      would not have been validated until step 3.
+- [x] **16d. Remove the pagination. ✅ DONE 2026-09-07.**
+      ✅ **One `ScrollView`, one `Elon berish` button.** `currentStep`, `renderStepIndicator`,
+      `handleNext`, `handleBack` and `validateStep` are gone, and `validateStepNumber` is no longer
+      imported. The four renderers are now named for what they draw — `renderCar` · `renderRoute`
+      · `renderSchedule` · `renderDetails` — not for a page number.
+      ✅ **`CarSection` is FIRST**, as the artboard draws it. **The order was verified against
+      `DriverElon.dc.html`, not taken from this card:** its eyebrows run mashina (l.112) · qayerdan
+      (152) · qayerga (182) · yurish vaqti · yetib borish · to'lov turi (231) · avto turi (240) ·
+      o'rindiqlar · shartlar · ma'lumot · narxlar (359). **The schedule sits BETWEEN the route and
+      payment** — this card did not say so, and building from its prose would have left the old
+      step 2 in the wrong place.
+      🔴 **THE SUMMARY PAGE (old step 4) IS DELETED, AND THAT IS A REMOVAL, NOT A MOVE.**
+      It re-rendered route/time/seats/price/note/stops as read-only rows. The artboard has no such
+      block, and with one scrolling form the driver is already looking at every one of those
+      fields. Its 4 summary styles and the `formatDateTime` import went with it.
+      ✅ **The header arrow now leaves the screen.** It called `handleBack`, which stepped the
+      wizard and only exited from page 1.
+      ✅ **12 dead translation entries removed** (`step1Title`…`step4Title` × uz/en/ru) and
+      **15 dead style keys**, each proven unreferenced by a whole-file count before deletion —
+      not assumed dead because the JSX had left.
+      🟢 **NET: −232 lines (2 630 → 2 398).**
+      ✅ **Baselines: `tsc` 28 · lint 0 errors / 275 warnings · tokens 3**; fonts, drawer and both
+      validation checkers green. `expo export` bundles clean (5.07 MB Hermes).
+      ✅ **i18n EVALUATED, not grepped:** the screen's 57 `offerWizard.*` keys were bundled with
+      esbuild and read out of all three locales — **171/171 resolve**. **The probe was proven able
+      to fail** (deleting `swapRoute` from `en` → 1 red), and the revert was checked with
+      `git diff` over the WHOLE file — 16c-2's lesson.
+      🔴 **I TRUNCATED THE SCREEN TO ZERO BYTES MID-STEP.** A script opened the file `'w'` and
+      then threw while encoding an emoji escape — the open had already cleared it.
+      **`git checkout` restored it only because 16c-2 had just been committed**; the identical
+      accident in 16b hit an untracked plan file and the file was lost. Every write after this
+      encodes to bytes FIRST and only then `os.replace`s the target.
 - [ ] **16e. The EDIT path, field by field.** Open a saved offer and confirm **every** field loads
       back — the failure mode line 296 warns about. Re-check T-078/079/080's `?? undefined` rule.
 - [ ] **16f. Checkers + baselines.** `check-font-weights.mjs` (drop `OfferWizardScreen.tsx` and
@@ -270,6 +297,7 @@ their loading rules (`?? undefined`, never `||`) must survive.
 bundle in `driver-app-standalone/tmp/` showed 5 errors on a project whose baseline is 0.
 
 🟢 **Lint is 275 after 16c-2 (2026-09-06) — five below the card's 280, never rebaselined up.**
+🟢 **Still 275 after 16d (2026-09-07)** — the cut removed no warning and added none.
 
 **Checkers that must stay green** (`node scripts/…` in `driver-app-standalone`):
 `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-drawer.mjs` ·
@@ -278,6 +306,23 @@ bundle in `driver-app-standalone/tmp/` showed 5 errors on a project whose baseli
 ---
 
 ## 6. Session notes
+
+### 2026-09-07 — 16d: the wizard is a form
+
+- **16d done.** Four pages became one scrolling form in the artboard's order, the car at the top,
+  a single `Elon berish`. **Screen 2 630 → 2 398.**
+- 🔴 **The artboard's order is not the order this card described.** Reading its eyebrows in
+  file order puts the **schedule between the route and payment**; the card implied it stayed a
+  block of its own. *Measured from the artboard, not from the plan file* — the same
+  card-versus-artifact gap as steps 9-12.
+- 🔴 **The old step 4 was a summary page with nothing behind it.** Deleted rather than
+  relocated: one scrolling form already shows every field it repeated.
+- 🔴 **I truncated the screen to 0 bytes** with an `open(...,'w')` that then failed on an
+  encode. **The commit made minutes earlier is the only reason it came back.** *Encode first,
+  replace second — and commit before restructuring a file.*
+- ⚠️ **The dead code outlived the markup**: 15 style keys and 12 locale entries. Counted per
+  symbol before deleting, never inferred from the JSX going away.
+- **Next: 16e (the EDIT path, field by field) — the one place where breakage is silent.**
 
 ### 2026-09-06 (3) — 16c-2: the rules before the ruler
 

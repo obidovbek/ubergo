@@ -30,7 +30,6 @@ import {
   clampSeats,
   resolveEndpointSelection,
   resolveLocationText,
-  validateStepNumber,
   validateAll,
   isValid,
   type OfferValidationInput,
@@ -50,7 +49,7 @@ import {
 } from '../components/offerWizard';
 import { BackButton } from '../components/BackButton';
 import { getErrorMessage } from '../utils/errorHandler';
-import { formatDateByLanguage, formatDateTime } from '../utils/date';
+import { formatDateByLanguage } from '../utils/date';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
@@ -121,7 +120,6 @@ export const OfferWizardScreen: React.FC = () => {
   const { t, currentLanguage } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!offerId);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
@@ -619,7 +617,7 @@ export const OfferWizardScreen: React.FC = () => {
   /**
    * T-101 step 16a — the current state, in the shape the pure rules read.
    *
-   * Gathering it in ONE place is what stops `validateStep` and `validateAll` drifting apart:
+   * Gathering it in ONE place is what stops the section validators and `validateAll` drifting apart:
    * both are handed the same snapshot, so a rule cannot see different data depending on which
    * entry point called it.
    */
@@ -642,34 +640,14 @@ export const OfferWizardScreen: React.FC = () => {
     return isValid(raw);
   };
 
-  /** One step — Back/Next, while the wizard still paginates (step 16d removes it). */
-  const validateStep = (step: number): boolean =>
-    applyErrors(validateStepNumber(step, validationInput()));
-
   /**
    * 🛑 EVERY rule. This is what submit uses.
    *
    * The old `handleSave` called `validateStep(currentStep)` — one step's worth of checks. The
-   * pagination made that safe by accident, and step 16d removes the pagination.
+   * pagination made that safe by accident; step 16d removed the pagination, so this is now
+   * the ONLY thing standing between a half-filled form and the API.
    */
   const validateEverything = (): boolean => applyErrors(validateAll(validationInput()));
-
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < 4) {
-        setCurrentStep(currentStep + 1);
-      }
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      navigation.goBack();
-    }
-  };
-
 
   // Parse location text and find matching geo options
   // Supports formats: "City, Province" or "City, Province, Country"
@@ -1207,39 +1185,27 @@ export const OfferWizardScreen: React.FC = () => {
     return key ? t(key) : undefined;
   };
 
-  const renderStepIndicator = () => {
-    return (
-      <View style={styles.stepIndicator}>
-        {[1, 2, 3, 4].map((step) => (
-          <View key={step} style={styles.stepContainer}>
-            <View
-              style={[
-                styles.stepCircle,
-                currentStep >= step && styles.stepCircleActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.stepNumber,
-                  currentStep >= step && styles.stepNumberActive,
-                ]}
-              >
-                {step}
-              </Text>
-            </View>
-            {step < 4 && (
-              <View
-                style={[
-                  styles.stepLine,
-                  currentStep > step && styles.stepLineActive,
-                ]}
-              />
-            )}
-          </View>
-        ))}
-      </View>
-    );
-  };
+  /**
+   * The car — FIRST, as `DriverElon.dc.html` draws it: its "Mashina tanlash" eyebrow is
+   * the artboard's opening block, above "Qayerdan".
+   *
+   * ⚠️ It could not sit here before step 16d. While the wizard paginated, a field drawn
+   * on page 1 was not validated until page 3, because `validateStepNumber` indexed the
+   * validators BY PAGE. With one form there are no pages and `validateAll` covers every
+   * section wherever it is drawn.
+   */
+  const renderCar = () => (
+    <View style={styles.stepContent}>
+      <CarSection
+        title={t('offerWizard.vehicleLabel')}
+        vehicleLabel={vehicles.length > 0 ? vehicles[0].label : undefined}
+        helper="Transport vositasi ma'lumotlari profilingizdan avtomatik olinadi."
+        emptyLabel="Transport vositasi ma'lumotlari topilmadi."
+        emptyHelper="Avval profil bo'limida transport vositasini to'ldiring, so'ng e'lon yarating."
+        error={errors.vehicle_id}
+      />
+    </View>
+  );
 
   /**
    * Step 1 — the route. T-101 step 16c.
@@ -1248,10 +1214,8 @@ export const OfferWizardScreen: React.FC = () => {
    * it. The three stacked dropdowns it replaces were the cascade rendered as a form,
    * and there were THREE copies of them on this screen (from · to · every stop).
    */
-  const renderStep1 = () => (
+  const renderRoute = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>{t('offerWizard.step1Title')}</Text>
-
       <RouteEndpointSection
         title={t('offerWizard.fromLabel')}
         variant="from"
@@ -1341,10 +1305,8 @@ export const OfferWizardScreen: React.FC = () => {
    *
    * The two wheel modals this replaces are gone; the rules are in `utils/offerSchedule.ts`.
    */
-  const renderStep2 = () => (
+  const renderSchedule = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>{t('offerWizard.step2Title')}</Text>
-
       <SectionCard title={t('offerWizard.departLabel')} error={errors.start_at}>
         <TouchableOpacity
           style={[styles.scheduleRow, errors.start_at && styles.scheduleRowInvalid]}
@@ -1385,7 +1347,8 @@ export const OfferWizardScreen: React.FC = () => {
   );
 
   /**
-   * Step 3 — everything about the car, the seats and the money.
+   * The rest of the offer — payment, class, seats, conditions and the prices.
+   * (The car itself moved to `renderCar`, at the top, in step 16d.)
    *
    * T-101 step 16b: the sections are now `components/offerWizard/` pieces, in the
    * order `DriverElon.dc.html` draws them (car · to'lov · avto turi · o'rindiqlar ·
@@ -1393,18 +1356,8 @@ export const OfferWizardScreen: React.FC = () => {
    * the route — that move waits for 16d, because while the wizard still paginates a
    * field rendered on step 1 would not be validated until step 3.
    */
-  const renderStep3 = () => (
+  const renderDetails = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>{t('offerWizard.step3Title')}</Text>
-
-      <CarSection
-        title={t('offerWizard.vehicleLabel')}
-        vehicleLabel={vehicles.length > 0 ? vehicles[0].label : undefined}
-        helper="Transport vositasi ma'lumotlari profilingizdan avtomatik olinadi."
-        emptyLabel="Transport vositasi ma'lumotlari topilmadi."
-        emptyHelper="Avval profil bo'limida transport vositasini to'ldiring, so'ng e'lon yarating."
-        error={errors.vehicle_id}
-      />
 
       {/* ── To'lov turi ─────────────────────────────────────────────────
           Two INDEPENDENT toggles. T-031's lesson on the passenger side:
@@ -1629,72 +1582,6 @@ export const OfferWizardScreen: React.FC = () => {
     </View>
   );
 
-  const renderStep4 = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>{t('offerWizard.step4Title')}</Text>
-
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>{t('offerWizard.route')}</Text>
-          <Text style={styles.summaryValue}>
-            {formData.from_text} → {formData.to_text}
-          </Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>
-            {t('offerWizard.departureTime')}
-          </Text>
-          <Text style={styles.summaryValue}>
-            {formData.start_at
-              ? formatDateTime(formData.start_at, currentLanguage)
-              : '-'}
-          </Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>{t('offerWizard.totalSeats')}</Text>
-          <Text style={styles.summaryValue}>{formData.seats_total}</Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>
-            {t('offerWizard.pricePerSeat')}
-          </Text>
-          <Text style={styles.summaryValue}>
-            {new Intl.NumberFormat('uz-UZ', {
-              style: 'currency',
-              currency: formData.currency || 'UZS',
-              minimumFractionDigits: 0,
-            }).format(formData.price_per_seat || 0)}
-          </Text>
-        </View>
-
-        {formData.note && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('driverOffers.note')}</Text>
-            <Text style={styles.summaryValue}>{formData.note}</Text>
-          </View>
-        )}
-
-        {stops.filter(s => s.city).length > 0 && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('offerWizard.stopsLabel') || 'To\'xtash joylari'}</Text>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              {stops
-                .filter(s => s.city)
-                .map((stop, index) => (
-                  <Text key={stop.id} style={styles.summaryValue}>
-                    {index + 1}. {stop.city!.name}
-                  </Text>
-                ))}
-            </View>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -1715,68 +1602,55 @@ export const OfferWizardScreen: React.FC = () => {
       >
         <View style={styles.header}>
           {/* T-071 — was a green `←` that scaled with the system font.
-              ⚠️ `handleBack` steps the WIZARD back, and only leaves the screen
-              from step 1. Deliberately not `goBack()`. */}
-          <BackButton onPress={handleBack} style={styles.backButton} />
+              Step 16d: with the pagination gone there is no wizard to step back
+              through, so the arrow leaves the screen. */}
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.headerTitle}>
             {offerId ? (t('offerWizard.editTitle') || 'E\'lonni tahrirlash') : t('offerWizard.title')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        {renderStepIndicator()}
+        {/*
+          ── T-101 step 16d ──────────────────────────────────────
+          ONE scrolling form, in the order the artboard draws it: mashina · qayerdan ·
+          qayerga · yurish vaqti · yetib borish · to'lov · avto turi · o'rindiqlar ·
+          shartlar · ma'lumot · narxlar.
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
+          The artboard has NO step concept — no indicator, no next button, no `step` key
+          in its state. The 4-page wizard was ours, not the design's.
+
+          🛑 Submit calls `validateEverything()` (step 16a). That had to exist BEFORE
+          this step: the old `handleSave` validated only the page you were standing on,
+          and the pagination was the only thing that made it safe.
+        */}
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {renderCar()}
+          {renderRoute()}
+          {renderSchedule()}
+          {renderDetails()}
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
-          {currentStep < 4 ? (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={handleBack}
-              >
-                <Text style={styles.buttonSecondaryText}>{t('common.back')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary]}
-                onPress={handleNext}
-              >
-                <Text style={styles.buttonPrimaryText}>{t('common.next')}</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={() => navigation.goBack()}
-                disabled={loading}
-              >
-                <Text style={styles.buttonSecondaryText}>
-                  {t('common.cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary]}
-                onPress={() => handleSave()}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={theme.palette.text.onAccent} />
-                ) : (
-                  <Text style={styles.buttonPrimaryText}>
-                    {offerId
-                      ? t('offerWizard.updateOffer')
-                      : t('offerWizard.createOffer')}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </>
-          )}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonPrimary]}
+            onPress={() => handleSave()}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={theme.palette.text.onAccent} />
+            ) : (
+              <Text style={styles.buttonPrimaryText}>
+                {offerId
+                  ? t('offerWizard.updateOffer')
+                  : t('offerWizard.createOffer')}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
 
@@ -1894,71 +1768,11 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 60,
   },
-  stepIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-  },
-  stepContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.palette.borders.strong,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.palette.surface,
-  },
-  stepCircleActive: {
-    backgroundColor: theme.palette.action,
-    borderColor: theme.palette.action,
-    shadowColor: theme.palette.action,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  stepNumber: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.palette.text.tertiary,
-  },
-  stepNumberActive: {
-    color: theme.palette.text.onAccent,
-  },
-  stepLine: {
-    width: 50,
-    height: 3,
-    backgroundColor: theme.palette.borders.strong,
-    marginHorizontal: 6,
-    borderRadius: 2,
-  },
-  stepLineActive: {
-    backgroundColor: theme.palette.action,
-  },
   scrollView: {
     flex: 1,
   },
   stepContent: {
     padding: 24,
-  },
-  stepTitle: {
-    fontSize: 24,
-    color: theme.palette.text.primary,
-    fontWeight: '800',
-    marginBottom: 28,
-    letterSpacing: -0.5,
   },
   inputGroup: {
     marginBottom: 24,
@@ -2046,42 +1860,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontWeight: '600',
   },
-  summaryCard: {
-    backgroundColor: theme.palette.surface,
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.surfaceSunken,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  summaryValue: {
-    fontSize: 15,
-    color: theme.palette.text.primary,
-    flex: 1,
-    textAlign: 'right',
-    fontWeight: '600',
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2119,21 +1897,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  buttonSecondary: {
-    backgroundColor: theme.palette.surface,
-    borderWidth: 2,
-    borderColor: theme.palette.borders.strong,
-  },
   buttonPrimaryText: {
     fontSize: 16,
     color: theme.palette.text.onAccent,
     fontWeight: '700',
     letterSpacing: 0.3,
-  },
-  buttonSecondaryText: {
-    fontSize: 16,
-    color: theme.palette.text.primary,
-    fontWeight: '700',
   },
   // Geo Modal Styles
   modalOverlay: {
