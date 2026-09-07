@@ -34,6 +34,7 @@ import {
   isValid,
   type OfferValidationInput,
 } from '../utils/offerWizardValidation';
+import { resolveEndpointRestore } from '../utils/offerRestore';
 // T-101 step 16b — the form's sections, cut out in the order `DriverElon.dc.html`
 // draws them. The wizard still paginates over them; step 16d deletes the pagination.
 import {
@@ -384,7 +385,8 @@ export const OfferWizardScreen: React.FC = () => {
                 const cities = await DriverAPI.fetchGeoCityDistricts(fromGeo.province.id);
                 if (fromGeo.city) {
                   loadedFromCity = fromGeo.city;
-                  setFromCity(fromGeo.city);
+                  // Step 16e: `setFromCity` is NOT called here — `resolveEndpointRestore`
+                  // below is the single writer, so the two cannot disagree.
                   loadedFromCities.push(fromGeo.city);
                 }
               }
@@ -443,7 +445,7 @@ export const OfferWizardScreen: React.FC = () => {
                 const cities = await DriverAPI.fetchGeoCityDistricts(toGeo.province.id);
                 if (toGeo.city) {
                   loadedToCity = toGeo.city;
-                  setToCity(toGeo.city);
+                  // Step 16e: single writer, as above.
                   loadedToCities.push(toGeo.city);
                 }
               }
@@ -525,34 +527,32 @@ export const OfferWizardScreen: React.FC = () => {
             }
           }
 
-          // Update selectedFromCities and selectedToCities with additional cities
-          // Combine primary city (from from_text/to_text) with additional cities (from stops)
-          // When multiple cities: all cities go in selectedFromCities/selectedToCities, clear single city
-          // When single city: set as fromCity/toCity, selectedFromCities/selectedToCities empty
-          if (loadedFromCities.length > 1) {
-            // Multiple cities: all go in selectedFromCities, clear single city
-            // Primary city is first, additional cities follow
-            setFromCity(null);
-            setSelectedFromCities(loadedFromCities);
-          } else if (loadedFromCities.length === 1) {
-            // Single city: set as fromCity, clear selectedFromCities
-            setFromCity(loadedFromCities[0]);
-            setSelectedFromCities([]);
-          }
-          
-          if (loadedToCities.length > 1) {
-            // Multiple cities: all go in selectedToCities, clear single city
-            // Primary city is first, additional cities follow
-            setToCity(null);
-            setSelectedToCities(loadedToCities);
-          } else if (loadedToCities.length === 1) {
-            // Single city: set as toCity, clear selectedToCities
-            setToCity(loadedToCities[0]);
-            setSelectedToCities([]);
-          }
-
           setStops(trueIntermediateStops);
         }
+
+        /*
+         * 🔴 T-101 step 16e — THE ENDPOINT SELECTIONS, RESTORED UNCONDITIONALLY.
+         *
+         * These four calls used to live INSIDE `if (offer.stops && offer.stops.length > 0)`,
+         * a few lines above. An offer whose stops came back empty therefore parsed its cities
+         * into `loadedFromCities` / `loadedToCities` and then dropped them on the floor:
+         * the endpoint rendered with nothing selected behind it, and because `handleSave`
+         * rebuilds `from_text` from that selection, **the next save wrote the blank over the
+         * real route.** Exactly the silent failure the note at the top of this screen warns
+         * about — nothing throws, nothing logs.
+         *
+         * The single/multi convention is `resolveEndpointRestore`, which is pure and asserted
+         * in `scripts/check-offer-restore.mjs` (41 assertions, red on 7 mutations). It must
+         * stay: a one-city endpoint clears `cities`, because a non-empty `cities` is what the
+         * render path reads as "this endpoint names several".
+         */
+        const fromRestore = resolveEndpointRestore(loadedFromCities);
+        setFromCity(fromRestore.city);
+        setSelectedFromCities(fromRestore.cities);
+
+        const toRestore = resolveEndpointRestore(loadedToCities);
+        setToCity(toRestore.city);
+        setSelectedToCities(toRestore.cities);
 
         // Load vehicles after setting form data
         await loadVehicles();

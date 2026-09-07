@@ -278,8 +278,42 @@ their loading rules (`?? undefined`, never `||`) must survive.
       **`git checkout` restored it only because 16c-2 had just been committed**; the identical
       accident in 16b hit an untracked plan file and the file was lost. Every write after this
       encodes to bytes FIRST and only then `os.replace`s the target.
-- [ ] **16e. The EDIT path, field by field.** Open a saved offer and confirm **every** field loads
-      back — the failure mode line 296 warns about. Re-check T-078/079/080's `?? undefined` rule.
+- [x] **16e. The EDIT path, field by field. ✅ DONE 2026-09-07.**
+      🔴 **A REAL INSTANCE OF THE SILENT FAILURE WAS FOUND, NOT JUST GUARDED AGAINST.**
+      `loadExistingOffer` computed the endpoint city selections correctly and then applied them
+      **inside `if (offer.stops && offer.stops.length > 0)`**. `setSelectedFromCities` /
+      `setSelectedToCities` were reachable from nowhere else in the load path — measured, by
+      counting every assignment to those setters, not by reading the block.
+      **The consequence is the exact failure line 296 warns about:** an offer whose stops come
+      back empty parsed its cities and dropped them, the endpoint rendered with nothing selected,
+      and since `handleSave` rebuilds `from_text` from that selection, **the next save wrote the
+      blank over the real route.** Nothing throws and nothing logs.
+      ✅ **`utils/offerRestore.ts` (new, 127 lines, pure)** — `splitLocationParts` ·
+      `namesMultipleCities` · `matchCitiesByName` · `resolveEndpointRestore` ·
+      `stopBelongsToEndpoint`. No React, no network: the geo fetches stay in the screen, what is
+      DECIDED from their results moved where it can be executed.
+      🔴 **THE FROM- AND TO-BRANCHES WERE THE SAME CODE TWICE, AGAIN** — the 16b finding, now
+      in the LOAD layer rather than the render layer. Both endpoints go through one function.
+      ✅ **`scripts/check-offer-restore.mjs` (new) — 41 assertions, PROVEN RED ON 7 MUTATIONS**,
+      each reverted and the revert verified by a whole-file `diff`. The headline mutation:
+      a one-city endpoint left holding a populated `cities` (**5 red**) — the render path reads a
+      non-empty `cities` as "this endpoint names several", so a plain city would draw as a list.
+      ✅ **A save→load ROUND TRIP is asserted** over one, two and three cities and the empty case:
+      `handleSave` writes a multi-city endpoint as a bare joined list, and the load path must
+      recognise **that** shape and rebuild the same selection.
+      ✅ **The other 34 payload fields were verified MECHANICALLY, not by eye:** every field of
+      `CreateOfferData` was diffed against the keys `setFormData` assigns in the load path —
+      **34/34 restore, nothing extra.** T-078/079/080's `?? undefined` and `numOrUndef` rules are
+      intact (`0` and `false` are real answers).
+      ✅ **One writer per state.** The single-city branches called `setFromCity` / `setToCity`
+      directly as well; those are gone, so the restore cannot disagree with itself.
+      ✅ **Baselines: `tsc` 28 · lint 0 errors / 275 warnings · tokens 3**; all six checkers green;
+      `expo export` bundles clean.
+      ⚠️ **`GeoOption.id` is a `number`, not a string** — the first draft of the module typed it
+      `string` and `tsc` went **28 → 34**. Widened to `string | number` with the reason on the
+      field, rather than casting at the call sites.
+      🛑 **STILL UNRUN ON A DEVICE.** The defect above is proven by construction and by
+      assertion; it has not been watched failing and then passing on a real offer.
 - [ ] **16f. Checkers + baselines.** `check-font-weights.mjs` (drop `OfferWizardScreen.tsx` and
       `DateWheelModal.tsx` from `EXEMPT_FILES` — **their reason expires here**),
       `check-design-tokens.mjs`, `check-drawer.mjs`, `tsc`, lint. A new checker if 16a/16c earn one.
@@ -301,11 +335,30 @@ bundle in `driver-app-standalone/tmp/` showed 5 errors on a project whose baseli
 
 **Checkers that must stay green** (`node scripts/…` in `driver-app-standalone`):
 `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-drawer.mjs` ·
-`check-offer-validation.mjs` · `check-offer-schedule.mjs`.
+`check-offer-validation.mjs` · `check-offer-schedule.mjs` · `check-offer-restore.mjs`.
 
 ---
 
 ## 6. Session notes
+
+### 2026-09-07 (2) — 16e: the warning at line 296 was describing a live bug
+
+- **16e done.** The edit path restores every field. `utils/offerRestore.ts` +
+  `scripts/check-offer-restore.mjs` (41 assertions, red on 7 mutations).
+- 🔴 **The screen has carried a comment since T-078 warning that a field which saves but
+  never loads gets blanked by the next save. One was doing exactly that.** The endpoint city
+  selections were restored inside a `if (offer.stops.length > 0)` guard they had no business
+  being in. *The warning was not hypothetical; nobody had checked it against the code under it.*
+- 🔴 **Found by counting assignments, not by reading.** Grepping every call to
+  `setSelectedFromCities` showed two, both in the same guarded block. The block reads perfectly
+  sensibly on its own — what is wrong with it is only visible from outside.
+- 🔴 **The from/to duplication is in the LOAD layer too.** 16b found the same 116 lines twice
+  in the render layer; this is the same defect one layer down. *The class, not the instance.*
+- ✅ **The other 34 fields were diffed mechanically** — `CreateOfferData`'s fields against the
+  keys the load path assigns. 34/34, nothing extra. A reading pass would not have been evidence.
+- ⚠️ **`tsc` 28 → 34 caught a wrong assumption immediately**: I typed `id` as `string`;
+  `GeoOption.id` is a number.
+- **Next: 16f (checkers + baselines, and the two files whose `EXEMPT_FILES` reason expires).**
 
 ### 2026-09-07 — 16d: the wizard is a form
 
