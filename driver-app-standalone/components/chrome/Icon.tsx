@@ -33,6 +33,13 @@ export const ICON_PATHS = {
   // and the same 24-box, so a pushed screen gets a back affordance that still looks like
   // the design's own chevron rather than a borrowed icon-set glyph.
   chevronLeft: 'M14.5 5.5 8 12l6.5 6.5',
+  // --- DriverQidiruv.dc.html (T-101 step 17d): the Taxi / Jo'natma kind toggle and the
+  // empty-state glyph. The taxi's two wheels are `<circle r="1.5">` in the artboard; they are
+  // written here as arcs so the glyph stays one path — same geometry, not a tidy-up.
+  taxi: 'M4 16.5v-3.2l1.7-4.1A2 2 0 0 1 7.5 8h9a2 2 0 0 1 1.8 1.2L20 13.3v3.2M4 16.5h16M9.5 8V5.8h5V8M6 17.8a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M15 17.8a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
+  parcel: 'M12 3.6 20 7.4v9.2L12 20.4 4 16.6V7.4zM4 7.4l8 3.8 8-3.8M12 11.2v9.2',
+  // The result dialog's check (DriverQidiruv.dc.html, `resIconPath`), drawn at stroke 2.4.
+  check: 'm5 12.5 4.5 4.5L19 7.5',
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

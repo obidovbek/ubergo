@@ -44,6 +44,63 @@ next phone session decides whether "matches the artboard" is true; the checkers 
 
 **Next:** step 17, `DriverQidiruv` — plan first, and measure the artboard before trusting the card.
 
+### Later the same day — step 17 scoped, not started
+
+- Owner committed step 16 and said "next". **Measured the artboard before believing the card, and
+  the card was wrong three ways** (a merge of the search and sent-proposals screens, a detail SHEET
+  that absorbs the join form, and an own-offers list that no artboard draws). `DriverOrder`, which
+  step 18's card names, is an older copy of this same board.
+- **Backend truth:** accept and counter-offer are both one `joinPassengerOffer` call; seat cells
+  are real here (`seat_counts`); no driver-side reject, no presence, **no rating model anywhere**,
+  no route matching.
+- **`docs/PLAN-T101-step17.md` written** — 17a-17i and seven owner decisions with recommendations.
+- **Owner accepted all seven. 17a done:** `utils/passengerOrders.ts` (pure rules: kind, seat
+  cells, listed price, accept payload, offer form, tags, sorts, modes, request states) and
+  `check-passenger-orders.mjs` — **59 assertions, red on 9 mutations**. 🔴 One mutation stayed
+  green at first (ceil vs floor on a total that divided evenly) — the assertion was true for the
+  wrong reason; re-fixtured. Two hand-computed sort expectations were wrong, the rules right.
+  Baselines `tsc` 28 · lint 275 hold.
+- **17b done:** `PanelTabs` (the welded class tabs) and `SortChips` in `components/chrome/`, plus
+  one measured token, `paidTint`, in both palettes. 🔴 Two contrast pairs failed at first
+  (`text.tertiary` on the empty tab's greys, 3.9 and 3.5:1) → `text.muted`, 10/10 pass.
+  🔴 **`SegmentedModes` has drawn 24px pills instead of its measured 12 since step 9, in both
+  apps** — it reads the deprecated `borderRadius.xl`. Fix scheduled for 17d.
+- **17c done:** `PassengerOrderCard` draws both modes from the 17a rules; six new keys × 3
+  locales; the i18n checker now sweeps 91 keys (red on `priceMine`); 21/21 contrast pairs.
+  ⚠️ `formatTime` is 12-hour US — the card uses the 24-hour language-aware helper.
+- **17d done:** `PassengerOrdersScreen` — three screens merged into one list with two modes,
+  every carried fix named in its header, the saved-search shape kept verbatim; 21 more keys × 3
+  (i18n checker at 121, red on `emptySent`). 🔴 **`SegmentedModes` fixed in BOTH apps** by
+  copying one file. 🔴 Lint went to 277 on two `catch (error: any)` of mine — fixed, back to 275.
+  ⚠️ The screen is unrouted until 17g, so `expo export` cannot prove it bundles; `tsc` can.
+- **17e done:** `PassengerOrderSheet` — detail, accept at the listed price, the counter-offer,
+  cancel while pending, the phone gated twice (T-054). 🔴 The old join form's seats stepper was
+  removed: the server bills per seat × seats NEEDED, so it never changed a price. Two more pure
+  rules (payment flags with the T-031 fallback, seat kind), checker at 69 / 11 mutations; i18n
+  at 162 keys; 21/21 contrast, one pair at exactly 4.50.
+- **17f done:** `OrderResultSheet` — the centred result dialog in place of the success toast,
+  its accept copy corrected to what the product does (a proposal; the phone opens on the
+  passenger's confirmation). The mode switch moved to the dialog's close. i18n at 168 keys.
+- **17g done — the new screen is REACHABLE.** Three route names, one screen; the
+  `PassengerOfferDetails { offerId }` route opens the sheet by id, so pushes keep landing.
+  Four old files are orphans on T-105, not deleted. `check-drawer` stays green because
+  `undefined` stayed in the new param unions.
+- **17h done:** the own-offers list on the shared chrome with the welded tabs, 15 weights on
+  `font()`, handlers untouched (the diff was grepped for them). 🔴 One lint warning of mine
+  (`ReadonlyArray<T>`), found by a scoped `git stash` before/after; fixed.
+- **17i done — STEP 17 CLOSED.** Final sweep, both apps, all green (driver 28 / 275 / 3 and
+  eight checkers; user 6 / 216 / 1 and five). T-109 boards the four things `DriverQidiruv` asks
+  for that the API cannot give. In one day: a 69-assertion rules module, six components, one
+  merged screen, a defect fixed in both apps, 51 keys × 3, five orphans. **Three baseline moves
+  of my own were pulled back; four artboard details were corrected rather than copied.**
+
+### The day's verification, in one line
+
+Driver `tsc` 28 · lint 0 / 275 · tokens 3 · fonts · drawer · 5 rule/i18n checkers (182 keys,
+69 assertions) · `expo export` — user `tsc` 6 · lint 216 · tokens 1 · fonts · 3 checkers.
+🛑 **Nothing from step 8e on has run on a device. The new passenger-orders screen is the largest
+untested surface in either app; it is the gate before step 18.**
+
 ---
 
 ## 2026-09-05 → 09-07 — catch-up: steps 13-16e ran without a journal entry

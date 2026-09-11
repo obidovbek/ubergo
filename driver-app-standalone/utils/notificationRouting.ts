@@ -58,7 +58,8 @@ const routeForNotification = (data: any): NotificationTarget => {
     // "there is no screen for these yet (T-023/T-024)". That went stale: T-037
     // built `MyJoinRequestsScreen` and registered it, and it lists exactly these
     // bids with their status — so it is the right destination for all four.
-    // It takes no params (no `useRoute`), so none are passed.
+    // T-101 step 17g: the NAME now opens `PassengerOrdersScreen` in its sent mode
+    // (`initialParams: { mode: 'sent' }` in `MainNavigator`); still no params here.
     case 'driver_request_confirmed':
     case 'driver_request_rejected':
     case 'driver_not_chosen':
@@ -70,7 +71,8 @@ const routeForNotification = (data: any): NotificationTarget => {
     // so open the ride itself rather than a list of bids.
     //
     // ⚠️ `offer_id` here is the passenger's own PassengerOffer, which is exactly
-    // what `PassengerOfferDetails` takes (`PassengerOfferDetailsScreen:56`).
+    // what `PassengerOfferDetails` takes — since T-101 step 17g that route is
+    // `PassengerOrdersScreen`, which opens its detail sheet on the id.
     // Do NOT route it anywhere that expects a DriverOffer id — that is the trap
     // documented at the top of the user app's copy of this file.
     case 'passenger_offer_updated': {

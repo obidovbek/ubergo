@@ -40,6 +40,21 @@ const TARGETS = [
   ['screens/OfferWizardScreen.tsx', ['offerWizard', 'common', 'errors']],
   ['utils/offerWizardValidation.ts', ['offerWizard']],
   ['utils/offerSchedule.ts', ['offerWizard']],
+  // T-101 step 17: the passenger-orders screen. The rules module returns keys under the
+  // existing prefixes; the card adds `passengerOrders.*`.
+  ['utils/passengerOrders.ts', ['passengerOfferExtras', 'passengerOfferDetails', 'myJoinRequests']],
+  ['components/offers/PassengerOrderCard.tsx', ['passengerOrders', 'passengerOfferExtras', 'myJoinRequests']],
+  [
+    'screens/PassengerOrdersScreen.tsx',
+    ['passengerOrders', 'searchPassengerOffers', 'myJoinRequests', 'errors', 'common', 'drawer'],
+  ],
+  [
+    'components/offers/PassengerOrderSheet.tsx',
+    ['passengerOrders', 'passengerOfferExtras', 'passengerOfferDetails', 'myJoinRequests', 'common'],
+  ],
+  ['components/offers/OrderResultSheet.tsx', ['passengerOrders', 'passengerOfferDetails']],
+  // 17h: the own-offers list — its status-tab labels are literal keys now, so they are swept.
+  ['screens/OffersListScreen.tsx', ['driverOffers', 'common']],
 ];
 
 // Bundle and evaluate the real translations. The filename carries a timestamp so a stale

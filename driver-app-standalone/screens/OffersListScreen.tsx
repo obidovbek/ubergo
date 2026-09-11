@@ -1,6 +1,12 @@
 /**
  * Offers List Screen
  * Display all driver offers with status badges and actions
+ *
+ * T-101 step 17h — VALUES ONLY. No artboard draws this screen (the design sends "Mening
+ * e'lonlarim" to the wizard), so it was converted in the artboards' language rather than
+ * rebuilt against nothing: the shared `TopBar` (a TAB — hamburger, not back), `PanelTabs`
+ * in place of `StatusFilterTabs`, `font()` for every weight. Every handler — load, publish,
+ * cancel, archive, delete, edit, passengers — is untouched; the diff was grepped for them.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,30 +16,43 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   RefreshControl,
   ActivityIndicator,
-  Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { MainNavigationProp } from '../navigation/types';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
 import { subscribePushReceived } from '../utils/pushEvents';
-import { BackButton } from '../components/BackButton';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import { getErrorMessage } from '../utils/errorHandler';
 import * as DriverOffersAPI from '../api/driverOffers';
 import type { DriverOffer, OfferStatus } from '../api/driverOffers';
-import { OfferCard, OfferDetailModal, StatusFilterTabs } from '../components/offers';
+import { OfferCard, OfferDetailModal } from '../components/offers';
+import { TopBar } from '../components/chrome/TopBar';
+import { NavDrawer } from '../components/chrome/NavDrawer';
+import { PanelTabs } from '../components/chrome/PanelTabs';
 import { theme } from '../themes';
 
+/** The status tabs and their label keys — literal so `check-offer-i18n.mjs` can sweep them. */
+const STATUS_TABS: readonly (readonly [OfferStatus | 'all', string])[] = [
+  ['all', 'common.all'],
+  ['published', 'driverOffers.status.published'],
+  ['archived', 'driverOffers.status.archived'],
+  ['cancelled', 'driverOffers.status.cancelled'],
+];
+
 export const OffersListScreen: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useTranslation();
   const navigation = useNavigation<MainNavigationProp>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const displayName =
+    user?.display_name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || '';
+  const initials = displayName.charAt(0).toUpperCase();
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [allOffers, setAllOffers] = useState<DriverOffer[]>([]); // Store all offers for counting
   const [loading, setLoading] = useState(true);
@@ -265,7 +284,7 @@ export const OffersListScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.palette.action} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
@@ -275,12 +294,20 @@ export const OffersListScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.surface} />
-      <View style={styles.header}>
-        {/* T-071 — was a green `←` at 24px that scaled with the system font. */}
-        <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        <Text style={styles.headerTitle}>{t('driverOffers.title')}</Text>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.palette.ground} />
+      {/* T-101 step 17h — the shared chrome. This is a TAB, so the hamburger opens the drawer;
+          the BackButton it carried since T-071 was a leftover from its stack days. */}
+      <TopBar
+        background="flat"
+        title={t('driverOffers.title')}
+        suffix="Driver"
+        initials={initials}
+        onMenuPress={() => setDrawerOpen(true)}
+        onBellPress={() => navigation.navigate('Notifications')}
+        onAvatarPress={() => navigation.navigate('Profile')}
+      />
+      <View style={styles.createRow}>
         <TouchableOpacity
           style={styles.createButton}
           onPress={handleCreateOffer}
@@ -291,11 +318,16 @@ export const OffersListScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Status Filter Tabs */}
-      <StatusFilterTabs
-        statusFilter={statusFilter}
-        onFilterChange={setStatusFilter}
-        allOffers={allOffers}
+      {/* T-101 step 17h — the welded tabs (17b) replace `StatusFilterTabs`; the counts are
+          computed from `allOffers` exactly as that component computed them. */}
+      <PanelTabs
+        tabs={STATUS_TABS.map(([key, labelKey]) => ({
+          key,
+          label: t(labelKey),
+          count: key === 'all' ? allOffers.length : allOffers.filter((o) => o.status === key).length,
+        }))}
+        value={statusFilter}
+        onChange={setStatusFilter}
       />
 
       {offers.length === 0 ? (
@@ -335,6 +367,8 @@ export const OffersListScreen: React.FC = () => {
         formatDate={formatDate}
         formatPrice={formatPrice}
       />
+
+      <NavDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
   );
 };
@@ -344,34 +378,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.palette.ground,
   },
-  header: {
+  // T-101 step 17h — the create button kept its place at the right, under the shared bar.
+  createRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
-    backgroundColor: theme.palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.borders.strong,
-    shadowColor: theme.palette.text.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  // T-071 — layout only; the tile itself comes from <BackButton />.
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.palette.text.primary,
-    letterSpacing: -0.5,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 18,
+    paddingBottom: 8,
   },
   createButton: {
     flexDirection: 'row',
@@ -392,12 +404,12 @@ const styles = StyleSheet.create({
   createButtonIcon: {
     color: theme.palette.surface,
     fontSize: 20,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     marginRight: 6,
   },
   createButtonText: {
     color: theme.palette.surface,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     fontSize: 14,
     letterSpacing: 0.3,
   },
@@ -411,7 +423,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: theme.palette.text.secondary,
     fontSize: 15,
-    fontWeight: '500',
+    ...theme.font('sans', 500),
   },
   emptyContainer: {
     flex: 1,
@@ -422,7 +434,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     color: theme.palette.text.primary,
     marginBottom: 8,
     textAlign: 'center',
@@ -450,7 +462,7 @@ const styles = StyleSheet.create({
   },
   emptyButtonText: {
     color: theme.palette.surface,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     fontSize: 16,
   },
   listContent: {

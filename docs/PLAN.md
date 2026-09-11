@@ -1193,10 +1193,30 @@ Edit both copies together and verify with `diff -q`.
       multi-vehicle (step 21's territory). *The rest of the screen IS backed: the offer API is
       genuinely rich, unlike step 15's.*
       Scale: **1 800 artboard lines / ~180 render keys** against **3 883 screen lines / 41 `useState`**.
-- [ ] **17.** `OffersListScreen` + `SearchPassengerOffersScreen` → `DriverQidiruv.dc.html`
+- [x] **17.** `OffersListScreen` + `SearchPassengerOffersScreen` → `DriverQidiruv.dc.html` —
+      **✅ CLOSED 2026-09-11 (17a-17i, one day).** What shipped: `PassengerOrdersScreen` (the merge of
+      the search, the sent requests and the join form: two modes, welded tabs, sort chips, the card,
+      the detail-and-offer sheet, the result dialog), reachable by the three old route names;
+      `OffersListScreen` on the shared chrome (values only); `SegmentedModes` fixed in BOTH apps; one
+      pure module with 69 assertions red on 11 mutations; 51 keys × 3; T-109 boarded. 🛑 **NOT SEEN
+      ON A DEVICE — the biggest untested surface in either app.**
+      📦 **SPLIT OUT 2026-09-11 → `docs/PLAN-T101-step17.md`** — the whole story lives there.
+      🔴 **MEASURED, AND THE CARD WAS WRONG THREE WAYS:** ① the artboard
+      is a MERGE of `SearchPassengerOffers` (incoming) + `MyJoinRequests` (sent proposals) — step 9's
+      shape again; ② its detail is a SHEET that absorbs `PassengerOfferDetails`' join form; ③
+      **`OffersListScreen` has NO artboard** (the design sends "Mening e'lonlarim" to the wizard) —
+      values-only conversion. ⚠️ **No route search in the artboard and no matching backend** — the
+      route row stays by recommendation. 🛑 **No API for the driver to reject an order** — `Rad etish`
+      not built. 🟢 Seat cells ARE backed on this side (`seat_counts`).
 - [ ] **18.** `MyJoinRequestsScreen` + `OfferPassengersScreen` + `PassengerOfferDetailsScreen`
       → `DriverMyOrder.dc.html` + `DriverOrder.dc.html` *(the latter lives ONLY in
       `uploads/Chek_28082026/`)*
+      ⚠️ **RESCOPED 2026-09-11 by step 17's measurement:** `DriverOrder.dc.html` is an OLDER COPY of
+      `DriverQidiruv` (same data, same modes) and `MyJoinRequests` + `PassengerOfferDetails` are
+      absorbed by step 17. **What is left: `DriverMyOrder` only** (Jarayonda / Faol / Tarix — the
+      driver's accepted rides) against `OfferPassengersScreen` + the confirmed join requests.
+      🛑 **First question for this step: the THIRD TAB.** The artboard's is "Mening buyurtmalarim" →
+      accepted rides; the app's is `OffersList` (own e'lons) labelled *Buyurtmalarim*. Owner decides.
 - [ ] **19.** Balance / income → `DriverBalans.dc.html` + `DriverDaromad.dc.html`.
       ⚠️ **No such screens exist in the driver app today** — these are new, and they touch T-087's
       ledger. Confirm scope with the owner before building; may belong in its own card.
@@ -1296,6 +1316,35 @@ of truth — do not edit the owner's artboards).
 ---
 
 ## Session notes
+
+### 2026-09-11 (3) — step 17 CLOSED, 17a-17i in one day; the rest is in `PLAN-T101-step17.md`
+
+- **Owner accepted all seven recommendations; nine sub-steps followed**, each with a baseline run
+  and a checker proven red: the pure rules (69 assertions), `PanelTabs` + `SortChips`, the card, the
+  merged `PassengerOrdersScreen`, the detail-and-offer sheet, the result dialog, the routes (three
+  names → one screen; pushes still land), `OffersListScreen` values-only, and the close-out.
+- 🔴 **`SegmentedModes` (step 9) had drawn 24px pills instead of its measured 12 since 2026-09-03
+  — in BOTH apps.** Fixed by copying one file. `UserMyOrder`'s strip changes shape as a result.
+- 🔴 **Three baseline moves of my own were pulled back** (two `catch (error: any)`, one
+  `ReadonlyArray<T>`), each found by the number. **Four artboard details were corrected rather
+  than copied** (no route search, no reject, an accept that promised a phone, an English label).
+- **Boarded:** T-109 (the four things `DriverQidiruv` asks for that the API cannot give). Five
+  orphans on T-105. Step 18 rescoped to `DriverMyOrder` only, with the third-tab question first.
+- **Next: a DEVICE WALK of the new screen, then the step 18 plan.**
+
+### 2026-09-11 (2) — step 17 scoped and split; no code written
+
+- **Measured before touching anything**, and the card was wrong three ways: the artboard merges
+  `SearchPassengerOffers` + `MyJoinRequests` (incoming vs sent — step 9's shape), its detail is a
+  sheet that absorbs `PassengerOfferDetails`' join form, and `OffersListScreen` has no artboard at
+  all. `DriverOrder.dc.html` (step 18's) is an older copy of this board, so step 18 shrinks to
+  `DriverMyOrder`.
+- **Backend measured against the artboard:** join/accept/counter-offer all map onto ONE
+  `joinPassengerOffer` call (one per-seat price, not per-row); seat cells are backed by
+  `seat_counts`; **no driver-side reject, no presence, no rating model exists at all**, no route
+  matching (the artboard has no search form).
+- **Split to `docs/PLAN-T101-step17.md`** with 17a-17i and **seven owner decisions in its §3**,
+  each with a recommendation. **No code yet (rule 3). Next: owner answers, then 17a.**
 
 ### 2026-09-11 — step 16 closed (16f + 16g); the rest of its story is in `PLAN-T101-step16.md`
 
@@ -1454,7 +1503,7 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-09-11 after closing step 16, for a brand-new chat session.**
+> **Written 2026-09-11 after closing step 17, for a brand-new chat session.**
 > Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
@@ -1462,8 +1511,8 @@ of truth — do not edit the owner's artboards).
 **The COLOUR half of T-101 is complete in both apps** (1 803 raw literals removed; both ceilings
 at their floor and enforced by `scripts/check-design-tokens.mjs`).
 
-**The VISIBLE half: the USER APP is done (steps 6-14). The DRIVER APP is two screens in
-(steps 15-16 of 15-22).** Screens rebuilt so far:
+**The VISIBLE half: the USER APP is done (steps 6-14). The DRIVER APP is three screens in
+(steps 15-17 of 15-22).** Screens rebuilt so far:
 
 | step | screen | note |
 |---|---|---|
@@ -1482,11 +1531,12 @@ at their floor and enforced by `scripts/check-design-tokens.mjs`).
 |---|---|---|
 | **15** | **`NavDrawer`** (new) + `MenuScreen` weights | the card named an ORPHAN; most of the artboard is backend-blocked |
 | **16** | **`OfferWizardScreen`** — RESTRUCTURED | 4-step wizard → ONE form + 4 sheets; edit path restores 34/34 fields; 3 883 → 1 895 lines. Full story in `PLAN-T101-step16.md` |
+| **17** | **`PassengerOrdersScreen`** (new) — a MERGE | `SearchPassengerOffers` + `MyJoinRequests` + the join half of `PassengerOfferDetails` → one list with two modes, a detail-and-offer sheet and a result dialog; `OffersListScreen` values-only; `SegmentedModes` fixed in BOTH apps. Full story in `PLAN-T101-step17.md` |
 
 **Baselines, all six at their long-standing values:**
 user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **275** · tokens **3**.
-**Re-measured 2026-09-11 after step 16 — unchanged** (driver lint fell 280 → 275 during step 16 and
-was never rebaselined up). ⚠️ **Admin's `tsc` baseline is 6, measured with `tsc -b`** — the old
+**Re-measured 2026-09-11 after step 17 — unchanged** (three moves of my own during the step were
+pulled back, never rebaselined up). ⚠️ **Admin's `tsc` baseline is 6, measured with `tsc -b`** — the old
 "admin 0" ran against a config with no files. ⚠️ Measure the driver app's lint only after
 deleting any scratch file you wrote into it: a stray esbuild bundle in `driver-app-standalone/tmp/`
 showed **5 errors** on a project whose baseline is **0**.
@@ -1500,7 +1550,9 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
 **driver app** — `check-design-tokens.mjs` · **`check-font-weights.mjs`** (new, step 15) ·
 **`check-drawer.mjs`** (new, step 15: 10 routes + 21 keys × 3 locales) ·
 **`check-offer-validation.mjs`** (16a) · **`check-offer-schedule.mjs`** (16c-2) ·
-**`check-offer-restore.mjs`** (16e, 41 assertions) · **`check-offer-i18n.mjs`** (16f, 70 keys × 3).
+**`check-offer-restore.mjs`** (16e, 41 assertions) · **`check-offer-i18n.mjs`** (16f; sweeps 9
+files, **182 keys × 3** after step 17) · **`check-passenger-orders.mjs`** (17a, **69 assertions,
+red on 11 mutations**).
 **Every one has been proven able to go red.**
 🔴 **THE SHELL THIS SESSION WRITES FILES THROUGH HALVES BACKSLASHES** — heredocs AND inline node
 strings alike: `\.` arrives as `.`, `\b` as a backspace. On 2026-09-11 that made a measurement report
@@ -1512,16 +1564,26 @@ the **unquoted** `fontWeight: 700` spelling, and scanning `sections/` + `utils/`
 
 ### ▶️ Next actions, in the order they are worth doing
 
-0. ▶️ **STEP 16 IS CLOSED (2026-09-11). NEXT IS STEP 17 — `OffersListScreen` +
-   `SearchPassengerOffersScreen` → `DriverQidiruv.dc.html` — AND IT NEEDS A PLAN FIRST (rule 3).**
-   Before believing its one-line card, measure the artboard: every step since 9 has turned out to be
-   a restructure the card called a repaint. Known already: the `Qidiruv` boards' filter strip is
-   TABS welded to a panel (`radius 12px 12px 0 0`, `border-bottom: none`), NOT `SegmentedModes` —
-   build that variant separately; the search card **cannot match its artboard until T-106** lands
-   (per-seat gender, `hex_code`, `vehicle_class`); T-102 / T-103 still gate the scopes. Both screens
-   were converted to `GeoSheet` in 7d, so their geo cascade is already the artboards' picker.
-   Consider splitting step 17 into its own plan file as 16 was — `SearchPassengerOffersScreen` is
-   1 262 lines of working search.
+0. ✅ **STEP 17 IS CLOSED (2026-09-11, 17a-17i) — `docs/PLAN-T101-step17.md` has the whole story.**
+   The driver's passenger-orders screen (`DriverQidiruv`) exists as `screens/PassengerOrdersScreen.tsx`
+   — incoming and sent modes, the welded tabs and sort chips, the card, the detail-and-offer sheet
+   (accept at the listed price · one per-seat counter-offer · cancel while pending · phone gated by
+   T-054), the result dialog — reachable from the drawer, the home screen and pushes by the three
+   OLD route names. `OffersListScreen` wears the shared chrome. `SegmentedModes`' radius defect is
+   fixed in both apps. **What the API cannot give is boarded as T-109**; per-seat gender on the
+   driver offer stays T-106. Five files are orphans on T-105.
+   ▶️ **NEXT, IN THIS ORDER:**
+   **(a) A DEVICE WALK OF THE NEW SCREEN — before anything else.** Drawer → "Kelgan buyurtmalar"
+   (incoming) and "Mening buyurtmalarim" (sent); the route row, the tabs and chips; tap a card → the
+   sheet; send an offer → the result dialog → the sent mode; accept → the confirm dialog; a push about
+   a bid → the sheet by id; the keyboard over the offer field inside the modal; `OffersListScreen`'s
+   create button under the bar; and `UserMyOrder`'s segments, which changed shape (12px, not pills).
+   **(b) The step 18 plan** — rescoped by 17's measurement to **`DriverMyOrder` only** (Jarayonda /
+   Faol / Tarix — the driver's accepted rides) against `OfferPassengersScreen` + the confirmed join
+   requests. **Its first question is the THIRD TAB**: the artboard's is "Mening buyurtmalarim"
+   (accepted rides → `DriverMyOrder`); the app's is `OffersList` (own e'lons) labelled
+   *Buyurtmalarim*. Owner decides before code. Measure the artboard first — every step since 9 has
+   been a restructure the card called a repaint.
 
 0b. 🛑 **DECIDE WHAT `DriverMenu` IS WITHOUT A BACKEND.** Step 15 shipped the drawer and left the
    artboard's whole centre unbuilt — the **online/offline toggle**, the two **shablon** route

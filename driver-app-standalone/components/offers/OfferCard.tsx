@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   offerIdText: {
     fontSize: 11,
     color: theme.palette.text.tertiary,
-    fontWeight: '600',
+    ...theme.font('sans', 600),
     fontFamily: 'monospace',
   },
   statusBadgeContainer: {
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     letterSpacing: 0.3,
   },
   sharedContextContainer: {
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   sharedContextText: {
     fontSize: 11,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...theme.font('sans', 600),
     fontStyle: 'italic',
   },
   routeContainer: {
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   stopIconText: {
     color: theme.palette.warnInk,
     fontSize: 12,
-    fontWeight: '800',
+    ...theme.font('sans', 800),
   },
   connectionLine: {
     position: 'absolute',
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   routeLabel: {
     fontSize: 10,
     color: theme.palette.text.secondary,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 4,
@@ -426,13 +426,13 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 15,
     color: theme.palette.text.primary,
-    fontWeight: '600',
+    ...theme.font('sans', 600),
     lineHeight: 20,
   },
   routeContext: {
     fontSize: 12,
     color: theme.palette.text.secondary,
-    fontWeight: '500',
+    ...theme.font('sans', 500),
     marginTop: 2,
     fontStyle: 'italic',
   },
@@ -459,13 +459,13 @@ const styles = StyleSheet.create({
   factText: {
     fontSize: 12,
     color: theme.palette.text.secondary,
-    fontWeight: '600',
+    ...theme.font('sans', 600),
     flexShrink: 1,
   },
   factPrice: {
     fontSize: 13,
     color: theme.palette.text.primary,
-    fontWeight: '700',
+    ...theme.font('sans', 700),
     flexShrink: 1,
   },
 });

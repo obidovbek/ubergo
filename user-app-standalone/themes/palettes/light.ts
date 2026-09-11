@@ -131,6 +131,13 @@ export const lightPalette = {
    * Measured: `rgba(91,46,157,.22)` in `UserBuyurtma.dc.html`. A border, never text.
    */
   paidBorder: 'rgba(91, 46, 157, 0.22)',
+  /**
+   * T-101 step 17b — the paid tint behind the "Maxsus buyurtma" count pill on the `Qidiruv`
+   * boards' welded tabs. Measured: `#D9CCEE` (`pillBg` of the selected paid tab) in
+   * `DriverQidiruv.dc.html`. `paid` ink on it passes AA (step 17b's contrast probe). A fill
+   * for `paid` ink, never text itself.
+   */
+  paidTint: '#D9CCEE',
 
   // ---------------------------------------------------------------- borders & scrims
   /**

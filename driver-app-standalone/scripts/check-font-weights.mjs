@@ -80,18 +80,21 @@ const EXEMPT_FILES = new Map([
   // user-visible effect (the step-14 rule), so it waits for deletion with the others.
   ['components/DateWheelModal.tsx', 'orphan since 16c-2, zero importers -> T-105'],
 
-  // ---- step 17: search / offer lists (DriverQidiruv).
-  ['screens/OffersListScreen.tsx', 'step 17 rebuilds it'],
-  ['screens/SearchPassengerOffersScreen.tsx', 'step 17 rebuilds it'],
-  ['components/offers/StatusFilterTabs.tsx', 'step 17 owns the list filter tabs'],
+  // ---- step 17g (2026-09-11) replaced three screens with `PassengerOrdersScreen`; these four
+  // have ZERO importers now (grep-verified). Not deleted (rule 4) -> T-105.
+  ['screens/SearchPassengerOffersScreen.tsx', 'orphan since 17g, zero importers -> T-105'],
+  ['screens/MyJoinRequestsScreen.tsx', 'orphan since 17g, zero importers -> T-105'],
+  ['screens/PassengerOfferDetailsScreen.tsx', 'orphan since 17g, zero importers -> T-105'],
+  ['components/offers/PassengerOfferExtras.tsx', 'orphan since 17g, zero importers -> T-105'],
 
-  // ---- step 18: my orders / passengers (DriverMyOrder + DriverOrder).
-  ['screens/MyJoinRequestsScreen.tsx', 'step 18 rebuilds it'],
+  // ---- step 17h (2026-09-11) converted `OffersListScreen` and `OfferCard` (values only) and
+  // replaced these tabs with `PanelTabs`. Only the barrel (`components/offers/index.ts`) still
+  // names the file; nothing renders it. Not deleted (rule 4) -> T-105.
+  ['components/offers/StatusFilterTabs.tsx', 'orphan since 17h, barrel re-export only -> T-105'],
+
+  // ---- step 18: my orders / passengers (DriverMyOrder).
   ['screens/OfferPassengersScreen.tsx', 'step 18 rebuilds it'],
-  ['screens/PassengerOfferDetailsScreen.tsx', 'step 18 rebuilds it'],
-  ['components/offers/OfferCard.tsx', 'step 18 owns the order card'],
   ['components/offers/OfferDetailModal.tsx', 'step 18 owns the detail sheet'],
-  ['components/offers/PassengerOfferExtras.tsx', 'step 18 owns the passenger extras'],
 
   // ---- step 20: profile (DriverProfil).
   ['screens/ProfileScreen.tsx', 'step 20 rebuilds it'],

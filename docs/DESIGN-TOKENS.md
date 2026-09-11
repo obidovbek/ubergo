@@ -126,6 +126,7 @@ opacity variant of a token here, or appears in a single artboard (listed in §8)
 | `female` | `#C43D7A` | female seat marker |
 | `timeInRange` | `#2D6CDF` | selected 15-minute blocks |
 | `paid` | `#5B2E9D` | the paid "Maxsus buyurtma" flow — entry, CTA, total |
+| `paidTint` | `#D9CCEE` | the fill behind `paid` ink — the paid tab's count pill on the `Qidiruv` welded tabs (T-101 step 17b, measured on `DriverQidiruv`) |
 
 ### 2.6 Borders and scrims — an opacity ramp on `#16130E`
 

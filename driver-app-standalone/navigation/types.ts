@@ -54,10 +54,17 @@ export type MainStackParamList = {
   OfferWizard: { offerId?: string } | undefined;
   /** The passengers who booked one of the driver's own offers. */
   OfferPassengers: { offerId: number };
-  SearchPassengerOffers: undefined;
-  /** ⚠️ `offerId` here is a **PassengerOffer** id, not a DriverOffer one (T-044). */
+  /**
+   * T-101 step 17g — all three of these render `PassengerOrdersScreen` (the merged
+   * incoming / sent list with its detail sheet). The three NAMES survive because the drawer,
+   * the home screen and `utils/notificationRouting.ts` navigate by them. `undefined` stays in
+   * the union so `check-drawer.mjs` still sees them as paramless.
+   */
+  SearchPassengerOffers: { mode?: 'incoming' | 'sent' } | undefined;
+  /** ⚠️ `offerId` here is a **PassengerOffer** id, not a DriverOffer one (T-044). Opens the sheet on it. */
   PassengerOfferDetails: { offerId: number };
-  MyJoinRequests: undefined;
+  /** Registered with `initialParams: { mode: 'sent' }` — the same screen, opened on its second mode. */
+  MyJoinRequests: { mode?: 'incoming' | 'sent' } | undefined;
 };
 
 /** Typed `useNavigation()` for any screen on the driver's main stack. */

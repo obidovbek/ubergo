@@ -26,9 +26,7 @@ import { DriverVehicleScreen } from '../screens/DriverVehicleScreen';
 import { DriverTaxiLicenseScreen } from '../screens/DriverTaxiLicenseScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
 import OfferPassengersScreen from '../screens/OfferPassengersScreen';
-import SearchPassengerOffersScreen from '../screens/SearchPassengerOffersScreen';
-import PassengerOfferDetailsScreen from '../screens/PassengerOfferDetailsScreen';
-import MyJoinRequestsScreen from '../screens/MyJoinRequestsScreen';
+import PassengerOrdersScreen from '../screens/PassengerOrdersScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -90,24 +88,30 @@ export const MainNavigator: React.FC = () => {
         }}
       />
       {/* T-037 step 1 — the screen existed but was registered nowhere, so a
-          driver could never reach the passenger orders at all. */}
+          driver could never reach the passenger orders at all.
+          T-101 step 17g — the three names below are ONE screen now (`DriverQidiruv`):
+          `PassengerOrdersScreen` with its incoming / sent modes and its detail sheet. The
+          names stay: the drawer, the home screen and `notificationRouting.ts` navigate by
+          them, and `PassengerOfferDetails { offerId }` opens the sheet on that order. The
+          three old screen files are orphans (not deleted — rule 4) → T-105. */}
       <Stack.Screen
         name="SearchPassengerOffers"
-        component={SearchPassengerOffersScreen}
+        component={PassengerOrdersScreen}
         options={{
           headerShown: false,
         }}
       />
       <Stack.Screen
         name="PassengerOfferDetails"
-        component={PassengerOfferDetailsScreen}
+        component={PassengerOrdersScreen}
         options={{
           headerShown: false,
         }}
       />
       <Stack.Screen
         name="MyJoinRequests"
-        component={MyJoinRequestsScreen}
+        component={PassengerOrdersScreen}
+        initialParams={{ mode: 'sent' }}
         options={{
           headerShown: false,
         }}

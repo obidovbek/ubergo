@@ -95,7 +95,23 @@
   this card.** New checker `check-offer-i18n.mjs` found `common.delete` missing from every locale.
   Unbacked artboard features boarded as **T-106 · T-107**; **T-108** is the locale gap that blinds
   `tsc`. ⚠️ **Admin `tsc` baseline corrected 0 → 6** (the 0 measured nothing; see `PLAN.md`).
-  🛑 **Nothing from step 8e onward has run on a device.** Next: step 17 (`DriverQidiruv`).
+  🛑 **Nothing from step 8e onward has run on a device.** Next: step 17 (`DriverQidiruv`) —
+  **scoped the same day → `docs/PLAN-T101-step17.md`; owner accepted all seven recommendations;
+  17a (the pure rules + a 59-assertion checker, red on 9 mutations) and 17b (`PanelTabs` +
+  `SortChips`, `paidTint` token), 17c (`PassengerOrderCard`, 21/21 contrast) and 17d (**the merged
+  `PassengerOrdersScreen`**, 27 keys × 3 locales) are DONE.** The card was wrong three ways (a
+  merge, a sheet, and a screen with no artboard); step 18 shrinks to `DriverMyOrder` as a result.
+  🔴 17b found `SegmentedModes` drawing 24px pills where step 9 measured 12, in both apps —
+  **fixed in 17d in both** (the user app's order list changes shape as a result). **17e (the
+  detail-and-offer sheet: accept, counter-offer, cancel, T-054 phone gate), 17f (the result
+  dialog, copy corrected) and **17g (routes — the new screen is now REACHABLE from the drawer,
+  the home screen and pushes; four old files are orphans on T-105) and 17h (`OffersListScreen` on
+  the shared chrome, values only; `StatusFilterTabs` orphaned)** are DONE.**
+  ✅ **STEP 17 CLOSED 2026-09-11 (17a-17i).** Unbacked artboard features → **T-109**. Steps left in
+  T-101: 18 (`DriverMyOrder` only — first question: the third tab), 19-22, then 23-26.
+  🛑 **The new screen has never been on a phone — walk it before 18.** Drawer → "Kelgan
+  buyurtmalar" / "Mening buyurtmalarim"; a card → the sheet; an offer → the result dialog → the
+  sent mode; a push about a bid → the sheet by id.
 
   🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
   Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
@@ -2363,6 +2379,18 @@ masofalar'`). **2 of the 6 were on
   `sections/profile/ProfileHeader.tsx` · **`components/DateWheelModal.tsx`** (the wizard's old
   wheel; 16c-2 replaced it with the date-card sheet). ⚠️ The user app's `DateWheelModal` is a
   different file and still live — see above.
+  ➕ **FOUR MORE DRIVER ORPHANS, T-101 step 17g (2026-09-11):** `screens/SearchPassengerOffersScreen.tsx`
+  · `screens/MyJoinRequestsScreen.tsx` · `screens/PassengerOfferDetailsScreen.tsx` (their three ROUTE
+  NAMES survive and render `PassengerOrdersScreen`) · `components/offers/PassengerOfferExtras.tsx`
+  (imported only by the first and third). All zero-importer, grep-verified, exempt in
+  `check-font-weights.mjs` with this card as the reason. ⚠️ With them, most of the
+  `searchPassengerOffers.*` keys (the filter modal, the old empty states) and the join-sheet half of
+  `passengerOfferDetails.*` are unused in all three locales — prune them in the same cleanup.
+  ➕ **`components/offers/StatusFilterTabs.tsx` (17h):** replaced by `PanelTabs`; only the barrel
+  `components/offers/index.ts` still names it. Drop the re-export with the file.
+  ➕ **`utils/date.formatTime` is 12-hour `en-US` ("09:00 PM")** and, after 17g, its only live
+  caller is `components/cards/RideCard.tsx` — itself on this list. Delete it with the orphans, or
+  make it the 24-hour `formatTimeByLanguage`; either way nothing in the live app should call it.
 
 - [ ] T-106 (P2) 🪑 **Per-seat gender + `hex_code` + `vehicle_class` on the driver offer — ONE
   card for BOTH apps' gaps (needs a migration → ask first)**
@@ -2390,6 +2418,25 @@ masofalar'`). **2 of the 6 were on
   one is fixed — found 2026-09-11 when `check-offer-i18n.mjs` caught `common.delete` missing from all
   three locales, a gap `tsc` had let through. Fix: add the `publicOffers` block to `en.ts` and
   `ru.ts`; the baseline then drops 28 → 26 and must be re-recorded (downward, as always).
+
+- [ ] T-109 (P3) 🚕 **`DriverQidiruv` asks for four things the API cannot give — owner to pick**
+  Left out of T-101 step 17 (2026-09-11, all by the owner's accepted recommendations); each needs
+  schema and/or an endpoint before any UI:
+  ① **Driver-side "Rad etish" with a reason** — a driver cannot decline a passenger's ORDER; the only
+  reject on the server is a passenger who joined the driver's offer (`/driver/passengers/:id/reject`).
+  The artboard's four reasons (`Joy qolmadi` · `Vaqti to'g'ri kelmadi` · `Yo'nalish o'zgardi` ·
+  `Boshqa sabab`) would need a table and a passenger notification.
+  ② **Presence and passenger reputation** — the online / "ilova fonda" / "24 soat" dot with "seen
+  9 daq oldin", and `★ 4,8 · 42 qatnov`. No `last_seen`, no online flag, **no rating model exists
+  anywhere in the API** (`grep -ril rating models/` → nothing).
+  ③ **Per-row counter-offer pricing** — front / back / salon / extras each priced, summed. The join
+  request carries ONE `offered_price_per_seat`; a breakdown column would let the sheet's one field
+  become the artboard's rows.
+  ④ **Route matching for "Kelgan buyurtmalar"** — the artboard has no search form because it assumes
+  the server matches orders to the driver; search is `ILIKE` on free text. This is T-102's family
+  (geo ids on offers) plus a driver-route source. Until it lands, the route row stays.
+  ⚠️ Per-seat gender on the DRIVER offer is **T-106**, not this card; the parcel ("Jo'natma") kind is
+  an out-of-scope role (owner 2026-08-30), not a feature gap.
 
 > 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
 > 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —
