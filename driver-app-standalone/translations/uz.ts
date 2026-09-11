@@ -15,6 +15,7 @@ export default {
   common: {
     continue: 'Davom etish',
     cancel: 'Bekor qilish',
+    delete: 'O\'chirish',
     confirm: 'Tasdiqlash',
     ok: 'OK',
     error: 'Xato',

@@ -16,9 +16,15 @@
 
 ## 🔴 BOARD STATE 2026-08-31 — read before starting anything
 
-**`tsc` BASELINES: API 281 · admin 0 · user 6 · driver 28.** All four lint at **0 errors**.
-🟢 **LINT WARNING BASELINES, RE-MEASURED 2026-08-31: user 216 · driver 280.**
-Both are *below* where this card started (user 225 → 218 → **216**, driver 304 → 289 → **280**);
+**`tsc` BASELINES: API 281 · admin 6 (via `tsc -b`) · user 6 · driver 28.** All four lint at **0 errors**.
+🔴 **ADMIN CORRECTED 2026-09-11: "admin 0" was never a measurement.** It came from plain
+`tsc --noEmit` against a solution-style `tsconfig.json` that lists NO files — it checked nothing.
+The build command (`tsc -b`, what `npm run build` runs) reports **6** unused-variable errors in
+files untouched since 2025-11, so a local admin build FAILS; the Dockerfile switches
+`noUnusedLocals`/`noUnusedParameters` off before building, so the deploy is unaffected.
+**Measure admin with `npx tsc -b --pretty false`.**
+🟢 **LINT WARNING BASELINES, RE-MEASURED 2026-09-11: user 216 · driver 275.**
+Both are *below* where this card started (user 225 → 218 → **216**, driver 304 → 289 → 280 → **275**);
 the conversions removed unused imports. **Neither was ever rebaselined upward to accommodate a
 change** — every deviation during the card was a real defect and was fixed.
 🔴 **The 225 / 289 / 304 figures recorded elsewhere in these files are HISTORY, not baselines.**
@@ -1165,9 +1171,14 @@ Edit both copies together and verify with `diff -q`.
       modules. *A grep cannot see nesting — the same trap as step 14's i18n checker, redressed.*
       ✅ Baselines all hold: **driver `tsc` 28 · lint 0 errors / 280 warnings · tokens 3.**
       🛑 **NOT SEEN ON A DEVICE.**
-- [ ] **16.** `OfferWizardScreen` → `DriverElon.dc.html`
+- [x] **16.** `OfferWizardScreen` → `DriverElon.dc.html` — **✅ DONE 2026-09-11 (16a-16g).**
       📦 **SPLIT OUT 2026-09-05 → `docs/PLAN-T101-step16.md`.** It did not fit one step, exactly as
-      this card predicted. **Resume it from that file**; this card stays unchecked until 16a-16g are.
+      this card predicted. **The whole story is in that file** — 16a-16e landed 09-05 → 09-07, 16f-16g
+      09-11. Headlines: the 4-step wizard is ONE scrolling form with four sheets · the edit path
+      restores all 34 fields and a real silent-blanking bug was found in it (16e) · 74 dead style
+      blocks deleted (16f, 3 883 → 1 895 lines over the step) · `check-offer-i18n.mjs` found
+      `common.delete` missing from every locale. Unbacked features → **T-106 · T-107**.
+      🛑 **NOT SEEN ON A DEVICE.**
       🔴 **MEASURED, AND THE CARD'S PREMISE IS WRONG THE SAME WAY STEPS 9-12's WERE.** The artboard
       is **ONE scrolling form**; the screen is a **4-step paginated wizard**. The artboard has no
       step concept at all. This is a RESTRUCTURE, not a repaint. **Owner chose the artboard's
@@ -1285,6 +1296,20 @@ of truth — do not edit the owner's artboards).
 ---
 
 ## Session notes
+
+### 2026-09-11 — step 16 closed (16f + 16g); the rest of its story is in `PLAN-T101-step16.md`
+
+- **16a-16e were done 2026-09-05 → 09-07 without a note here or a journal entry** — those
+  sessions recorded themselves only in the step file. Caught up today in `JOURNAL.md`.
+- **16f:** 74 dead style blocks deleted from the wizard (2 399 → 1 895 lines), the 3 live weights
+  on `theme.font()`, `check-offer-i18n.mjs` new (70 keys × 3, proven red) — and it found
+  `common.delete` missing from every locale. 🔴 **The shell halves backslashes in files it
+  writes**: a measurement said 99/99 styles dead until grep disagreed. **Baselines all hold**
+  (`tsc` 28 · lint 275 · tokens 3 · 7 checkers · `expo export`).
+- **16g:** T-106 / T-107 / T-108 boarded; T-105 extended with the driver app's five orphans.
+- ⚠️ **Admin `tsc` baseline corrected to 6 (via `tsc -b`)** — see the board-state header. The
+  old 0 measured nothing.
+- **Next: step 17 — plan first.**
 
 ### 2026-09-05 (2) — step 16 scoped and split; no code written
 
@@ -1429,7 +1454,7 @@ of truth — do not edit the owner's artboards).
 
 ## Resume point
 
-> **Written 2026-09-05 after scoping step 16, for a brand-new chat session.**
+> **Written 2026-09-11 after closing step 16, for a brand-new chat session.**
 > Read this section, then `docs/JOURNAL.md`'s newest entry. Nothing else is required.
 
 ### 🟢 What is finished
@@ -1437,8 +1462,8 @@ of truth — do not edit the owner's artboards).
 **The COLOUR half of T-101 is complete in both apps** (1 803 raw literals removed; both ceilings
 at their floor and enforced by `scripts/check-design-tokens.mjs`).
 
-**The VISIBLE half: the USER APP is done (steps 6-14). The DRIVER APP has just started
-(step 15 of 15-22).** Screens rebuilt so far:
+**The VISIBLE half: the USER APP is done (steps 6-14). The DRIVER APP is two screens in
+(steps 15-16 of 15-22).** Screens rebuilt so far:
 
 | step | screen | note |
 |---|---|---|
@@ -1456,10 +1481,13 @@ at their floor and enforced by `scripts/check-design-tokens.mjs`).
 | step | screen | note |
 |---|---|---|
 | **15** | **`NavDrawer`** (new) + `MenuScreen` weights | the card named an ORPHAN; most of the artboard is backend-blocked |
+| **16** | **`OfferWizardScreen`** — RESTRUCTURED | 4-step wizard → ONE form + 4 sheets; edit path restores 34/34 fields; 3 883 → 1 895 lines. Full story in `PLAN-T101-step16.md` |
 
 **Baselines, all six at their long-standing values:**
-user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **280** · tokens **3**.
-**Re-measured 2026-09-05 after step 15 — unchanged.** ⚠️ Measure the driver app's lint only after
+user `tsc` **6** · lint **216** · tokens **1** · driver `tsc` **28** · lint **275** · tokens **3**.
+**Re-measured 2026-09-11 after step 16 — unchanged** (driver lint fell 280 → 275 during step 16 and
+was never rebaselined up). ⚠️ **Admin's `tsc` baseline is 6, measured with `tsc -b`** — the old
+"admin 0" ran against a config with no files. ⚠️ Measure the driver app's lint only after
 deleting any scratch file you wrote into it: a stray esbuild bundle in `driver-app-standalone/tmp/`
 showed **5 errors** on a project whose baseline is **0**.
 🔴 **Never rebaseline upward.** Three lint warnings appeared during step 9 (`catch (error: any)`
@@ -1471,20 +1499,29 @@ because `isAuthError`/`getErrorMessage` both accept `any`.
 `check-order-lifecycle.mjs` (18) · `check-i18n-myorders.mjs` (69 keys × 3 locales).
 **driver app** — `check-design-tokens.mjs` · **`check-font-weights.mjs`** (new, step 15) ·
 **`check-drawer.mjs`** (new, step 15: 10 routes + 21 keys × 3 locales) ·
-**`check-offer-validation.mjs`** (new, step 16a: ~30 assertions on the wizard's rules).
+**`check-offer-validation.mjs`** (16a) · **`check-offer-schedule.mjs`** (16c-2) ·
+**`check-offer-restore.mjs`** (16e, 41 assertions) · **`check-offer-i18n.mjs`** (16f, 70 keys × 3).
 **Every one has been proven able to go red.**
+🔴 **THE SHELL THIS SESSION WRITES FILES THROUGH HALVES BACKSLASHES** — heredocs AND inline node
+strings alike: `\.` arrives as `.`, `\b` as a backspace. On 2026-09-11 that made a measurement report
+99/99 style keys dead (grep said 29 live) and put the step-11 unescaped-dot bug into a checker as it
+was written. **Write scripts with the editor tool, use backslash-free regexes (`[.]`, `[{]`,
+`(?![A-Za-z0-9_])`), and read every new script back before trusting a green run.**
 📋 **Port back to the user app's `check-font-weights.mjs`** the two gaps the driver copy closed:
 the **unquoted** `fontWeight: 700` spelling, and scanning `sections/` + `utils/`.
 
 ### ▶️ Next actions, in the order they are worth doing
 
-0. ▶️ **STEP 16 IS THE LIVE TASK, AND IT LIVES IN `docs/PLAN-T101-step16.md`.**
-   **16a is DONE** (2026-09-05): the wizard's rules are now pure in
-   `utils/offerWizardValidation.ts`, `handleSave` validates **every** section, and
-   `scripts/check-offer-validation.mjs` asserts on them (**proven able to fail on 5 mutations**).
-   **Next: 16b** — cut `renderStep1..4` into the artboard's sections, wizard still paginating.
-   Owner has already decided: **one scrolling form**, **backend-only content**.
-   ⚠️ **A new checker joins the must-stay-green list: `check-offer-validation.mjs`.**
+0. ▶️ **STEP 16 IS CLOSED (2026-09-11). NEXT IS STEP 17 — `OffersListScreen` +
+   `SearchPassengerOffersScreen` → `DriverQidiruv.dc.html` — AND IT NEEDS A PLAN FIRST (rule 3).**
+   Before believing its one-line card, measure the artboard: every step since 9 has turned out to be
+   a restructure the card called a repaint. Known already: the `Qidiruv` boards' filter strip is
+   TABS welded to a panel (`radius 12px 12px 0 0`, `border-bottom: none`), NOT `SegmentedModes` —
+   build that variant separately; the search card **cannot match its artboard until T-106** lands
+   (per-seat gender, `hex_code`, `vehicle_class`); T-102 / T-103 still gate the scopes. Both screens
+   were converted to `GeoSheet` in 7d, so their geo cascade is already the artboards' picker.
+   Consider splitting step 17 into its own plan file as 16 was — `SearchPassengerOffersScreen` is
+   1 262 lines of working search.
 
 0b. 🛑 **DECIDE WHAT `DriverMenu` IS WITHOUT A BACKEND.** Step 15 shipped the drawer and left the
    artboard's whole centre unbuilt — the **online/offline toggle**, the two **shablon** route

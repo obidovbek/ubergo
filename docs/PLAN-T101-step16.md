@@ -314,12 +314,52 @@ their loading rules (`?? undefined`, never `||`) must survive.
       field, rather than casting at the call sites.
       🛑 **STILL UNRUN ON A DEVICE.** The defect above is proven by construction and by
       assertion; it has not been watched failing and then passing on a real offer.
-- [ ] **16f. Checkers + baselines.** `check-font-weights.mjs` (drop `OfferWizardScreen.tsx` and
-      `DateWheelModal.tsx` from `EXEMPT_FILES` — **their reason expires here**),
-      `check-design-tokens.mjs`, `check-drawer.mjs`, `tsc`, lint. A new checker if 16a/16c earn one.
-      ⚠️ **16b's i18n probe was a throwaway** — if 16c/16d add keys, make it a real
-      `check-offer-i18n.mjs` rather than re-typing it, and prove it red first.
-- [ ] **16g. Board the unbacked features** (§3) and update `PLAN.md`, `TODO.md`, `JOURNAL.md`.
+- [x] **16f. Checkers + baselines. ✅ DONE 2026-09-11.**
+      ✅ **`check-font-weights.mjs`: the wizard's exemption is gone**, and the checker went RED on its
+      32 literals before anything was converted — the proof it can see this file. ⚠️ **`DateWheelModal.tsx`
+      is NOT converted: it has had ZERO importers since 16c-2** (grep-verified). Its exemption now reads
+      "orphan → T-105"; converting dead code has no user-visible effect (the step-14 rule).
+      🔴 **29 OF THE 32 LITERALS WERE IN DEAD STYLE BLOCKS.** Measuring the WHOLE stylesheet rather than
+      the flagged keys: **99 keys, 25 live, 74 dead** — the old geo modal, stop cards, chips and wheel
+      picker that 16c/16d replaced (16d's per-symbol count covered only the 15 keys it touched).
+      **74 blocks deleted — recomputed by reference count inside the script, not pasted from the
+      measurement — and the 3 live weights → `theme.font('sans', n)`. Screen 2 399 → 1 895.** `tsc` is
+      the proof nothing live was cut: a deleted key still referenced would be an error, and it is 28.
+      🔴 **THE MEASUREMENT WAS WRONG TWICE BEFORE IT WAS RIGHT, AND grep IS WHAT EXPOSED IT.** The shell
+      this session writes files through HALVES BACKSLASHES — in a heredoc AND in inline node strings —
+      so `\.` reached the regex as `.` and `\b` as a BACKSPACE character. The script reported
+      **99/99 dead** while grep counted 29 live references. Rewritten with regexes that need no
+      backslash (`[.]`, `(?![A-Za-z0-9_])`). *Two tools disagreeing IS the finding; trust neither
+      until they agree.*
+      ✅ **`scripts/check-offer-i18n.mjs` (new)** — bundles the real locales with esbuild and sweeps
+      (file, prefix) pairs: the screen (`offerWizard` · `common` · `errors`) plus the two rule modules
+      whose keys never pass through `t()`. **70 keys × 3 locales, 210 lookups.** Proven RED by renaming
+      `errorMinAdvance` in uz — a key that reaches the screen only as a VALUE returned by
+      `utils/offerSchedule.ts`, the case a `t('`-anchored pattern misses. Restored; `git diff` on the
+      locale shows only the one intended line.
+      🔴 **AND ITS FIRST VERSION HAD THE STEP-11 UNESCAPED-DOT DEFECT** — the same backslash loss, in a
+      file I had just written. Caught by reading the file back, not by the run: the run was green
+      either way. **A checker written through this shell must be read back before it is trusted.**
+      🔴 **FIRST GREEN RUN FOUND A REAL DEFECT: `common.delete` EXISTED IN NO LOCALE.** The stop row's
+      remove button used it as its accessibility label, so a screen reader announced the raw key.
+      Added to uz / ru / en (`O'chirish` / `Удалить` / `Delete`).
+      ⚠️ **`tsc` CANNOT GUARD LOCALE COMPLETENESS RIGHT NOW.** `translations/index.ts` already fails
+      TS2741 because `publicOffers` is missing from `en` and `ru` — 2 of the 28 baseline errors — and
+      TS2741 names ONE missing property per file. A second missing key stays invisible until that one
+      is fixed. The i18n checkers are the only guard until then. → **T-108** (boarded in 16g).
+      ✅ **Baselines: `tsc` 28 · lint 0 errors / 275 warnings · tokens 3** (the wizard alone still 29
+      warnings — 507 deleted lines moved none) · **all 7 checkers green** · `expo export` bundles clean.
+      🛑 **NOT SEEN ON A DEVICE.** The 3 converted weights (loading text, header title, primary button)
+      are exactly the class only a phone can verify.
+- [x] **16g. Board the unbacked features + update the memory files. ✅ DONE 2026-09-11.**
+      ✅ **T-106** (per-seat gender + `hex_code` + `vehicle_class` on the driver offer — ONE card for
+      both the wizard's seat grid and the search card) · **T-107** (the other `DriverElon` blocks with
+      no column: Maxsus buyurtma, dostavka, inline multi-vehicle) · **T-108** (`publicOffers` missing
+      from `en`/`ru` — the 2 baseline `tsc` errors that blind TS2741 to any further missing key).
+      **T-105** gained the driver app's five orphans (four from step 15 + `DateWheelModal`).
+      ✅ `PLAN.md` step 16 checked, session note added, Resume point rewritten; `TODO.md` T-101 card
+      annotated; `JOURNAL.md` caught up for 09-05 → 09-07 (those sessions never ran `/end-day`) and
+      written for today.
 
 ---
 
@@ -332,14 +372,39 @@ bundle in `driver-app-standalone/tmp/` showed 5 errors on a project whose baseli
 
 🟢 **Lint is 275 after 16c-2 (2026-09-06) — five below the card's 280, never rebaselined up.**
 🟢 **Still 275 after 16d (2026-09-07)** — the cut removed no warning and added none.
+🟢 **Still 275 after 16f (2026-09-11)** — 507 lines of dead styles deleted; the wizard alone is
+still 29 warnings, so the cut moved nothing.
 
 **Checkers that must stay green** (`node scripts/…` in `driver-app-standalone`):
 `check-design-tokens.mjs` · `check-font-weights.mjs` · `check-drawer.mjs` ·
-`check-offer-validation.mjs` · `check-offer-schedule.mjs` · `check-offer-restore.mjs`.
+`check-offer-validation.mjs` · `check-offer-schedule.mjs` · `check-offer-restore.mjs` ·
+`check-offer-i18n.mjs` (16f).
+⚠️ **Scripts written through this session's shell lose backslashes** (`\.` → `.`, `\b` → backspace).
+Write regexes without them (`[.]`, `[{]`, `(?![A-Za-z0-9_])`) and read every new script back.
 
 ---
 
 ## 6. Session notes
+
+### 2026-09-11 — 16f + 16g: the checker was right, the measurement was wrong twice, step 16 closes
+
+- **16f done.** The wizard's font-weight exemption is retired; **74 of its 99 style blocks were
+  dead** (the modals and pickers 16c/16d replaced) and are deleted — screen **2 399 → 1 895**;
+  the 3 live weights use `theme.font()`. `DateWheelModal` is an orphan (zero importers since
+  16c-2), not a conversion → T-105.
+- 🔴 **My measurement said 99/99 dead. grep said 29 live. grep was right.** The shell this
+  session writes files through halves backslashes — `\.` became `.` and `\b` a backspace — in a
+  heredoc and in inline node alike. *When two tools disagree, the disagreement is the finding.*
+  Regexes now avoid backslashes entirely (`[.]`, `(?![A-Za-z0-9_])`).
+- 🔴 **The same loss put the step-11 unescaped-dot bug into the NEW i18n checker** as I wrote
+  it. Read back and fixed; the green run could not have told me.
+- 🔴 **`check-offer-i18n.mjs` found a real defect on its first run:** `common.delete` (the stop
+  row's remove-button accessibility label) existed in no locale. Added to all three.
+- ⚠️ **`tsc` is not guarding locale completeness:** `publicOffers` is already missing from
+  `en`/`ru` (2 of the 28 baseline errors) and TS2741 reports one property at a time. → T-108.
+- **16g done.** T-106 / T-107 / T-108 boarded, T-105 extended, PLAN / TODO / JOURNAL updated.
+- **Next: step 17 (`DriverQidiruv`) — needs its own plan first (rule 3); measure the artboard
+  before believing the card, as every step since 9 has required.**
 
 ### 2026-09-07 (2) — 16e: the warning at line 296 was describing a live bug
 

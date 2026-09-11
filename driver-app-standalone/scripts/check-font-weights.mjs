@@ -75,10 +75,10 @@ const EXEMPT_FILES = new Map([
   ['components/cards/RideCard.tsx', 'orphan, zero importers -> T-105'],
   ['sections/home/RideTypeSelector.tsx', 'orphan, zero importers -> T-105'],
   ['sections/profile/ProfileHeader.tsx', 'orphan, zero importers -> T-105'],
-
-  // ---- step 16: the offer wizard (DriverElon), the app's biggest screen.
-  ['screens/OfferWizardScreen.tsx', 'step 16 rebuilds it'],
-  ['components/DateWheelModal.tsx', 'step 16 owns the wizard date sheet'],
+  // Step 16c-2 replaced the wizard's date wheel with the artboard's date-card sheet; nothing
+  // imports this file any more (grep-verified 2026-09-11). Converting dead code has no
+  // user-visible effect (the step-14 rule), so it waits for deletion with the others.
+  ['components/DateWheelModal.tsx', 'orphan since 16c-2, zero importers -> T-105'],
 
   // ---- step 17: search / offer lists (DriverQidiruv).
   ['screens/OffersListScreen.tsx', 'step 17 rebuilds it'],

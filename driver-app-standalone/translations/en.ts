@@ -14,6 +14,7 @@ export default {
   common: {
     continue: 'Continue',
     cancel: 'Cancel',
+    delete: 'Delete',
     confirm: 'Confirm',
     ok: 'OK',
     error: 'Error',

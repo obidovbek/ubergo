@@ -14,6 +14,7 @@ export default {
   common: {
     continue: 'Продолжить',
     cancel: 'Отмена',
+    delete: 'Удалить',
     confirm: 'Подтвердить',
     ok: 'ОК',
     error: 'Ошибка',

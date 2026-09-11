@@ -5,6 +5,72 @@
 
 ---
 
+## 2026-09-11 — step 16 closed; a measurement that lied twice, and a checker that paid for itself
+
+- **Task:** T-101 step 16f + 16g — checkers and baselines for the driver's offer wizard, then
+  board what the artboard asks for and the API cannot give.
+
+### What happened
+
+- **Start-of-day check of every "done":** every recorded baseline holds and every checker passes
+  (API 238 tests · `tsc` 281 / 6 / 28 · lint 0 errors everywhere · tokens 1 / 3 · 11 checkers ·
+  the driver bundle exports). 🔴 **Except the admin panel: "admin 0" was never a measurement.**
+  Plain `tsc --noEmit` there checks a solution-style config with NO files. The build command
+  reports **6** unused-variable errors untouched since 2025-11; a local `npm run build` fails, the
+  Dockerfile turns the two flags off so the deploy is fine. Baseline corrected to 6.
+- **16f:** the wizard's font-weight exemption expired. **29 of its 32 literals were in DEAD style
+  blocks** — measuring the whole stylesheet found 74 of 99 keys unreferenced (the modals and
+  pickers 16c/16d replaced). Deleted: **2 399 → 1 895 lines.** Three live weights on
+  `theme.font()`. `DateWheelModal` turned out to be an orphan, not a conversion.
+- 🔴 **The measurement reported 99/99 dead — twice.** The shell this session writes files through
+  halves backslashes, so `\.` became `.` and `\b` a backspace character. grep disagreed, and grep
+  was right. Every regex in today's scripts now avoids backslashes.
+- ✅ **`check-offer-i18n.mjs`** — 70 keys × 3 locales across the screen and the two rule modules,
+  proven red. 🔴 **Its first green run found `common.delete` in no locale** (a remove button's
+  accessibility label read as the raw key). 🔴 And its own first version carried the step-11
+  unescaped-dot defect, from the same backslash loss — caught only by reading the file back.
+- ⚠️ **`tsc` is not guarding locale completeness**: `publicOffers` is already missing from
+  `en`/`ru` and TS2741 names one property at a time. → **T-108**.
+- **16g:** T-106 (per-seat gender + colour + class, both apps), T-107 (the other unbacked wizard
+  blocks) and T-108 boarded; T-105 extended with the driver app's five orphans.
+
+### Verification
+
+`tsc` 28 · lint 0 / 275 · tokens 3 · 7 driver checkers green · `expo export` clean — all
+unchanged from 16e. The wizard alone stays at 29 lint warnings: 507 deleted lines moved none.
+
+🛑 **NOTHING FROM STEP 8e ONWARD HAS RUN ON A DEVICE — including all of step 16.** The owner's
+next phone session decides whether "matches the artboard" is true; the checkers cannot.
+
+**Next:** step 17, `DriverQidiruv` — plan first, and measure the artboard before trusting the card.
+
+---
+
+## 2026-09-05 → 09-07 — catch-up: steps 13-16e ran without a journal entry
+
+*Written 2026-09-11 from the session notes in `PLAN.md` and `PLAN-T101-step16.md`; those
+sessions never ran `/end-day`.*
+
+- **09-03 (late):** step 13 (user auth, values only — the artboard's 5-digit code and custom keypad
+  were deliberately NOT built: the server sends 4 digits and a `View` keypad kills SMS autofill)
+  and step 14 (strays; the font-weight checker was born because the Android weight trap had three
+  spellings).
+- **09-05:** step 15 — `DriverMenu`. The card named an orphan (`HomeScreen` is unrouted); the
+  hamburger opened the profile, the same defect step 11 fixed in the user app; the artboard's
+  online/offline mechanic has no backend and was not built. Step 16 scoped and split into its own
+  file: the card said "repaint", the artboard is ONE form against a 4-step wizard.
+- **09-05 → 09-06:** 16a `validateAll()` before the pagination could go (submit used to validate
+  one step) · 16b section components — the from/to code was the same 116 lines twice · 16c-1 the
+  geo sheets · 16c-2 departure window + arrival deadline, rules written and mutation-tested before
+  the gesture existed.
+- **09-07:** 16d the wizard became a form (2 630 → 2 398; a 0-byte truncation was only survivable
+  because of the commit minutes earlier) · 16e the edit path — **a real silent bug: multi-city
+  endpoints were restored inside a `stops.length > 0` guard, so an offer without stops blanked its
+  route on the next save.** `offerRestore.ts` + 41 assertions, red on 7 mutations.
+- Baselines held throughout: `tsc` 28 · lint 280 → 275 (never up) · tokens 3.
+
+---
+
 ## 2026-09-03 — four screens, and four cards that were wrong until measured
 
 - **Task:** T-101 steps 9, 10, 11 and 12 — the user app's remaining list, detail, chrome and

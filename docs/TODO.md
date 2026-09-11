@@ -88,6 +88,14 @@
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN.md`.
   ✅ **PLAN APPROVED 2026-08-30. Phase 1 (foundation) complete. Committed through `c005785`.**
+  🟢 **2026-09-11 — STEP 16 (`DriverElon`, the driver's offer wizard) IS CLOSED: 16a-16g.** The
+  4-step wizard is ONE scrolling form with four sheets; the edit path restores all 34 fields (a real
+  silent-blanking bug was found and fixed in 16e); 74 dead style blocks went in 16f. **Steps 13-15
+  (user auth values-only, the strays, `DriverMenu`) were also done 09-03 → 09-05 and never noted on
+  this card.** New checker `check-offer-i18n.mjs` found `common.delete` missing from every locale.
+  Unbacked artboard features boarded as **T-106 · T-107**; **T-108** is the locale gap that blinds
+  `tsc`. ⚠️ **Admin `tsc` baseline corrected 0 → 6** (the 0 measured nothing; see `PLAN.md`).
+  🛑 **Nothing from step 8e onward has run on a device.** Next: step 17 (`DriverQidiruv`).
 
   🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
   Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
@@ -2348,6 +2356,40 @@ masofalar'`). **2 of the 6 were on
   it for the birth date. Checked, not assumed.
   ⚠️ **Check `GeoPickerModal` in the driver app is NOT the same thing** — it consolidated 7 copies
   in T-036 and has a multi-select `GeoSheet` lacks. **That one stays.**
+  ➕ **DRIVER APP ORPHANS, 2026-09-11** (step 15 found four, 16c-2 made a fifth; all zero-importer,
+  grep-verified; each sits in the driver `check-font-weights.mjs` exempt list with this card as the
+  reason): `screens/HomeScreen.tsx` (exported, never routed — the Home tab is `MenuScreen`) ·
+  `components/cards/RideCard.tsx` · `sections/home/RideTypeSelector.tsx` ·
+  `sections/profile/ProfileHeader.tsx` · **`components/DateWheelModal.tsx`** (the wizard's old
+  wheel; 16c-2 replaced it with the date-card sheet). ⚠️ The user app's `DateWheelModal` is a
+  different file and still live — see above.
+
+- [ ] T-106 (P2) 🪑 **Per-seat gender + `hex_code` + `vehicle_class` on the driver offer — ONE
+  card for BOTH apps' gaps (needs a migration → ask first)**
+  `DriverElon.dc.html` assigns m/f to each seat (`seatGenders`, long-press to flip), and the
+  `DriverQidiruv` / `UserQidiruv` offer card shows per-seat gender, the car's colour swatch and its
+  class. The API has only `seats_total` / `seats_free`, and no colour or class on the offer response.
+  Recorded on the SEARCH side in `PLAN.md` (steps 7 / 17) and on the WIZARD side in
+  `PLAN-T101-step16.md` §3 — one missing feature showing up twice. Until it lands, neither the
+  wizard's seat grid nor the search card can match its artboard; T-101 shipped without them.
+  ⚠️ The passenger side already has a three-state seat marker (`maleTint` / `femaleTint` tokens) —
+  reuse its shape, don't invent a second one.
+
+- [ ] T-107 (P3) 🧾 **The other `DriverElon` blocks with no column behind them — owner to pick**
+  Left out of T-101 step 16 on the 2026-09-03 rule ("build only what has a backend"):
+  ① **"Maxsus buyurtma"** — `specialPrices` / `specialLines` / `specialTotal` / `confirmSpecial`
+  and the 3 000 so'm-per-unit rule; ② **dostavka** (`dost` / `dostPhone`); ③ **inline
+  "Yangi mashina qo'shish"** — the artboard adds cars on the offer form, but the driver profile
+  holds ONE vehicle (step 21 / the `DriverMashinalar` gap, the same finding as step 15's drawer).
+  Each needs schema + endpoint before any UI. Board separately once the owner chooses.
+
+- [ ] T-108 (P3) 🌐 **`publicOffers` translations missing from `en` and `ru` — and while they are,
+  `tsc` cannot see any OTHER missing key**
+  `translations/index.ts` fails TS2741 on both files (2 of the driver app's 28 baseline `tsc`
+  errors). TS2741 names ONE missing property per file, so a second omission is invisible until this
+  one is fixed — found 2026-09-11 when `check-offer-i18n.mjs` caught `common.delete` missing from all
+  three locales, a gap `tsc` had let through. Fix: add the `publicOffers` block to `en.ts` and
+  `ru.ts`; the baseline then drops 28 → 26 and must be re-recorded (downward, as always).
 
 > 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
 > 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —
