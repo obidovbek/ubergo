@@ -107,11 +107,21 @@
   dialog, copy corrected) and **17g (routes — the new screen is now REACHABLE from the drawer,
   the home screen and pushes; four old files are orphans on T-105) and 17h (`OffersListScreen` on
   the shared chrome, values only; `StatusFilterTabs` orphaned)** are DONE.**
-  ✅ **STEP 17 CLOSED 2026-09-11 (17a-17i).** Unbacked artboard features → **T-109**. Steps left in
-  T-101: 18 (`DriverMyOrder` only — first question: the third tab), 19-22, then 23-26.
-  🛑 **The new screen has never been on a phone — walk it before 18.** Drawer → "Kelgan
-  buyurtmalar" / "Mening buyurtmalarim"; a card → the sheet; an offer → the result dialog → the
-  sent mode; a push about a bid → the sheet by id.
+  ✅ **STEP 17 CLOSED 2026-09-11 (17a-17i).** Unbacked artboard features → **T-109**.
+  ✅ **STEP 18 CLOSED 2026-09-12 (18a-18f), → `docs/PLAN-T101-step18.md`.** `MyRidesScreen` merges
+  `OffersListScreen` + `OfferPassengersScreen` into the driver's rides in three DERIVED phases,
+  each card expanding to its passengers; the artboard's nine-reason reject sheet is real backend.
+  🔴 **The step-18 card was wrong the same way 16 and 17 were** — `DriverMyOrder` draws the
+  driver's OWN offers, not "accepted rides", so its "third tab" question dissolved and **17h's
+  "no artboard draws `OffersList`" was wrong.** Unbacked features → **T-110**; 5 files → T-105.
+  **Steps left in T-101: 19-22, then 23-26 — plus 2b, still unchecked.**
+  🛑 **STEPS 15-18 HAVE NEVER BEEN ON A PHONE, AND 18 REPLACES THE DRIVER'S MOST-USED TAB.**
+  This is now the gate before step 19, and **2b (native install + prebuild) blocks the walk.**
+  Walk, in order: the `Buyurtmalarim` tab → three phases, a card expands to its passengers,
+  confirm one and watch the ride move phase, reject one with a reason, cancel/archive/publish;
+  then the drawer → "Kelgan buyurtmalar" / "Mening buyurtmalarim" (step 17); a card → the sheet;
+  an offer → the result dialog → the sent mode; a push about a bid → the sheet by id; a push
+  about a join request → the right ride's card, in the right phase.
 
   🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
   Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
@@ -2388,6 +2398,17 @@ masofalar'`). **2 of the 6 were on
   `passengerOfferDetails.*` are unused in all three locales — prune them in the same cleanup.
   ➕ **`components/offers/StatusFilterTabs.tsx` (17h):** replaced by `PanelTabs`; only the barrel
   `components/offers/index.ts` still names it. Drop the re-export with the file.
+  ➕ **FOUR MORE DRIVER ORPHANS, T-101 step 18e (2026-09-12)** — the offers-list / passengers merge
+  (`MyRidesScreen`). ⚠️ **They are a CLOSED DEAD CLUSTER, not four loose files**, so they come out
+  together or not at all: `screens/OffersListScreen.tsx` (reachable only through
+  `screens/index.ts`, a barrel **nothing imports** — verified) · `screens/OfferPassengersScreen.tsx`
+  (zero importers) · `components/offers/OfferCard.tsx` · `components/offers/OfferDetailModal.tsx`
+  (both reachable only through `components/offers/index.ts`, whose **only** importer is
+  `OffersListScreen` itself). `StatusFilterTabs` above is the fifth member of the same cluster.
+  **Both route names survive** — `OffersList` (the tab) and `OfferPassengers { offerId }` (the push
+  target) now render `MyRidesScreen`.
+  ⚠️ `screens/index.ts` re-exports `OffersListScreen` and is imported by nothing at all; consider
+  deleting the barrel outright rather than editing it.
   ➕ **`utils/date.formatTime` is 12-hour `en-US` ("09:00 PM")** and, after 17g, its only live
   caller is `components/cards/RideCard.tsx` — itself on this list. Delete it with the orphans, or
   make it the 24-hour `formatTimeByLanguage`; either way nothing in the live app should call it.
@@ -2437,6 +2458,32 @@ masofalar'`). **2 of the 6 were on
   (geo ids on offers) plus a driver-route source. Until it lands, the route row stays.
   ⚠️ Per-seat gender on the DRIVER offer is **T-106**, not this card; the parcel ("Jo'natma") kind is
   an out-of-scope role (owner 2026-08-30), not a feature gap.
+
+- [ ] T-110 (P3) 🚐 **`DriverMyOrder` asks for SEVEN things the API cannot give — owner to pick**
+  Left out of T-101 step 18 (2026-09-12, by the owner's accepted recommendations). Each needs
+  schema and/or an endpoint before any UI; **none was faked** (the 2026-09-01 no-fabricated-state
+  rule). The artboard draws all seven as if they work, so this card is what the screen is missing:
+  ① **Per-passenger delivery steps** — `Kutilmoqda → Mashinada → Yetkazildi` with `Oldim` /
+  `Yetkazdim` buttons, per passenger AND per parcel. `OfferPassenger.status` is the BOOKING's
+  state (pending/confirmed/rejected/cancelled); there is no ride-progress column anywhere.
+  ② **Parcel orders** (`Jo'natmalar` per route, with prices, sender/receiver and their own 3
+  steps). No parcel-order model exists. ⚠️ The driver offer's `parcel_accepted` / `parcel_price` /
+  `parcel_max_kg` FLAGS exist — the flags are not orders.
+  ③ **In-app messaging** — the `Xabar` sheet with quick replies and sent/delivered/read ticks.
+  No chat model, no endpoint, no push type.
+  ④ **`Budilnik` (wake-the-passenger ping)** — no endpoint, no push type.
+  ⑤ **Cancelling a whole RIDE with a reason** — `POST /driver/offers/:id/cancel` reads **no body**
+  (`DriverOfferController.cancelOffer`), so the artboard's 6 `ROUTE_CANCEL_REASONS` would be typed
+  and dropped. ⚠️ The PASSENGER reject reason is different and **is** backed — it shipped in 18c.
+  ⑥ **An active-offer limit** (`Faol e'lon: 2 / 2` + the "limit to'ldi" note). **No limit exists
+  server-side** — grep of `DriverOfferService` finds nothing. A ceiling the server does not
+  enforce is decoration that lies.
+  ⑦ **A `completed` ride state.** The artboard's `Yakunlangan` has no column; `archived` is the
+  nearest real thing and is what step 18 uses, with an "o'tgan" hint on a past departure.
+  ⚠️ **`api/rides.ts` (`startRide` · `completeRide` · `cancelRide(reason)`) looks like the backing
+  for ① ⑤ ⑦ and is DEAD** — the server's `/rides` router is commented out (`routes/index.ts:149`).
+  **Do not wire it.**
+  ⚠️ Passenger rating and presence are **T-109 ②**, not this card.
 
 > 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
 > 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —

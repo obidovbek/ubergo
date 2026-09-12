@@ -13,7 +13,11 @@
  * there as genuinely new work rather than a repaint. Until that screen exists a fifth
  * tab would ship a crash or a blank, so the bar carries four.
  *
- * ⚠️ Detail screens (OfferPassengers, the five document screens, …) stay in the parent
+ * 🔴 T-101 step 18e — the `OffersList` TAB is now `MyRidesScreen`: the driver's own rides
+ * with their passengers nested, in three derived phases (`DriverMyOrder.dc.html`). The route
+ * NAME is unchanged — the drawer, the home screen and the wizard all navigate by it.
+ *
+ * ⚠️ Detail screens (the five document screens, …) stay in the parent
  * stack so they push OVER the bar, matching the artboards.
  */
 
@@ -21,7 +25,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MenuScreen } from '../screens/MenuScreen';
 import { OfferWizardScreen } from '../screens/OfferWizardScreen';
-import { OffersListScreen } from '../screens/OffersListScreen';
+import { MyRidesScreen } from '../screens/MyRidesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { BottomTabBar, type TabIconMap } from '../components/chrome/BottomTabBar';
 
@@ -48,7 +52,7 @@ export const MainTabs: React.FC = () => (
     />
     <Tab.Screen
       name="OffersList"
-      component={OffersListScreen}
+      component={MyRidesScreen}
       options={{ tabBarLabel: 'Buyurtmalarim' }}
     />
     <Tab.Screen

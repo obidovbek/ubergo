@@ -43,6 +43,14 @@ const TARGETS = [
   // T-101 step 17: the passenger-orders screen. The rules module returns keys under the
   // existing prefixes; the card adds `passengerOrders.*`.
   ['utils/passengerOrders.ts', ['passengerOfferExtras', 'passengerOfferDetails', 'myJoinRequests']],
+  // T-101 step 18: the rides screen. The rules module returns `myRides.*` and reuses
+  // `offerPassengers.*` / `driverOffers.*`; 18c-18d add the components and the screen here.
+  ['utils/myRides.ts', ['myRides', 'offerPassengers', 'driverOffers']],
+  ['components/rides/MyRideCard.tsx', ['myRides', 'driverOffers']],
+  ['components/rides/BookingRow.tsx', ['myRides', 'offerPassengers']],
+  ['components/rides/BookingSheet.tsx', ['myRides', 'offerPassengers', 'driverOffers', 'common']],
+  ['components/rides/RejectReasonSheet.tsx', ['myRides', 'offerPassengers', 'common']],
+  ['screens/MyRidesScreen.tsx', ['myRides', 'offerPassengers', 'driverOffers', 'common', 'errors']],
   ['components/offers/PassengerOrderCard.tsx', ['passengerOrders', 'passengerOfferExtras', 'myJoinRequests']],
   [
     'screens/PassengerOrdersScreen.tsx',

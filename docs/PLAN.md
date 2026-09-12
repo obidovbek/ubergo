@@ -1208,9 +1208,21 @@ Edit both copies together and verify with `diff -q`.
       values-only conversion. ⚠️ **No route search in the artboard and no matching backend** — the
       route row stays by recommendation. 🛑 **No API for the driver to reject an order** — `Rad etish`
       not built. 🟢 Seat cells ARE backed on this side (`seat_counts`).
-- [ ] **18.** `MyJoinRequestsScreen` + `OfferPassengersScreen` + `PassengerOfferDetailsScreen`
-      → `DriverMyOrder.dc.html` + `DriverOrder.dc.html` *(the latter lives ONLY in
-      `uploads/Chek_28082026/`)*
+- [x] **18.** `OffersListScreen` + `OfferPassengersScreen` → `DriverMyOrder.dc.html`.
+      **✅ CLOSED 2026-09-12 (18a-18f, one day).** What shipped: **`MyRidesScreen`** — the driver's
+      own rides in three DERIVED phases (Jarayonda / Faol / Tarix), each card expanding to its
+      passengers, with `MyRideCard` (the only gradient card body in either app), `BookingRow`,
+      `BookingSheet` and the artboard's nine-reason `RejectReasonSheet`; both old route names
+      (`OffersList`, `OfferPassengers`) render it; one pure module with 64 assertions red on 11
+      mutations; 31 keys × 3; six palette tokens in both apps; T-110 boarded; five files → T-105.
+      🛑 **NOT SEEN ON A DEVICE — and it replaces the driver's most-used tab.**
+      📦 **SPLIT OUT 2026-09-12 → `docs/PLAN-T101-step18.md`** — the whole story lives there.
+      📦 **SPLIT OUT 2026-09-12 → `docs/PLAN-T101-step18.md`. Measured; the card was wrong AGAIN:**
+      the artboard is the driver's **OWN OFFERS with their passengers nested** in three DERIVED
+      phases (Jarayonda = seats free · Faol = 0 free · Tarix = archived/cancelled) — i.e.
+      **`OffersListScreen` + `OfferPassengersScreen` merged**, not "accepted rides". So the
+      third-tab question dissolves (same screen), and **17h's "no artboard draws `OffersList`" was
+      wrong — `DriverMyOrder` does.** 🛑 Seven owner decisions in that file gate 18a.
       ⚠️ **RESCOPED 2026-09-11 by step 17's measurement:** `DriverOrder.dc.html` is an OLDER COPY of
       `DriverQidiruv` (same data, same modes) and `MyJoinRequests` + `PassengerOfferDetails` are
       absorbed by step 17. **What is left: `DriverMyOrder` only** (Jarayonda / Faol / Tarix — the

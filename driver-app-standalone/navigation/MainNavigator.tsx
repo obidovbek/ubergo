@@ -25,7 +25,7 @@ import { DriverLicenseScreen } from '../screens/DriverLicenseScreen';
 import { DriverVehicleScreen } from '../screens/DriverVehicleScreen';
 import { DriverTaxiLicenseScreen } from '../screens/DriverTaxiLicenseScreen';
 import { DriverDetailsScreen } from '../screens/DriverDetailsScreen';
-import OfferPassengersScreen from '../screens/OfferPassengersScreen';
+import { MyRidesScreen } from '../screens/MyRidesScreen';
 import PassengerOrdersScreen from '../screens/PassengerOrdersScreen';
 
 const Stack = createNativeStackNavigator();
@@ -80,9 +80,13 @@ export const MainNavigator: React.FC = () => {
           headerShown: false,
         }}
       />
+      {/* T-101 step 18e — `OfferPassengers { offerId }` IS the rides screen now, opened on
+          that ride's card (`DriverMyOrder`). The name stays: `notificationRouting.ts` and the
+          wizard navigate by it. `OfferPassengersScreen` and `OffersListScreen` are orphans
+          (not deleted — rule 4) → T-105. */}
       <Stack.Screen
         name="OfferPassengers"
-        component={OfferPassengersScreen}
+        component={MyRidesScreen}
         options={{
           headerShown: false,
         }}

@@ -5,6 +5,65 @@
 
 ---
 
+## 2026-09-12 — step 18: the card was wrong again, and so was the step's own premise
+
+- **Task:** T-101 step 18 — `DriverMyOrder.dc.html`. Scoped, approved, and closed the same day.
+
+### What happened
+
+- **Scoped by measuring the artboard first, and the card was wrong.** It said "the driver's
+  accepted rides, from the join requests". The artboard's data model is the driver's **own
+  offers with their passengers nested**, in three phases — i.e. `OffersListScreen` +
+  `OfferPassengersScreen` merged. 🔴 **The third-tab question the card led with dissolved:**
+  the artboard's third tab and the app's third tab are the same screen. 🔴 **And step 17h's
+  premise fell with it** — it converted `OffersListScreen` values-only because "no artboard
+  draws it"; this artboard does.
+- **Owner accepted all seven recommendations ("ok").** The phases are DERIVED from `status` +
+  `seats_free`, so no state was invented.
+- **18a:** `utils/myRides.ts` + `check-my-rides.mjs` — 64 assertions, red on 11 mutations, file
+  restored byte-identical. 🔴 One mutation stayed green: flipping ONE of two NaN branches in
+  the sort made the comparator inconsistent and the engine still landed the fixture right.
+  Flipping both goes red. *An invalid mutation rather than a weak assertion — but only reading
+  WHY it stayed green showed which.*
+- **18b:** 🔴 **the step's own contrast worry was backwards.** It was written to check "white
+  on `#25A445`"; the artboard's ink is DARK on a LIGHT green, and white would measure 2.2:1.
+  **26/26 pairs pass AA.** Five candidate tokens folded onto existing ones once re-measured;
+  the token checker then caught 9 inline `rgba()` overlays (3 → 12, exit 1) and they became
+  three more tokens. Named `MyRideCard` because `components/cards/RideCard.tsx` is an existing
+  orphan — two files, one basename, is this project's recurring trap.
+- **18c:** 🟢 **the artboard's nine reject reasons turned out to be FULLY BACKED** —
+  `OfferPassengerService.ts:527` stores `rejection_reason`, `:536` pushes it. Checked at the
+  source, including that a nearby `exclude` hides a different column. The artboard attaches them
+  to cancelling an ACCEPTED order, which has no endpoint; they moved to the reject of a PENDING
+  request, the real action with the real column.
+- **18d/18e:** every handler carried over and grepped for in the diff. Two behaviours the merge
+  forced: a confirm can move a ride between phases under the driver's finger, and a push about a
+  history ride must switch the phase or open an empty list. One lint warning of mine, removed.
+- **18f:** i18n sweep now 241 keys × 3 across 15 files, **proven red once per locale**.
+  🔴 The prover's first version matched nothing — CRLF files, anchors ending in a bare
+  newline. It reported "anchor missing" and exited 1 rather than passing. *Same family as 16f's
+  backslash loss.* `expo export` clean at 5.09 MB.
+
+### Verification
+
+Driver `tsc` **28** · lint **0 / 275** · tokens **3** · fonts · drawer · i18n 241×3 · my-rides 64 ·
+passenger-orders 69 · the three wizard checkers · `expo export`. User `tsc` **6** · tokens **1**
+(its palette changed too). **All baselines unchanged; the one deviation was mine and was pulled
+back, never rebaselined up.**
+
+- **Decisions:** phases derived, not stored · the fill row is a readout, not a button · passengers
+  load lazily on expand · one screen, both old route names · `OfferDetailModal` dropped.
+- **Problems:** 🛑 **nothing from step 8e onward has run on a device, and step 18 replaces the
+  driver's most-used tab.** Seven unbacked artboard features boarded as **T-110**; five files
+  orphaned to **T-105** as a closed cluster.
+- **Next:** step 19 (balance / income) is genuinely new work with no screens behind it — but the
+  device walk of steps 15-18 is the gate before it. **2b (native install + prebuild) is still
+  unchecked and blocks that walk.**
+- **Commit:** proposed `T-101 step 18 — MyRidesScreen: the driver's rides and their passengers
+  merged onto DriverMyOrder; nine-reason reject sheet; T-110 boarded`
+
+---
+
 ## 2026-09-11 — step 16 closed; a measurement that lied twice, and a checker that paid for itself
 
 - **Task:** T-101 step 16f + 16g — checkers and baselines for the driver's offer wizard, then

@@ -99,6 +99,29 @@ export const lightPalette = {
   actionPressed: '#155C40', // pressed state, price figures, icon glyphs
   headerGradient: ['#1D9846', '#F4F2ED'] as const, // the top bar, every screen
   tileGradient: ['#1D9846', '#FFFFFF'] as const, // service tiles on the main menu
+  /**
+   * T-101 step 18b — the ride card on `DriverMyOrder.dc.html`, the ONLY place in either
+   * app where a card body is a gradient (measured: `linear-gradient(158deg,…)`, one
+   * artboard, one occurrence). `rideGradientOff` is its cancelled/archived twin.
+   *
+   * 🔴 `rideInk` is DARK, not white. The artboard puts `#0C2A14` on this green; white
+   * would measure 2.2:1 on the light end. Everything drawn on the gradient uses this ink
+   * or sits on a white tile — measured 26/26 AA, `PLAN-T101-step18.md` §7.
+   */
+  rideGradient: ['#66D46D', '#25A445'] as const,
+  rideGradientOff: ['#CFC9BC', '#A9A296'] as const,
+  rideInk: '#0C2A14',
+  /**
+   * The three overlays that sit ON the ride gradient. They must stay translucent — a solid
+   * colour would only match one end of the gradient.
+   *
+   * ⚠️ `rideTile` folds the artboard's TWO values, `.92` (state pill) and `.93` (tiles,
+   * strips, buttons), into one. They are 1% apart, measured indistinguishable, and both
+   * clear AA on both gradient ends — an artboard inconsistency, not two intentions.
+   */
+  rideTile: 'rgba(255, 255, 255, 0.93)',
+  rideTileSoft: 'rgba(255, 255, 255, 0.42)', // the "seats still open" readout
+  rideWell: 'rgba(12, 42, 20, 0.14)', // the chevron disc, sunk into the gradient
 
   // ---------------------------------------------------------------- status
   danger: '#C0431B', // badge fill (bell + tab counts), warnings
