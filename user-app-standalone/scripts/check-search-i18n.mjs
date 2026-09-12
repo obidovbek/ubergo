@@ -39,6 +39,8 @@ const TARGETS = [
   ['utils/offerSearch.ts', ['searchOffers', 'passengerOffers', 'offerDrivers']],
   ['components/search/OfferResultCard.tsx', ['searchOffers', 'offerDrivers', 'offerDetails']],
   ['components/search/DriverBlock.tsx', ['searchOffers', 'offerDrivers', 'common']],
+  ['components/search/RouteSummary.tsx', ['searchOffers', 'common']],
+  ['components/search/ClassStrip.tsx', ['searchOffers', 'common']],
   [
     'screens/SearchOffersScreen.tsx',
     ['searchOffers', 'offerDrivers', 'offerDetails', 'common', 'errors', 'drawer'],

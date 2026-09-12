@@ -404,6 +404,8 @@ export default {
     swap: "Yo'nalishni almashtirish",
     fromLabel: "QAYERDAN",
     toLabel: "QAYERGA",
+    placeUnset: "Manzil tanlanmagan",
+    timeUnset: "Yurish vaqti tanlanmagan",
     modeSearch: "Qidiruv",
     modeBids: "Takliflar",
     listMatching: "Mos haydovchilar",

@@ -366,6 +366,8 @@ export default {
     swap: "Swap direction",
     fromLabel: "FROM",
     toLabel: "TO",
+    placeUnset: "No address selected",
+    timeUnset: "No departure time selected",
     modeSearch: "Search",
     modeBids: "Offers",
     listMatching: "Matching drivers",

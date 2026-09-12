@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL, API_TIMEOUT } from '../config/api';
+import { cachedGeo } from '../utils/geoCache';
 
 export interface GeoOption {
   id: number;
@@ -53,32 +54,40 @@ const fetchGeoList = async <T extends GeoOption[]>(
   }
 };
 
-export const fetchGeoCountries = async (): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>('/geo/countries');
-};
+/*
+ * T-113 — every geo list is cached (memory + disk, 24h, stale-while-revalidate). The cache
+ * lives HERE, in the client, so every caller gets it: `GeoSheet`, `GeoSelectModal`,
+ * `LocationCard` and `CreatePassengerOfferScreen` all improve without changing a line.
+ */
+export const fetchGeoCountries = async (): Promise<GeoOption[]> =>
+  cachedGeo('countries', () => fetchGeoList<GeoOption[]>('/geo/countries'));
 
-export const fetchGeoProvinces = async (countryId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/countries/${countryId}/provinces`);
-};
+export const fetchGeoProvinces = async (countryId: number): Promise<GeoOption[]> =>
+  cachedGeo(`provinces:${countryId}`, () =>
+    fetchGeoList<GeoOption[]>(`/geo/countries/${countryId}/provinces`),
+  );
 
-export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`);
-};
+export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOption[]> =>
+  cachedGeo(`districts:${provinceId}`, () =>
+    fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`),
+  );
 
 /**
  * 4th level of the hierarchy (mavze / QFY / shaharcha). Optional everywhere:
  * many city-districts have no settlements at all, so an empty list is normal.
  */
-export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`);
-};
+export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> =>
+  cachedGeo(`settlements:${cityDistrictId}`, () =>
+    fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`),
+  );
 
 /**
  * Mahallas. Like settlements these hang off the CITY DISTRICT, not off the
  * settlement — so the two are siblings, not a chain. Also optional: plenty of
  * districts have none, and an empty list is normal rather than an error.
  */
-export const fetchGeoNeighborhoods = async (cityDistrictId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`);
-};
+export const fetchGeoNeighborhoods = async (cityDistrictId: number): Promise<GeoOption[]> =>
+  cachedGeo(`neighborhoods:${cityDistrictId}`, () =>
+    fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`),
+  );
 

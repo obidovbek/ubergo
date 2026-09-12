@@ -360,6 +360,8 @@ export default {
     swap: "Поменять направление",
     fromLabel: "ОТКУДА",
     toLabel: "КУДА",
+    placeUnset: "Адрес не выбран",
+    timeUnset: "Время отправления не выбрано",
     modeSearch: "Поиск",
     modeBids: "Предложения",
     listMatching: "Подходящие водители",

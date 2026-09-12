@@ -27,6 +27,14 @@ export const lightPalette = {
   // ---------------------------------------------------------------- ground / surface
   ground: '#F4F2ED', // every screen background, drawer, sheet, inset well
   surface: '#FFFFFF', // cards, popovers, chip-off state, control tiles
+  /**
+   * T-101 step 14b-7 — `ground` at zero alpha, for the edge fades on the class strip.
+   *
+   * 🔴 IT MUST BE AN EXPLICIT RGBA OF THE SAME COLOUR, NOT `'transparent'`. On Android a
+   * gradient to `transparent` interpolates through BLACK, so the fade greys out instead of
+   * dissolving. Matching the ground's own channels with alpha 0 is the only safe end stop.
+   */
+  groundClear: 'rgba(244, 242, 237, 0)',
   surfaceInput: '#FDFCFA', // input fields ONLY — never a card
   surfaceSunken: '#EDEAE3', // progress track, scroll arrows, "completed" pill
   /**

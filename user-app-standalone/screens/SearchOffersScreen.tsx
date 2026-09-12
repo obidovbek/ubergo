@@ -71,6 +71,8 @@ import { NavDrawer } from '../components/chrome/NavDrawer';
 import { SegmentedModes } from '../components/chrome/SegmentedModes';
 import { OfferResultCard } from '../components/search/OfferResultCard';
 import { DriverBlock, RatingBreakdownSheet } from '../components/search/DriverBlock';
+import { RouteSummary } from '../components/search/RouteSummary';
+import { ClassStrip } from '../components/search/ClassStrip';
 import {
   ALL_CLASSES,
   classCounts,
@@ -364,6 +366,18 @@ export default function SearchOffersScreen() {
     return weekday ? `${date} ${weekday}` : date;
   };
 
+  /**
+   * "Farg'ona viloyat, Farg'ona shahar" — the artboard shows the FULL path, not the leaf.
+   * `null` when nothing is chosen, so `RouteSummary` draws its own placeholder rather than
+   * an empty line.
+   */
+  const routeText = (path: GeoPath): string | null => {
+    const parts = [path.province?.name, path.district?.name, path.settlement?.name].filter(
+      (n): n is string => typeof n === 'string' && n.trim().length > 0,
+    );
+    return parts.length ? parts.join(', ') : null;
+  };
+
   const needsRoute = mode === 'qidiruv' && (!selectedFromProvince || !selectedToProvince);
 
   // ---------------------------------------------------------------- render
@@ -372,47 +386,30 @@ export default function SearchOffersScreen() {
     <View style={styles.head}>
       {mode === 'qidiruv' && (
         <>
-          <View style={styles.routeRow}>
-            <Pressable style={styles.routeCell} onPress={() => setGeoSheet('from')}>
-              <Text style={styles.routeLabel}>{t('searchOffers.fromLabel')}</Text>
-              <Text style={styles.routeValue} numberOfLines={1}>
-                {selectedFromCity?.name || selectedFromProvince?.name || t('searchOffers.from')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={styles.swap}
-              onPress={swapLocations}
-              accessibilityRole="button"
-              accessibilityLabel={t('searchOffers.swap')}
-            >
-              <Text style={styles.swapGlyph}>⇄</Text>
-            </Pressable>
-            <Pressable style={styles.routeCell} onPress={() => setGeoSheet('to')}>
-              <Text style={styles.routeLabel}>{t('searchOffers.toLabel')}</Text>
-              <Text style={styles.routeValue} numberOfLines={1}>
-                {selectedToCity?.name || selectedToProvince?.name || t('searchOffers.to')}
-              </Text>
-            </Pressable>
-          </View>
+          {/*
+            🔴 The artboard draws a ROUTE, not a form (lines 110-127). The two-cell picker that
+            stood here until 2026-09-12 was invented; the owner spotted it. The lines stay
+            tappable because this screen is also a TAB opened cold — see `RouteSummary`.
+          */}
+          <RouteSummary
+            from={routeText(fromPath)}
+            to={routeText(toPath)}
+            time={null}
+            badge={null}
+            onPressFrom={() => setGeoSheet('from')}
+            onPressTo={() => setGeoSheet('to')}
+            onSwap={swapLocations}
+          />
 
-          <View style={styles.chipRow}>
-            {[ALL_CLASSES, ...CLASSES].map((c) => {
-              const on = cls === c;
-              const n = counts[c] ?? 0;
-              return (
-                <Pressable
-                  key={c}
-                  style={[styles.classChip, on && styles.classChipOn, !n && !on && styles.classChipEmpty]}
-                  onPress={() => setCls(c)}
-                >
-                  <Text style={[styles.classChipLabel, on && styles.classChipLabelOn]}>
-                    {c === ALL_CLASSES ? t('common.all') : c}
-                  </Text>
-                  <Text style={[styles.classChipCount, on && styles.classChipLabelOn]}>{String(n)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ClassStrip
+            items={[ALL_CLASSES, ...CLASSES].map((c) => ({
+              key: c,
+              label: c === ALL_CLASSES ? t('common.all') : c,
+              count: counts[c] ?? 0,
+            }))}
+            value={cls}
+            onChange={setCls}
+          />
 
           <View style={styles.sortRow}>
             {SORTS.map((k) => {
@@ -556,55 +553,11 @@ export default function SearchOffersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.palette.ground },
 
-  head: { gap: 10, paddingBottom: 8 },
-  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  routeCell: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: theme.borderRadius.field,
-    backgroundColor: theme.palette.surface,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.control,
-  },
-  routeLabel: {
-    fontSize: 10,
-    ...theme.font('mono', 700),
-    letterSpacing: 1,
-    color: theme.palette.text.tertiary,
-  },
-  routeValue: { fontSize: 13.5, ...theme.font('sans', 700), color: theme.palette.text.primary },
-  swap: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.palette.surface,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swapGlyph: { fontSize: 16, ...theme.font('sans', 700), color: theme.palette.text.primary },
-
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  classChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.palette.surfaceSunken,
-    borderWidth: 1,
-    borderColor: theme.palette.borders.strong,
-  },
-  classChipOn: { backgroundColor: theme.palette.surface, borderColor: theme.palette.brand },
-  classChipEmpty: { backgroundColor: theme.palette.surfaceTrack },
-  classChipLabel: { fontSize: 11.5, ...theme.font('sans', 600), color: theme.palette.text.muted },
-  classChipLabelOn: { color: theme.palette.text.primary, ...theme.font('sans', 800) },
-  classChipCount: { fontSize: 10.5, ...theme.font('mono', 700), color: theme.palette.text.tertiary },
+  /*
+   * ⚠️ The route block and the class strip bring their OWN padding (they are full-bleed in the
+   * artboard — the strip's tabs weld to the list edge), so this wrapper adds none of its own.
+   */
+  head: { gap: 8, paddingBottom: 8 },
 
   sortRow: { flexDirection: 'row', gap: 6 },
   sortChip: {
