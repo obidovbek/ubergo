@@ -17,6 +17,13 @@ export interface DriverOffer {
   seats_free: number;
   seats_total: number;
   /**
+   * T-101 step 14b-2 — the class the driver set. **The server has always sent this**
+   * (`DriverOfferService.getPublicOffers` maps `vehicle_class`); only this type was missing
+   * it, so the search card could not read it without an error. Type-only addition, no API
+   * change.
+   */
+  vehicle_class?: string | null;
+  /**
    * T-083 — which seats are free, front vs back. `seats_free` is one pool
    * number and cannot answer that.
    *

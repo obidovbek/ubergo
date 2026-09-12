@@ -13,6 +13,7 @@ export default {
   },
   common: {
     continue: 'Continue',
+    all: "All",
     cancel: 'Cancel',
     /** T-101 step 8b — the ✕ that un-picks an optional geo level. */
     clear: 'Clear',
@@ -355,6 +356,20 @@ export default {
     freeSeats: 'Free seats',
     // Weekday names, formatted by hand — Android locale data is not reliable.
     weekdays: 'Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+    ratingBreakdown: "Rating breakdown",
+    notRatedYet: "Not rated yet",
+    ratingCount: "{count} ratings",
+    sortMatch: "Best match",
+    sortPrice: "Price",
+    sortSeats: "Free seats",
+    sortSoon: "Soonest",
+    swap: "Swap direction",
+    fromLabel: "FROM",
+    toLabel: "TO",
+    modeSearch: "Search",
+    modeBids: "Offers",
+    listMatching: "Matching drivers",
+    listBids: "Offers from drivers",
     fuelBenzine: 'Petrol',
     fuelMetan: 'Methane',
     fuelPropan: 'Propane',
