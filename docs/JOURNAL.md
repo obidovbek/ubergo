@@ -5,6 +5,129 @@
 
 ---
 
+## 2026-09-12 (3) — 14b-7 and T-113: two owner reports, both right
+
+- **Task:** the owner's two reports on the passenger search screen, same day as step 14b closed.
+
+### 14b-7 — the from/to block and the class filters were INVENTED
+
+The owner said the from/to still looked old. Measured: **14b-4 reproduced what the old screen
+DID and made up how it looked.** The artboard draws a vertical route — dot, connector, dot, two
+bold lines of full place text, a mono depart line — not two picker cells with a swap. And the
+class filters are a **horizontally scrolling strip of welded tabs**, not wrapped pills.
+Both rebuilt as drawn: `RouteSummary` and `ClassStrip`.
+
+🔴 **Three of four contrast failures were the artboard's own `brand` green** at 2.29:1 on the
+ground — on the route connector, its end dot and the selected tab border, i.e. the elements
+carrying the block's meaning. `action` (4.72:1) replaces it. **Third time on this card.** The
+fourth was the empty tab label — **step 17b's exact finding, same control, other app.** 16/16 now.
+🟢 One new token in both palettes, `groundClear`: the edge fades must end on the ground at
+alpha 0, **not `'transparent'`** — Android interpolates through black and the fade greys out.
+
+### T-113 — the address picker cached
+
+Owner: *"if i select county loads inner modal data … for eye it is not good"*. Every level
+re-fetched with a full spinner. Now a three-layer cache **in the API client**, so all eight call
+sites across both apps benefit without a line changing: in-flight dedupe, memory, and disk with
+a 24-hour TTL, **stale-while-revalidate** so a newly added city still appears on the next open.
+
+🔴 **THE CHECKER WAS BROKEN IN THE WAY THAT LOOKS LIKE SUCCESS.** Three of seven mutations
+stayed green because **esbuild inlines the storage stub into the bundle** — the handle the script
+held was a different module instance, so turning storage "off" did nothing, the disk layer
+quietly answered everything, and the memory layer was never tested at all. Fixed by sharing
+state through a global. **Then one assertion failed and the ASSERTION was wrong, not the code.**
+
+### Verification
+
+User `tsc` **6** · lint **0 / 208** · tokens **1** · **eight checkers green**.
+Driver `tsc` **28** · lint **0 / 275** · tokens **3** · **ten checkers green**.
+Geo cache: 21 assertions, red on 7 mutations, both apps identical (`diff -q`).
+
+- **Decisions:** the route lines stay tappable (this screen is also a cold-opened TAB, unlike the
+  artboard's, which always follows a placed order) · TTL 24h, one constant · cache at the client,
+  not the sheet.
+- **Problems:** 🛑 **still nothing on a device.** The cache's whole point is a flicker only a
+  phone can show, so it is untested in the way that matters.
+- **Next:** a device walk is now overdue on both apps' busiest screens **and** on this cache.
+- **Commit:** proposed `14b-7 + T-113 — route summary and welded class strip as drawn; cache the
+  geo picker in both apps (memory + 24h disk, stale-while-revalidate)`
+
+---
+
+## 2026-09-12 (2) — step 14b: the screen that was ticked without being built
+
+- **Task:** T-101 step 14b — `UserQidiruv.dc.html`, the passenger's search screen. Scoped,
+  approved and closed the same day, after the owner reported it does not look like the artboard.
+
+### What happened
+
+- **The owner was right, and the plan had already said so twice.** Step 7 was titled
+  "`SearchOffersScreen` -> `UserQidiruv`" and ticked; its own body says it swapped colour VALUES
+  and touched no layout (125 insertions / 124 deletions, every line a colour plus one import).
+  Two other places in `PLAN.md` said plainly the screen had **no step** and needed one called
+  14b. **The tick outvoted the warnings for six weeks.** Step 7's title is now corrected.
+- **Measuring found a fourth merge.** The artboard is two modes — `Qidiruv` (search) and
+  `Takliflar` (drivers who bid on the passenger's own request). The second is
+  `OfferDriversScreen`, **rebuilt nine days earlier in step 10 against "no artboard"**, because
+  this was its artboard.
+
+### 🔴 FIVE MEASUREMENT CORRECTIONS, AND THEY DID NOT ALL GO THE SAME WAY
+
+Three found MORE than the board claimed, two found less — and **two of the wrong claims were
+mine, written in this very plan file**:
+
+1. **Driver ★ rating is REAL.** T-109 ② said "no rating model exists anywhere in the API"; that
+   grep ran against the wrong directory. `DriverRating`, five routes, and `min_rating` /
+   `rating_desc` already in the search. **Now built and used for the first time ever.**
+2. **The colour swatch is a one-line serialisation**, not schema — `hex_code` already exists.
+   T-106 corrected.
+3. **Fuel type is real** (`DriverVehicle.fuel_types`, T-077) and this screen already rendered
+   it. **My own §2 had listed it as needing new schema.**
+4. **Review COMMENTS are NOT reachable** — my §2 over-claimed them. The only endpoint carrying
+   comments is scoped to `req.user.id`, a driver reading their own. Replaced with the rating
+   DISTRIBUTION, which the public endpoint returns and nothing had ever called.
+5. **The front seat has THREE states, not two** — `free`, `taken`, and **never offered**.
+   `api/offers.ts` spells this out under T-083 in a comment I had already read, and my first
+   `seatAvailability` collapsed them, which tells a passenger a seat is gone when it never
+   existed. I had also invented a field name that does not exist.
+
+### Other defects caught before they shipped
+
+- 🔴 **"Eng tez" sorted by TIME OF DAY**, so across midnight it meant its opposite. Caught by
+  `check-offer-search.mjs` on its **first run**, before a pixel was drawn. The artboard could
+  not show it — all its fixtures share one date.
+- 🔴 **The bid status keys pointed at the DRIVER app's namespace**, and three more keys
+  (`common.all`, `searchOffers.fromLabel` / `toLabel`) existed only there. Every one would have
+  rendered its own key as text in all three locales. **`tsc` cannot see a translation key.**
+- 🔴 **The rebuilt screen passed both a back arrow and a menu to `TopBar`**, which renders the
+  arrow INSTEAD of the hamburger — the drawer would have been unreachable from the search tab.
+- 🔴 **The artboard's seat-cell colours fail contrast**: 2.56:1 and 1.41:1 against a 3:1 floor,
+  on the one control that says whether a seat is free. Replaced after measuring alternatives.
+- ⚠️ **A bid is not a decorated driver offer.** `OfferDriver` has its own driver and vehicle and
+  no `DriverOffer` behind it. The card is a discriminated union for that reason.
+
+### Verification
+
+User `tsc` **6** · lint **0 / 208** · tokens **1** · fonts · **seven checkers green** (91 rule
+assertions red on 16 mutations; search i18n 51 keys × 3, red on 4) · `expo export` clean at
+4.91 MB. Driver app untouched: `tsc` 28, tokens 3.
+🟢 **Lint fell 216 → 208** — the rewrite removed eight warnings the 1 634-line original carried.
+**Rebaselined DOWNWARD only.**
+
+- **Decisions:** merge the bids LIST but **not** the accept flow (it rejects every other bidder
+  with a push each, so it keeps its own confirm dialog) · build the rating, omit presence, trips
+  and comments · rebuild the presentation, keep the logic · leave the booking form to 14c.
+- **Problems:** 🛑 **nothing has run on a device.** With driver steps 15-18, the untested
+  surface is now the busiest screen in BOTH apps. **T-112 boarded** (six unbacked features);
+  **T-109 ② and T-106 corrected.**
+- **Next:** 14c (absorbing the booking form) is boarded but should wait for a device walk.
+  **2b — the native install — is verified done except the device build, which only the owner
+  can run, and it gates every walk.**
+- **Commit:** proposed `T-101 step 14b — rebuild the passenger search screen on UserQidiruv:
+  two modes, driver rating, rating breakdown; T-112 boarded, T-109/T-106 corrected`
+
+---
+
 ## 2026-09-12 — step 18: the card was wrong again, and so was the step's own premise
 
 - **Task:** T-101 step 18 — `DriverMyOrder.dc.html`. Scoped, approved, and closed the same day.

@@ -4,6 +4,57 @@
 > `UserBuyurtma*` artboards are **not duplicates** but four **search scopes**.
 > Everything here was read from the code, not inferred.
 
+## 0. 🟢 RE-CONFIRMED BY THE OWNER 2026-09-12 — and it matches §1 line for line
+
+The owner restated the whole scope model unprompted, after noticing the four screens behave
+alike. **Nothing in it contradicts what was recorded on 2026-08-30**, which is worth saying
+plainly: the specification below has been right and unimplemented for two weeks.
+
+Their words, kept verbatim because this is the only place the rule exists:
+
+```
+adm0 davlat
+adm1 viloyat
+adm2 tuman
+adm3 qfy
+
+adm1 adm2 --> adm1 adm2   Viloyatlar aro
+adm1 adm2 --> adm2        viloyat ichi. Viloyatlar aro farqi faqat frontend yengilligi uchun,
+                          match adm2 --> adm2, uni ichki qismlari emas
+adm1 adm2 adm3 --> adm3   tuman ichi. backend ichi chuqirroq qidiradi, app frontend uchun
+                          qulaylik bir xil adm1, adm2 ikki marta qidirmasligi uchun
+adm1 adm2 adm3 --> adm1 adm2 adm3, match adm3 --> adm3
+                          2 ta chegaradosh tuman. Viloyatlar aro dan farqi: agar boshqa
+                          viloyatdan aniq qaysidir boshqa viloyat qfy ga bormoqchi bo'lsa
+```
+
+🔴 **THIS ANSWERS OPEN QUESTION 3 IN §6: T-102 IS WANTED.** That question asked the owner to
+confirm it before step 8 shipped, precisely so four identical screens would not look like a bug.
+Step 8 shipped anyway and the screens are identical, which is what the owner has now reported.
+
+✅ **AND IT CONFIRMS THE ARTBOARDS ARE *SUPPOSED* TO LOOK ALIKE.** The owner's own reason —
+*"faqat frontend yengilligi uchun … ikki marta qidirmasligi uchun"* — is that the UI difference
+exists only to save re-picking what is already known. So "all four artboards are similar" is the
+design being correct; **the defect is that all four SEARCH the same**, which is invisible on a
+drawing and lives entirely in the backend.
+
+### What is already true in code (verified 2026-09-12)
+
+| piece | state |
+|---|---|
+| the four scopes and their match levels | ✅ `user-app-standalone/types/orderScope.ts` — `tuman:adm3 · aro:adm2 · viloyat:adm2 · yaqin:adm3` |
+| the picker pre-locking per scope | ✅ `GeoSheet`'s `startLevel` / `initialPath` |
+| `PassengerOffer` geo id columns | ✅ **all 8 exist** (`from_/to_` × country/province/city/settlement) — **and nothing reads them** |
+| the scope reaching the API | ❌ **not sent at all** — no `match_level`, no `scope` in the request or the service |
+| `DriverOffer` geo columns | ❌ **none** — free-text `from_text`/`to_text` only |
+| search | ❌ `ILIKE '%name%'` on that free text |
+| `geo_district_neighbors` | ❌ does not exist, so *Yaqin* has no adjacency source |
+
+**The gap is exactly T-102, and three of its four pieces are DB schema changes** — which CLAUDE.md
+rule 4 says to ask about before writing. See §5.
+
+---
+
 ## 1. What the owner said (2026-08-30)
 
 The hierarchy is:

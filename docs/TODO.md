@@ -114,8 +114,25 @@
   🔴 **The step-18 card was wrong the same way 16 and 17 were** — `DriverMyOrder` draws the
   driver's OWN offers, not "accepted rides", so its "third tab" question dissolved and **17h's
   "no artboard draws `OffersList`" was wrong.** Unbacked features → **T-110**; 5 files → T-105.
+  ✅ **STEP 14b CLOSED 2026-09-12 (14b-1 to 14b-6), → `docs/PLAN-T101-step14b.md`.** The USER
+  app's search screen — **the owner reported it did not look like `UserQidiruv`, and they were
+  right**: step 7 had swapped colours only and been ticked with a title that read as a rebuild.
+  Now rebuilt: two modes (search + the drivers who bid on your own request), the shared chrome,
+  the result card, and **the ★ driver rating, used for the first time anywhere in either app.**
+  🔴 **FIVE MEASUREMENT CORRECTIONS came out of it, and two of the wrong claims were my own:**
+  rating, colour swatch and fuel type all EXIST where cards said they did not; review comments
+  do NOT where I said they did; and the front seat has three states where I modelled two.
+  → **T-112** boarded; **T-109 ②** and **T-106** corrected.
+  ⚠️ **14c** (absorbing the 1 456-line booking form into the sheet) is deferred until this has
+  been walked on a device.
+
   **Steps left in T-101: 19-22, then 23-26 — plus 2b, still unchecked.**
-  🛑 **STEPS 15-18 HAVE NEVER BEEN ON A PHONE, AND 18 REPLACES THE DRIVER'S MOST-USED TAB.**
+  🟢 **2b IS VERIFIED DONE EXCEPT THE DEVICE BUILD** (2026-09-12): both native deps are
+  installed in both apps at Expo-54 versions and **both were proven to autolink**, via two
+  different resolvers. **`expo prebuild` is NOT needed and must not be run** — the `android/`
+  folders are gitignored generated artifacts and autolinking re-resolves every build.
+  **What is left is `npm run android` on a real device, once per app — owner-only.**
+  🛑 **STEPS 15-18 AND 14b HAVE NEVER BEEN ON A PHONE — THAT IS THE BUSIEST SCREEN IN BOTH APPS.**
   This is now the gate before step 19, and **2b (native install + prebuild) blocks the walk.**
   Walk, in order: the `Buyurtmalarim` tab → three phases, a card expands to its passengers,
   confirm one and watch the ride move phase, reject one with a reason, cancel/archive/publish;
@@ -2414,6 +2431,10 @@ masofalar'`). **2 of the 6 were on
   make it the 24-hour `formatTimeByLanguage`; either way nothing in the live app should call it.
 
 - [ ] T-106 (P2) 🪑 **Per-seat gender + `hex_code` + `vehicle_class` on the driver offer — ONE
+  🔴 **SCOPE CORRECTED 2026-09-12 (T-101 step 14b): the colour swatch is NOT schema work.**
+  `VehicleColor.hex_code` already exists in the database. It is simply not serialised into the
+  offer response, which sends `color` as a NAME. That is a one-line server change; only the
+  per-seat GENDER half of this card needs new columns.
   card for BOTH apps' gaps (needs a migration → ask first)**
   `DriverElon.dc.html` assigns m/f to each seat (`seatGenders`, long-press to flip), and the
   `DriverQidiruv` / `UserQidiruv` offer card shows per-seat gender, the car's colour swatch and its
@@ -2447,9 +2468,19 @@ masofalar'`). **2 of the 6 were on
   reject on the server is a passenger who joined the driver's offer (`/driver/passengers/:id/reject`).
   The artboard's four reasons (`Joy qolmadi` · `Vaqti to'g'ri kelmadi` · `Yo'nalish o'zgardi` ·
   `Boshqa sabab`) would need a table and a passenger notification.
-  ② **Presence and passenger reputation** — the online / "ilova fonda" / "24 soat" dot with "seen
-  9 daq oldin", and `★ 4,8 · 42 qatnov`. No `last_seen`, no online flag, **no rating model exists
-  anywhere in the API** (`grep -ril rating models/` → nothing).
+  ② **Presence** — the online / "ilova fonda" / "24 soat" dot with "seen 9 daq oldin". No
+  `last_seen` and no online flag anywhere. **This half stands.**
+  🔴 **CORRECTED 2026-09-12 (T-101 step 14b): THE RATING HALF OF THIS ITEM WAS WRONG.** It said
+  "no rating model exists anywhere in the API (`grep -ril rating models/` → nothing)". **That
+  grep was run against the wrong path** — the models live in `database/models/`, and there sit
+  **`DriverRating`** (table `driver_ratings`: driver, passenger, booking, rating, comment) and
+  **`driver-rating.routes.ts` with five routes**. `DriverOfferService` already averages it and
+  supports `min_rating` and `sort_by=rating_desc`. **The passenger app now uses it** (14b-3).
+  ⚠️ Still missing on this card: the **trip count** (`42 qatnov`) — that is **T-082**, not this
+  one — and **review COMMENTS for another driver**, which have no passenger-facing endpoint
+  (the one carrying them is scoped to `req.user.id`). → **T-112**.
+  ⚠️ Step 17's driver-side decision ⑥ omitted the rating on this same wrong premise and can be
+  revisited whenever the driver's search screen is next touched.
   ③ **Per-row counter-offer pricing** — front / back / salon / extras each priced, summed. The join
   request carries ONE `offered_price_per_seat`; a breakdown column would let the sheet's one field
   become the artboard's rows.
@@ -2484,6 +2515,56 @@ masofalar'`). **2 of the 6 were on
   for ① ⑤ ⑦ and is DEAD** — the server's `/rides` router is commented out (`routes/index.ts:149`).
   **Do not wire it.**
   ⚠️ Passenger rating and presence are **T-109 ②**, not this card.
+
+- [x] T-113 (P2) ⚡ **✅ DONE 2026-09-12 — the address picker re-fetched every level, with a
+  spinner each time.** [OWNER 2026-09-12] *"everywhere where county/city/... selection make cache
+  for some period — if i select county loads inner modal data … for eye it is not good"*.
+  ✅ **`utils/geoCache.ts` in BOTH apps** — three layers, each removing a different flicker:
+  **in-flight dedupe** (two callers share one request) · **memory** (instant for the session —
+  this is the one the owner sees) · **disk** via AsyncStorage with a **24-hour TTL** (so the
+  first open after launch is instant too).
+  ✅ **Stale-while-revalidate**, deliberately: a cached list is returned immediately AND a quiet
+  refresh runs behind it. That is what makes a long TTL safe — a city an admin adds appears on
+  the NEXT open, not up to a day later. A background refresh never raises an error or a spinner.
+  ✅ **Wired at the API CLIENT, not in the sheet** — so all eight call sites benefit without a
+  line changing: `GeoSheet` (both apps), `GeoSelectModal`, `LocationCard`,
+  `CreatePassengerOfferScreen`, `GeoPickerModal`, `SearchPassengerOffersScreen`.
+  **5 functions cached in the user app, 6 in the driver app** (its client lives in `api/driver.ts`;
+  `api/geo.ts` there is only a re-export shim).
+  ✅ **`scripts/check-geo-cache.mjs` — 21 assertions, RED ON ALL 7 MUTATIONS.**
+  🔴 **AND THE CHECKER WAS BROKEN AT FIRST, IN THE WAY THAT LOOKS LIKE SUCCESS.** Three
+  mutations stayed green because **esbuild INLINES the storage stub into the bundle**, so the
+  handle the script held was a different module instance and turning storage "off" did nothing.
+  With a real always-working stub, the DISK layer silently answered every assertion and the
+  MEMORY layer was never exercised at all. The stub now shares state through a global.
+  🔴 **One assertion then failed and was WRONG, not the code:** a clear that runs while storage
+  is unavailable cannot erase the disk entry, so the next read legitimately finds it. Harmless —
+  geo lists are public reference data — but recorded in the checker.
+  ⚠️ **TTL is one constant, `GEO_CACHE_TTL_MS`.** The owner said "some period" and left it open;
+  24 hours is the choice. Versioned key prefix (`@ubexgo:geo:v1:`) so a shape change orphans old
+  entries instead of feeding them to a new reader. `clearGeoCache()` is exported for logout.
+  ⚠️ **Every storage call is wrapped**: a device with full or disabled storage degrades to
+  network-only, never to a crash. The cache is an optimisation, not a dependency.
+  🛑 **NOT SEEN ON A DEVICE** — the flicker the owner reported is the acceptance test.
+
+- [ ] T-112 (P3) 🔍 **`UserQidiruv` asks for six things the API cannot give — owner to pick**
+  Left out of T-101 step 14b (2026-09-12, by the owner's accepted decision ③); none was faked.
+  ① **Driver presence** — `Online / Ilova fonda / 24 soat ichida / 24 soatdan oldin` plus
+  "hozir onlayn" / "12 daq oldin". No `last_seen`, no online flag. Same gap as T-109 ②.
+  ② **Review COMMENTS.** 🔴 The column is real and so is the data; **no endpoint exposes another
+  driver's comments to a passenger.** `GET /ratings/driver/ratings` includes them but is scoped
+  to `req.user.id` — a driver reading their own. Needs a public "reviews of driver X" endpoint,
+  with a decision about what a passenger may see. *The rating AVERAGE and DISTRIBUTION are
+  already built (14b-3) — only the prose is missing.*
+  ③ **Years of experience and trip count** (`7 yil tajriba`, `100+ qatnov`) → **T-082**.
+  ④ **Per-seat gender on a DRIVER offer** (the artboard's m/f seat map) → **T-106**. The card
+  draws OCCUPANCY instead, which is real.
+  ⑤ **The car colour swatch.** 🟢 **Nearly free and T-106 overstates it:** `VehicleColor.hex_code`
+  **already exists**; it is simply not serialised into the offer response, which sends the colour
+  NAME. A one-line server change, not schema. Out of scope for T-101 (presentation only).
+  ⑥ **A women-only flag on a driver offer** (`femaleOnly`) — no such column on `DriverOffer`.
+  ⚠️ **`Hoziroq` on a driver offer is T-103**, not this card. **Fuel type is NOT on this list** —
+  it is real (`DriverVehicle.fuel_types`, T-077) and the card renders it.
 
 > 📥 **OWNER BILLING BATCH 2026-08-14 — the payment system, boarded as T-087…T-093.**
 > 🔌 **The owner supplied the PAYNET contract the same day** (`paynet/*.docx`, `paynet/*.pdf`) —

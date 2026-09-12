@@ -186,12 +186,23 @@ Edit both copies together and verify with `diff -q`.
       ⚠️ **A font failure never blocks startup:** the splash gate releases on `fontsLoaded || fontError`
       and the error is logged loudly, because the failure mode is otherwise invisible.
       🛑 **NOT YET SEEN ON A DEVICE.** Bundling is proven; *rendering* is not. Confirm at step 2b.
-- [ ] **2b. Install the two APPROVED native dependencies in BOTH apps** (owner approved 2026-08-30):
-      `npx expo install expo-linear-gradient react-native-svg` — **`expo install`, not `npm install`**,
-      so the versions match Expo 54. Then `npx expo prebuild` and a full `npm run android` on each.
-      🛑 **Do this before step 3, and confirm both apps still boot on a device before building any
-      chrome on top of them.** A missing native module surfaces as a bundling error, which reads
-      like a code mistake and sends you looking in the wrong place.
+- [ ] **2b. The two APPROVED native dependencies** (owner approved 2026-08-30).
+      ✅ **INSTALL DONE AND VERIFIED 2026-09-12 — in BOTH apps, at Expo-54-matched versions**
+      (`expo-linear-gradient ~15.0.8`, `react-native-svg 15.12.1`, in `package.json` and
+      `node_modules`).
+      ✅ **AUTOLINKING PROVEN, NOT ASSUMED — and it takes TWO different resolvers**, which is why
+      one check would have looked like a failure: `expo-linear-gradient` links through
+      **expo-modules-autolinking** (driver 18 modules / user 19) and `react-native-svg` through
+      the **React Native community config** (driver 12 / user 14; `settings.gradle:29`
+      `autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)`). Each module is absent from
+      the other's list — that is correct, not a miss. `MainApplication.kt` uses the generated
+      `PackageList(this).packages` with no hand-registered packages, so nothing can be forgotten.
+      🔴 **`npx expo prebuild` IS NOT NEEDED, and this plan step was wrong to require it.**
+      Both `android/` folders already exist and are **gitignored generated artifacts**, and
+      autolinking re-resolves at every gradle configure — so a plain build picks the modules up.
+      Running prebuild would regenerate a folder nobody tracks for no gain. **Do not run it.**
+      🛑 **WHAT IS ACTUALLY LEFT IS OWNER-ONLY: `npm run android` on a real device, once per
+      app.** This is now the single blocker in front of the whole steps 15-18 device walk.
 - [x] **3. The shared chrome. ✅ DONE 2026-08-30 (user app).**
       `components/chrome/`: **`Icon`** (the artboards' exact SVG `d` paths via the approved
       `react-native-svg` — no `@expo/vector-icons` approximations), **`Badge`** (both artboard
@@ -523,7 +534,21 @@ Edit both copies together and verify with `diff -q`.
       that lands on a dimmed, untappable service would be a dead control.
       ✅ `tsc` **6** · lint **222** · **`Carousel.tsx` lints completely clean and has 0 raw colours**.
       🛑 **NOT SEEN ON A DEVICE.**
-- [x] **7. `SearchOffersScreen` -> `UserQidiruv`. ✅ DONE 2026-08-30. THE BIGGEST DROP SO FAR.**
+- [x] **7. `SearchOffersScreen` — COLOURS ONLY. ✅ DONE 2026-08-30. THE BIGGEST DROP SO FAR.**
+      🔴 **TITLE CORRECTED 2026-09-12 — it used to read "`SearchOffersScreen` -> `UserQidiruv`",
+      which reads as a REBUILD. It was never one.** This step swapped style VALUES and touched no
+      layout (its own body says so: 125 insertions / 124 deletions, every line a colour plus one
+      import). The screen still has its pre-T-101 header, uses NONE of the shared chrome, and does
+      not resemble `UserQidiruv.dc.html`. **The owner reported exactly this on 2026-09-12.**
+      The rebuild is **step 14b**, ✅ **WRITTEN AND CLOSED 2026-09-12 (14b-1 to 14b-6)** →
+      **`docs/PLAN-T101-step14b.md`**. 🛑 Not seen on a device.
+      🔴 **Measuring for it found the artboard is a TWO-MODE MERGE** (`Qidiruv` + `Takliflar`)
+      whose second mode is **`OfferDriversScreen`** — rebuilt in step 10 against "no artboard",
+      because **this** was its artboard. Fourth merge of this card.
+      🟢 **And two board cards turned out to UNDERSTATE what exists:** the driver ★ rating and
+      its review comments are **fully backed** (T-109 ② grepped the wrong directory), and the
+      colour swatch needs a one-line serialisation, not schema (T-106). Both corrected in 14b-6.
+      🛑 **Five owner decisions in that file gate 14b-1.**
       🟢 **App total 814 -> 687: 127 colours gone in one screen**, and the file now reads **0**.
       🔴 **DELIBERATELY A DIFFERENT APPROACH FROM STEP 6, AND THIS IS THE PATTERN FOR THE REST OF
       PHASE 2.** `MenuScreen` was 180 lines and was rewritten; **this file is 1 937 lines** carrying
@@ -1230,6 +1255,16 @@ Edit both copies together and verify with `diff -q`.
       🛑 **First question for this step: the THIRD TAB.** The artboard's is "Mening buyurtmalarim" →
       accepted rides; the app's is `OffersList` (own e'lons) labelled *Buyurtmalarim*. Owner decides.
 - [ ] **19.** Balance / income → `DriverBalans.dc.html` + `DriverDaromad.dc.html`.
+      📦 **SPLIT OUT 2026-09-12 → `docs/PLAN-T101-step19.md`. MEASURED, AND THE BLOCKER IS THE
+      OPPOSITE OF THE ONE THIS CARD NAMED.** T-087's ledger is **built, mounted and live**
+      (`GET /wallet/balances`, `GET /wallet/:kind/statement`) and its three account kinds
+      (`real/token/bonus`) map EXACTLY onto the artboard's `Pul/Token/Bonus`. The driver app
+      simply has no wallet API client.
+      🔴 **The real blocker is one level deeper: the ledger has NO reason code by which a
+      driver is ever PAID.** The reason set is top-up / referral / bonus / `ride_discount` /
+      reversal — money coming in and being spent, never driver earnings. So **`DriverDaromad`
+      has no data source at all**, and `DriverBalans` can be built truthfully but will NOT show
+      a driver what they earned. 🛑 **Five owner decisions in that file gate 19a.**
       ⚠️ **No such screens exist in the driver app today** — these are new, and they touch T-087's
       ledger. Confirm scope with the owner before building; may belong in its own card.
 - [ ] **20.** `ProfileScreen` + `EditProfileScreen` → `DriverProfil.dc.html`

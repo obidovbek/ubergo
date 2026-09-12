@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL, getHeaders, API_TIMEOUT } from '../config/api';
+import { cachedGeo } from '../utils/geoCache';
 
 export interface DriverProfileStatus {
   hasProfile: boolean;
@@ -297,35 +298,29 @@ const fetchGeoList = async <T extends GeoOption[]>(
   }
 };
 
-export const fetchGeoCountries = async (): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>('/geo/countries');
-};
+export const fetchGeoCountries = async (): Promise<GeoOption[]> =>
+  cachedGeo('countries', () => fetchGeoList<GeoOption[]>('/geo/countries'));
 
-export const fetchGeoProvinces = async (countryId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/countries/${countryId}/provinces`);
-};
+export const fetchGeoProvinces = async (countryId: number): Promise<GeoOption[]> =>
+  cachedGeo(`provinces:${countryId}`, () => fetchGeoList<GeoOption[]>(`/geo/countries/${countryId}/provinces`));
 
-export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`);
-};
+export const fetchGeoCityDistricts = async (provinceId: number): Promise<GeoOption[]> =>
+  cachedGeo(`districts:${provinceId}`, () => fetchGeoList<GeoOption[]>(`/geo/provinces/${provinceId}/city-districts`));
 
 export const fetchGeoAdministrativeAreas = async (
   cityDistrictId: number
-): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(
+): Promise<GeoOption[]> =>
+  cachedGeo(`adminAreas:${cityDistrictId}`, () => fetchGeoList<GeoOption[]>(
     `/geo/city-districts/${cityDistrictId}/administrative-areas`
-  );
-};
+  ));
 
-export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`);
-};
+export const fetchGeoSettlements = async (cityDistrictId: number): Promise<GeoOption[]> =>
+  cachedGeo(`settlements:${cityDistrictId}`, () => fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/settlements`));
 
 export const fetchGeoNeighborhoods = async (
   cityDistrictId: number
-): Promise<GeoOption[]> => {
-  return fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`);
-};
+): Promise<GeoOption[]> =>
+  cachedGeo(`neighborhoods:${cityDistrictId}`, () => fetchGeoList<GeoOption[]>(`/geo/city-districts/${cityDistrictId}/neighborhoods`));
 
 export interface CountryOption {
   id: string;
