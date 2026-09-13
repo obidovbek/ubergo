@@ -212,7 +212,9 @@ export class DriverService {
     });
 
     if (!driverProfile) {
-      throw new AppError('Driver profile not found', 404);
+      throw new AppError('Driver profile not found', 404, {
+        messageKey: 'driver.profileNotFound'
+      });
     }
 
     // Find existing passport
@@ -270,7 +272,9 @@ export class DriverService {
     });
 
     if (!driverProfile) {
-      throw new AppError('Driver profile not found', 404);
+      throw new AppError('Driver profile not found', 404, {
+        messageKey: 'driver.profileNotFound'
+      });
     }
 
     // Handle license
@@ -355,7 +359,9 @@ export class DriverService {
     });
 
     if (!driverProfile) {
-      throw new AppError('Driver profile not found', 404);
+      throw new AppError('Driver profile not found', 404, {
+        messageKey: 'driver.profileNotFound'
+      });
     }
 
     // Find existing vehicle
@@ -403,7 +409,9 @@ export class DriverService {
     });
 
     if (!driverProfile) {
-      throw new AppError('Driver profile not found', 404);
+      throw new AppError('Driver profile not found', 404, {
+        messageKey: 'driver.profileNotFound'
+      });
     }
 
     // Find existing taxi license

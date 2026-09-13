@@ -219,6 +219,7 @@ export default {
 
   // Driver profile messages
   driver: {
+    profileNotFound: 'Driver profile not found',
     profileUpdated: 'Profile updated',
     profileIncomplete: 'Profile incomplete',
     registrationComplete: 'Registration complete',
@@ -230,6 +231,22 @@ export default {
 
   // Offer error messages
   offers: {
+    // T-116 — the offer-lifecycle refusals, previously English literals in the services.
+    onlyPublishedCanBeCancelled: 'Only published offers can be cancelled',
+    onlyPublishedOrMatchedCanBeCancelled:
+      'Only published or matched orders can be cancelled',
+    onlyArchivedOrCancelledCanBePublished:
+      'Only archived or cancelled offers can be published',
+    onlyArchivedOrCancelledCanBeDeleted:
+      'Only archived or cancelled offers can be deleted',
+    cancelInsteadDriverConfirmed: 'A driver is already confirmed — cancel the order instead',
+    onlyWithConfirmedDriverCanComplete:
+      'Only orders with a confirmed driver can be completed',
+    activeLimitReachedDriver:
+      'Limit reached — finish or cancel a ride before posting a new offer.',
+    activeLimitReachedPassenger:
+      'Limit reached — finish or cancel an order before creating a new one.',
+    startAtTooSoon: 'Departure must be at least {minutes} minutes from now',
     notFound: 'Offer not found',
     notAvailable: 'This offer is not available',
     alreadyStarted: 'This offer has already started',

@@ -219,6 +219,7 @@ export default {
 
   // Driver profile messages
   driver: {
+    profileNotFound: 'Профиль водителя не найден',
     profileUpdated: 'Профиль обновлен',
     profileIncomplete: 'Профиль не заполнен',
     registrationComplete: 'Регистрация завершена',
@@ -230,6 +231,22 @@ export default {
 
   // Offer error messages
   offers: {
+    // T-116 — the offer-lifecycle refusals, previously English literals in the services.
+    onlyPublishedCanBeCancelled: 'Отменить можно только опубликованный рейс',
+    onlyPublishedOrMatchedCanBeCancelled:
+      'Отменить можно только активный заказ или заказ с найденным водителем',
+    onlyArchivedOrCancelledCanBePublished:
+      'Повторно опубликовать можно только архивное или отменённое объявление',
+    onlyArchivedOrCancelledCanBeDeleted:
+      'Удалить можно только архивное или отменённое объявление',
+    cancelInsteadDriverConfirmed: 'Водитель уже подтверждён — отмените заказ',
+    onlyWithConfirmedDriverCanComplete:
+      'Завершить можно только заказ с подтверждённым водителем',
+    activeLimitReachedDriver:
+      'Лимит исчерпан — завершите или отмените рейс, чтобы разместить новое объявление.',
+    activeLimitReachedPassenger:
+      'Лимит исчерпан — завершите или отмените текущий заказ, чтобы создать новый.',
+    startAtTooSoon: 'Время отправления должно быть не раньше чем через {minutes} мин.',
     notFound: 'Объявление не найдено',
     notAvailable: 'Это объявление недоступно',
     alreadyStarted: 'Это объявление уже началось',

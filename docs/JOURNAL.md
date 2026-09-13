@@ -129,6 +129,40 @@ user **6** / **0 / 208** / 10 checkers · driver **28** / **0 / 275** / 10 check
 T-110 ⑥. 🛑 **A concurrency hole is open and documented, not hidden**: no transactions exist in
 these services, so closing it is **T-026A**.
 
+### T-116 — "correct everywhere ... language responses", measured before touching anything
+
+**221 `new AppError(...)` in the API: 68 translated, 130 English literals.** The error handler
+already answered in the caller's language on every branch *except* `AppError`, where it passed
+`err.message` straight through. Both apps were already sending `Accept-Language` and the API was
+already resolving it — **the infrastructure was complete and the wiring just stopped short.**
+
+🔴 **The decision that shaped the fix: translate at the EDGE, not at the throw site.** A survey of
+every literal showed most sit in helpers with no `req` and therefore no language —
+`validateOfferData`, `parsePrice`, `parseDate`, `buildOfferFields`. Localising there meant
+threading `language` through about fifteen signatures and every future helper remembering to.
+`errorHandler` already resolves the language for everything else, so it now translates
+`data.messageKey` (+ `messageParams`) and **falls back to the English literal when a key is
+missing** — which is what makes migrating one call site at a time safe.
+
+⚠️ **That same fallback is why the guard matters more than the conversion.** A typo'd key renders
+the English message perfectly and silently leaves Uzbek and Russian users on English for ever —
+nothing throws, nothing logs, and `tsc` cannot see a string key. `messageKeys.test.ts` reads the
+real sources, extracts every key in use and resolves it in all three locales: **red on 4
+mutations** (typo · wrong namespace · one locale short · lost `{placeholder}`).
+
+🟢 **Success messages turned out NOT to be the problem they looked like**: 28 literals, but 24 are
+admin controllers and both apps render their own local success toasts, ignoring the server's text.
+
+🛑 **NOT DONE and named on the card: ~29 field-validation literals** (`${field} must be a number`).
+They are developer-shaped, a well-behaved app never hits them, and leaving them diagnosable in
+English may be right — **but that should be a decision, not drift.**
+
+**Verification.** API `tsc` **281** · **311 tests** (305 + 6) · lint 0 errors. user **6** ·
+driver **28**, both lint-clean, 20 checkers green.
+
+⚠️ **The backslash-heredoc trap cost two attempts again**, exactly as the memory note says. The
+rule stands: scripts that need escapes go through the Write tool.
+
 - **Problems:** 🛑 **the re-pin check is still undone** — and T-114's re-pin rule is the one thing no
   checker can cover. T-114 ② not started. The edit path waits on T-102d.
 - **Next:** device-walk `PLAN-T114.md` §8, then **T-102d** — which also finishes T-114's edit path.

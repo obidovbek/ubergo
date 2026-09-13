@@ -96,7 +96,45 @@ export const errorHandler = (
     message = err.errors[0]?.message ?? t('common.badRequest', language);
   } else if (err instanceof AppError || err instanceof AppErrorFromErrors) {
     statusCode = err.statusCode;
-    message = err.message;
+
+    /*
+     * 🔴 T-116 — TRANSLATE THE THROWN ERROR HERE, AT THE EDGE, NOT AT THE THROW SITE.
+     *
+     * Every other branch of this function already answers in the caller's language; this one
+     * passed `err.message` through untouched, and `err.message` is an English literal in 130
+     * of the API's 221 `new AppError(...)` calls. So an Uzbek phone asking for something the
+     * server refuses got an English sentence — which is what the owner reported.
+     *
+     * ⚠️ WHY NOT LOCALISE WHERE IT IS THROWN. Most of those 130 sit in helpers with no `req`
+     * and therefore no language: `validateOfferData`, `parsePrice`, `parseDate`,
+     * `buildOfferFields`. Reaching them would mean threading a `language` argument through
+     * about fifteen signatures, and every future helper would have to remember to do it. This
+     * middleware already resolves `language` for everything else, so one place does the work
+     * and a throw site only has to name a KEY.
+     *
+     * ⚠️ FALLS BACK TO THE LITERAL, never to a dotted identifier. The API's `t()` returns the
+     * key itself when it is missing (`i18n/translator.ts`), so comparing against the key IS
+     * the presence test — an un-migrated throw keeps its English text, which is exactly the
+     * behaviour it has today. That is what makes this safe to adopt one call site at a time.
+     *
+     * ⚠️ `data.messageKey` is the API's i18n key; `data.code` is the STABLE, app-facing code
+     * the two apps map to their own strings (`errors.codes.*`). Separate fields because they
+     * have separate jobs — a code is a contract, a key is an implementation detail.
+     */
+    const errorData = (err as {
+      data?: { messageKey?: unknown; messageParams?: Record<string, unknown> };
+    }).data;
+    const messageKey = errorData?.messageKey;
+    /*
+     * `messageParams` carries the numbers a message interpolates — "at least {minutes}
+     * minutes", "{booked} seat(s) already booked". Without it a parameterised key would
+     * render its placeholders literally, which reads worse than the English it replaced.
+     */
+    const translated =
+      typeof messageKey === 'string'
+        ? t(messageKey, language, errorData?.messageParams)
+        : null;
+    message = translated && translated !== messageKey ? translated : err.message;
     // Note: data will be included in response object below
   } else if (err.name === 'ValidationError') {
     statusCode = HttpStatus.BAD_REQUEST;

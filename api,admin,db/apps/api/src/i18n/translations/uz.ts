@@ -231,6 +231,7 @@ export default {
 
   // Driver profile messages
   driver: {
+    profileNotFound: "Haydovchi profili topilmadi",
     profileUpdated: 'Profil yangilandi',
     profileIncomplete: "Profil to'ldirilmagan",
     registrationComplete: "Ro'yxatdan o'tish yakunlandi",
@@ -242,6 +243,23 @@ export default {
 
   // Offer error messages
   offers: {
+    // T-116 — the offer-lifecycle refusals, previously English literals in the services.
+    onlyPublishedCanBeCancelled: "Faqat e'lon qilingan reyslarni bekor qilish mumkin",
+    onlyPublishedOrMatchedCanBeCancelled:
+      "Faqat faol yoki haydovchi topilgan buyurtmani bekor qilish mumkin",
+    onlyArchivedOrCancelledCanBePublished:
+      "Faqat arxivlangan yoki bekor qilingan e'lonni qayta e'lon qilish mumkin",
+    onlyArchivedOrCancelledCanBeDeleted:
+      "Faqat arxivlangan yoki bekor qilingan e'lonni o'chirish mumkin",
+    cancelInsteadDriverConfirmed:
+      "Haydovchi allaqachon tasdiqlangan — buyurtmani bekor qiling",
+    onlyWithConfirmedDriverCanComplete:
+      "Faqat haydovchisi tasdiqlangan buyurtmani yakunlash mumkin",
+    activeLimitReachedDriver:
+      "Limit to'ldi — yangi e'lon berish uchun reysni yakunlang yoki bekor qiling.",
+    activeLimitReachedPassenger:
+      "Limit to'ldi — yangi buyurtma berish uchun mavjudini yakunlang yoki bekor qiling.",
+    startAtTooSoon: "Jo'nash vaqti kamida {minutes} daqiqadan keyin bo'lishi kerak",
     notFound: 'E\'lon topilmadi',
     notAvailable: 'Bu e\'lon mavjud emas',
     alreadyStarted: 'Bu e\'lon allaqachon boshlangan',

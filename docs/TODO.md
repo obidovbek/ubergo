@@ -662,6 +662,39 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
+  info/error/warning language responses frontend/backend".**
+  ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
+  is NOT.** Measured, not estimated.
+  🟢 **The infrastructure was already complete on BOTH ends** — both apps send `Accept-Language`
+  (`config/api.ts`) and the API resolves it (`getLanguageFromHeaders`). Nothing was missing;
+  the wiring simply stopped short.
+  🔴 **THE MEASUREMENT: 221 `new AppError(...)` in the API — 68 translated, 130 English
+  literals** (115 plain + 15 template). The error handler already answered in the caller's
+  language on EVERY branch except the `AppError` one, which passed `err.message` through raw.
+  ✅ **FIXED AT THE EDGE, NOT AT THE THROW SITE.** Most literals live in helpers with no `req`
+  and so no language (`validateOfferData`, `parsePrice`, `parseDate`, `buildOfferFields`);
+  localising there meant threading `language` through ~15 signatures and remembering it for ever
+  after. Instead `errorHandler` translates `data.messageKey` (+ `data.messageParams`) with the
+  request language, and **falls back to the English literal when a key is missing** — which is
+  what lets throw sites migrate one at a time with nothing breaking.
+  ✅ **Both apps now prefer a translated `errors.codes.*` over the server's sentence**
+  (`getErrorMessage`), so an app can out-speak the server for codes it knows.
+  ✅ **`messageKeys.test.ts` — reads the real service sources, extracts every `messageKey` in
+  use and resolves it in uz/ru/en. RED on 4 mutations** (typo'd key · wrong namespace · one
+  locale short · a lost `{placeholder}`). **This guard is the point**: the English fallback that
+  makes migration safe is exactly what makes a typo INVISIBLE.
+  🛑 **WHAT IS LEFT, precisely:** ~29 field-validation literals of the shape
+  `${field} must be a number` / `seat_counts must be an object` in `DriverOfferService` and
+  `PassengerOfferService`. **These are developer-shaped and a well-behaved app never triggers
+  them** — they signal a client bug, and leaving them diagnosable in English is arguably right.
+  **Decide deliberately rather than by drift.** Plus 4 in `DriverService`'s siblings and 4 in
+  the admin services (different audience — the admin panel is not localised at all).
+  ⚠️ **Success/info messages are NOT the problem they look like:** 28 `successResponse` literals
+  exist but **24 are admin controllers**, and both apps render their own local success toasts
+  (`t('common.success')`), ignoring the server's text. Only 4 could ever reach a phone.
+  ❌ No migration. ⚠️ **Needs an API deploy.**
+
 - [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
   Owner: *"user or driver have possibility max two active offers"*.
   ✅ **SERVER ENFORCEMENT DONE 2026-09-13. The counter UI is not (see below).**

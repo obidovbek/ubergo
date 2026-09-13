@@ -1034,7 +1034,8 @@ export class PassengerOfferService {
     if (userId !== undefined && offer.user_id !== userId) {
       throw new AppError(
         'You do not have permission to access this offer',
-        403
+        403,
+        { messageKey: 'offers.offerNotFoundOrNoPermission' }
       );
     }
 
@@ -1090,6 +1091,7 @@ export class PassengerOfferService {
         409,
         {
           code: 'ACTIVE_OFFER_LIMIT_REACHED',
+          messageKey: 'offers.activeLimitReachedPassenger',
           limit: MAX_ACTIVE_OFFERS,
           active: activeCount
         }
@@ -1280,7 +1282,8 @@ export class PassengerOfferService {
     if (!['published', 'driver_found'].includes(offer.status)) {
       throw new AppError(
         'Only published or matched offers can be cancelled',
-        400
+        400,
+        { messageKey: 'offers.onlyPublishedOrMatchedCanBeCancelled' }
       );
     }
 
@@ -1381,7 +1384,8 @@ export class PassengerOfferService {
     if (!['archived', 'cancelled'].includes(offer.status)) {
       throw new AppError(
         'Only archived or cancelled offers can be published',
-        400
+        400,
+        { messageKey: 'offers.onlyArchivedOrCancelledCanBePublished' }
       );
     }
 
@@ -1445,7 +1449,8 @@ export class PassengerOfferService {
     if (offer.status !== 'driver_found') {
       throw new AppError(
         'Only offers with a confirmed driver can be completed',
-        400
+        400,
+        { messageKey: 'offers.onlyWithConfirmedDriverCanComplete' }
       );
     }
 
@@ -1473,7 +1478,8 @@ export class PassengerOfferService {
     if (!['archived', 'cancelled'].includes(offer.status)) {
       throw new AppError(
         'Only archived or cancelled offers can be deleted',
-        400
+        400,
+        { messageKey: 'offers.onlyArchivedOrCancelledCanBeDeleted' }
       );
     }
 

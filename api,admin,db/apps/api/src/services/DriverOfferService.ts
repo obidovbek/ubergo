@@ -137,7 +137,11 @@ export class DriverOfferService {
       if (startAt < minStartAt) {
         throw new AppError(
           `start_at must be at least ${this.MIN_ADVANCE_MINUTES} minutes in the future`,
-          400
+          400,
+          {
+            messageKey: 'offers.startAtTooSoon',
+            messageParams: { minutes: this.MIN_ADVANCE_MINUTES }
+          }
         );
       }
     }
@@ -280,7 +284,9 @@ export class DriverOfferService {
     });
 
     if (!vehicle) {
-      throw new AppError('Vehicle not found or does not belong to you', 403);
+      throw new AppError('Vehicle not found or does not belong to you', 403, {
+        messageKey: 'offers.vehicleNotFound'
+      });
     }
 
     return vehicle;
@@ -455,12 +461,14 @@ export class DriverOfferService {
     });
 
     if (!offer) {
-      throw new AppError('Offer not found', 404);
+      throw new AppError('Offer not found', 404, { messageKey: 'offers.offerNotFound' });
     }
 
     // Check ownership if userId provided
     if (userId !== undefined && offer.user_id !== userId) {
-      throw new AppError('You do not have permission to access this offer', 403);
+      throw new AppError('You do not have permission to access this offer', 403, {
+        messageKey: 'offers.offerNotFoundOrNoPermission'
+      });
     }
 
     return offer;
@@ -589,6 +597,7 @@ export class DriverOfferService {
         409,
         {
           code: 'ACTIVE_OFFER_LIMIT_REACHED',
+          messageKey: 'offers.activeLimitReachedDriver',
           limit: MAX_ACTIVE_OFFERS,
           active: activeCount
         }
@@ -818,7 +827,9 @@ export class DriverOfferService {
     const offer = await this.getOfferById(offerId, userId);
 
     if (offer.status !== 'published') {
-      throw new AppError('Only published offers can be cancelled', 400);
+      throw new AppError('Only published offers can be cancelled', 400, {
+        messageKey: 'offers.onlyPublishedCanBeCancelled'
+      });
     }
 
     // Get all confirmed passengers before cancelling
@@ -882,7 +893,9 @@ export class DriverOfferService {
     const offer = await this.getOfferById(offerId, userId);
 
     if (!['archived', 'cancelled'].includes(offer.status)) {
-      throw new AppError('Only archived or cancelled offers can be published', 400);
+      throw new AppError('Only archived or cancelled offers can be published', 400, {
+        messageKey: 'offers.onlyArchivedOrCancelledCanBePublished'
+      });
     }
 
     // T-115 — re-publishing is a new live offer, so it is subject to the same ceiling.
@@ -931,7 +944,9 @@ export class DriverOfferService {
     const offer = await this.getOfferById(offerId, userId);
 
     if (!['archived', 'cancelled'].includes(offer.status)) {
-      throw new AppError('Only archived or cancelled offers can be deleted', 400);
+      throw new AppError('Only archived or cancelled offers can be deleted', 400, {
+        messageKey: 'offers.onlyArchivedOrCancelledCanBeDeleted'
+      });
     }
 
     await offer.destroy();
