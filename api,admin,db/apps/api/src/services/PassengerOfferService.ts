@@ -29,6 +29,11 @@ import type {
   PassengerOfferVehicleType,
 } from '../database/models/PassengerOffer.js';
 import { ORDER_SCOPES, isOrderScope } from '../utils/geoMatch.js';
+import {
+  MAX_ACTIVE_OFFERS,
+  PASSENGER_ACTIVE_STATUSES,
+  isAtActiveLimit
+} from '../utils/activeOffers.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
@@ -1037,6 +1042,62 @@ export class PassengerOfferService {
   }
 
   /**
+   * T-115 — refuse a third live offer. Owner, 2026-09-13; the driver artboard has drawn
+   * `Faol e'lon: n / 2` since T-101 and nothing enforced it (T-110 ⑥).
+   *
+   * 🔴 CALLED FROM CREATE **AND** RE-PUBLISH. Checking only `create` leaves the ceiling
+   * trivially bypassable: fill both slots, archive one, create a third, then re-publish the
+   * archived one. Re-publishing is a new live offer by any other name.
+   *
+   * ⚠️ NEVER called from update. Editing a live offer creates nothing, and refusing an edit
+   * because two offers exist would strand a passenger who simply wants to fix a typo.
+   *
+   * ⚠️ `excludeOfferId` is for re-publish: that row is the one being brought back, and it is
+   * archived/cancelled at the moment of counting, so it cannot be double-counted today — the
+   * argument keeps the call honest if the status rules ever widen.
+   *
+   * 🛑 A CONCURRENCY HOLE REMAINS AND IS DELIBERATELY NOT PAPERED OVER: two requests landing
+   * together can both read a count of 1 and both insert. These services use no transactions
+   * at all (measured 2026-09-13), so closing it means introducing the codebase's first one —
+   * that is **T-026A**, the offer-concurrency card, not this one. The realistic case (a
+   * double-tap) is also covered by `offerActionLimiter` on the route.
+   */
+  private static async assertBelowActiveLimit(
+    userId: number,
+    excludeOfferId?: string | number
+  ) {
+    const where: Record<string, unknown> = {
+      user_id: userId,
+      status: { [Op.in]: [...PASSENGER_ACTIVE_STATUSES] },
+      // Only offers that have not departed — see `utils/activeOffers.ts` for why.
+      start_at: { [Op.gte]: new Date() }
+    };
+    if (excludeOfferId !== undefined) where.id = { [Op.ne]: excludeOfferId };
+
+    const activeCount = await PassengerOffer.count({ where });
+
+    if (isAtActiveLimit(activeCount)) {
+      /*
+       * 409, not 400: the request is well formed, it conflicts with the account's current
+       * state. And a STRUCTURED `data` rather than a bare string — the error handler passes
+       * `AppError.data` straight through as `response.data`, so the apps can key off
+       * `code` and render their own localised message instead of showing this English one.
+       * The English text is the fallback for anything that does not know the code.
+       */
+      throw new AppError(
+        `You may hold at most ${MAX_ACTIVE_OFFERS} active orders. ` +
+          'Finish or cancel one before opening another.',
+        409,
+        {
+          code: 'ACTIVE_OFFER_LIMIT_REACHED',
+          limit: MAX_ACTIVE_OFFERS,
+          active: activeCount
+        }
+      );
+    }
+  }
+
+  /**
    * Create new passenger offer
    */
   static async createOffer(
@@ -1046,6 +1107,9 @@ export class PassengerOfferService {
   ) {
     // Whitelist + validate (throws AppError(400) on anything malformed)
     const fields = this.buildOfferFields(data);
+
+    // T-115 — before anything is written.
+    await this.assertBelowActiveLimit(userId);
 
     // Create offer
     const offer = await PassengerOffer.create({
@@ -1320,6 +1384,9 @@ export class PassengerOfferService {
         400
       );
     }
+
+    // T-115 — re-publishing is a new live order, so the same ceiling applies.
+    await this.assertBelowActiveLimit(userId, offerId);
 
     await offer.update({ status: 'published' });
 

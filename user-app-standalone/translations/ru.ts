@@ -260,6 +260,10 @@ export default {
 
   // Backend Error Messages
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED:
+        'Лимит исчерпан — завершите или отмените текущий заказ, чтобы создать новый.',
+    },
     network: 'Нет подключения к интернету',
     timeout: 'Время ожидания истекло',
     serverError: 'Произошла ошибка сервера',

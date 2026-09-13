@@ -377,6 +377,10 @@ export default {
 
   // Backend Error Messages
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED:
+        'Limit reached — finish or cancel a ride before posting a new offer.',
+    },
     network: 'No internet connection',
     timeout: 'Request timeout',
     serverError: 'Server error occurred',

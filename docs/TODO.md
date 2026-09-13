@@ -662,6 +662,40 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
+  Owner: *"user or driver have possibility max two active offers"*.
+  ✅ **SERVER ENFORCEMENT DONE 2026-09-13. The counter UI is not (see below).**
+  🟢 **The number was already drawn**: `DriverMyOrder.dc.html` carries `MAX_ELON = 2`, a
+  `Faol e'lon: n / 2` chip and the note *"Limit to'ldi — yangi e'lon berish uchun reysni
+  yakunlang yoki bekor qiling."* **T-110 ⑥ had logged that nothing enforced it** — *"a ceiling
+  the server does not enforce is decoration that lies."* This is that card's server half.
+  🔴 **"ACTIVE" IS TWO CONDITIONS, and the second is the one that is easy to miss:**
+  ① a live STATUS — driver `published`; passenger `published` **or `driver_found`** (a matched
+  order has not travelled yet, so it still occupies a slot). The two lists are deliberately
+  separate: `driver_found` does not exist on the driver side.
+  ② **a departure still AHEAD.** The search already hides `start_at < now`, so a past
+  `published` row is invisible to everyone; counting it would lock a driver out over rows
+  nobody can see, for ever, since nothing ages a row out of `published`.
+  🔴 **ENFORCED ON CREATE *AND* RE-PUBLISH.** Create-only is trivially bypassable: fill both
+  slots, archive one, create a third, re-publish the archived one → three.
+  ⚠️ **NEVER on update** — editing a live offer creates nothing, and refusing an edit because
+  two offers exist would strand someone fixing a typo.
+  ✅ `src/utils/activeOffers.ts` + **21 tests (API 284 → 305), red on 8 mutations**; a 9th
+  mutation proved a null-guard branch was DEAD CODE and it was removed rather than left
+  untestable.
+  ✅ **409 with a structured `data.code`**, not a bare English 400 — both apps' `getErrorMessage`
+  now prefers a translated `errors.codes.*` over the server's English sentence, falling through
+  when the app has never heard the code. Keys in **uz · ru · en × both apps**, Uzbek wording
+  taken verbatim from the artboard.
+  🛑 **STILL TO DO — the counter UI** (`Faol e'lon: n / 2` + the note, and a disabled create
+  button when full). That is the rest of T-110 ⑥, and without it the user only learns the limit
+  by being refused.
+  🛑 **A CONCURRENCY HOLE IS OPEN AND NOT PAPERED OVER:** two requests landing together can both
+  read 1 and both insert. These services use **no transactions at all** (measured), so closing
+  it means the codebase's first one — that is **T-026A**, not this card. `offerActionLimiter`
+  covers the realistic double-tap.
+  ❌ No migration. ⚠️ **Needs an API deploy** — the apps talk to `test3.fstu.uz`.
+
 - [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
   FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
   ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
@@ -676,6 +710,11 @@
   reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
   stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
   reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
+  ✅ ④ **the search tab now follows an edited order** — it is a tab that mounts once and seeded
+  its route once, so an edit never reached it. Fixed through storage + a REVISION
+  (`utils/lastSearch.ts`), because the screen writes that same key itself and a plain re-read on
+  focus would overwrite a search the passenger typed. `check-last-search.mjs`: 11 assertions,
+  red on 6 mutations, both failure directions.
   ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
   **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
   is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.

@@ -299,6 +299,9 @@ export default {
    * claiming to fix a missing-key bug.
    */
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED: "Limit to'ldi — yangi buyurtma berish uchun mavjudini yakunlang yoki bekor qiling.",
+    },
     network: "Internet bilan aloqa yo'q",
     timeout: "Kutish vaqti tugadi",
     serverError: "Serverda xatolik yuz berdi",

@@ -65,6 +65,9 @@ export default {
   },
 
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED: "Limit to'ldi — yangi e'lon berish uchun reysni yakunlang yoki bekor qiling.",
+    },
     unknown: 'Noma\'lum xatolik yuz berdi',
     network: 'Internet aloqasi bilan muammo. Iltimos, internet aloqangizni tekshiring.',
     timeout: 'So\'rov vaqti tugadi. Iltimos, qayta urinib ko\'ring.',

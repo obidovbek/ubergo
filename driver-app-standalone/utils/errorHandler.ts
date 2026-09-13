@@ -156,6 +156,25 @@ export const handleBackendError = (
 export const getErrorMessage = (error: any, t?: (key: string) => string, defaultMsg?: string): string => {
   if (typeof error === 'string') return error;
 
+  /*
+   * 🔴 T-115 — A SERVER ERROR **CODE** BEATS THE SERVER'S SENTENCE. The line below prefers
+   * `data.message`, and that message is written in ENGLISH by the API: for anything the
+   * server cannot localise, an Uzbek or Russian speaker gets an English sentence. Where the
+   * API sends a machine-readable `code` in its structured `data`, the app can say it properly.
+   *
+   * ⚠️ Falls through when the key is missing rather than showing `errors.codes.SOMETHING`:
+   * `t()` returns the key itself for a miss (see `hooks/useTranslation.ts`), so comparing
+   * against the key IS the presence test. A code the app has never heard of therefore still
+   * gets the server's English text, which is worse than a translation and better than a
+   * dotted identifier.
+   */
+  const serverCode = error?.response?.data?.data?.code;
+  if (t && typeof serverCode === 'string') {
+    const key = `errors.codes.${serverCode}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
+
   // Prefer backend-translated messages (they're already in user's language)
   if (error?.response?.data?.message) return error.response.data.message;
   if (error?.response?.data?.error) return error.response.data.error;

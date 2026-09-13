@@ -79,6 +79,7 @@ import {
 import { ScopeRootCard } from "../components/passengerOffer/ScopeRootCard";
 import type { GeoPath } from "../components/geo/GeoSheet";
 import { scopeRootChanged } from "../utils/scopeRoot";
+import { bumpLastSearchRoute } from "../utils/lastSearch";
 
 /*
  * T-028 — the shared list, not a local copy. The copy that used to sit here
@@ -790,6 +791,28 @@ export const CreatePassengerOfferScreen: React.FC = () => {
       } else {
         await createPassengerOffer(offerData);
       }
+
+      /*
+       * 🔴 HAND THE ROUTE TO THE SEARCH TAB — device report 2026-09-13: *"after edit on user
+       * search page remains data before edit"*.
+       *
+       * `SearchOffersScreen` is a tab: it mounts once and seeds its from/to once, so an edit
+       * had no way to reach it and it kept showing the pre-edit route. On CREATE the T-077
+       * hand-off below moves it; on EDIT nothing did, because an edit deliberately returns to
+       * the orders list instead (owner re-confirmed 2026-09-13 — going to search would lose
+       * the passenger's place). So the route travels through storage rather than navigation.
+       *
+       * ⚠️ `bumpLastSearchRoute`, not a plain save: the search screen writes this same key on
+       * every change of its own, and only a bumped REVISION tells it that someone else moved
+       * the route. Without that distinction it would either ignore this or fight the passenger
+       * for the field. See `utils/lastSearch.ts`.
+       */
+      await bumpLastSearchRoute({
+        fromProvince: fromLocation.province,
+        fromCity: fromLocation.cityDistrict,
+        toProvince: toLocation.province,
+        toCity: toLocation.cityDistrict,
+      });
 
       // A dialog, NOT a toast: OK is what returns the user to their list. A
       // toast would leave them staring at the form they just submitted,

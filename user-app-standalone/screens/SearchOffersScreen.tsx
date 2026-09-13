@@ -41,7 +41,7 @@
  * driver-side `Hoziroq` tag, and the reviews list (no passenger-facing endpoint for comments).
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -60,6 +60,11 @@ import * as OffersAPI from '../api/offers';
 import * as PassengerOffersAPI from '../api/passengerOffers';
 import type { OfferDriver } from '../api/passengerOffers';
 import { getDriverRatingSummary, type DriverRatingSummary } from '../api/ratings';
+import {
+  readLastSearchRevision,
+  readLastSearchRoute,
+  shouldAdoptLastSearch,
+} from '../utils/lastSearch';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
@@ -215,6 +220,56 @@ export default function SearchOffersScreen() {
      */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /*
+   * 🔴 T-114 follow-up — FOLLOW THE ROUTE WHEN THE ORDER FORM MOVES IT.
+   *
+   * The effect above runs ONCE, and this screen is a tab that never unmounts, so before this
+   * an edited order left the search showing its pre-edit route (device report 2026-09-13).
+   *
+   * ⚠️ It adopts only when the stored REVISION differs from the one already applied — i.e.
+   * when somebody OTHER than this screen moved the route. This screen saves the same key on
+   * every change of its own; reacting to that would overwrite a search the passenger set up
+   * by hand. `shouldAdoptLastSearch` is that rule, and it is asserted in
+   * `scripts/check-last-search.mjs` because both failure modes are silent.
+   */
+  const appliedRevision = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Seed on mount so the FIRST focus never adopts — `initialize()` has just run.
+    void readLastSearchRevision().then((rev) => {
+      appliedRevision.current = rev ?? 0;
+    });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const stored = await readLastSearchRevision();
+        if (cancelled) return;
+        if (!shouldAdoptLastSearch(appliedRevision.current, stored)) return;
+
+        const route = await readLastSearchRoute();
+        if (cancelled || !route) return;
+
+        appliedRevision.current = stored;
+        setFromPath({
+          ...(route.fromCountry ? { country: route.fromCountry } : {}),
+          ...(route.fromProvince ? { province: route.fromProvince } : {}),
+          ...(route.fromCity ? { district: route.fromCity } : {}),
+        });
+        setToPath({
+          ...(route.toCountry ? { country: route.toCountry } : {}),
+          ...(route.toProvince ? { province: route.toProvince } : {}),
+          ...(route.toCity ? { district: route.toCity } : {}),
+        });
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     if (!selectedFromProvince || !selectedToProvince) return;

@@ -76,6 +76,59 @@ goes through `isOrderScope` from the rules module rather than a second copy of t
 their stored geo was rejected**: an `aro` order inside one district is indistinguishable from a
 `tuman` one — the reason the column stores the scope, not the level.
 
+**④ *"after edit on user search page remains data before edit"*.** `SearchOffersScreen` is a
+TAB — it mounts once and stays mounted — and it seeds its from/to in a **mount-only** effect
+(deliberately: the T-077 hand-off is rebuilt from `route.params` every render, so depending on it
+would loop). A CREATE moves it by navigating with params; an EDIT returns to the orders list
+instead, so nothing ever told the tab the route had changed.
+
+✅ **Owner re-confirmed T-077's landing decision** — an edit still goes back to the orders list —
+so the route travels through **storage**, not navigation: `utils/lastSearch.ts`.
+🔴 **A plain shared write would have been wrong in the other direction.** The search screen SAVES
+that same key on every change of its own, so "re-read on focus" would silently overwrite a search
+the passenger typed. The rule is therefore a **revision**: the tab follows the stored route only
+when someone *other than itself* moved it. `bumpLastSearchRoute` is the order form; the screen's
+own save deliberately does not bump. `check-last-search.mjs` — **11 assertions, red on all 6
+mutations**, covering BOTH failure directions (too lax = the reported bug returns; too eager =
+the passenger's own search is overwritten).
+
+🔴 **AND THE REASON ①-③ TOOK THREE ROUNDS: the apps point at `https://test3.fstu.uz/api` in every
+branch, `__DEV__` included** (`config/api.ts:39-43`). Two of the reports were unfixable until the
+API was redeployed, and the code had been correct for one of them the whole time. **Check what the
+device is actually talking to before debugging a server-side symptom.**
+
+### T-115 — max two active offers, asked for and built the same day
+
+Owner: *"user or driver have possibility max two active offers"*. **The artboard had already
+drawn it** (`MAX_ELON = 2`, `Faol e'lon: n / 2`, the "limit to'ldi" note) and **T-110 ⑥ had
+already logged that nothing enforced it.** So this was the server half of a card that existed.
+
+🔴 **The thinking that mattered was what "active" means**, and it is two conditions: a live
+status, AND a departure still ahead. The second is the one that bites — the search already hides
+`start_at < now`, so counting a departed offer would lock a driver out over rows nobody can see,
+permanently, because nothing ages a row out of `published`. And `driver_found` counts on the
+passenger side but does not exist on the driver side, so the two status lists stay separate.
+
+🔴 **Enforced on create AND re-publish.** Create-only is bypassable in four steps: fill both
+slots, archive one, create a third, re-publish the archived one. **Never on update** — an edit
+creates nothing.
+
+⚠️ **A mutation run found DEAD CODE rather than a bug**: 8 of 9 mutations went red, and the one
+that did not proved a null-guard branch could not change any answer (`new Date(null)` is the
+epoch, already excluded; `new Date(undefined)` is NaN, already caught). **Removed it** — a branch
+no test can defend is a branch that should not be there.
+
+⚠️ **The Uzbek apostrophe trap struck again and was caught before it shipped**: the driver's
+`uz` string went in single-quoted, and `to'ldi` / `e'lon` would have broken the file. Caught by
+EVALUATING all six locale files rather than grepping them.
+
+**Verification.** API `tsc` **281** (identical set) · **305 tests** (284 + 21) · lint 0 errors.
+user **6** / **0 / 208** / 10 checkers · driver **28** / **0 / 275** / 10 checkers.
+
+🛑 **Not done: the counter UI** (`Faol e'lon: n / 2`, disabled create button) — the rest of
+T-110 ⑥. 🛑 **A concurrency hole is open and documented, not hidden**: no transactions exist in
+these services, so closing it is **T-026A**.
+
 - **Problems:** 🛑 **the re-pin check is still undone** — and T-114's re-pin rule is the one thing no
   checker can cover. T-114 ② not started. The edit path waits on T-102d.
 - **Next:** device-walk `PLAN-T114.md` §8, then **T-102d** — which also finishes T-114's edit path.

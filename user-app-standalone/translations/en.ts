@@ -266,6 +266,10 @@ export default {
 
   // Backend Error Messages
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED:
+        'Limit reached — finish or cancel an order before creating a new one.',
+    },
     network: 'No internet connection',
     timeout: 'Request timeout',
     serverError: 'Server error occurred',

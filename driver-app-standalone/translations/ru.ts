@@ -377,6 +377,10 @@ export default {
 
   // Backend Error Messages
   errors: {
+    codes: {
+      ACTIVE_OFFER_LIMIT_REACHED:
+        'Лимит исчерпан — завершите или отмените рейс, чтобы разместить новое объявление.',
+    },
     network: 'Нет подключения к интернету',
     timeout: 'Время ожидания истекло',
     serverError: 'Произошла ошибка сервера',
