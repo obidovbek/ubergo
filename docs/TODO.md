@@ -662,6 +662,49 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
+  FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
+  ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
+  drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
+  **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
+  🛑 **Device check §8 of the plan, item 2 first** — changing the root must CLEAR both endpoints,
+  and no checker can cover that.
+  🛑 **② IS NOT STARTED** (per-scope completeness: `yaqin` requiring a QFY, the MATCH strip).
+  ✅ **DEVICE-FIXED 2026-09-13, three owner reports:** ① the root/from-to pickers rendered EMPTY
+  (`GeoSheet` answers a missing ancestor with an empty list and no error — the country was never
+  put back into the path); ② after creating an order the app **stayed on the form** (a tab route
+  reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
+  stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
+  reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
+  ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
+  **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
+  is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.
+  Owner: *"user app user order … there must be different FROM, TO part"*, naming all four boards.
+  ✅ **Measured 2026-09-13, not assumed — and it is SMALLER than it reads.**
+  🟢 **`GeoSheet` ALREADY TAKES `startLevel` + `initialPath`, and was built for this card** — its
+  header says *"that is the whole reason the artboards have four `UserBuyurtma*` files."*
+  🔴 **`LocationCard.tsx:207-208` hardcodes both as literals** and takes neither as a prop, so the
+  capability is wired to nothing. `CreatePassengerOfferScreen.tsx:127` reads `scope` and spends it
+  on the header subtitle — its own comment at line 125 admits that is "the only thing separating
+  the four scopes".
+  **The four boards differ by ENTRY LEVEL and PINNING, nothing else** (all four pickers are
+  byte-identical; `openFrom` is the only line that changes):
+  · `aro` — no root card, opens at **viloyat**
+  · `viloyat` — root card **`Viloyat (Adm1)`**, opens at **tuman**, province pinned
+  · `tuman` — root card **`Tuman (Adm2)`**, opens at **QFY**, province + district pinned
+  · `yaqin` — no root card, opens at **viloyat**
+  ⚠️ **`aro` and `yaqin` are IDENTICAL in sub-step ①** — measured, not an oversight. They diverge
+  only in completeness (`yaqin` requires adm3), which is ②.
+  🔴 **A CONTRADICTION FOUND: the Tuman board accepts an endpoint with NO QFY, but
+  `validateScope(order,'tuman')` matches at adm3 and refuses it.** An order that form accepts, the
+  matcher rejects. ✅ **Owner decided 2026-09-13: the QFY is REQUIRED on Tuman** — the rules module
+  stands and the form tightens beyond the artboard. Enforcement is ②.
+  **SCOPE NOW = ① ONLY** (owner's call): root card + entry levels. ② (per-scope completeness, the
+  MATCH strip) is a follow-up card and half-overlaps T-102's validation.
+  ❌ No migration, no API change — `PassengerOffer` already has and populates all 8 geo id columns.
+  ⚠️ **Fix all four boards together** — `ubexgo-fix-the-class-not-the-instance`, four times in one
+  screen.
+
 > 🤝 **START HERE: `docs/HANDOFF-2026-09-12.md`.** Written at the owner's request and complete
 > on its own — state, the three blockers, the nine card corrections made that day, the two
 > structural gaps, exact uncommitted files, and the traps this project keeps hitting.

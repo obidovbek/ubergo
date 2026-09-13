@@ -34,7 +34,7 @@ import {
   isValid,
   type OfferValidationInput,
 } from '../utils/offerWizardValidation';
-import { resolveEndpointRestore } from '../utils/offerRestore';
+import { resolveEndpointRestore, buildOfferPlaces } from '../utils/offerRestore';
 // T-101 step 16b — the form's sections, cut out in the order `DriverElon.dc.html`
 // draws them. The wizard still paginates over them; step 16d deletes the pagination.
 import {
@@ -52,7 +52,7 @@ import { BackButton } from '../components/BackButton';
 import { getErrorMessage } from '../utils/errorHandler';
 import { formatDateByLanguage } from '../utils/date';
 import * as DriverOffersAPI from '../api/driverOffers';
-import type { CreateOfferData, DriverOffer } from '../api/driverOffers';
+import type { CreateOfferData, DriverOffer, DriverOfferPlace } from '../api/driverOffers';
 import * as DriverAPI from '../api/driver';
 import type { DriverProfile, GeoOption } from '../api/driver';
 // T-101 step 16c — the app's own geo cascade, adopted at last. Its header lists
@@ -334,13 +334,55 @@ export const OfferWizardScreen: React.FC = () => {
           note: offer.note || '',
         });
 
+        /*
+         * 🔴 T-102c — THE IDS, IF THIS OFFER HAS THEM. Everything below this block is the
+         * PRE-T-102 fallback and now runs only for an offer saved before this card: one that
+         * carries `from_text` and no `places`. It recovers cities by splitting the text on
+         * commas and testing whether a part `includes('viloyat')`, so a district named
+         * "...viloyat..." is mis-parsed and a renamed district silently stops loading. Those
+         * failures are why this block exists; the fallback stays only so old offers still open.
+         *
+         * ⚠️ `validateOfferPlaces` on the API guarantees one province per side, so reading the
+         * province off the first place that names one is not a guess.
+         */
+        const offerPlaces = offer.places ?? [];
+        const fromPlaces = offerPlaces.filter(place => place.direction === 'from');
+        const toPlaces = offerPlaces.filter(place => place.direction === 'to');
+        const placesDroveTheLoad = fromPlaces.length > 0 || toPlaces.length > 0;
+
+        const loadSideFromPlaces = async (places: DriverOfferPlace[]) => {
+          const countryId = places.find(place => place.country_id != null)?.country_id ?? null;
+          const provinceId = places.find(place => place.province_id != null)?.province_id ?? null;
+
+          const country = countries.find(c => c.id === countryId) ?? null;
+          const provinces = country ? await DriverAPI.fetchGeoProvinces(country.id) : [];
+          const province = provinces.find(pr => pr.id === provinceId) ?? null;
+          const districts = province ? await DriverAPI.fetchGeoCityDistricts(province.id) : [];
+
+          const cities: GeoOption[] = [];
+          for (const place of places) {
+            const found = districts.find(d => d.id === place.city_id);
+            if (found && !cities.some(c => c.id === found.id)) cities.push(found);
+          }
+          return { country, province, cities };
+        };
+
         // Parse and populate "From" location geo selections
         let loadedFromCountry: GeoOption | null = null;
         let loadedFromProvince: GeoOption | null = null;
         let loadedFromCity: GeoOption | null = null;
         let loadedFromCities: GeoOption[] = [];
 
-        if (offer.from_text) {
+        if (fromPlaces.length > 0) {
+          const side = await loadSideFromPlaces(fromPlaces);
+          loadedFromCountry = side.country;
+          setFromCountry(side.country);
+          loadedFromProvince = side.province;
+          setFromProvince(side.province);
+          loadedFromCities = side.cities;
+          // Only meaningful to the fake-stop dance below, which `placesDroveTheLoad` skips.
+          loadedFromCity = side.cities.length === 1 ? side.cities[0] : null;
+        } else if (offer.from_text) {
           // Check if from_text contains multiple cities (comma-separated, no province/country)
           const fromTextParts = offer.from_text.split(',').map(p => p.trim());
           const hasMultipleCities = fromTextParts.length > 1 && !fromTextParts.some(p => 
@@ -400,7 +442,15 @@ export const OfferWizardScreen: React.FC = () => {
         let loadedToCity: GeoOption | null = null;
         let loadedToCities: GeoOption[] = [];
 
-        if (offer.to_text) {
+        if (toPlaces.length > 0) {
+          const side = await loadSideFromPlaces(toPlaces);
+          loadedToCountry = side.country;
+          setToCountry(side.country);
+          loadedToProvince = side.province;
+          setToProvince(side.province);
+          loadedToCities = side.cities;
+          loadedToCity = side.cities.length === 1 ? side.cities[0] : null;
+        } else if (offer.to_text) {
           // Check if to_text contains multiple cities (comma-separated, no province/country)
           const toTextParts = offer.to_text.split(',').map(p => p.trim());
           const hasMultipleCities = toTextParts.length > 1 && !toTextParts.some(p => 
@@ -470,8 +520,17 @@ export const OfferWizardScreen: React.FC = () => {
               province = stopGeo.province;
               city = stopGeo.city;
 
+              /*
+               * 🔴 T-102c — THIS ABSORPTION IS THE OLD SMUGGLING ROUTE, AND IT MUST NOT RUN ON
+               * AN OFFER THAT HAS IDS. It exists because extra from/to districts used to be
+               * written as fake stops, so loading had to guess which stops were really
+               * endpoints — by province. Now that `driver_offer_places` carries the route, a
+               * stop is a stop: leaving this on would swallow a genuine intermediate stop that
+               * happens to sit in the origin's province, and the next save would then store it
+               * as an origin district.
+               */
               // Check if this stop belongs to From multi-city selection
-              if (country && province && city && 
+              if (!placesDroveTheLoad && country && province && city && 
                   loadedFromCountry && loadedFromProvince &&
                   country.id === loadedFromCountry.id && 
                   province.id === loadedFromProvince.id) {
@@ -488,7 +547,7 @@ export const OfferWizardScreen: React.FC = () => {
               }
 
               // Check if this stop belongs to To multi-city selection
-              if (country && province && city &&
+              if (!placesDroveTheLoad && country && province && city &&
                   loadedToCountry && loadedToProvince &&
                   country.id === loadedToCountry.id && 
                   province.id === loadedToProvince.id) {
@@ -893,32 +952,34 @@ export const OfferWizardScreen: React.FC = () => {
         }
       });
 
-      // Include additional From cities (except first one which is primary)
-      const fromStops = selectedFromCities.length > 1 
-        ? selectedFromCities.slice(1).map((city, index) => ({
-            label_text: buildLocationText(fromCountry, fromProvince, city),
-            lat: city.latitude || undefined,
-            lng: city.longitude || undefined,
-            order_no: intermediateStops.length + index + 1,
-          }))
-        : [];
+      /*
+       * 🔴 T-102c — THE EXTRA FROM/TO DISTRICTS NO LONGER BECOME FAKE STOPS. They used to:
+       * `driver_offers` has ONE `from_text`, so every district after the first was serialised
+       * into a `DriverOfferStop` carrying a label, and the edit path reconstructed the route by
+       * splitting prose. They now travel as ids in `from_places` / `to_places`, which is what
+       * the search will match on (T-102e). `stopsData` is therefore what the word always meant:
+       * the driver's real intermediate stops, and nothing else.
+       */
+      const stopsData = intermediateStops;
 
-      // Include additional To cities (except first one which is primary)
-      const toStops = selectedToCities.length > 1
-        ? selectedToCities.slice(1).map((city, index) => ({
-            label_text: buildLocationText(toCountry, toProvince, city),
-            lat: city.latitude || undefined,
-            lng: city.longitude || undefined,
-            order_no: intermediateStops.length + fromStops.length + index + 1,
-          }))
-        : [];
-
-      // Combine: intermediate stops first, then additional From cities, then additional To cities
-      const stopsData = [...intermediateStops, ...fromStops, ...toStops];
+      /*
+       * The endpoint's districts, as ids. The single-vs-multi rule lives in `buildOfferPlaces`
+       * beside `resolveEndpointRestore`, which is the function that creates the trap it avoids
+       * — and is asserted in `scripts/check-offer-restore.mjs` rather than trusted here.
+       */
+      const fromPlaces = buildOfferPlaces(fromCountry, fromProvince, selectedFromCities, fromCity);
+      const toPlaces = buildOfferPlaces(toCountry, toProvince, selectedToCities, toCity);
 
       const offerDataWithStops = {
         ...formData,
         stops: stopsData.length > 0 ? stopsData : undefined,
+        /*
+         * ⚠️ Omitted rather than sent empty when the wizard has no ids to give. The API reads
+         * `undefined` as "said nothing" and leaves stored rows alone; `[]` is a validation
+         * error. Only a form that somehow reached save with no district lands here.
+         */
+        from_places: fromPlaces.length > 0 ? fromPlaces : undefined,
+        to_places: toPlaces.length > 0 ? toPlaces : undefined,
       };
 
       if (offerId) {

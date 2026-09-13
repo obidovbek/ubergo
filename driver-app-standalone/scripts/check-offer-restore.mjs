@@ -194,6 +194,67 @@ ok(
 
 
 
+// ── buildOfferPlaces — T-102c, what the endpoint SENDS ──────────────────────
+/*
+ * 🔴 THE ONE THAT MATTERS IS THE SINGLE-CITY CASE. `resolveEndpointRestore` clears `cities`
+ * for a one-district endpoint and puts it in `city`, so a sender reading only the array emits
+ * NOTHING for the commonest offer there is — and the offer saves with no ids, falling back to
+ * the very text search T-102 replaces. Nothing errors when that happens, which is why it is
+ * asserted here and not eyeballed in the screen.
+ *
+ * ⚠️ Numeric ids on purpose: `GeoOption.id` is a number, unlike the string-keyed CITIES above.
+ */
+const UZ = { id: 1 };
+const ANDIJON_VIL = { id: 10 };
+const D = [
+  { id: 101, name: 'Andijon' },
+  { id: 102, name: 'Asaka' },
+];
+
+eq(
+  'places: multi-select sends every district',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null),
+  [
+    { country_id: 1, province_id: 10, city_id: 101 },
+    { country_id: 1, province_id: 10, city_id: 102 },
+  ],
+);
+eq(
+  'places: ONE city lives in `primary` with an EMPTY array, and must still be sent',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [], D[0]),
+  [{ country_id: 1, province_id: 10, city_id: 101 }],
+);
+eq(
+  'places: the array wins when both are somehow populated',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[1]], D[0]).map((pl) => pl.city_id),
+  [102],
+);
+eq('places: nothing picked sends nothing', M.buildOfferPlaces(UZ, ANDIJON_VIL, [], null), []);
+eq(
+  'places: duplicates collapse (the API UNIQUE index would throw)',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0], D[0]], null).length,
+  1,
+);
+eq(
+  'places: a missing country/province is null, not dropped',
+  M.buildOfferPlaces(null, null, [D[0]], null),
+  [{ country_id: null, province_id: null, city_id: 101 }],
+);
+ok(
+  'places: never names a settlement — the wizard cannot pick one yet',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null).every(
+    (pl) => !Object.prototype.hasOwnProperty.call(pl, 'settlement_id'),
+  ),
+);
+
+// 🔴 The round trip T-102c actually creates: restore -> send. A one-city endpoint must survive.
+const restored = M.resolveEndpointRestore([D[0]]);
+eq(
+  'places: restore -> send keeps a single-district offer whole',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, restored.cities, restored.city).map((pl) => pl.city_id),
+  [101],
+);
+
 if (fails.length) {
   console.error('FAIL offer restore: ' + fails.length + ' of ' + (pass + fails.length));
   for (const f of fails) console.error('   - ' + f);
@@ -202,5 +263,5 @@ if (fails.length) {
 console.log(
   '✓ offer restore: all ' +
     pass +
-    ' assertions pass (split · multi-detect · match · resolve · stops · round trip)',
+    ' assertions pass (split · multi-detect · match · resolve · stops · round trip · places)',
 );

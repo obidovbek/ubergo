@@ -101,6 +101,7 @@ import { SupportContact, initSupportContact } from './SupportContact.js';
 import { Notification, initNotification } from './Notification.js';
 import { DriverOffer, initDriverOffer } from './DriverOffer.js';
 import { DriverOfferStop, initDriverOfferStop } from './DriverOfferStop.js';
+import { DriverOfferPlace, initDriverOfferPlace } from './DriverOfferPlace.js';
 import { OfferPassenger, initOfferPassenger } from './OfferPassenger.js';
 import { PassengerOffer, initPassengerOffer } from './PassengerOffer.js';
 import { OfferDriver, initOfferDriver } from './OfferDriver.js';
@@ -142,6 +143,7 @@ initSupportContact(sequelize);
 initNotification(sequelize);
 initDriverOffer(sequelize);
 initDriverOfferStop(sequelize);
+initDriverOfferPlace(sequelize);
 initOfferPassenger(sequelize);
 initPassengerOffer(sequelize);
 initOfferDriver(sequelize);
@@ -306,6 +308,10 @@ DriverOffer.belongsTo(DriverVehicle, { foreignKey: 'vehicle_id', as: 'vehicle' }
 DriverOffer.hasMany(DriverOfferStop, { foreignKey: 'offer_id', as: 'stops' });
 DriverOfferStop.belongsTo(DriverOffer, { foreignKey: 'offer_id', as: 'offer' });
 
+// T-102 — where the offer picks up and drops off, as ids. A SET per direction, so hasMany.
+DriverOffer.hasMany(DriverOfferPlace, { foreignKey: 'offer_id', as: 'places' });
+DriverOfferPlace.belongsTo(DriverOffer, { foreignKey: 'offer_id', as: 'offer' });
+
 AdminUser.hasMany(DriverOffer, { foreignKey: 'reviewed_by', as: 'reviewedOffers' });
 DriverOffer.belongsTo(AdminUser, { foreignKey: 'reviewed_by', as: 'reviewer' });
 
@@ -412,6 +418,7 @@ export {
   Notification,
   DriverOffer,
   DriverOfferStop,
+  DriverOfferPlace,
   OfferPassenger,
   PassengerOffer,
   OfferDriver,

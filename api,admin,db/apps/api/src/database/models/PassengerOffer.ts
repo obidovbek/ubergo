@@ -22,6 +22,12 @@ export type PassengerOfferStatus =
 // Stored as VARCHAR (not PG enums) — new values need no migration.
 export type PassengerOfferPaymentType = 'cash' | 'click_payme' | 'friend_pays';
 export type PassengerOfferSalonScope = 'whole_salon' | 'back_salon_full';
+/**
+ * T-102 — the four order scopes, the owner's own vocabulary. Mirrors `OrderScope` in
+ * `utils/geoMatch.ts`; kept as its own name here because this one is a COLUMN type and the
+ * two must be free to be checked against each other rather than silently share a definition.
+ */
+export type PassengerOfferMatchScope = 'aro' | 'viloyat' | 'tuman' | 'yaqin';
 export type PassengerOfferVehicleClass =
   | 'standard'
   | 'comfort'
@@ -75,6 +81,18 @@ export interface PassengerOfferAttributes {
   arrive_from?: Date | null;
   arrive_until?: Date | null;
   is_urgent: boolean;
+  /**
+   * T-102d — WHICH of the four scopes this order was placed with.
+   *
+   * 🔴 THE SCOPE, NOT THE MATCH LEVEL. `aro` and `viloyat` both match at adm2, `tuman` and
+   * `yaqin` both at adm3, so storing the level would make two different orders permanently
+   * indistinguishable. The level is derived from the scope (`utils/geoMatch.ts`
+   * `matchLevelFor`), never the reverse.
+   *
+   * ⚠️ NULL means an order placed BEFORE T-102d, which genuinely chose nothing. Inventing
+   * `'aro'` for those would be a lie the data could never be cleaned of.
+   */
+  match_scope?: PassengerOfferMatchScope | null;
   seats_needed: number;
   max_price_per_seat?: number | null;
   currency: string;
@@ -133,6 +151,7 @@ export interface PassengerOfferCreationAttributes
     | 'arrive_from'
     | 'arrive_until'
     | 'is_urgent'
+    | 'match_scope'
     | 'max_price_per_seat'
     | 'payment_type'
     | 'payment_cash'
@@ -187,6 +206,7 @@ export class PassengerOffer
   declare arrive_from?: Date | null;
   declare arrive_until?: Date | null;
   declare is_urgent: boolean;
+  declare match_scope?: PassengerOfferMatchScope | null;
   declare seats_needed: number;
   declare max_price_per_seat?: number | null;
   declare currency: string;
@@ -364,6 +384,14 @@ export function initPassengerOffer(sequelize: Sequelize) {
       },
       arrive_until: {
         type: DataTypes.DATE,
+        allowNull: true
+      },
+      match_scope: {
+        /*
+         * The four values are a closed set the owner defined. A real ENUM rather than a
+         * string so a typo is refused at the column instead of quietly never matching.
+         */
+        type: DataTypes.ENUM('aro', 'viloyat', 'tuman', 'yaqin'),
         allowNull: true
       },
       is_urgent: {

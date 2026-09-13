@@ -169,7 +169,7 @@ symmetric or "either direction" match would offer a passenger a ride going the w
       🛑 **I have NOT run them.** They change the owner's database; the approval was to write
       them. Run with `npm run db:migrate` in `api,admin,db/apps/api` — **on a copy of test3
       first** — and `npm run db:migrate:undo` reverses each.
-- [ ] **T-102c. The driver wizard collects geo ids.**
+- [ ] **T-102c. The driver wizard collects geo ids.** 🟢 **SUB-STEPS 1 AND 2 DONE 2026-09-13. 3 (QFY selection) REMAINS.**
       🟢 **MEASURED 2026-09-12 BEFORE STARTING, AND IT IS FAR LESS WORK THAN §4 ③ ASSUMED.**
       The wizard **already multi-selects districts**, exactly as `DriverElon` draws it:
       `selectedFromCities` / `selectedToCities` are `GeoOption[]` (lines 135/141), the sheet
@@ -187,16 +187,37 @@ symmetric or "either direction" match would offer a passenger a ride going the w
       in it.** So the driver cannot name a QFY at all today. The artboard's `toggleAdm3` is not
       built — adm3 offers are genuinely new UI, not a rewiring.
       **So T-102c splits:**
-        1. **persist what is already collected** — write `driver_offer_places` rows from
-           `selectedFromCities` / `selectedToCities` instead of into `stops`; keep `from_text`
-           for display. This alone deletes the text round trip and the `includes('viloyat')` guess.
-        2. **stop faking stops** — a true intermediate stop stays a stop; the fake ones go.
-        3. **add adm3 selection** (`endLevel="settlement"`, multi) so `tuman`/`yaqin` can match.
+        1. ✅ **DONE 2026-09-13 — persist what is already collected.** `DriverOfferPlace` model +
+           association; `from_places` / `to_places` on the create/update payload;
+           `writeOfferPlaces` (replace, never merge) validating through `validateOfferPlaces`;
+           `places` included on both driver-side reads. The wizard sends ids and the edit path
+           reads them back, so `parseLocationText` and the `includes('viloyat')` guess now run
+           **only for pre-T-102 offers**, as an explicit fallback.
+        2. ✅ **DONE 2026-09-13 — stopped faking stops.** `fromStops`/`toStops` are gone from
+           `handleSave`; `stopsData` is the real intermediate stops and nothing else. The load
+           path's absorption-by-province dance is skipped whenever the offer has places
+           (`placesDroveTheLoad`) — **without that guard, step 1 would have REGRESSED the app**:
+           a genuine stop inside the origin's province would be swallowed into the origin set
+           and the next save would store it as an origin district.
+        3. 🛑 **NOT STARTED — add adm3 selection** (`endLevel="settlement"`, multi) so
+           `tuman`/`yaqin` can match. Genuinely new UI; the word "settlement" still appears zero
+           times in the wizard. **Until it lands, every place row the wizard writes has a NULL
+           `settlement_id`**, which `LOOSE_PARENT_MATCH` reads as "anywhere in this district".
       ⚠️ **`stops` rows written by the old code are indistinguishable from real intermediate
       stops except by comparing their text to the from/to cities** (lines 868-885 already do this
       dance). The backfill (T-102g) must un-pick that, and it is the reason that step is risky.
 - [ ] **T-102d. The order sends and stores its scope**, and the passenger app stops relying on
-      free text.
+      free text. 🟢 **THE SCOPE HALF IS DONE 2026-09-13** — driven by an owner device report on
+      T-114 (*"on edit it should open based on how created"*), which needed exactly this.
+      ✅ `match_scope` on the `PassengerOffer` MODEL (the column was migrated on 2026-09-12 and
+      the model never knew about it, so nothing could read or write it) · accepted on create and
+      update · **validated through `isOrderScope` from the rules module, not a second copy of the
+      four values** · returned by the serialiser · sent by the order form on create AND edit.
+      🔴 **A BAD VALUE IS A 400, NOT A NULL.** NULL already means "pre-T-102d order, fall back to
+      the text search", so coercing a typo onto it would hide a broken client behind behaviour
+      that looks deliberate.
+      ⚠️ **Still open in this step:** "the passenger app stops relying on free text" — that is the
+      read side and belongs with **T-102e**, which is the query rewrite.
 - [ ] **T-102e. Rewrite the search** to `WHERE from_<L>_id = :x AND to_<L>_id = :y`, replacing the
       `ILIKE` path. **Keep the text search as an explicit fallback only when an order has no ids**
       (pre-T-102 rows), and say so in the response so the app can label it.
@@ -228,6 +249,45 @@ symmetric or "either direction" match would offer a passenger a ride going the w
 ---
 
 ## 8. Session notes
+
+### 2026-09-13 — T-102c 1+2: the ids are persisted, and the prose path is now a fallback
+
+**API.** `DriverOfferPlace` (table already migrated by the owner in `a522a8d`) + the
+`DriverOffer.hasMany(… as: 'places')` association; `from_places` / `to_places` on
+`CreateOfferData`; `writeOfferPlaces` on the service, called by both `createOffer` and
+`updateOffer`. It **replaces, never merges** — an edit is a fresh statement of where the driver
+goes — dedupes before insert (the table's UNIQUE index folds NULL settlements to 0 and would
+throw, not ignore), and validates through `validateOfferPlaces`, so T-102a's 46 tested cases are
+what guard the write. `undefined` on both sides means "an old client said nothing" and leaves
+stored rows alone; `[]` is a validation error, so neither path can silently empty an offer.
+
+**Driver app.** `handleSave` sends ids; `fromStops`/`toStops` are deleted. The load path reads
+`offer.places` first and falls back to `parseLocationText` **only for an offer with no places**.
+
+🔴 **THE GUARD THAT STOPPED THIS BEING A REGRESSION.** Removing the fake stops was not enough on
+its own: the load path also *absorbs* stops that share the origin's province back into the origin
+set, because that is how the fakes were recovered. Left running on an offer that now has ids, it
+would swallow a **real** intermediate stop in that province — and the next save would store it as
+an origin district. Hence `placesDroveTheLoad`. Sub-steps 1 and 2 are not separable; doing 1
+alone would have shipped the bug.
+
+⚠️ **`buildOfferPlaces` was pulled OUT of the screen into `utils/offerRestore.ts`** — beside
+`resolveEndpointRestore`, which is the function that creates the trap it has to avoid: a one-city
+endpoint keeps its city in `city` and an **empty** `cities`, so a sender reading only the array
+emits nothing for the commonest offer there is, and the offer saves with no ids at all, silently
+falling back to the text search this card exists to replace. Nothing errors when that happens.
+`check-offer-restore.mjs` **41 → 49 assertions**, and **RED on all 6 mutations** (dropped
+fallback · inverted precedence · no dedupe · swapped country/province · invented settlement ·
+0-for-null), file restored byte-identical.
+
+**Verification.** API `tsc` **281** (identical error set, proved by stashing) · **284 tests** ·
+lint **0 errors**. Driver `tsc` **28** · lint **0 / 275** · **10 checkers green**. Every figure at
+its baseline; none raised.
+
+🛑 **NOT RUN ON A DEVICE, AND NOT VERIFIED AGAINST A REAL DATABASE.** No query reads
+`driver_offer_places` yet — that is T-102e — so the rows are written and nothing consumes them.
+The honest test is: save an offer with two origin districts, reopen it for edit, and check both
+come back **and** that no fake stop appears in the stops list.
 
 ### 2026-09-12 (4) — T-102c measured: the UI is already right, the persistence is not
 
@@ -285,3 +345,34 @@ Owner re-confirmed the scope model and approved proceeding. The matching logic w
 than assumed: it reduces to **one equality per direction at the order's level**, from which
 "not its inner parts", `aro`≡`viloyat`, and "a more precise offer still matches" all follow.
 **One case is not derivable** — an offer less precise than the order — and it is decision ①.
+
+---
+
+## 9. Resume point — 2026-09-13
+
+**Migrations: RUN.** The owner migrated in `a522a8d`; §5's "NOT RUN" is history.
+
+**Done:** T-102a (rules, 46 tests) · T-102b (three migrations) · **T-102c sub-steps 1 and 2** —
+the driver wizard now persists `driver_offer_places` and reads them back, and no longer writes
+fake stops.
+
+🔴 **NOTHING READS THE TABLE YET.** The rows are written and unused until **T-102e** rewrites the
+search. So this work changes no visible behaviour except on the wizard's own edit path, and an
+offer created today matches exactly as it did yesterday — by `ILIKE` on free text.
+
+### The next step, in order of what unblocks what
+
+1. 🛑 **DEVICE-CHECK WHAT JUST LANDED** (owner is device testing). Save an offer with **two**
+   origin districts → reopen it for edit → both must come back, **and** the stops list must show
+   only real stops. Then add a genuine intermediate stop in the *origin's own province*, save,
+   reopen: it must still be a stop. That last case is the one the `placesDroveTheLoad` guard
+   exists for, and it is not covered by any checker.
+2. **T-102d** — the order sends and stores its scope (`match_scope`, migrated, nullable ENUM).
+3. **T-102e** — the search itself. Keep the text path as an explicit fallback for rows with no
+   ids, and say which was used in the response so the app can label it.
+4. **T-102c sub-step 3** — QFY selection in the wizard. Until it lands, every place row has a
+   NULL `settlement_id`, so `tuman` and `yaqin` can only ever match through
+   `LOOSE_PARENT_MATCH` — district precision wearing an adm3 label.
+
+⚠️ **Do not start T-102g (the backfill) before T-102e.** Its whole safety argument is that an
+offer left NULL keeps working through the fallback, and the fallback does not exist yet.

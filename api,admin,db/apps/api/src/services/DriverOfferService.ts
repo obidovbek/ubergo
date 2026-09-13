@@ -7,6 +7,7 @@ import { Op, Sequelize, fn, col } from 'sequelize';
 import {
   DriverOffer,
   DriverOfferStop,
+  DriverOfferPlace,
   User,
   DriverVehicle,
   DriverProfile,
@@ -26,6 +27,7 @@ import type {
   DriverOfferStatus,
   DriverOfferVehicleClass
 } from '../database/models/DriverOffer.js';
+import { validateOfferPlaces, type GeoPathIds } from '../utils/geoMatch.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
@@ -42,6 +44,9 @@ interface OfferStopData {
   lng?: number;
   order_no?: number;
 }
+
+/** One place on one side of an offer. A null `settlement_id` means "anywhere in this district". */
+type OfferPlaceData = GeoPathIds;
 
 interface CreateOfferData {
   vehicle_id: string;
@@ -84,6 +89,13 @@ interface CreateOfferData {
   currency?: string;
   note?: string;
   stops?: OfferStopData[];
+  /**
+   * T-102c — WHERE this offer runs, as ids. One entry per district the driver ticked (per QFY
+   * once the wizard can name them). Optional: an old client sends neither, and such an offer
+   * keeps working through the text search until T-102g backfills it.
+   */
+  from_places?: OfferPlaceData[];
+  to_places?: OfferPlaceData[];
 }
 
 interface UpdateOfferData extends Partial<CreateOfferData> {}
@@ -357,6 +369,13 @@ export class DriverOfferService {
           required: false,
           separate: true,
           order: [['order_no', 'ASC']]
+        },
+        {
+          // T-102c — the edit path reads these back instead of parsing `from_text`.
+          model: DriverOfferPlace,
+          as: 'places',
+          required: false,
+          separate: true
         }
       ],
       order: [['start_at', 'DESC']]
@@ -415,6 +434,13 @@ export class DriverOfferService {
           order: [['order_no', 'ASC']]
         },
         {
+          // T-102c — the edit path reads these back instead of parsing `from_text`.
+          model: DriverOfferPlace,
+          as: 'places',
+          required: false,
+          separate: true
+        },
+        {
           model: AdminUser,
           as: 'reviewer',
           attributes: ['id', 'full_name', 'email'],
@@ -438,6 +464,77 @@ export class DriverOfferService {
   /**
    * Create new offer
    */
+  /**
+   * T-102c — replace an offer's place rows with what the wizard collected.
+   *
+   * 🔴 THIS IS THE STEP THAT DELETES A ROUND TRIP THROUGH PROSE. Until now the wizard kept only
+   * the FIRST district of each side (`driver_offers` has one `from_text`) and smuggled every
+   * other one into a fake `DriverOfferStop` carrying a label. The edit path then split
+   * `from_text` on commas and guessed which parts were cities by testing whether any part
+   * `includes('viloyat')` — so a district whose name contains that word was mis-parsed, and a
+   * renamed district silently stopped loading. The ids were collected and then thrown away.
+   *
+   * ⚠️ REPLACE, NEVER MERGE. An edit is a fresh statement of where the driver goes; keeping the
+   * old rows would silently widen the offer. Same shape as the `stops` handling below it.
+   *
+   * ⚠️ Called only when the caller passed a side. `undefined` on both means "an old client said
+   * nothing", which must leave existing rows alone; `[]` means "the driver cleared it" and the
+   * validator rejects it, so neither path can silently empty an offer.
+   */
+  private static async writeOfferPlaces(
+    /**
+     * ⚠️ `number | string` because the two callers genuinely hold different things:
+     * `createOffer` has the freshly created `offer.id` (a number), `updateOffer` has
+     * `req.params.id` (a string). `driver_offers.id` is an INTEGER, so coerce once here
+     * rather than letting a string reach the `offer_id` of a row we insert.
+     */
+    offerId: number | string,
+    from: OfferPlaceData[] | undefined,
+    to: OfferPlaceData[] | undefined
+  ) {
+    if (from === undefined && to === undefined) return;
+
+    const id = Number(offerId);
+    if (!Number.isInteger(id)) throw new AppError('Invalid offer id', 400);
+
+    /*
+     * The table carries a UNIQUE index over (offer, direction, city, COALESCE(settlement, 0)),
+     * so a repeated place would throw rather than be ignored. Fold them here: the wizard can
+     * legitimately send one district twice once a QFY list and a district tick overlap.
+     */
+    const dedupe = (places: OfferPlaceData[]) => {
+      const seen = new Map<string, OfferPlaceData>();
+      for (const place of places) {
+        seen.set(`${place.city_id ?? 0}:${place.settlement_id ?? 0}`, place);
+      }
+      return [...seen.values()];
+    };
+
+    const fromPlaces = dedupe(from ?? []);
+    const toPlaces = dedupe(to ?? []);
+
+    const problems = validateOfferPlaces({ from: fromPlaces, to: toPlaces });
+    if (problems.length > 0) {
+      throw new AppError(`Invalid offer places: ${problems.join(', ')}`, 400);
+    }
+
+    await DriverOfferPlace.destroy({ where: { offer_id: id } });
+
+    const rows = [
+      ...fromPlaces.map((place) => ({ place, direction: 'from' as const })),
+      ...toPlaces.map((place) => ({ place, direction: 'to' as const }))
+    ].map(({ place, direction }) => ({
+      offer_id: id,
+      direction,
+      country_id: place.country_id ?? null,
+      province_id: place.province_id ?? null,
+      city_id: place.city_id ?? null,
+      settlement_id: place.settlement_id ?? null
+    }));
+
+    if (rows.length > 0) await DriverOfferPlace.bulkCreate(rows);
+  }
+
   static async createOffer(userId: number, data: CreateOfferData, req?: Request) {
     // Validate data
     this.validateOfferData(data);
@@ -490,6 +587,9 @@ export class DriverOfferService {
       note: data.note,
       status: 'published'
     });
+
+    // T-102c — the geo ids the wizard collected, before the stops that used to carry them.
+    await this.writeOfferPlaces(offer.id, data.from_places, data.to_places);
 
     // Create stops if provided
     if (data.stops && Array.isArray(data.stops) && data.stops.length > 0) {
@@ -604,6 +704,9 @@ export class DriverOfferService {
         : {}),
       seats_free: seatsFree
     });
+
+    // T-102c — replace the geo ids too. `undefined` on both sides leaves the rows alone.
+    await this.writeOfferPlaces(offerId, data.from_places, data.to_places);
 
     // Update stops if provided (allows editing stops for all offer statuses)
     if (data.stops !== undefined) {

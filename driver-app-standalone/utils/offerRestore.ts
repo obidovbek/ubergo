@@ -113,10 +113,53 @@ export const resolveEndpointRestore = <T extends RestoreGeoLike>(
  * Is a stop returned by the API really an intermediate stop, or is it one of the extra
  * cities of a multi-city From/To that `handleSave` wrote into the stops list?
  *
- * ⚠️ `handleSave` genuinely stores them there — `fromStops`/`toStops` append cities 2..n —
- * so on load they must be pulled back out, or every edit promotes an endpoint's own cities
- * into stops and the list grows by one on each save.
+ * 🔴 T-102c ENDED THE PRACTICE THIS DEFENDS AGAINST, BUT NOT THE NEED FOR IT. `handleSave`
+ * used to append an endpoint's cities 2..n to the stops list (`fromStops`/`toStops`, both now
+ * gone) because `driver_offers` has one `from_text`; they travel as ids in `from_places` /
+ * `to_places` now. Offers saved BEFORE that change still carry the fake stops, and this is
+ * what pulls them back out — so it stays until T-102g backfills them. On an offer that has
+ * ids the screen skips this test entirely, or a real stop in the origin's province would be
+ * swallowed into the origin.
  */
+/** One place, as the wizard sends it. Mirrors the API's `CreateOfferPlaceData`. */
+export interface OfferPlaceIds {
+  country_id: number | null;
+  province_id: number | null;
+  city_id: number;
+}
+
+/**
+ * T-102c — WHICH districts an endpoint SENDS, as ids. The inverse of `resolveEndpointRestore`,
+ * and it exists in this module for exactly the same reason that one does.
+ *
+ * 🔴 THE TRAP IT ENCODES: `resolveEndpointRestore` deliberately CLEARS `cities` for a one-city
+ * endpoint and puts that city in `city`. A caller reading only the array therefore sends
+ * NOTHING for the commonest offer there is — one district to one district — and the offer
+ * saves with no ids at all, silently falling back to the text search it was meant to replace.
+ * Both shapes, one set.
+ *
+ * ⚠️ NO `settlement_id`. The wizard stops at `endLevel="district"` and cannot name a QFY yet
+ * (T-102c step 3). A null settlement means "anywhere in this district" — precisely what a
+ * driver who was never asked has said, and what `LOOSE_PARENT_MATCH` on the API reads.
+ */
+export const buildOfferPlaces = <T extends { id: number }>(
+  country: { id: number } | null,
+  province: { id: number } | null,
+  cities: T[],
+  primary: T | null,
+): OfferPlaceIds[] => {
+  const picked = cities.length > 0 ? cities : primary ? [primary] : [];
+
+  const unique: T[] = [];
+  for (const c of picked) if (!unique.some((u) => u.id === c.id)) unique.push(c);
+
+  return unique.map((city) => ({
+    country_id: country?.id ?? null,
+    province_id: province?.id ?? null,
+    city_id: city.id,
+  }));
+};
+
 export const stopBelongsToEndpoint = (
   stop: { countryId?: string | null; provinceId?: string | null },
   endpoint: { countryId?: string | null; provinceId?: string | null },

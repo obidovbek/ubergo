@@ -12,6 +12,14 @@
  *
  * ⚠️ Existing `navigate('SearchOffers')` / `navigate('MyBookings')` / etc. calls from
  * `MenuScreen` still work — the call bubbles up to the tab navigator and switches tab.
+ *
+ * 🔴 BUT SWITCHING THE TAB DOES NOT UNWIND THE STACK ABOVE IT — device report 2026-09-13.
+ * From a screen PUSHED OVER the bar (`CreatePassengerOffer`, `OfferDetails`, …) a bare
+ * `navigate('SearchOffers')` changes the tab underneath and leaves the pushed screen on
+ * top, so the user appears not to have gone anywhere. Nothing errors. From a pushed screen
+ * use `navigate('MainTabs', { screen: 'SearchOffers', params })`: `MainTabs` is BELOW in
+ * this stack, so going to it pops the pushed screen, and the nested `screen` picks the tab.
+ * The bare form is fine only from `MenuScreen`, which IS inside the tab navigator.
  */
 
 import React from 'react';

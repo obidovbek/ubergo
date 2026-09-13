@@ -5,6 +5,84 @@
 
 ---
 
+## 2026-09-13 — T-102c lands, and the card the owner reported turns out to be half-built already
+
+- **Task:** device testing. Owner migrated (`a522a8d`), then reported the four order scopes draw
+  one identical FROM/TO block. Did **T-102c 1+2**, then planned and built **T-114 ①**.
+
+### T-102c 1+2 — the driver's offer finally has geo ids
+
+`DriverOfferPlace` + `writeOfferPlaces` (replace, never merge; dedupes; validates through T-102a's
+46 tested cases). The wizard sends ids and reads them back; `parseLocationText` and the
+`includes('viloyat')` guess are now a **fallback for pre-T-102 offers only**.
+
+🔴 **The two sub-steps were not separable.** The load path *absorbs* stops sharing the origin's
+province back into the origin — that is how the fake stops were recovered. Left running on an offer
+that now has ids it would swallow a **real** intermediate stop, and the next save would store it as
+an origin district. Hence `placesDroveTheLoad`. **Doing step 1 alone would have shipped that bug.**
+
+### T-114 ① — the owner was right, and `GeoSheet` had been waiting for this since August
+
+Measured all four artboards instead of describing them: **the pickers are byte-identical**
+(`pickAdm2`/`pickAdm3` run 1→2→3→4 in every file). The only differences are the **entry step**
+and what is **pinned** — and `GeoSheet` has taken `startLevel`/`initialPath` since the day it was
+written, its header saying *"that is the whole reason the artboards have four `UserBuyurtma*`
+files."* `LocationCard` hardcoded both at lines 207-208. That was the entire defect.
+
+- **Decisions (owner):** scope = ① only · **QFY REQUIRED on Tuman** — the artboard accepts an
+  endpoint with no QFY but `validateScope` refuses it, so the rules module stands and the form
+  tightens · T-102 stays live in *Now* beside T-114.
+- **Rejected:** inferring the edit path's scope from the stored geo. An `aro` order inside one
+  district is indistinguishable from a `tuman` one — the reason the migration stores the scope.
+- ⚠️ **A rule inside a component is a rule no checker here can execute.** `mergeScopeRoot` had to
+  move to `utils/scopeRoot.ts` before it could be bundled — react-native cannot build for
+  `--platform=neutral`. Same shape, same reason, as the driver app's `offerRestore.ts`.
+- **Verification:** user `tsc` **6** (identical set, proved by stashing) · lint **0/208** · colours
+  **1/1** · **9 checkers**. Driver **28** / **0/275** / 10 checkers. API **281** / **284 tests**.
+  Two new checkers: **+8 assertions red on 6 mutations** (driver), **50 red on 9** (user).
+### 🔴 The device run found what 50 assertions had not
+
+*"tuman ichi -> Viloyat va tuman tanlang shows nothing"* — `ScopeRootCard` opened `GeoSheet`
+without the country, and `GeoSheet` answers a missing ancestor with an **empty list, no error**.
+One cause, every symptom: the root could not be picked, so the pickers below it had no ancestor
+either. Fixed as `scopeSheetPath` in `utils/scopeRoot.ts`, now used by `LocationCard` too.
+**The checker covered the config I wrote and not the thing the passenger touches** — whether the
+sheet can be opened at all. +8 assertions; the shipped bug fails 5 of them.
+⚠️ `GeoSheet`'s prop doc already said *"anything above it must be supplied in `initialPath`"*.
+**A doc comment is not a guard.**
+
+### The device run continued, and found two more — both real
+
+**② *"after user creates offer leaves on that page"*.** `SearchOffers` is a TAB route; the order
+form is a stack route PUSHED OVER the tab bar. So `navigate("SearchOffers")` switched the tab
+**underneath** and left the form on top — the passenger stared at the screen they had just
+submitted. The navigation existed and the T-077 intent was right; it simply never unwound the
+stack. Fixed by naming the nested navigator — `navigate("MainTabs", { screen, params })` — which
+pops the form (MainTabs is BELOW it in the same stack) and picks the tab in one call.
+🔴 **`MainTabs` was typed `undefined` in the param list, so the CORRECT spelling was a type error
+and only the broken one compiled.** Now `NavigatorScreenParams<MainTabParamList>`.
+✅ **Checked the class, not just the instance:** `OfferDetailsScreen` already calls `goBack()`
+first (correct); `MenuScreen` and `MyBookingsScreen` are inside the tab navigator (bare form is
+right there); `MyPassengerOffersScreen` is not routed at all. **No live twins.**
+
+**③ *"on edit it should open based on how created"*.** Right, and it needed **T-102d's scope
+half** — so that got built. `match_scope` was migrated on 2026-09-12 and **never added to
+`PassengerOffer`'s model**, so nothing could read or write it. Now on the model, accepted,
+validated, returned, and sent by the form on create and edit.
+🔴 **A bad scope is a 400, not a NULL** — NULL already means "pre-T-102d, use the text search", so
+coercing a typo onto it would hide a broken client behind deliberate-looking behaviour. Validation
+goes through `isOrderScope` from the rules module rather than a second copy of the four values.
+⚠️ Orders created before today keep NULL and open with the default. **Inferring their scope from
+their stored geo was rejected**: an `aro` order inside one district is indistinguishable from a
+`tuman` one — the reason the column stores the scope, not the level.
+
+- **Problems:** 🛑 **the re-pin check is still undone** — and T-114's re-pin rule is the one thing no
+  checker can cover. T-114 ② not started. The edit path waits on T-102d.
+- **Next:** device-walk `PLAN-T114.md` §8, then **T-102d** — which also finishes T-114's edit path.
+- **Commit:** proposed below.
+
+---
+
 ## 2026-09-12 (4) — T-102 started, and a handoff written
 
 - **Task:** T-102 (structured geo matching) after the owner re-confirmed the scope model; then

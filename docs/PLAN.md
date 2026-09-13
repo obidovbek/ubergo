@@ -7,6 +7,9 @@
 > 📦 **T-088 (Paynet) IS NOT FINISHED — it moved to `docs/PLAN-T088.md` on 2026-08-30.** It is still
 > in *Now*. Its one remaining Claude coding step is **`ChangePassword` persistence**; the rest is
 > **T-100** (proxy layer) and Paynet's credentials. Resume it from that file.
+> 📦 **T-114 (per-scope FROM/TO on the order form) → `PLAN-T114.md`, split 2026-09-13.**
+> In *Now*, sub-step ① planned, **not started**. `GeoSheet` already takes `startLevel`;
+> `LocationCard` hardcodes it at lines 207-208. That is the whole card.
 > 📦 **T-101 STEP 16 (the offer wizard) → `PLAN-T101-step16.md`, split 2026-09-05.** Not started.
 > ✅ **T-092** → `PLAN-T092.md`. ✅ **T-091** → `PLAN-T091.md`. ✅ **T-087** → `PLAN-T087.md`.
 > ✅ **T-081** → `PLAN-T081.md`. ✅ **T-078** → `PLAN-T078.md`. ✅ **T-077** → `PLAN-T077.md`.

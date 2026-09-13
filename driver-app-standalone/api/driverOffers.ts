@@ -16,6 +16,35 @@ export interface DriverOfferStop {
   lng?: number;
 }
 
+/**
+ * T-102c — WHERE an offer runs, as geo ids, one row per place the driver ticked.
+ *
+ * 🔴 THIS REPLACES A ROUND TRIP THROUGH PROSE. Before it, only the FIRST district of each side
+ * survived (`from_text` is one string) and the rest were smuggled out as fake `stops`; the edit
+ * path recovered them by splitting `from_text` on commas and testing `includes('viloyat')`.
+ * A district whose name contains that word was mis-parsed and a renamed one stopped loading.
+ *
+ * ⚠️ `settlement_id` null means "anywhere in this district" — the driver named no QFY. The
+ * wizard cannot name one yet (T-102c step 3), so today every row it writes has a null here.
+ */
+export interface DriverOfferPlace {
+  id: string;
+  offer_id: string;
+  direction: 'from' | 'to';
+  country_id?: number | null;
+  province_id?: number | null;
+  city_id?: number | null;
+  settlement_id?: number | null;
+}
+
+/** What the wizard SENDS for one place. Ids only — the text still travels in `from_text`. */
+export interface CreateOfferPlaceData {
+  country_id?: number | null;
+  province_id?: number | null;
+  city_id?: number | null;
+  settlement_id?: number | null;
+}
+
 export interface DriverOffer {
   id: string;
   user_id: number;
@@ -80,6 +109,8 @@ export interface DriverOffer {
     color?: { name: string };
   };
   stops?: DriverOfferStop[];
+  /** T-102c — read back on EDIT instead of re-parsing `from_text`. Absent on pre-T-102 offers. */
+  places?: DriverOfferPlace[];
 }
 
 export interface CreateOfferStopData {
@@ -150,6 +181,14 @@ export interface CreateOfferData {
   currency?: string;
   note?: string;
   stops?: CreateOfferStopData[];
+  /**
+   * T-102c — the districts the driver ticked, as ids, one entry each.
+   *
+   * ⚠️ Sent on EVERY create and edit, so the two sides can never drift apart. The API replaces
+   * the whole set; omitting a side means "said nothing", which leaves the stored rows alone.
+   */
+  from_places?: CreateOfferPlaceData[];
+  to_places?: CreateOfferPlaceData[];
 }
 
 /** T-078 — the mockup's five radios. */

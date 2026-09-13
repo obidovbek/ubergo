@@ -596,6 +596,10 @@ export default {
     selectSettlement: 'Select settlement',
     selectNeighborhood: 'Select neighborhood',
     landmarkPlaceholder: 'Landmark (e.g. next to the notary)',
+    scopeRootProvince: 'Province',
+    scopeRootDistrict: 'District',
+    scopeRootPickProvince: 'Select province',
+    scopeRootPickDistrict: 'Select province and district',
     geoNoResults: 'Nothing found',
     urgent: 'right now (urgent)',
     /** T-101 step 8c — the artboard's two time-section headings. */

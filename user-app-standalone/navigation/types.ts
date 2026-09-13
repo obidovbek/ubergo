@@ -4,6 +4,7 @@
  */
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { GeoOption } from '../api/geo';
 import type { OrderScope } from '../types/orderScope';
 
@@ -58,8 +59,19 @@ export type MainTabParamList = {
 };
 
 export type MainStackParamList = MainTabParamList & {
-  /** T-101 — the tab navigator itself; everything else pushes over it. */
-  MainTabs: undefined;
+  /**
+   * T-101 — the tab navigator itself; everything else pushes over it.
+   *
+   * 🔴 `NavigatorScreenParams`, not `undefined` — device report 2026-09-13. A screen PUSHED
+   * over the bar cannot reach a tab with a bare `navigate('SearchOffers')`: that switches the
+   * tab UNDERNEATH and leaves the pushed screen on top, so the user appears not to have moved
+   * (it left `CreatePassengerOffer` sitting on the form it had just submitted). The way that
+   * both pops the stack and picks the tab is
+   * `navigate('MainTabs', { screen: 'SearchOffers', params })`, and typing the route
+   * `undefined` made that spelling a type error — so the broken one was the only one that
+   * compiled.
+   */
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   EditProfile: undefined;
   Notifications: undefined;
   OfferDetails: { offerId: number };

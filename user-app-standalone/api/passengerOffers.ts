@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL, API_ENDPOINTS, getHeaders, API_TIMEOUT } from '../config/api';
+import type { OrderScope } from '../types/orderScope';
 
 // Types
 // The T-018 field types (`PassengerOfferPaymentType`, `PassengerOfferSeatCounts`,
@@ -47,6 +48,14 @@ export interface PassengerOffer {
   arrive_from?: string | null;
   arrive_until?: string | null;
   is_urgent?: boolean;
+  /**
+   * T-102d — which of the four scopes this order was placed with. Read back so an EDIT
+   * reopens the form in the scope it was created in.
+   *
+   * ⚠️ NULL on every order placed before T-102d — those genuinely chose nothing, and the
+   * form falls back to its default rather than inventing one.
+   */
+  match_scope?: OrderScope | null;
   seats_needed: number;
   // Nullable since T-018 — the new order form collects no price at all.
   max_price_per_seat: number | null;
@@ -183,6 +192,8 @@ export interface CreatePassengerOfferData {
   arrive_from?: string;
   arrive_until?: string;
   is_urgent?: boolean;
+  /** T-102d — the scope the home carousel chose. Omitted only by a pre-T-102d client. */
+  match_scope?: OrderScope | null;
   /** Omit it and the API derives it from seat_counts / salon_scope. */
   seats_needed?: number;
   /** The new form collects no price — only the special order has prices. */

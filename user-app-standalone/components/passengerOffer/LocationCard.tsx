@@ -24,7 +24,13 @@
  * would rewrite those strings and lose real addresses.
  *
  * The country is fixed to Uzbekistan by the screen and never shown (OR-004), so the
- * sheet opens at province.
+ * sheet opens at province by DEFAULT.
+ *
+ * 🎯 T-114 ① — `startLevel` and `initialPath` are now PROPS. They were literals here
+ * (`startLevel="province"`), which is why all four `UserBuyurtma*` scopes drew the same
+ * from/to block: `GeoSheet` has taken `startLevel` since the day it was written — its header
+ * says *"that is the whole reason the artboards have four `UserBuyurtma*` files"* — and this
+ * caller was the thing that never passed it. The scope's root card supplies the ancestors.
  */
 
 import React, { useState } from "react";
@@ -37,7 +43,12 @@ import {
 } from "react-native";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { GeoOption } from "../../api/geo";
-import { GeoSheet, type GeoPath } from "../geo/GeoSheet";
+import { GeoSheet, type GeoLevel, type GeoPath } from "../geo/GeoSheet";
+/*
+ * ⚠️ The merge lives in `utils/` and not here BECAUSE this file imports react-native:
+ * a component cannot be bundled for the checkers. See that module's header.
+ */
+import { mergeScopeRoot, scopeSheetPath } from "../../utils/scopeRoot";
 import { theme } from "../../themes";
 
 export interface LocationValue {
@@ -90,6 +101,16 @@ interface LocationCardProps {
   /** Marker style: the origin is a hollow ring, the destination a filled one. */
   accent: "start" | "end";
   error?: string;
+  /**
+   * T-114 ① — where the picker opens. Defaults to the pre-T-114 behaviour, so any caller
+   * that does not know about scopes keeps working unchanged.
+   */
+  startLevel?: GeoLevel;
+  /**
+   * The ancestors the scope already fixed, merged UNDER the value's own path. A scope root
+   * only supplies what the passenger has not chosen themselves.
+   */
+  scopeRoot?: GeoPath;
 }
 
 export const LocationCard: React.FC<LocationCardProps> = ({
@@ -99,6 +120,8 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   onChange,
   accent,
   error,
+  startLevel = "province",
+  scopeRoot,
 }) => {
   const { t } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -108,12 +131,18 @@ export const LocationCard: React.FC<LocationCardProps> = ({
    * levels under different names, so the mapping is a rename — except `country`, which
    * the sheet needs as an ancestor but this screen never displays (OR-004).
    */
-  const toPath = (): GeoPath => ({
-    country: countryId ? ({ id: countryId, name: "" } as GeoOption) : undefined,
-    province: value.province ?? undefined,
-    district: value.cityDistrict ?? undefined,
-    settlement: value.settlement ?? undefined,
-  });
+  /*
+   * ⚠️ The country goes back in through `scopeSheetPath`, which is also what the scope root
+   * card uses — `GeoSheet` renders an EMPTY list, not an error, when the level above the one
+   * it opens at is missing. This file always did it right inline; it is shared now so the
+   * next caller cannot get it wrong the way the root card did.
+   */
+  const toPath = (): GeoPath =>
+    scopeSheetPath(countryId, {
+      province: value.province ?? undefined,
+      district: value.cityDistrict ?? undefined,
+      settlement: value.settlement ?? undefined,
+    }) as GeoPath;
 
   const handleDone = (path: GeoPath) => {
     onChange({
@@ -204,9 +233,15 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       <GeoSheet
         visible={sheetOpen}
         title={label}
-        startLevel="province"
+        startLevel={startLevel}
         endLevel="settlement"
-        initialPath={toPath()}
+        /*
+         * ⚠️ ORDER MATTERS. The scope's root is the FLOOR and the value's own path wins over
+         * it: re-opening a half-filled endpoint must show what the passenger picked, not the
+         * root again. `toPath()` yields undefined for levels not yet chosen, and spreading it
+         * second would then blank the root — hence the explicit per-level fallback.
+         */
+        initialPath={mergeScopeRoot(scopeRoot, toPath())}
         onDone={handleDone}
         onClose={() => setSheetOpen(false)}
       />

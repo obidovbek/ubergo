@@ -70,7 +70,15 @@ import {
 } from "../utils/rideTime";
 import { TopBar } from "../components/chrome/TopBar";
 import { Chip } from "../components/Chip";
-import { DEFAULT_ORDER_SCOPE, orderScopeLabelKey } from "../types/orderScope";
+import {
+  DEFAULT_ORDER_SCOPE,
+  orderScopeGeo,
+  orderScopeLabelKey,
+  isOrderScope,
+} from "../types/orderScope";
+import { ScopeRootCard } from "../components/passengerOffer/ScopeRootCard";
+import type { GeoPath } from "../components/geo/GeoSheet";
+import { scopeRootChanged } from "../utils/scopeRoot";
 
 /*
  * T-028 — the shared list, not a local copy. The copy that used to sit here
@@ -113,18 +121,6 @@ export const CreatePassengerOfferScreen: React.FC = () => {
   const offerId = route.params?.offerId;
   const isEdit = offerId !== undefined;
 
-  /**
-   * T-101 step 8 — the order scope, chosen on the home carousel.
-   *
-   * The four `UserBuyurtma*` artboards are ONE screen with a mode (owner, 2026-09-01):
-   * measured, they differ in 22-78 lines out of ~138 KB, and the difference is the top
-   * bar's subtitle plus how deep the location sheet opens.
-   *
-   * ⚠️ TODAY IT ONLY NAMES THE SCREEN. It changes no matching and no validation — all
-   * four scopes still behave identically until **T-102** gives `DriverOffer` real geo
-   * columns. Do not read this as the scopes being wired up.
-   */
-  const scope = route.params?.scope ?? DEFAULT_ORDER_SCOPE;
   const [isPreparing, setIsPreparing] = useState(isEdit);
   /**
    * The order as it was loaded. Used to answer "did the passenger actually
@@ -132,6 +128,68 @@ export const CreatePassengerOfferScreen: React.FC = () => {
    * whether `from_text`/`to_text` are sent at all.
    */
   const [loadedOffer, setLoadedOffer] = useState<PassengerOffer | null>(null);
+
+  /**
+   * T-101 step 8 — the order scope, chosen on the home carousel.
+   *
+   * The four `UserBuyurtma*` artboards are ONE screen with a mode (owner, 2026-09-01):
+   * measured, they differ in 22-78 lines out of ~138 KB, and the difference is the top
+   * bar's subtitle plus how deep the location sheet opens.
+   *
+   * 🟢 **T-114 ① (2026-09-13) MADE THE SECOND HALF OF THAT TRUE.** The scope now drives the
+   * root card and the level the location sheet opens at, through `ORDER_SCOPE_GEO`.
+   * ⚠️ It still changes no MATCHING: `matchLevel` is unsent and `DriverOffer` gains
+   * searchable geo only with T-102. A passenger can state a scope; the search ignores it.
+   *
+   * 🟢 **THE EDIT PATH READS THE ORDER'S OWN SCOPE — T-102d, 2026-09-13.** `MyOrdersScreen:263`
+   * and `MyPassengerOffersScreen:245` navigate here with `{ offerId }` and no scope, so the
+   * order has to carry it: `match_scope` is now written on create and returned on read, and an
+   * edit reopens the form the way it was made.
+   *
+   * ⚠️ `isOrderScope` still guards it, and the fallback still matters. `match_scope` is NULL on
+   * every order placed before T-102d — those genuinely chose nothing, so they open with the
+   * default. **Inferring a scope from their stored geo would be a GUESS**: an `aro` order that
+   * happens to stay inside one district is indistinguishable from a `tuman` one, which is
+   * precisely why the column stores the scope and not the level.
+   */
+  const scope =
+    route.params?.scope ??
+    (isOrderScope(loadedOffer?.match_scope) ? loadedOffer.match_scope : DEFAULT_ORDER_SCOPE);
+  const scopeGeo = orderScopeGeo(scope);
+
+  /**
+   * 🔴 T-114 ① — the level this scope pins for BOTH endpoints.
+   *
+   * Held here rather than inside `ScopeRootCard` because BOTH `LocationCard`s read it and
+   * because changing it has to clear them — a root that only the card knew about could not
+   * do that.
+   */
+  const [scopeRoot, setScopeRoot] = useState<GeoPath>({});
+
+  /**
+   * 🔴 CHANGING THE ROOT CLEARS BOTH ENDPOINTS. This is the whole reason the root lives on
+   * the screen, and the step most likely to have been the bug.
+   *
+   * A passenger who picks *Farg'ona*, chooses two districts inside it, then switches the
+   * root to *Andijon* is left with two endpoints that still name Farg'ona districts. They
+   * RENDER perfectly — nothing throws, nothing is logged — and the order is simply wrong.
+   * That is the same class of silent failure `resolveEndpointRestore` exists for in the
+   * driver app, and `GeoSheet`'s header calls "clear the child when the parent changes"
+   * the rule that is easy to get subtly wrong in one copy.
+   *
+   * ⚠️ Only clears when the root ACTUALLY changed. Re-opening the sheet and confirming the
+   * same province must not wipe work the passenger has already done.
+   */
+  const handleScopeRootChange = (next: GeoPath) => {
+    const changed = scopeRootChanged(scopeRoot, next);
+
+    setScopeRoot(next);
+
+    if (changed) {
+      setFromLocation(emptyLocation);
+      setToLocation(emptyLocation);
+    }
+  };
 
   // Country is fixed to Uzbekistan and never shown (OR-004 precedent)
   const [countryId, setCountryId] = useState<number | null>(null);
@@ -310,6 +368,24 @@ export const CreatePassengerOfferScreen: React.FC = () => {
 
         setFromLocation(from);
         setToLocation(to);
+
+        /*
+         * 🔴 T-114 ① — RESTORE THE ROOT, OR THE FIRST SAVE AFTER AN EDIT REPINS NOTHING.
+         *
+         * Derived from the order's OWN restored path, not guessed from the scope: whatever
+         * province (and district) the stored endpoints already name IS the root, by
+         * definition. So this is exact even though `match_scope` is still unwritten — and
+         * when T-102d starts returning the scope, the card simply appears with the right
+         * value already in it.
+         *
+         * ⚠️ Taken from the FROM endpoint. Every scope with a root pins the same level on
+         * both ends (`viloyat` = one province, `tuman` = one district), so the two agree;
+         * if a legacy order disagrees, the origin is the one the passenger picked first.
+         */
+        setScopeRoot({
+          province: from.province ?? undefined,
+          district: from.cityDistrict ?? undefined,
+        });
 
         const startAt = new Date(offer.start_at);
         setIsUrgent(!!offer.is_urgent);
@@ -638,6 +714,17 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         depart_until: departUntilDate?.toISOString(),
         arrive_until: arriveUntilDate?.toISOString(),
         is_urgent: isUrgent,
+        /*
+         * T-102d — the scope travels with the order, so an EDIT can reopen the form the
+         * way it was created (owner, 2026-09-13). Until this was sent, `match_scope` was a
+         * migrated column nothing wrote, and every edit fell back to `aro`.
+         *
+         * ⚠️ Sent on the EDIT path too, deliberately: `scope` there resolves to the order's
+         * own stored value, so a save re-affirms it rather than blanking it. An order made
+         * before T-102d has none, and editing it now records the scope the form actually
+         * used — which is the default, and is what it behaved as.
+         */
+        match_scope: scope,
         // seats_needed and max_price_per_seat are deliberately absent: the API
         // derives the seat count, and this form collects no price at all.
         // T-031 — the flags are the source of truth. The server keeps the
@@ -729,11 +816,34 @@ export const CreatePassengerOfferScreen: React.FC = () => {
             navigation.goBack();
             return;
           }
-          navigation.navigate("SearchOffers", {
-            fromProvince: fromLocation.province,
-            fromCity: fromLocation.cityDistrict,
-            toProvince: toLocation.province,
-            toCity: toLocation.cityDistrict,
+          /*
+           * 🔴 THROUGH `MainTabs`, NOT STRAIGHT AT THE TAB — device report 2026-09-13:
+           * *"after user creates offer leaves on that page"*.
+           *
+           * `SearchOffers` lives in the TAB navigator, and this screen is a stack route
+           * PUSHED OVER it (`MainNavigator`: `MainTabs` first, everything else on top).
+           * `navigate("SearchOffers")` therefore switched the tab UNDERNEATH and left the
+           * order form sitting on top of it — the passenger saw the screen they had just
+           * submitted and could not tell whether it had worked. Nothing errored.
+           *
+           * Naming `MainTabs` fixes both halves at once: it is BELOW this screen in the
+           * same stack, so navigating to it POPS the form, and the nested `screen` param
+           * picks the tab. The driver app never hit this because its wizard just calls
+           * `goBack()` — it has no tab to reach across.
+           *
+           * ⚠️ `MainNavigator`'s own header claims these bare calls "bubble up to the tab
+           * navigator and switch tab". They do switch the tab; what that note misses is
+           * that switching it does NOT unwind the stack above it. Left as a comment there
+           * too, rather than silently disagreeing with this file.
+           */
+          navigation.navigate("MainTabs", {
+            screen: "SearchOffers",
+            params: {
+              fromProvince: fromLocation.province,
+              fromCity: fromLocation.cityDistrict,
+              toProvince: toLocation.province,
+              toCity: toLocation.cityDistrict,
+            },
           });
         },
         onCancel: () => {},
@@ -829,6 +939,21 @@ export const CreatePassengerOfferScreen: React.FC = () => {
             times used to sit interleaved between the two locations, which is what made
             the block read as a stack of forms rather than a route.
           */}
+              {/*
+                T-114 ① — the scope root, drawn ABOVE the route card on the `Viloyat ichi`
+                and `Tuman ichi` boards and absent from the other two. The component
+                returns null for a scope with no root, so this is not a second condition
+                to keep in step with the first.
+              */}
+              {scopeGeo.rootLevel !== null && (
+                <ScopeRootCard
+                  scope={scope}
+                  countryId={countryId}
+                  value={scopeRoot}
+                  onChange={handleScopeRootChange}
+                />
+              )}
+
               <View style={styles.routeCard}>
                 <LocationCard
                   label={t("passengerOffers.fromLabel")}
@@ -837,6 +962,8 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                   onChange={setFromLocation}
                   accent="start"
                   error={errors.from_text}
+                  startLevel={scopeGeo.startLevel}
+                  scopeRoot={scopeRoot}
                 />
 
                 <View style={styles.routeDivider} />
@@ -848,6 +975,8 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                   onChange={setToLocation}
                   accent="end"
                   error={errors.to_text}
+                  startLevel={scopeGeo.startLevel}
+                  scopeRoot={scopeRoot}
                 />
               </View>
 

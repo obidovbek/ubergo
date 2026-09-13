@@ -20,6 +20,7 @@ import type {
   PassengerOfferAttributes,
   PassengerOfferCreationAttributes,
   PassengerOfferPaymentType,
+  PassengerOfferMatchScope,
   PassengerOfferSalonScope,
   PassengerOfferSeatCounts,
   PassengerOfferSpecialOrder,
@@ -27,6 +28,7 @@ import type {
   PassengerOfferVehicleClass,
   PassengerOfferVehicleType,
 } from '../database/models/PassengerOffer.js';
+import { ORDER_SCOPES, isOrderScope } from '../utils/geoMatch.js';
 import { AppError } from '../errors/AppError.js';
 import { logAudit } from '../utils/auditLogger.js';
 import PushService from './PushService.js';
@@ -60,6 +62,14 @@ interface CreatePassengerOfferData {
   arrive_from?: string | Date | null;
   arrive_until?: string | Date | null;
   is_urgent?: boolean;
+  /**
+   * T-102d — which of the four scopes the passenger placed this order with.
+   *
+   * ⚠️ OPTIONAL, and absent means NULL, not `'aro'`. An app built before T-102d sends
+   * nothing, and such an order genuinely chose no scope — the search falls back to text
+   * for it (T-102e). Defaulting here would be indistinguishable from a real choice.
+   */
+  match_scope?: PassengerOfferMatchScope | null;
   /** Optional since T-018 — derived from seat_counts / salon_scope when absent. */
   seats_needed?: number;
   /** Optional since T-018 — the new order form collects no price at all. */
@@ -489,6 +499,28 @@ export class PassengerOfferService {
       'arrive_until',
     ] as const) {
       if (sent(key)) fields[key] = this.parseDate(body[key], key);
+    }
+
+    /*
+     * T-102d — the scope, refused rather than coerced if it is not one of the four.
+     *
+     * 🔴 A BAD VALUE MUST NOT BECOME NULL. NULL already MEANS "pre-T-102d order, fall back to
+     * the text search", so silently mapping a typo onto it would hide a broken client behind
+     * behaviour that looks deliberate. The column is a real ENUM and would refuse the write
+     * anyway — this turns that into a 400 that names the field.
+     */
+    if (sent('match_scope')) {
+      const raw = body.match_scope;
+      if (raw === null || raw === undefined) {
+        fields.match_scope = null;
+      } else if (isOrderScope(raw)) {
+        fields.match_scope = raw;
+      } else {
+        throw new AppError(
+          `match_scope must be one of ${ORDER_SCOPES.join(', ')}`,
+          400
+        );
+      }
     }
 
     if (sent('is_urgent')) fields.is_urgent = Boolean(body.is_urgent);
@@ -1568,6 +1600,8 @@ export class PassengerOfferService {
       arrive_from: offer.arrive_from,
       arrive_until: offer.arrive_until,
       is_urgent: offer.is_urgent,
+      // T-102d — the order form reads this back to reopen an EDIT in its own scope.
+      match_scope: offer.match_scope ?? null,
       max_price_per_seat: offer.max_price_per_seat,
       currency: offer.currency,
       payment_type: offer.payment_type,
