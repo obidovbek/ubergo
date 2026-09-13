@@ -105,6 +105,18 @@ visually complete but never say what the backend should match on. The owner's me
 answer (**adm2→adm2** and **adm3→adm3**); it is recorded here because **it exists nowhere in the
 artboards** and would otherwise be lost.
 
+
+### 🔴 Two things the artboards say that the 2026-08-30 notes missed (found 2026-09-12)
+
+1. **The driver's offer is a SET, the passenger's order is a PATH.** `DriverElon.dc.html`
+   multi-selects districts (`toggleAdm2`) and QFYs (`toggleAdm3`) per direction; its sample leaves
+   from *Farg'ona t.* OR *Marg'ilon sh.* All four `UserBuyurtma*` boards single-select. So
+   matching is **membership**, not equality, and the driver needs a child table, not columns.
+2. **The Yaqin picker is NOT filtered to neighbours.** `UserBuyurtmaYaqin` step 2 lists every
+   district of the chosen province, unmarked. §6 Q4's "until the table is populated, Yaqin returns
+   nothing" was therefore wrong: the neighbours table sorts the picker, it does not gate anything.
+   Owner-confirmed 2026-09-12. Full reasoning in `docs/PLAN-T102.md` §4 ②/③.
+
 ## 3. 🛑 WHAT THE API CAN DO TODAY — the blocking finding
 
 ### 3.1 ✅ RESOLVED 2026-08-30 — it is FOUR levels, not six. The owner asked me to settle this.

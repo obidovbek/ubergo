@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-09-12 (4) — T-102 started, and a handoff written
+
+- **Task:** T-102 (structured geo matching) after the owner re-confirmed the scope model; then
+  *"document everything, i will start from here."*
+
+### Done
+
+- **T-102a** — `src/utils/geoMatch.ts` + `geoMatch.test.ts`. The whole rule reduced to **one
+  sentence**: *an offer matches when, for both directions independently, the order's node at the
+  order's level is AMONG the offer's nodes at that level.* From it, "uni ichki qismlari emas"
+  needs **no code**, `aro`≡`viloyat`, `tuman`≡`yaqin`, and a more precise offer matches for free.
+  **The four scopes differ in VALIDATION, not matching.** API suite 238 → 284; **red on all 16
+  mutations**, file restored byte-identical.
+- **T-102b** — three migrations **written, NOT run** (owner: *"i do not run migrations yet"*).
+
+### 🔴 The owner asked me to check decisions ② and ③, and BOTH were wrong
+
+- **② "chegaradosh" enforced** — wrong two ways. The Yaqin artboard's destination picker is
+  unfiltered, and enforcing adjacency would leave a passenger wanting QFY precision between two
+  NON-adjacent districts with **no scope at all**. Corrected: the neighbours table **sorts** the
+  picker, never refuses.
+- **③ the offer modelled as 8 scalar columns** — `DriverElon` multi-selects districts AND QFYs
+  per direction; all four passenger boards single-select. **A migration written that morning and
+  never run was replaced** by a `driver_offer_places` child table; matching generalised from
+  equality to membership without changing its one-sentence statement.
+- *The lesson: I derived the semantics correctly and then modelled the DATA from an assumption
+  instead of from the artboard. Both errors were one measurement away.*
+
+### 🟢 T-102c measured before starting — the balance of work inverted
+
+The wizard **already multi-selects districts** (`selectedFromCities` / `selectedToCities` are
+arrays). What is broken is underneath: every district after the first is smuggled into a **fake
+`DriverOfferStop`**, and the edit path recovers them by splitting `from_text` on commas and
+testing whether a part **`includes('viloyat')`**. A district named "… viloyat …" is mis-parsed and
+a renamed district silently stops loading — **a live defect, not debt.**
+⚠️ The wizard stops at `endLevel="district"` and the word "settlement" appears **zero** times, so
+`tuman`/`yaqin` need genuinely new UI, not rewiring.
+
+### Verification
+
+API **284 tests** · user `tsc` **6** / lint **0/208** / tokens **1** / 8 checkers ·
+driver `tsc` **28** / lint **0/275** / tokens **3** / 10 checkers. All green.
+
+- **Decisions:** neighbours sort, never filter · the offer is a set, the order a path ·
+  `LOOSE_PARENT_MATCH` on, matches labelled district-level.
+- **Problems:** 🛑 nothing on a device; migrations unrun; driver earnings do not exist.
+- **Next:** **`docs/HANDOFF-2026-09-12.md`** is the entry point. T-102c splits into three.
+- **Commit:** proposed `T-102a/b — scope matching rules + tests (46 cases, red on 16 mutations);
+  three migrations written, NOT run` · plus `docs/HANDOFF-2026-09-12.md`.
+
+---
+
 ## 2026-09-12 (3) — 14b-7 and T-113: two owner reports, both right
 
 - **Task:** the owner's two reports on the passenger search screen, same day as step 14b closed.

@@ -662,6 +662,15 @@
 
 ## 🔥 Now (working on it)
 
+> 🤝 **START HERE: `docs/HANDOFF-2026-09-12.md`.** Written at the owner's request and complete
+> on its own — state, the three blockers, the nine card corrections made that day, the two
+> structural gaps, exact uncommitted files, and the traps this project keeps hitting.
+> 🛑 **The three blockers, shortest form:** (1) **a device walk** — nothing since early
+> September has run on a phone, and that is the busiest screen in BOTH apps; (2) the **three
+> T-102 migrations are written but NOT run**; (3) **a driver is never paid through the system**,
+> which blocks the income screen entirely (→ `PLAN-T101-step19.md`).
+
+
 > 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
 > what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
 > 🔴 **`DriverOffer` carries ~20 columns; `PassengerOffer` carries 51.** Nearly everything the mockup

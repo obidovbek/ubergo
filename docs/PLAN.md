@@ -14,6 +14,9 @@
 > 🔴 **T-047 PARKED.** 🛑 **T-031 — item 1 CLOSED by the owner, do NOT reopen** → `PLAN-T031.md`.
 > ⏸️ **T-040 · T-039 · T-037 · T-033 · T-030 · T-027 · T-018 · T-026A · T-025** → their own files.
 
+> 🤝 **2026-09-12 — READ `docs/HANDOFF-2026-09-12.md` FIRST.** It supersedes the board state
+> below for anything dated after 2026-08-31, and lists nine card claims corrected that day.
+
 ## 🔴 BOARD STATE 2026-08-31 — read before starting anything
 
 **`tsc` BASELINES: API 281 · admin 6 (via `tsc -b`) · user 6 · driver 28.** All four lint at **0 errors**.
