@@ -728,6 +728,10 @@ export default {
 
   // Driver Offers
   driverOffers: {
+    activeLimitCount: "Faol e'lon: {count} / {max}",
+    activeLimitFull:
+      "Limit to'ldi — yangi e'lon berish uchun reysni yakunlang yoki bekor qiling.",
+    activeLimitHint: "Bir vaqtda {max} tagacha e'lon ochib turishingiz mumkin.",
     title: 'Mening e\'lonlarim',
     createOffer: 'E\'lon yaratish',
     noOffers: 'Sizda hali e\'lonlar yo\'q',

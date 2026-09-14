@@ -65,9 +65,41 @@ export interface GeoPath {
    * screen predates this and must not change behaviour.
    */
   districts?: GeoOption[];
+  /**
+   * Every QFY picked, when the caller opted into multi-select at `settlement` — T-102c-3.
+   *
+   * ⚠️ An EMPTY array is a real answer, not a missing one: it means "anywhere in this
+   * district", which is what a driver who was offered the step and skipped it has said.
+   * The key being absent altogether means the step was never reached.
+   */
+  settlements?: GeoOption[];
 }
 
+/** Which levels are toggles rather than steps. One per level, deepest last. */
+type PickedByLevel = Partial<Record<GeoLevel, GeoOption[]>>;
+
 const ORDER: GeoLevel[] = ['country', 'province', 'district', 'settlement'];
+
+/** The multi-selections a caller handed in, as the sheet holds them. */
+const pickedFrom = (path?: GeoPath): PickedByLevel => ({
+  district: path?.districts ?? [],
+  settlement: path?.settlements ?? [],
+});
+
+/**
+ * A confirmed multi-selection, written back onto the path.
+ *
+ * ⚠️ The singular field keeps the FIRST entry at every level, for the same reason it always
+ * has: a caller that never asked for multi-select reads exactly what it always read.
+ */
+const pathFromPicked = (level: GeoLevel, list: GeoOption[]): GeoPath => {
+  const first = list[0];
+  if (level === 'settlement') return { settlement: first, settlements: list };
+  if (level === 'district') return { district: first, districts: list };
+  // Nothing multi-selects above adm2. Writing the singular alone keeps the path honest
+  // rather than inventing a plural field for a level that has none.
+  return level === 'province' ? { province: first } : { country: first };
+};
 
 interface GeoSheetProps {
   visible: boolean;
@@ -86,8 +118,22 @@ interface GeoSheetProps {
    * wizard would DELETE a feature drivers already have.
    *
    * Rows toggle instead of advancing, and the sheet confirms on the footer button.
+   *
+   * ⚠️ T-102c-3 made this a LIST as well as a single level, so the wizard can toggle
+   * districts and then QFYs in one walk. A plain string still means what it always
+   * meant — the existing callers pass one and are untouched.
    */
-  multiSelectAt?: GeoLevel;
+  multiSelectAt?: GeoLevel | readonly GeoLevel[];
+  /**
+   * May the cascade continue PAST a confirmed multi-selection? — T-102c-3.
+   *
+   * 🔴 THE SHEET DELIBERATELY DOES NOT KNOW THE RULE. Whether a driver's endpoint may
+   * name a QFY depends on how many districts it names (owner decision ①, 2026-09-14),
+   * which is an OFFER rule; this is a geo picker that a search screen also uses. So the
+   * caller injects it — `OfferWizardScreen` passes `canPickSettlements` from
+   * `utils/offerRestore.ts`, where a checker can execute it. Default: always continue.
+   */
+  canAdvance?: (picked: readonly GeoOption[], level: GeoLevel) => boolean;
   title: string;
   onDone: (path: GeoPath) => void;
   onClose: () => void;
@@ -99,6 +145,7 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   endLevel = 'district',
   initialPath,
   multiSelectAt,
+  canAdvance,
   title,
   onDone,
   onClose,
@@ -110,14 +157,32 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [picked, setPicked] = useState<GeoOption[]>(initialPath?.districts ?? []);
+  const [picked, setPicked] = useState<PickedByLevel>(() => pickedFrom(initialPath));
+
+  /** Is this level a set of toggles? Accepts the old single-level spelling unchanged. */
+  const isMulti = (lvl: GeoLevel): boolean =>
+    Array.isArray(multiSelectAt)
+      ? multiSelectAt.includes(lvl)
+      : multiSelectAt === lvl;
+
+  const here = picked[level] ?? [];
+
+  /**
+   * 🔴 ZERO IS A REAL ANSWER AT adm3 AND NOT AT adm2.
+   *
+   * A driver who names no QFY is saying "anywhere in this district" — the offer the API has
+   * accepted all along, and what `LOOSE_PARENT_MATCH` reads. A driver who names no DISTRICT
+   * has not given an endpoint at all, and `validateOfferPlaces` answers `from_empty`. So the
+   * QFY step must be skippable and the district step must not.
+   */
+  const needsPick = level !== 'settlement';
 
   // Re-arm on each open so a sheet closed half-way does not reopen mid-cascade.
   useEffect(() => {
     if (visible) {
       setLevel(startLevel);
       setPath(initialPath ?? {});
-      setPicked(initialPath?.districts ?? []);
+      setPicked(pickedFrom(initialPath));
       setQuery('');
       setError(null);
     }
@@ -150,17 +215,42 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
     if (visible) void load(level, path);
   }, [visible, level, path, load]);
 
+  /** Everything chosen BELOW this level was chosen under an answer that just changed. */
+  const dropDeeperPicks = (from: number) =>
+    setPicked((current) => {
+      const next = { ...current };
+      for (const deeper of ORDER.slice(from + 1)) next[deeper] = [];
+      return next;
+    });
+
   const pick = (option: GeoOption) => {
     /*
      * The multi-select level toggles and stays put — the cascade does NOT advance,
      * because the user is still building one answer. Confirming is the footer's job.
      */
-    if (level === multiSelectAt) {
-      setPicked((current) =>
-        current.some((o) => o.id === option.id)
-          ? current.filter((o) => o.id !== option.id)
-          : [...current, option],
-      );
+    if (isMulti(level)) {
+      setPicked((current) => {
+        /*
+         * ⚠️ Derived from `current`, not from the `picked` this render closed over. Two taps
+         * landing in one batch would otherwise both start from the same snapshot and the
+         * second would drop the first — the classic way a toggle list loses a tick.
+         */
+        const at = current[level] ?? [];
+        const next = at.some((o) => o.id === option.id)
+          ? at.filter((o) => o.id !== option.id)
+          : [...at, option];
+        const updated: PickedByLevel = { ...current, [level]: next };
+        /*
+         * 🔴 T-102c-3 — THE ARTBOARD'S OWN RULE, and the one a QFY step makes possible to
+         * get wrong. `DriverElon`'s `toggleAdm2` drops every QFY whose district was just
+         * unticked. Here it is stricter and has to be: QFYs are offered only for a SINGLE
+         * district, so ANY change to the district set makes the ones already chosen
+         * meaningless — and `buildOfferPlaces` would silently discard them anyway, leaving
+         * the sheet showing ticks that never reach the offer.
+         */
+        for (const deeper of ORDER.slice(ORDER.indexOf(level) + 1)) updated[deeper] = [];
+        return updated;
+      });
       return;
     }
 
@@ -174,13 +264,12 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
     const from = ORDER.indexOf(level);
     for (const deeper of ORDER.slice(from + 1)) delete next[deeper];
 
-    // 🔴 The same rule, for the multi-selection: districts chosen under the OLD
+    // 🔴 The same rule, for the multi-selections: districts chosen under the OLD
     // region do not belong under the new one. Forgetting this is how a driver ends
     // up with an offer listing tumans from a province they no longer selected.
-    if (multiSelectAt && ORDER.indexOf(multiSelectAt) > from) {
-      setPicked([]);
-      delete next.districts;
-    }
+    delete next.districts;
+    delete next.settlements;
+    dropDeeperPicks(from);
 
     setPath(next);
     setQuery('');
@@ -193,11 +282,28 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
     setLevel(nextLevel);
   };
 
-  /** The footer's "Tayyor" — only reachable at the multi-select level. */
+  /**
+   * The footer's "Tayyor" — only reachable at a multi-select level.
+   *
+   * 🔴 IT CONFIRMS *OR* CONTINUES. When the caller asked for a deeper level than this one
+   * (`endLevel="settlement"`) and `canAdvance` agrees, the multi-selection is written onto
+   * the path and the cascade carries on into it — that is the whole QFY step. Otherwise it
+   * finishes, exactly as it did before T-102c-3.
+   */
   const confirmPicked = () => {
-    if (picked.length === 0) return;
-    // `district` keeps the first, so single-select callers read what they always read.
-    onDone({ ...path, [multiSelectAt as GeoLevel]: picked[0], districts: picked });
+    if (needsPick && here.length === 0) return;
+
+    const next: GeoPath = { ...path, ...pathFromPicked(level, here) };
+    const from = ORDER.indexOf(level);
+    const nextLevel = ORDER[from + 1];
+
+    if (level !== endLevel && nextLevel && (canAdvance ? canAdvance(here, level) : true)) {
+      setPath(next);
+      setQuery('');
+      setLevel(nextLevel);
+      return;
+    }
+    onDone(next);
   };
 
   const back = () => {
@@ -298,10 +404,9 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
                 </Text>
               }
               renderItem={({ item }) => {
-                const selected =
-                  level === multiSelectAt
-                    ? picked.some((o) => o.id === item.id)
-                    : path[level]?.id === item.id;
+                const selected = isMulti(level)
+                  ? here.some((o) => o.id === item.id)
+                  : path[level]?.id === item.id;
                 return (
                   <Pressable
                     onPress={() => pick(item)}
@@ -320,7 +425,7 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
                       {item.name}
                     </Text>
                     <Text style={styles.rowChevron}>
-                      {selected ? '✓' : level === multiSelectAt ? '+' : '›'}
+                      {selected ? '✓' : isMulti(level) ? '+' : '›'}
                     </Text>
                   </Pressable>
                 );
@@ -329,26 +434,33 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
           )}
 
           {/*
-            The multi-select level is the ONLY one with a confirm: every other level
+            The multi-select levels are the ONLY ones with a confirm: every other level
             advances the cascade on tap, so a button there would be a second way to do
-            the same thing. Disabled at zero, because an endpoint with no tuman is not
-            an answer the caller can use.
+            the same thing. Disabled at zero where zero is not an answer — see `needsPick`.
+
+            ⚠️ At adm3 the button's label is the ANSWER, not the action: skipping the QFYs
+            is not "cancel", it is the driver saying the whole district. A button that read
+            "Tayyor" over an empty list would look like nothing had been chosen.
           */}
-          {level === multiSelectAt && (
+          {isMulti(level) && (
             <View style={styles.footer}>
               <Pressable
                 onPress={confirmPicked}
-                disabled={picked.length === 0}
+                disabled={needsPick && here.length === 0}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: picked.length === 0 }}
+                accessibilityState={{ disabled: needsPick && here.length === 0 }}
                 style={({ pressed }) => [
                   styles.confirm,
-                  picked.length === 0 && styles.confirmOff,
+                  needsPick && here.length === 0 && styles.confirmOff,
                   pressed && { opacity: theme.states.pressedOpacity },
                 ]}
               >
                 <Text style={styles.confirmText}>
-                  {picked.length > 0 ? `Tayyor (${picked.length})` : 'Tayyor'}
+                  {here.length > 0
+                    ? `Tayyor (${here.length})`
+                    : level === 'settlement'
+                      ? 'Butun tuman'
+                      : 'Tayyor'}
                 </Text>
               </Pressable>
             </View>

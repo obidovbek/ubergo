@@ -482,6 +482,10 @@ export default {
   },
 
   myOrders: {
+    activeLimitCount: 'Active orders: {count} / {max}',
+    activeLimitFull:
+      'Limit reached — finish or cancel an order before creating a new one.',
+    activeLimitHint: 'You can keep up to {max} orders open at a time.',
     title: 'My orders',
     modeJarayon: 'In progress',
     modeAktiv: 'Active',

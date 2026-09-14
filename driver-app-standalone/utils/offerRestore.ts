@@ -126,7 +126,31 @@ export interface OfferPlaceIds {
   country_id: number | null;
   province_id: number | null;
   city_id: number;
+  /**
+   * The QFY, or null for "anywhere in this district" — T-102c-3.
+   *
+   * ⚠️ ALWAYS PRESENT, null included. Until this step the key was simply absent, which made
+   * "no QFY" and "this field does not exist" two different shapes on the wire and invited the
+   * `hasOwnProperty` test that used to stand in the checker. One shape, one meaning.
+   */
+  settlement_id: number | null;
 }
+
+/**
+ * T-102c-3 — CAN this endpoint name a QFY at all?
+ *
+ * 🛑 Only when it names exactly ONE district (owner decision ①, 2026-09-14). A driver who lists
+ * several districts is saying "anywhere in these", and `LOOSE_PARENT_MATCH` on the API already
+ * matches that against an adm3 order at `'district'` precision — so nothing is lost, and the
+ * grouped multi-district picker the artboard's `"<tuman> / <QFY>"` key shape implies stays
+ * unbuilt. The row shape already carries both, so it can be added later with no data change.
+ *
+ * ⚠️ Exported because `GeoSheet` asks it whether to offer the QFY step. The rule lives HERE and
+ * not in the component: a rule inside a component is a rule no checker in this project can
+ * execute — the lesson `mergeScopeRoot` cost on T-114.
+ */
+export const canPickSettlements = (districts: readonly { id: number }[]): boolean =>
+  districts.length === 1;
 
 /**
  * T-102c — WHICH districts an endpoint SENDS, as ids. The inverse of `resolveEndpointRestore`,
@@ -138,26 +162,44 @@ export interface OfferPlaceIds {
  * saves with no ids at all, silently falling back to the text search it was meant to replace.
  * Both shapes, one set.
  *
- * ⚠️ NO `settlement_id`. The wizard stops at `endLevel="district"` and cannot name a QFY yet
- * (T-102c step 3). A null settlement means "anywhere in this district" — precisely what a
- * driver who was never asked has said, and what `LOOSE_PARENT_MATCH` on the API reads.
+ * 🔴 T-102c-3 — THE QFYs, AND THE ROW THEY DO *NOT* PRODUCE. One row per (district, QFY): a
+ * district with no QFY is one row with a null settlement, a district with QFYs A and B is two
+ * rows and **no third row for the district itself**. That omission is the rule, not an oversight
+ * — `LOOSE_PARENT_MATCH`'s own doc says a driver who named QFY A did NOT say "anywhere in the
+ * district", and the API's UNIQUE index keys on `(city, COALESCE(settlement, 0))`, so a stray
+ * district-only row would survive dedupe and silently widen the offer back out.
+ *
+ * ⚠️ The QFYs are DROPPED, not honoured, when the endpoint names more than one district. The
+ * sheet should never collect them in that state; this is the guarantee that the payload cannot
+ * lie even if it does.
  */
 export const buildOfferPlaces = <T extends { id: number }>(
   country: { id: number } | null,
   province: { id: number } | null,
   cities: T[],
   primary: T | null,
+  settlements: readonly { id: number }[] = [],
 ): OfferPlaceIds[] => {
   const picked = cities.length > 0 ? cities : primary ? [primary] : [];
 
   const unique: T[] = [];
   for (const c of picked) if (!unique.some((u) => u.id === c.id)) unique.push(c);
 
-  return unique.map((city) => ({
+  const districtRow = (city: T): OfferPlaceIds => ({
     country_id: country?.id ?? null,
     province_id: province?.id ?? null,
     city_id: city.id,
-  }));
+    settlement_id: null,
+  });
+
+  if (!canPickSettlements(unique)) return unique.map(districtRow);
+
+  const qfys: { id: number }[] = [];
+  for (const s of settlements) if (!qfys.some((u) => u.id === s.id)) qfys.push(s);
+  if (qfys.length === 0) return unique.map(districtRow);
+
+  const [only] = unique;
+  return qfys.map((qfy) => ({ ...districtRow(only), settlement_id: qfy.id }));
 };
 
 export const stopBelongsToEndpoint = (

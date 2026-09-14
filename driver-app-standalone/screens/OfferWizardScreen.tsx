@@ -34,7 +34,7 @@ import {
   isValid,
   type OfferValidationInput,
 } from '../utils/offerWizardValidation';
-import { resolveEndpointRestore, buildOfferPlaces } from '../utils/offerRestore';
+import { resolveEndpointRestore, buildOfferPlaces, canPickSettlements } from '../utils/offerRestore';
 // T-101 step 16b — the form's sections, cut out in the order `DriverElon.dc.html`
 // draws them. The wizard still paginates over them; step 16d deletes the pagination.
 import {
@@ -83,6 +83,15 @@ const theme = createTheme('light');
  * "bepul kutish 0 minut" are real answers the driver typed; `||` would silently
  * turn both into "not set" and the next save would blank them.
  */
+/**
+ * T-102c-3 — the two levels a driver TOGGLES rather than steps through: tumans, then QFYs.
+ *
+ * ⚠️ Module-level so its identity is stable. `GeoSheet` re-arms on a changed `initialPath`,
+ * and an array literal rebuilt every render is the kind of prop that turns a re-render into
+ * a reset of whatever the driver had half-selected.
+ */
+const MULTI_SELECT_LEVELS = ['district', 'settlement'] as const;
+
 /** T-078 — the mockup's five radios, in its own order. */
 const VEHICLE_CLASSES = [
   'standard',
@@ -133,12 +142,21 @@ export const OfferWizardScreen: React.FC = () => {
   const [fromProvince, setFromProvince] = useState<GeoOption | null>(null);
   const [fromCity, setFromCity] = useState<GeoOption | null>(null);
   const [selectedFromCities, setSelectedFromCities] = useState<GeoOption[]>([]);
+  /**
+   * The QFYs of a single-district endpoint — T-102c-3.
+   *
+   * ⚠️ EMPTY IS THE NORMAL ANSWER and means "anywhere in these districts". Only an endpoint
+   * naming exactly ONE district can hold any (`canPickSettlements`), and `buildOfferPlaces`
+   * drops them if that stops being true, so these can never contradict the districts above.
+   */
+  const [selectedFromSettlements, setSelectedFromSettlements] = useState<GeoOption[]>([]);
 
   // Geo selection states for "To" location
   const [toCountry, setToCountry] = useState<GeoOption | null>(null);
   const [toProvince, setToProvince] = useState<GeoOption | null>(null);
   const [toCity, setToCity] = useState<GeoOption | null>(null);
   const [selectedToCities, setSelectedToCities] = useState<GeoOption[]>([]);
+  const [selectedToSettlements, setSelectedToSettlements] = useState<GeoOption[]>([]);
 
   // Stops selection states
   const [stops, setStops] = useState<Array<{ id: string; city: GeoOption | null; selectedCities?: GeoOption[]; country: GeoOption | null; province: GeoOption | null; label_text: string; lat?: number; lng?: number }>>([]);
@@ -364,7 +382,28 @@ export const OfferWizardScreen: React.FC = () => {
             const found = districts.find(d => d.id === place.city_id);
             if (found && !cities.some(c => c.id === found.id)) cities.push(found);
           }
-          return { country, province, cities };
+
+          /*
+           * 🛑 T-102c-3 — THE HALF THAT MAKES COLLECTING THEM SAFE. A field that saves but
+           * never loads back means the NEXT save silently writes the blank over real data:
+           * the driver opens their own offer, presses save, and the QFYs they never touched
+           * are gone, with nothing erroring. That is the T-078 failure this whole module
+           * exists for, and shipping the collection without this would have been an instance.
+           *
+           * ⚠️ Only asked for when the endpoint really is one district — the same rule the
+           * sheet and `buildOfferPlaces` use, so a row set that somehow disagrees is ignored
+           * rather than half-restored. It also costs no request for the common offer.
+           */
+          const settlements: GeoOption[] = [];
+          if (canPickSettlements(cities) && places.some(p => p.settlement_id != null)) {
+            const available = await DriverAPI.fetchGeoSettlements(cities[0].id);
+            for (const place of places) {
+              const found = available.find(s => s.id === place.settlement_id);
+              if (found && !settlements.some(s => s.id === found.id)) settlements.push(found);
+            }
+          }
+
+          return { country, province, cities, settlements };
         };
 
         // Parse and populate "From" location geo selections
@@ -380,6 +419,7 @@ export const OfferWizardScreen: React.FC = () => {
           loadedFromProvince = side.province;
           setFromProvince(side.province);
           loadedFromCities = side.cities;
+          setSelectedFromSettlements(side.settlements);
           // Only meaningful to the fake-stop dance below, which `placesDroveTheLoad` skips.
           loadedFromCity = side.cities.length === 1 ? side.cities[0] : null;
         } else if (offer.from_text) {
@@ -449,6 +489,7 @@ export const OfferWizardScreen: React.FC = () => {
           loadedToProvince = side.province;
           setToProvince(side.province);
           loadedToCities = side.cities;
+          setSelectedToSettlements(side.settlements);
           loadedToCity = side.cities.length === 1 ? side.cities[0] : null;
         } else if (offer.to_text) {
           // Check if to_text contains multiple cities (comma-separated, no province/country)
@@ -967,8 +1008,20 @@ export const OfferWizardScreen: React.FC = () => {
        * beside `resolveEndpointRestore`, which is the function that creates the trap it avoids
        * — and is asserted in `scripts/check-offer-restore.mjs` rather than trusted here.
        */
-      const fromPlaces = buildOfferPlaces(fromCountry, fromProvince, selectedFromCities, fromCity);
-      const toPlaces = buildOfferPlaces(toCountry, toProvince, selectedToCities, toCity);
+      const fromPlaces = buildOfferPlaces(
+        fromCountry,
+        fromProvince,
+        selectedFromCities,
+        fromCity,
+        selectedFromSettlements,
+      );
+      const toPlaces = buildOfferPlaces(
+        toCountry,
+        toProvince,
+        selectedToCities,
+        toCity,
+        selectedToSettlements,
+      );
 
       const offerDataWithStops = {
         ...formData,
@@ -1042,6 +1095,17 @@ export const OfferWizardScreen: React.FC = () => {
       undefined,
     );
 
+  /**
+   * The artboard's second line for an endpoint — the QFYs, `·`-separated. T-102c-3.
+   *
+   * Empty when none are named, which is both the common case and a meaningful one:
+   * the endpoint is then the whole district, exactly as it was before this step.
+   */
+  const endpointDetail = (which: 'from' | 'to'): string =>
+    (which === 'from' ? selectedFromSettlements : selectedToSettlements)
+      .map(s => s.name)
+      .join(' · ');
+
   const stopLine = (stop: { country: GeoOption | null; province: GeoOption | null; city: GeoOption | null; selectedCities?: GeoOption[] }): string =>
     resolveLocationText(
       {
@@ -1058,6 +1122,14 @@ export const OfferWizardScreen: React.FC = () => {
     // `districts` is the multi-select; `district` is the single. A caller that
     // picked one still gets a one-element list, so there is one code path below.
     const cities = path.districts ?? (path.district ? [path.district] : []);
+    /*
+     * 🔴 ALWAYS REPLACE, NEVER MERGE — and that is why this reads `?? []` rather than
+     * skipping when the key is absent. The sheet omits `settlements` entirely when the
+     * endpoint ends up naming two districts, and the QFYs a PREVIOUS edit chose must not
+     * survive that: the offer would then claim a precision inside a district the driver
+     * has just widened away from, and nothing would throw.
+     */
+    const settlements = path.settlements ?? [];
     const country = path.country ?? null;
     const province = path.province ?? null;
     const next = resolveEndpointSelection(cities, country, province);
@@ -1087,6 +1159,7 @@ export const OfferWizardScreen: React.FC = () => {
       setFromProvince(province);
       setFromCity(next.city as GeoOption | null);
       setSelectedFromCities(cities);
+      setSelectedFromSettlements(settlements);
       setFormData(prev => ({
         ...prev,
         from_text: next.text,
@@ -1101,6 +1174,7 @@ export const OfferWizardScreen: React.FC = () => {
     setToProvince(province);
     setToCity(next.city as GeoOption | null);
     setSelectedToCities(cities);
+    setSelectedToSettlements(settlements);
     setFormData(prev => ({
       ...prev,
       to_text: next.text,
@@ -1123,11 +1197,15 @@ export const OfferWizardScreen: React.FC = () => {
     setFromProvince(toProvince);
     setFromCity(toCity);
     setSelectedFromCities(selectedToCities);
+    // 🔴 The QFYs belong to their END, not to their side of the screen. A swap that moved
+    // the districts and left these behind would attach one district's QFYs to the other's.
+    setSelectedFromSettlements(selectedToSettlements);
 
     setToCountry(fromCountry);
     setToProvince(fromProvince);
     setToCity(fromCity);
     setSelectedToCities(selectedFromCities);
+    setSelectedToSettlements(selectedFromSettlements);
 
     setFormData(prev => ({
       ...prev,
@@ -1157,11 +1235,13 @@ export const OfferWizardScreen: React.FC = () => {
           country: fromCountry ?? undefined,
           province: fromProvince ?? undefined,
           districts: selectedFromCities,
+          settlements: selectedFromSettlements,
         }
       : {
           country: toCountry ?? undefined,
           province: toProvince ?? undefined,
           districts: selectedToCities,
+          settlements: selectedToSettlements,
         };
   };
 
@@ -1281,6 +1361,7 @@ export const OfferWizardScreen: React.FC = () => {
         title={t('offerWizard.fromLabel')}
         variant="from"
         line={endpointLine('from')}
+        detail={endpointDetail('from')}
         placeholder={t('offerWizard.selectPlace')}
         onPress={() => setGeoSheet({ endpoint: 'from' })}
         text={formData.from_text}
@@ -1298,6 +1379,7 @@ export const OfferWizardScreen: React.FC = () => {
         title={t('offerWizard.toLabel')}
         variant="to"
         line={endpointLine('to')}
+        detail={endpointDetail('to')}
         placeholder={t('offerWizard.selectPlace')}
         onPress={() => setGeoSheet({ endpoint: 'to' })}
         text={formData.to_text}
@@ -1758,8 +1840,15 @@ export const OfferWizardScreen: React.FC = () => {
 
       <GeoSheet
         visible={!!geoSheet}
-        multiSelectAt="district"
-        endLevel="district"
+        multiSelectAt={MULTI_SELECT_LEVELS}
+        /*
+         * 🔴 T-102c-3 — A STOP STOPS AT THE DISTRICT. Only the two endpoints write
+         * `driver_offer_places`, so a QFY collected on a stop row would be gathered, shown,
+         * and then dropped on save with nothing to say it had gone. The three call sites
+         * share this one sheet; the difference has to be made here.
+         */
+        endLevel={geoSheet?.endpoint === 'stop' ? 'district' : 'settlement'}
+        canAdvance={canPickSettlements}
         initialPath={geoSheetInitialPath()}
         title={
           geoSheet?.endpoint === 'to'

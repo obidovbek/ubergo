@@ -51,6 +51,9 @@ const TARGETS = [
   ['components/rides/BookingSheet.tsx', ['myRides', 'offerPassengers', 'driverOffers', 'common']],
   ['components/rides/RejectReasonSheet.tsx', ['myRides', 'offerPassengers', 'common']],
   ['screens/MyRidesScreen.tsx', ['myRides', 'offerPassengers', 'driverOffers', 'common', 'errors']],
+  // T-115 — the active-offer counter. Its keys interpolate {count}/{max}, so a locale that
+  // drops a placeholder shows the brace to the driver.
+  ['components/offers/ActiveLimitRow.tsx', ['driverOffers']],
   ['components/offers/PassengerOrderCard.tsx', ['passengerOrders', 'passengerOfferExtras', 'myJoinRequests']],
   [
     'screens/PassengerOrdersScreen.tsx',

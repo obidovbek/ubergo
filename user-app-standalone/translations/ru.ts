@@ -476,6 +476,10 @@ export default {
   },
 
   myOrders: {
+    activeLimitCount: 'Активных заказов: {count} / {max}',
+    activeLimitFull:
+      'Лимит исчерпан — завершите или отмените текущий заказ, чтобы создать новый.',
+    activeLimitHint: 'Одновременно можно держать до {max} заказов.',
     title: 'Мои заказы',
     modeJarayon: 'В процессе',
     modeAktiv: 'Активные',

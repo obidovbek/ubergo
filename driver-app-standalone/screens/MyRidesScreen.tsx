@@ -67,6 +67,8 @@ import { dialPhone } from '../utils/contactPhone';
 import { TopBar } from '../components/chrome/TopBar';
 import { NavDrawer } from '../components/chrome/NavDrawer';
 import { SegmentedModes } from '../components/chrome/SegmentedModes';
+import { ActiveLimitRow } from '../components/offers/ActiveLimitRow';
+import { countActiveOffers, isAtActiveLimit } from '../utils/activeOffers';
 import { MyRideCard } from '../components/rides/MyRideCard';
 import { BookingRow } from '../components/rides/BookingRow';
 import { BookingSheet } from '../components/rides/BookingSheet';
@@ -241,7 +243,27 @@ export const MyRidesScreen: React.FC = () => {
     });
   };
 
-  const handleCreate = () => navigation.navigate('OfferWizard');
+  /*
+   * T-115 — the driver's live offers, counted the way the SERVER counts them (published, and
+   * not yet departed). Recomputed on render rather than stored: `offers` is refreshed on focus
+   * and by push (T-068), and a cached count would go stale exactly when a ride departs.
+   */
+  const activeCount = countActiveOffers(offers);
+  const atLimit = isAtActiveLimit(activeCount);
+
+  /*
+   * 🔴 REFUSE HERE TOO, not only on the server. The API returns a 409 either way, but letting
+   * the driver fill in the whole wizard before telling them is the ambush this card exists to
+   * remove. **Still not a dead control**: it explains itself rather than doing nothing, which
+   * is the other half of the same complaint.
+   */
+  const handleCreate = () => {
+    if (atLimit) {
+      showToast.error(t('common.error'), t('driverOffers.activeLimitFull'));
+      return;
+    }
+    navigation.navigate('OfferWizard');
+  };
   const handleEdit = (ride: DriverOffer) => navigation.navigate('OfferWizard', { offerId: ride.id });
   const handleCancel = (ride: DriverOffer) =>
     runRideAction(
@@ -402,7 +424,12 @@ export const MyRidesScreen: React.FC = () => {
       />
 
       <View style={styles.createRow}>
-        <Pressable style={styles.createButton} onPress={handleCreate} accessibilityRole="button">
+        <Pressable
+          style={[styles.createButton, atLimit && styles.createButtonDisabled]}
+          onPress={handleCreate}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: atLimit }}
+        >
           <Text style={styles.createIcon}>+</Text>
           <Text style={styles.createLabel}>{t('driverOffers.createOffer')}</Text>
         </Pressable>
@@ -418,6 +445,9 @@ export const MyRidesScreen: React.FC = () => {
         onChange={setPhase}
         shape="pill"
       />
+
+      {/* T-115 — `Faol e'lon: n / 2`, exactly where `DriverMyOrder` draws it. */}
+      <ActiveLimitRow activeCount={activeCount} />
 
       {loading ? (
         <View style={styles.loading}>
@@ -471,6 +501,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.palette.ground },
 
   createRow: { paddingHorizontal: 14, paddingBottom: 8 },
+  /*
+   * ⚠️ Dimmed, NOT `disabled`. A disabled Pressable swallows the tap and explains nothing; this
+   * one still fires and says why. Same reasoning as the guard in `handleCreate`.
+   */
+  createButtonDisabled: {
+    opacity: 0.5,
+  },
   createButton: {
     minHeight: 44,
     borderRadius: theme.borderRadius.control,

@@ -23,6 +23,7 @@
  */
 
 import { useCallback, useState } from "react";
+import { countActiveOffers } from "../utils/activeOffers";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   getMyPassengerOffers,
@@ -58,6 +59,11 @@ interface HomeOrders {
   activeOffer: PassengerOffer | null;
   recentRoutes: RecentRoute[];
   loading: boolean;
+  /**
+   * T-115 — live orders held, counted the server's way (a live status AND a departure still
+   * ahead). The home screen refuses a third before opening the form.
+   */
+  activeCount: number;
 }
 
 /**
@@ -144,5 +150,16 @@ export const useHomeOrders = (): HomeOrders => {
     if (recentRoutes.length === RECENT_LIMIT) break;
   }
 
-  return { activeOffer, recentRoutes, loading };
+  /*
+   * T-115 — how many slots the passenger is holding, counted the SERVER's way (a live status
+   * AND a departure still ahead). Exposed here because this hook already loads the orders, so
+   * the home screen can refuse a third before the form opens instead of after it is filled in.
+   *
+   * ⚠️ NOT `ACTIVE_STATUSES` above. That list answers "which order does the banner show" and
+   * ignores departure time on purpose; this answers "how many slots are taken". Two similar
+   * lists, two jobs — see `utils/activeOffers.ts`.
+   */
+  const activeCount = countActiveOffers(offers);
+
+  return { activeOffer, recentRoutes, loading, activeCount };
 };

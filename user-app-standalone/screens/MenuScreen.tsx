@@ -61,6 +61,8 @@ import {
   type OrderScope,
 } from "../types/orderScope";
 import { useHomeOrders, shortPlace } from "../hooks/useHomeOrders";
+import { isAtActiveLimit } from "../utils/activeOffers";
+import { showToast } from "../utils/toast";
 
 /*
  * T-028 — the shared list, not a local copy.
@@ -141,11 +143,28 @@ export const MenuScreen: React.FC = () => {
     Step 6 left this area empty on purpose because the artboard fills it with invented
     data; these are the same blocks built from real data instead.
   */
-  const { activeOffer, recentRoutes } = useHomeOrders();
+  const { activeOffer, recentRoutes, activeCount } = useHomeOrders();
 
   const displayName =
     (user as any)?.display_name || (user as any)?.name || t("menu.guest");
   const userInitial = displayName.charAt(0).toUpperCase();
+
+  /*
+   * 🔴 T-115 — THE HOME SCREEN IS WHERE A PASSENGER ACTUALLY STARTS AN ORDER, so it is where
+   * the ceiling has to be said. The server refuses a third with a 409 either way; letting the
+   * form open first means the refusal lands after the whole thing is filled in.
+   *
+   * ⚠️ BOTH openers go through here — the big CTA and the recent-route chips. They are two
+   * buttons doing one thing, and guarding only the obvious one is how the other becomes the
+   * way round the rule.
+   */
+  const openOrderForm = () => {
+    if (isAtActiveLimit(activeCount)) {
+      showToast.error(t("common.error"), t("myOrders.activeLimitFull"));
+      return;
+    }
+    navigation.navigate("CreatePassengerOffer", { scope });
+  };
 
   const handleProfilePress = () => navigation.navigate("Profile");
 
@@ -221,9 +240,9 @@ export const MenuScreen: React.FC = () => {
           onPress={() =>
             // T-101 step 8 — the scope now really does travel; before, this said it
             // did and navigated with `{}`. The order screen uses it to NAME itself
-            // (the four artboards differ in that subtitle). It still does not change
-            // matching — that stays blocked on T-102.
-            navigation.navigate("CreatePassengerOffer", { scope })
+            // (the four artboards differ in that subtitle).
+            // T-115 — and it refuses a third live order before opening the form.
+            openOrderForm()
           }
           style={styles.cta}
         />
@@ -304,9 +323,7 @@ export const MenuScreen: React.FC = () => {
                 <TouchableOpacity
                   key={route.id}
                   style={styles.recentChip}
-                  onPress={() =>
-                    navigation.navigate("CreatePassengerOffer", { scope })
-                  }
+                  onPress={openOrderForm}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                 >

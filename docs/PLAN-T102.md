@@ -169,7 +169,7 @@ symmetric or "either direction" match would offer a passenger a ride going the w
       🛑 **I have NOT run them.** They change the owner's database; the approval was to write
       them. Run with `npm run db:migrate` in `api,admin,db/apps/api` — **on a copy of test3
       first** — and `npm run db:migrate:undo` reverses each.
-- [ ] **T-102c. The driver wizard collects geo ids.** 🟢 **SUB-STEPS 1 AND 2 DONE 2026-09-13. 3 (QFY selection) REMAINS.**
+- [x] **T-102c. The driver wizard collects geo ids. ✅ CLOSED 2026-09-14 (1 · 2 · 3).**
       🟢 **MEASURED 2026-09-12 BEFORE STARTING, AND IT IS FAR LESS WORK THAN §4 ③ ASSUMED.**
       The wizard **already multi-selects districts**, exactly as `DriverElon` draws it:
       `selectedFromCities` / `selectedToCities` are `GeoOption[]` (lines 135/141), the sheet
@@ -199,10 +199,20 @@ symmetric or "either direction" match would offer a passenger a ride going the w
            (`placesDroveTheLoad`) — **without that guard, step 1 would have REGRESSED the app**:
            a genuine stop inside the origin's province would be swallowed into the origin set
            and the next save would store it as an origin district.
-        3. 🛑 **NOT STARTED — add adm3 selection** (`endLevel="settlement"`, multi) so
-           `tuman`/`yaqin` can match. Genuinely new UI; the word "settlement" still appears zero
-           times in the wizard. **Until it lands, every place row the wizard writes has a NULL
-           `settlement_id`**, which `LOOSE_PARENT_MATCH` reads as "anywhere in this district".
+        3. ✅ **DONE 2026-09-14 → `docs/PLAN-T102c3.md`.** The wizard collects QFYs and sends
+           them as `settlement_id`. **A CLIENT-ONLY step — the API was already finished for it**
+           (`OfferPlaceData = GeoPathIds`, `writeOfferPlaces` persists it, the UNIQUE index keys
+           on `COALESCE(settlement, 0)`). `GeoSheet` gained a second multi-select level and a
+           confirm that ADVANCES; the rule *"only an endpoint naming exactly ONE district may
+           name a QFY"* is owner decision ① and lives in `canPickSettlements`, injected into the
+           sheet rather than known by it. `check-offer-restore.mjs` 49 → **60 assertions, red on
+           all 7 mutations**. 🛑 **Not on a device.**
+           🔴 **§4 ③ BELOW OVERSTATES THE ARTBOARD AND IS CORRECTED HERE.** `DriverElon` draws
+           **no QFY picker**: its place sheet is `1/2 · Viloyat` → `2/2 · tuman`, `sheetNext()`
+           calls `confirmPlace()` immediately, and **`toggleAdm3` has zero callers**. What it
+           really contributes is the DATA MODEL (`"<tuman> / <QFY>"` keys, cleared when a district
+           is unticked) and the DISPLAY (the QFYs are the endpoint's *second* line, beside the
+           landmark, never inside the place line). The picker itself was new UI.
       ⚠️ **`stops` rows written by the old code are indistinguishable from real intermediate
       stops except by comparing their text to the from/to cities** (lines 868-885 already do this
       dance). The backfill (T-102g) must un-pick that, and it is the reason that step is risky.
@@ -218,14 +228,62 @@ symmetric or "either direction" match would offer a passenger a ride going the w
       that looks deliberate.
       ⚠️ **Still open in this step:** "the passenger app stops relying on free text" — that is the
       read side and belongs with **T-102e**, which is the query rewrite.
-- [ ] **T-102e. Rewrite the search** to `WHERE from_<L>_id = :x AND to_<L>_id = :y`, replacing the
-      `ILIKE` path. **Keep the text search as an explicit fallback only when an order has no ids**
-      (pre-T-102 rows), and say so in the response so the app can label it.
+- [x] **T-102e. Rewrite the search. ✅ DONE 2026-09-13 — the places table finally has a reader.**
+      ✅ `utils/offerGeoQuery.ts` (pure) + **27 tests, red on all 8 mutations**; API suite
+      305 → **332**. `getPublicOffers` now asks `driver_offer_places` instead of running
+      `from_text ILIKE '%name%'` against free prose.
+      🔴 **THE FALLBACK IS PER-OFFER, NOT PER-REQUEST, AND THAT IS THE DESIGN.** Places have only
+      been written since T-102c shipped the same day, so nearly every published offer still has
+      none. An offer WITH places matches on ids and its text is ignored; an offer WITHOUT places
+      matches exactly as it does today. A request-level switch would have returned an empty list
+      for most of the database. **This is also what makes T-102g low-risk instead of urgent** —
+      an un-backfilled offer keeps working.
+      ⚠️ **Raw SQL, because Sequelize cannot express it**: a correlated `EXISTS` against a child
+      table beside a `NOT EXISTS` on the same table. Everything interpolated is escaped in that
+      module — ids must be positive integers or it throws (`Number('1 OR 1=1')` is NaN and is
+      refused, not coerced), and place names have their quotes doubled, which is an everyday
+      path in Uzbek (*Qo'qon*, *G'uzor*, *To'rtko'l*), not a hardening afterthought.
+      🛑 **SQL-VERIFIED, NOT DB-VERIFIED.** No test in this project touches Postgres. That a
+      passenger's search still returns the offers it used to **must be checked on a device**.
+      ⚠️ **Not done in this step:** labelling the response with WHICH path matched, so the app
+      can show "district-level" for a `LOOSE_PARENT_MATCH`. That belongs with the adm3 work
+      (T-102c-3), which is what makes loose matches possible at all.
 - [ ] **T-102f. Admin: the neighbours screen** — pick a district, tick its neighbours, both rows
       written. ~200 districts to populate; the geo section already has CRUD for all five levels.
-- [ ] **T-102g. The backfill.** 🔴 **The riskiest step.** Existing offers have text only. Match it
-      to ids where it is unambiguous, leave NULL where it is not, and **report the counts** —
-      never guess. An offer left NULL keeps working through the §6e fallback.
+- [ ] **T-102g. The backfill.** 🟢 **WRITTEN AND TESTED 2026-09-13 — NOT RUN.** Still the
+      riskiest step, so it reports by default and writes only when told.
+      `npm run backfill:places` reports · `npm run backfill:places -- --apply` writes.
+      ✅ `utils/backfillPlaces.ts` (pure) + **25 tests, red on all 7 mutations**; suite 332 → **357**.
+      🔴 **IT REFUSES RATHER THAN GUESSES, because the failure is asymmetric.** An offer left
+      alone KEEPS WORKING (T-102e falls back to its text); an offer given the WRONG district is
+      confidently matched to passengers going elsewhere and is indistinguishable from a correct
+      one afterwards. So: names compare EXACTLY — never `includes()`, which is what made the old
+      loader match a district against its own province — a name matching two districts makes the
+      whole side `ambiguous` and is skipped, and **both directions must match or neither is
+      written** (a half-backfilled offer has places, so the text fallback stops applying, and it
+      would then match on one end only).
+      ⚠️ **Uzbek apostrophes are folded** (`Qo'qon` / `Qo‘qon` / `Qoʻqon` are one place).
+      Without it thousands of rows would look unmatchable rather than unmatched.
+      ⚠️ Offers that ALREADY have places are skipped — never second-guessed from prose.
+      ⚠️ `--apply` runs in ONE transaction: a half-finished backfill is not corruption, but it
+      makes the next report's numbers a lie and nobody would know where it stopped.
+      🛑 **Run the REPORT first and read it.** The counts (writable / ambiguous / no-match) are
+      the evidence for whether `--apply` is safe on this data — I cannot see the database.
+- [ ] 🔴 **T-102i. THE READ SIDE — the step this plan never had.** Boarded 2026-09-14, on measuring
+      that **nothing reads the ids at adm3**: `getPublicOffers` builds its geo filter from
+      `from_city_id` / `from_province_id` only, `SearchOffersScreen` sends nothing deeper, and
+      `matchesOrder` · `matchLevelFor` · `matchPrecision` · `hasMatchableIds` · `validateScope` ·
+      `neighborsFirst` — **the entire matching half of `utils/geoMatch.ts` — have zero consumers.**
+      Only `validateOfferPlaces` and `isOrderScope` are called from anywhere.
+      So T-102e rewrote the **search** (adm2) and nothing yet matches an **order** at its own
+      scope's level, which is what §1's table promises. This step is: `getPublicOffers` accepting
+      `from_/to_settlement_id`, `LOOSE_PARENT_MATCH` expressed in SQL beside the existing
+      per-offer text fallback, and **the response saying WHICH path matched** so the card can
+      show "district-level" — the label T-102e explicitly deferred to "the adm3 work".
+      ⚠️ **An open design question comes with it:** the scope lives on the ORDER (`match_scope`),
+      but the passenger's SEARCH screen has no scope and stops at adm2. Whether adm3 matching
+      belongs to the search, to order↔offer matching, or to both, is a decision — not a detail.
+      🛑 **Until this lands, a QFY a driver picks changes nothing a passenger sees.**
 - [ ] **T-102h. Checkers, baselines, board**; `docs/PLAN-T101-SCOPES.md` §6 questions closed.
 
 ---
@@ -348,31 +406,30 @@ than assumed: it reduces to **one equality per direction at the order's level**,
 
 ---
 
-## 9. Resume point — 2026-09-13
+## 9. Resume point — 2026-09-14
+
+> ⚠️ **The 2026-09-13 resume point that stood here was already stale when this session read it** —
+> it listed T-102d and T-102e as "next" hours after both had been built. Rewritten, not patched.
 
 **Migrations: RUN.** The owner migrated in `a522a8d`; §5's "NOT RUN" is history.
 
-**Done:** T-102a (rules, 46 tests) · T-102b (three migrations) · **T-102c sub-steps 1 and 2** —
-the driver wizard now persists `driver_offer_places` and reads them back, and no longer writes
-fake stops.
+**Done:** T-102a (rules, 46 tests) · T-102b (three migrations) · **T-102c, all three sub-steps**
+(persisted places · no more fake stops · **QFY selection, 2026-09-14**) · T-102d (the scope half) ·
+T-102e (the search reads the table) · T-102g (**written and tested, NOT RUN**).
 
-🔴 **NOTHING READS THE TABLE YET.** The rows are written and unused until **T-102e** rewrites the
-search. So this work changes no visible behaviour except on the wizard's own edit path, and an
-offer created today matches exactly as it did yesterday — by `ILIKE` on free text.
+**Left:** **T-102i** (the read side — new, and the one that matters) · T-102f (admin neighbours) ·
+T-102g's actual run · T-102h.
 
 ### The next step, in order of what unblocks what
 
-1. 🛑 **DEVICE-CHECK WHAT JUST LANDED** (owner is device testing). Save an offer with **two**
-   origin districts → reopen it for edit → both must come back, **and** the stops list must show
-   only real stops. Then add a genuine intermediate stop in the *origin's own province*, save,
-   reopen: it must still be a stop. That last case is the one the `placesDroveTheLoad` guard
-   exists for, and it is not covered by any checker.
-2. **T-102d** — the order sends and stores its scope (`match_scope`, migrated, nullable ENUM).
-3. **T-102e** — the search itself. Keep the text path as an explicit fallback for rows with no
-   ids, and say which was used in the response so the app can label it.
-4. **T-102c sub-step 3** — QFY selection in the wizard. Until it lands, every place row has a
-   NULL `settlement_id`, so `tuman` and `yaqin` can only ever match through
-   `LOOSE_PARENT_MATCH` — district precision wearing an adm3 label.
-
-⚠️ **Do not start T-102g (the backfill) before T-102e.** Its whole safety argument is that an
-offer left NULL keeps working through the fallback, and the fallback does not exist yet.
+1. 🛑 **DEVICE-WALK WHAT IS STACKED UP.** Seven changes are on the device unverified: T-114 ①'s
+   re-pin, T-102c 1+2, **T-102c-3 (`docs/PLAN-T102c3.md` §6 — six walks, item 3 is the one no
+   checker covers)**, T-102e's search rewrite (**SQL-verified, not DB-verified — it changed the
+   passenger's main screen**), T-115's counters, T-116.
+2. **Run `npm run backfill:places`** — the REPORT, which writes nothing. Its counts are the
+   evidence for whether `--apply` is safe, and reading them is the owner's call.
+3. 🔴 **T-102i** — the read side. **Nothing reads a QFY today**, so T-102c-3's data is inert until
+   this lands, exactly as T-102c-1's was before T-102e. It carries an open design question about
+   where adm3 matching belongs (see the step).
+4. **T-102f** — the admin neighbours screen. `yaqin` orders the picker by it and matches nothing
+   through it, so this is convenience, not correctness.

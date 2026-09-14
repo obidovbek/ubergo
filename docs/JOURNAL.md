@@ -5,6 +5,84 @@
 
 ---
 
+## 2026-09-14 — T-102c-3: the driver can name a QFY, and the card's real hole turned up while measuring
+
+- **Task:** T-102c-3, the last sub-step of T-102c. Owner picked it directly. → `docs/PLAN-T102c3.md`.
+
+### Measuring first changed the step three ways, before any code
+
+1. **It is a CLIENT-ONLY step.** `OfferPlaceData = GeoPathIds` already carried `settlement_id`,
+   `writeOfferPlaces` already persisted it, and the UNIQUE index already keyed on
+   `(offer, direction, city, COALESCE(settlement, 0))`. The API was finished for this on 09-13.
+2. 🔴 **The artboard draws no QFY picker.** §4 ③ of the plan credits `DriverElon` with
+   *"a SET of districts and a SET of QFYs per direction"*. Measured: the place sheet is
+   `1/2 · Viloyat` → `2/2 · tuman`, `sheetNext()` calls `confirmPlace()` immediately, and
+   **`toggleAdm3` has zero callers**. What it really gives is the DATA MODEL (`"tuman / QFY"`
+   keys, cleared when a district is unticked) and the DISPLAY (the QFYs are the endpoint's
+   *second* line, beside the landmark). The picker itself was new UI.
+3. 🔴 **AND NOTHING READS THE IDS AT adm3.** `getPublicOffers` filters on city/province only,
+   `SearchOffersScreen` sends nothing deeper, and **the entire matching half of
+   `utils/geoMatch.ts` — `matchesOrder`, `matchLevelFor`, `matchPrecision`, `hasMatchableIds`,
+   `validateScope`, `neighborsFirst` — has ZERO consumers.** T-102e rewrote the *search* at adm2;
+   nothing matches an *order* at its own scope's level, which is what the card promises. **§6 had
+   no step for it.** Boarded as **T-102i**, and the owner chose the ordering knowing it: write
+   side now, read side next.
+
+- **Decisions (owner):** ① **QFY only when the endpoint names exactly ONE district** — a driver
+  listing several is saying "anywhere in these", and `LOOSE_PARENT_MATCH` already matches that at
+  `'district'` precision, so nothing is lost and the grouped picker stays unbuilt (the row shape
+  already carries both, so it is addable later with no data change). ② write side now.
+
+### The shape that mattered: the sheet does not know the rule
+
+`GeoSheet` gained `canAdvance?: (picked, level) => boolean` and the wizard injects
+`canPickSettlements` from `utils/offerRestore.ts`. Whether an endpoint may name a QFY is an
+**offer** rule; this is a geo picker a search screen also uses. Importing an offer module into a
+shared component is how a picker acquires opinions it should not have — and keeping the rule in
+`utils/` is what lets a checker execute it at all (the lesson `mergeScopeRoot` cost on T-114).
+The one change that *is* the QFY step: **`confirmPicked` now confirms OR continues.**
+
+⚠️ **One planned function was deliberately not built.** `keepSettlementsForDistricts` — the
+artboard's "drop the QFYs whose district went away" filter — has nothing to filter: a settlement
+`GeoOption` carries **no parent id**, and under decision ① any change to the district set clears
+them all. What replaced it is stronger: **`buildOfferPlaces` drops the QFYs itself** whenever the
+endpoint names ≠ 1 district, so the payload cannot lie even if the sheet does. A filter would have
+guarded the UI; this guards the wire.
+
+### 🔴 Three defects found by reading the diff — no baseline would have caught any of them
+
+1. **The toggle derived its next state from the render's `picked`, not from `current`.** Two taps
+   in one batch would both start from the same snapshot and the second would drop the first.
+2. **A stop row shares this one sheet.** Stops write no places, so a QFY collected there would
+   have been gathered, shown, then dropped on save with nothing to say it had gone. The sheet
+   opens at `endLevel="district"` for stops — the three call sites differ, in one render.
+3. **`applyGeoPath` had to read `path.settlements ?? []`, not skip an absent key.** The sheet
+   omits `settlements` when the endpoint ends up naming two districts; merging would have let a
+   previous edit's QFYs survive into a district the driver had just widened away from.
+
+🛑 **c3-3 and c3-4 shipped together on purpose.** Collecting a field that never loads back means
+the next save writes the blank over real data — the T-078 failure `offerRestore.ts` exists for.
+Splitting them would have been an instance of it.
+
+⚠️ **Boarded, not fixed: `GeoSheet` is not localised at all** — every string in it is inline
+Uzbek, in **both** apps' copies, on the busiest screen, in a three-language app. The `'Butun
+tuman'` this step added follows the file (rule 7) rather than fixing it. → **T-117**.
+
+**Verification.** driver `tsc` **28** — proved the same SET, not just the same count, by stashing
+only the five touched files · lint **0 / 275** · colours **3/3** · **11 checkers** ·
+`check-offer-restore.mjs` 49 → **60 assertions, red on all 7 mutations** (6 by assertion; m5 by
+crashing at `city.id`, reachable only through the new primary-anchor case). API untouched.
+
+- **Problems:** 🛑 **NOT ON A DEVICE, and it is now the seventh unverified change stacked there.**
+  `PLAN-T102c3.md` §6 lists six walks; **item 3 — ticking a second district must CLEAR the QFYs —
+  is the one no checker covers**: if it fails the offer claims precision in a district the driver
+  never picked, and nothing throws.
+- **Next:** the device walk, then `npm run backfill:places` (the report writes nothing), then
+  **T-102i** — without which a picked QFY changes nothing a passenger sees.
+- **Commit:** proposed below.
+
+---
+
 ## 2026-09-13 — T-102c lands, and the card the owner reported turns out to be half-built already
 
 - **Task:** device testing. Owner migrated (`a522a8d`), then reported the four order scopes draw
@@ -162,6 +240,97 @@ driver **28**, both lint-clean, 20 checkers green.
 
 ⚠️ **The backslash-heredoc trap cost two attempts again**, exactly as the memory note says. The
 rule stands: scripts that need escapes go through the Write tool.
+
+### T-115 counter UI — the driver can now see the ceiling before hitting it
+
+Owner committed and deployed the limit, so the first follow-up was the half that makes it fair:
+`ActiveLimitRow` on `MyRidesScreen`, built to `DriverMyOrder`'s measurements and using its note
+verbatim. The `+` button dims at the limit and explains itself on tap — **not disabled**, because
+a control that swallows the tap and says nothing is the same complaint in a different costume.
+
+🔴 **The count is a SECOND implementation of a server rule**, in another language, in another
+project. That is how a UI starts lying — a chip reading `1 / 2` in front of a server answering
+409. So `check-active-offers.mjs` does not just test the app's arithmetic: it **reads the API's
+`activeOffers.ts` and the artboard's `MAX_ELON`** and fails when either stops matching.
+**Red on 6 mutations, two of them cross-project** (the API raising its ceiling, the API widening
+its status list — the app's check goes red for both).
+
+⚠️ Also found and fixed: `ActiveLimitRow` was not in `check-offer-i18n.mjs`'s file list, so two of
+its three keys were unguarded — and they interpolate `{count}`/`{max}`, so a locale dropping a
+placeholder would show a brace to the driver. Added: **244 keys × 3 locales across 16 files.**
+
+### The passenger twin, same day — and the guard went where orders really start
+
+`ActiveLimitRow` + `utils/activeOffers.ts` + `check-active-offers.mjs` on the user side too
+(**17 assertions, red on 5 mutations**, two of them cross-project). The passenger status list is
+NOT the driver's: `driver_found` counts here and does not exist there.
+
+🔴 **The obvious button was the wrong one.** The user app's only visible create button is the
+empty-state CTA — real orders start on the HOME CAROUSEL. So the refusal lives in one
+`openOrderForm()` that both the big CTA and the recent-route chips call. Guarding only the
+obvious control is how the other one becomes the way round the rule. `useHomeOrders` already
+loaded the orders, so the count cost nothing.
+
+🔴 **AND THE I18N CHECKER WAS SILENTLY SKIPPING THE NEW KEYS.** Its pattern was single-quote
+only (`'myOrders.x'`), and the new component is written in double quotes — so it stayed green
+while never looking at them. **The tell was the count rising by ONE when three keys had been
+added.** Fixed to accept both quote styles: 69 → **72 keys × 3 locales**, and proved red when a
+key is dropped. This is the second time on this project that a checker's own blind spot, not the
+code, was the defect — and its header already warned about exactly this shape.
+
+### T-102e — the places table finally has a reader
+
+`getPublicOffers` stopped matching a passenger's search against free prose. It now asks
+`driver_offer_places`, which is what T-102 has been building toward all day.
+
+🔴 **The decision that made it safe: the text fallback is PER OFFER.** Places have only been
+written since this morning, so nearly every published offer still has none. An offer with places
+matches on ids and its text is ignored; an offer without matches exactly as it did yesterday.
+A request-level "use ids if the search has ids" switch would have emptied the search screen for
+most of the database. **It is also why T-102g (the backfill) is now low-risk rather than urgent** —
+an un-backfilled offer simply keeps working.
+
+⚠️ **Raw SQL, because Sequelize has no form for it** (a correlated `EXISTS` beside a `NOT EXISTS`
+on the same child table). So the escaping is the module's own job and is tested as such: an id
+that is not a positive integer THROWS rather than being coerced — `Number('1 OR 1=1')` is NaN and
+would otherwise reach the statement as "NaN" — and place names have their quotes doubled, which
+in Uzbek is an everyday path (*Qo'qon*, *G'uzor*), not a hardening afterthought.
+
+**27 tests, red on all 8 mutations**, including the two that matter most: applying the fallback to
+every offer, and letting ids win outright so every pre-T-102 offer vanishes from search.
+
+🛑 **SQL-verified, NOT DB-verified — nothing in this project touches Postgres.** That the search
+still returns what it used to has to be checked on a device against real data. That is the one
+thing I cannot do from here, and it is the risk worth naming: this changed the passenger's main
+screen.
+
+### T-102g written as a REPORT first — the riskiest step, de-risked rather than performed
+
+Chose this over T-102c-3 (QFY selection) deliberately: **four changes are already on the device
+unverified** (T-114's re-pin, T-102c 1+2, T-102e's search rewrite, T-115's counters), and
+`GeoSheet` is 470 lines whose multi-select is single-level — picking QFYs across several
+districts is genuinely new UI. Stacking that on three unverified changes is how a session
+produces a pile nobody can debug.
+
+`npm run backfill:places` reports and touches nothing; `-- --apply` writes.
+
+🔴 **The design follows from the failure being ASYMMETRIC.** An offer left alone keeps working —
+T-102e falls back to its text for exactly this case — while an offer given the WRONG district is
+confidently matched to passengers going elsewhere, looks healthy, and cannot be told from a
+correct one afterwards. So every rule refuses rather than guesses: names compare **exactly**
+(`includes()` is what made the old loader match a district against its own province), a name
+hitting two districts makes the whole side ambiguous and is skipped, and **both directions must
+match or neither is written** — a half-backfilled offer has places, so the text fallback stops
+applying and it would match on one end only.
+
+⚠️ Uzbek apostrophes are folded, so `Qo'qon` / `Qo‘qon` / `Qoʻqon` are one place. Without that,
+thousands of rows would read as unmatchable rather than merely unmatched.
+
+**25 tests, red on all 7 mutations** — including the two that matter: taking the first of several
+candidates, and letting a half-matched offer be written.
+
+🛑 **NOT RUN. I cannot see the database.** The report's counts are the evidence for whether
+`--apply` is safe, and reading them is the owner's call.
 
 - **Problems:** 🛑 **the re-pin check is still undone** — and T-114's re-pin rule is the one thing no
   checker can cover. T-114 ② not started. The edit path waits on T-102d.

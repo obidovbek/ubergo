@@ -529,6 +529,10 @@ export default {
   },
 
   myOrders: {
+    activeLimitCount: "Faol buyurtma: {count} / {max}",
+    activeLimitFull:
+      "Limit to'ldi — yangi buyurtma berish uchun mavjudini yakunlang yoki bekor qiling.",
+    activeLimitHint: "Bir vaqtda {max} tagacha buyurtma ochib turishingiz mumkin.",
     title: "Mening buyurtmalarim",
     modeJarayon: "Jarayonda",
     modeAktiv: "Faol",

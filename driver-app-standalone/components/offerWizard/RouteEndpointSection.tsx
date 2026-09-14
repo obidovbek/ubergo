@@ -35,6 +35,15 @@ interface RouteEndpointSectionProps {
   variant: 'from' | 'to' | 'stop';
   /** The resolved place — "Farg'ona t., Farg'ona viloyati, O'zbekiston". */
   line?: string;
+  /**
+   * The QFYs this endpoint names — "Chimyon QFY · 2-Mavze". T-102c-3.
+   *
+   * 🔴 A SECOND LINE, NEVER PART OF THE FIRST, and that is the artboard's own shape:
+   * `DriverElon` draws each endpoint as `adm1, adm2s` above `adm3s — mo'ljal`. It also
+   * keeps `from_text` out of this — the stored text stays the district-level line that
+   * every OTHER screen displays, so naming a QFY does not rewrite a passenger's card.
+   */
+  detail?: string;
   placeholder: string;
   /** Opens the `GeoSheet` for this endpoint. */
   onPress: () => void;
@@ -49,6 +58,7 @@ export const RouteEndpointSection: React.FC<RouteEndpointSectionProps> = ({
   title,
   variant,
   line,
+  detail,
   placeholder,
   onPress,
   text,
@@ -62,7 +72,7 @@ export const RouteEndpointSection: React.FC<RouteEndpointSectionProps> = ({
       onPress={onPress}
       activeOpacity={0.8}
       accessibilityRole="button"
-      accessibilityLabel={`${title} ${line || placeholder}`}
+      accessibilityLabel={[title, line || placeholder, detail].filter(Boolean).join(' ')}
     >
       <View style={styles.rail}>
         <View style={[styles.dot, variant === 'stop' && styles.dotStop]}>
@@ -75,6 +85,11 @@ export const RouteEndpointSection: React.FC<RouteEndpointSectionProps> = ({
         <Text style={[styles.line, !line && styles.linePlaceholder]} numberOfLines={3}>
           {line || placeholder}
         </Text>
+        {!!detail && (
+          <Text style={styles.detail} numberOfLines={2}>
+            {detail}
+          </Text>
+        )}
       </View>
 
       <Text style={styles.chevron}>›</Text>
@@ -177,6 +192,12 @@ const styles = StyleSheet.create({
   },
   linePlaceholder: {
     color: theme.palette.text.tertiary,
+  },
+  // The artboard's second line. Quieter than the place itself — a QFY refines the
+  // district, it does not replace it — but still content, not chrome.
+  detail: {
+    ...typography.secondary,
+    color: theme.palette.text.secondary,
   },
   chevron: {
     ...typography.cardTitle,

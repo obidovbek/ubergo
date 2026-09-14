@@ -54,6 +54,11 @@ const tr = mod.translations ?? mod.default;
  */
 const TARGETS = [
   ['screens/MyOrdersScreen.tsx', 'myOrders'],
+  // T-115 — the active-order counter. Its keys interpolate {count}/{max}, so a locale that
+  // drops a placeholder shows the brace to the passenger.
+  ['components/passengerOffer/ActiveLimitRow.tsx', 'myOrders'],
+  // T-115 — MenuScreen reads `myOrders.activeLimitFull` for its refusal toast.
+  ['screens/MenuScreen.tsx', 'myOrders'],
   ['components/chrome/NavDrawer.tsx', 'drawer'],
   ['screens/NotificationsScreen.tsx', 'notifications'],
   ['screens/ProfileScreen.tsx', 'profile'],
@@ -62,7 +67,14 @@ const TARGETS = [
 const keys = [];
 for (const [file, prefix] of TARGETS) {
   const src = fs.readFileSync(path.join(root, file), 'utf8');
-  const re = new RegExp(`'(${prefix}\\.[a-zA-Z]+)'`, 'g');
+  /*
+   * 🔴 BOTH QUOTE STYLES. This pattern was single-quote only, and the user app writes plenty
+   * of files in double quotes — so `t("myOrders.activeLimitCount")` was SILENTLY SKIPPED when
+   * T-115 added it (2026-09-13). The count going up by one instead of three was the tell.
+   * That is the same class of miss the header above describes for the ternary mode labels:
+   * the check stayed green while the keys it was meant to guard were never looked at.
+   */
+  const re = new RegExp(`['"](${prefix}\\.[a-zA-Z]+)['"]`, 'g');
   for (const m of src.matchAll(re)) if (!keys.includes(m[1])) keys.push(m[1]);
 }
 

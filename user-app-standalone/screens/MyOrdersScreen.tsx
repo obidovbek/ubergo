@@ -65,6 +65,8 @@ import { dialPhone, formatContactPhone } from '../utils/contactPhone';
 import { AppModal } from '../components/AppModal';
 import { TopBar } from '../components/chrome/TopBar';
 import { SegmentedModes } from '../components/chrome/SegmentedModes';
+import { ActiveLimitRow } from '../components/passengerOffer/ActiveLimitRow';
+import { countActiveOffers, isAtActiveLimit } from '../utils/activeOffers';
 import { NavDrawer } from '../components/chrome/NavDrawer';
 import {
   ORDER_MODES,
@@ -701,6 +703,9 @@ export default function MyOrdersScreen() {
 
       <SegmentedModes modes={modes} value={mode} onChange={setMode} />
 
+      {/* T-115 — the same counter the driver gets, on the screen that lists the orders. */}
+      <ActiveLimitRow activeCount={countActiveOffers(requests)} />
+
       {isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={theme.palette.action} />
@@ -726,7 +731,18 @@ export default function MyOrdersScreen() {
               <Text style={styles.emptyBody}>{emptyBody}</Text>
               <Pressable
                 style={styles.emptyCta}
-                onPress={() => navigation.navigate('CreatePassengerOffer')}
+                onPress={() => {
+                  /*
+                   * T-115 — reachable while the passenger still holds two live orders (the
+                   * empty state belongs to a FILTER, not to the account), so it is guarded
+                   * like every other create entry point.
+                   */
+                  if (isAtActiveLimit(countActiveOffers(requests))) {
+                    showToast.error(t('common.error'), t('myOrders.activeLimitFull'));
+                    return;
+                  }
+                  navigation.navigate('CreatePassengerOffer');
+                }}
               >
                 <Text style={styles.emptyCtaText}>{t('myOrders.newOrder')}</Text>
               </Pressable>

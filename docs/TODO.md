@@ -720,9 +720,26 @@
   now prefers a translated `errors.codes.*` over the server's English sentence, falling through
   when the app has never heard the code. Keys in **uz · ru · en × both apps**, Uzbek wording
   taken verbatim from the artboard.
-  🛑 **STILL TO DO — the counter UI** (`Faol e'lon: n / 2` + the note, and a disabled create
-  button when full). That is the rest of T-110 ⑥, and without it the user only learns the limit
-  by being refused.
+  ✅ **DRIVER COUNTER UI DONE 2026-09-13** — `ActiveLimitRow` on `MyRidesScreen`, exactly where
+  `DriverMyOrder` draws it: the `Faol e'lon: n / 2` chip (grey → `dangerTint` when full) and the
+  artboard's own note, verbatim. The `+` button dims at the limit and, when tapped, **says why
+  rather than doing nothing** — a dead control is the other half of the same complaint.
+  ✅ **`check-active-offers.mjs` — 16 assertions, red on 6 mutations, INCLUDING TWO CROSS-PROJECT
+  DRIFT CASES**: it reads the API's `activeOffers.ts` and the artboard's `MAX_ELON` and fails if
+  either stops matching the app. The count is a second implementation of a server rule, which is
+  the classic way a UI starts lying; this is what stops that being silent.
+  ✅ **PASSENGER COUNTER DONE 2026-09-13 — the twin, done deliberately.** `ActiveLimitRow` on
+  `MyOrdersScreen`, its own `utils/activeOffers.ts` (passenger statuses: `published` **and**
+  `driver_found`), and `check-active-offers.mjs` with the same API-parity assertions —
+  **17 assertions, red on 5 mutations including 2 cross-project.**
+  🔴 **THE GUARD WENT WHERE ORDERS ACTUALLY START, NOT WHERE THE BUTTON WAS OBVIOUS.** The user
+  app's only visible create button is the EMPTY-STATE CTA; real orders begin on the home
+  carousel. So `MenuScreen` now refuses through one `openOrderForm()` used by **both** the CTA
+  **and** the recent-route chips — two buttons doing one thing, and guarding only the obvious
+  one is how the other becomes the way round the rule. `useHomeOrders` already loaded the
+  orders, so the count cost no extra request.
+  ⚠️ **No artboard draws the passenger counter** (only `DriverMyOrder` does), so the measurements
+  and wording are the driver's, carried across deliberately rather than invented.
   🛑 **A CONCURRENCY HOLE IS OPEN AND NOT PAPERED OVER:** two requests landing together can both
   read 1 and both insert. These services use **no transactions at all** (measured), so closing
   it means the codebase's first one — that is **T-026A**, not this card. `offerActionLimiter`
@@ -1949,7 +1966,28 @@ masofalar'`). **2 of the 6 were on
 ## 📋 Next (ready to start)
 
 - [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
-  scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`.
+  scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
+  `docs/PLAN-T102.md` §9.
+  🟢 **2026-09-14 — T-102c IS CLOSED (1 · 2 · 3).** Sub-step 3, the driver naming a QFY, is
+  `docs/PLAN-T102c3.md`: **a client-only step — the API had been finished for it since 09-13.**
+  `GeoSheet` gained a second multi-select level and a confirm that ADVANCES instead of finishing;
+  the rule *"only an endpoint naming exactly ONE district may name a QFY"* (owner decision ①) is
+  `canPickSettlements`, **injected into the sheet rather than known by it** — the sheet is a geo
+  picker a search screen also uses, and an offer rule has no business inside it.
+  49 → **60 assertions, red on all 7 mutations.** All baselines identical (`tsc` 28 proved as a
+  SET, lint 0/275, 3 colours, 11 checkers).
+  🔴 **AND MEASURING IT FOUND THE HOLE IN THIS CARD: NOTHING READS THE IDS AT adm3.**
+  `getPublicOffers` filters on city/province only, `SearchOffersScreen` sends nothing deeper, and
+  **the whole matching half of `utils/geoMatch.ts` — `matchesOrder`, `matchLevelFor`,
+  `matchPrecision`, `hasMatchableIds`, `validateScope`, `neighborsFirst` — has ZERO consumers.**
+  T-102e rewrote the *search*; nothing matches an *order* at its own scope's level, which is what
+  the card promises. → **T-102i**, now in the plan's §6. *Fifth time a card has claimed a thing
+  the code did not do; measuring, not reading, is what found it.*
+  🔴 **§4 ③ of the plan overstated the artboard** and is corrected there: `DriverElon` draws **no**
+  QFY picker (`toggleAdm3` has zero callers, the sheet is `1/2`→`2/2`). It contributes the data
+  model and the two-line display; the picker was new UI.
+  🛑 **NOT ON A DEVICE.** `PLAN-T102c3.md` §6 lists six walks; **item 3 — ticking a second
+  district must CLEAR the QFYs — is the one no checker covers.**
   🔴 **`DriverOffer` HAS NO GEO COLUMNS AT ALL** — only `from_text`/`to_text` free strings, and
   search is `ILIKE '%name%'` against them (`DriverOfferService.ts:812-839`). **So three of the
   owner's four scopes cannot be expressed**, and "match adm2 but do NOT descend into it" — the rule
@@ -2492,6 +2530,21 @@ masofalar'`). **2 of the 6 were on
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+
+- [ ] T-117 (P2) 🌐 **`GeoSheet` IS NOT LOCALISED AT ALL — every string in it is inline Uzbek.**
+  Found 2026-09-14 while adding the QFY step (T-102c-3), which followed the file rather than
+  fixing it (CLAUDE.md rule 7 — match the surrounding code).
+  **The strings:** `'Qidirish'` · `'Tayyor'` / `'Tayyor (n)'` · `'Butun tuman'` · `'Topilmadi'` ·
+  `"Ro'yxat bo'sh"` · `'Qayta urinish'` · `'Ortga'` · `'Yopish'`.
+  🔴 **It is on the busiest screen in BOTH apps and the app ships in three languages.** A Russian
+  driver picking a place reads Uzbek chrome around Uzbek place names and cannot tell which part
+  the app was supposed to translate.
+  ⚠️ **Both apps have their own copy** (driver 470 lines with multi-select, user 319 without), so
+  this is two files and one key set — and it is the exact shape the memory note calls the most
+  repeated defect here: fix one, walk past its twin.
+  ⚠️ Whoever takes it: the keys must go into **both** `check-*-i18n.mjs` file lists, and the
+  locale files must be **evaluated, not grepped** — `to'ldi` / `e'lon` is how the apostrophe trap
+  bites, and `"Ro'yxat bo'sh"` is already one of these strings.
 
 - [ ] T-104 (P3) 📍 **Mahalla in the passenger order form — reversible, revisit if wanted**
   🟢 **NOTHING WAS DROPPED FROM THE DATABASE, and this card exists so that stays findable.**

@@ -718,6 +718,10 @@ export default {
 
   // Driver Offers
   driverOffers: {
+    activeLimitCount: 'Active offers: {count} / {max}',
+    activeLimitFull:
+      'Limit reached — finish or cancel a ride before posting a new offer.',
+    activeLimitHint: 'You can keep up to {max} offers open at a time.',
     title: 'My Offers',
     createOffer: 'Create Offer',
     noOffers: 'You don\'t have any offers yet',

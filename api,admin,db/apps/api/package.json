@@ -19,6 +19,7 @@
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:seed": "sequelize-cli db:seed:all",
+    "backfill:places": "tsx src/scripts/backfill-driver-places.ts",
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
     "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
     "validate:fcm": "node scripts/validate-fcm-setup.js"

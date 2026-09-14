@@ -28,6 +28,12 @@ import type {
   DriverOfferVehicleClass
 } from '../database/models/DriverOffer.js';
 import { validateOfferPlaces, type GeoPathIds } from '../utils/geoMatch.js';
+import { Sequelize as SequelizeLib } from 'sequelize';
+import {
+  directionMatchSql,
+  isSafeId,
+  type PlaceLevel
+} from '../utils/offerGeoQuery.js';
 import {
   DRIVER_ACTIVE_STATUSES,
   MAX_ACTIVE_OFFERS,
@@ -990,31 +996,66 @@ export class DriverOfferService {
       { start_at: { [Op.gte]: new Date() } } // Only future offers
     ];
 
-    // Filter by "From" location geo
-    if (filters.from_city_id) {
-      const city = await GeoCityDistrict.findByPk(filters.from_city_id);
-      if (city) {
-        whereConditions.push({ from_text: { [Op.iLike]: `%${city.name}%` } });
-      }
-    } else if (filters.from_province_id) {
-      const province = await GeoProvince.findByPk(filters.from_province_id);
-      if (province) {
-        whereConditions.push({ from_text: { [Op.iLike]: `%${province.name}%` } });
-      }
-    }
+    /*
+     * 🔴 T-102e — MATCH ON IDS, FALLING BACK TO TEXT PER OFFER.
+     *
+     * This block used to look up the chosen place's NAME and run `from_text ILIKE '%name%'`
+     * against free prose — the reason T-102 exists. It now asks `driver_offer_places` instead,
+     * which carries the districts the driver actually ticked.
+     *
+     * ⚠️ THE OLD TEXT PATH IS KEPT, AND KEPT PER-OFFER. `driver_offer_places` has only been
+     * written since T-102c shipped today, so nearly every published offer still has no rows
+     * there. An offer WITH places is matched by id and its text is ignored; an offer WITHOUT
+     * places is matched exactly as it is today. Deciding this per request instead would return
+     * an empty list for every pre-T-102 offer, which is most of them.
+     *
+     * ⚠️ The name is still fetched — it is what the fallback needs. What changed is that it is
+     * no longer the only thing asked.
+     *
+     * 🛑 SQL-VERIFIED, NOT DB-VERIFIED. `utils/offerGeoQuery.ts` is unit-tested (shape,
+     * escaping, the per-offer guard), but no test in this project touches Postgres. The
+     * behaviour that matters — that a passenger's search still returns the offers it used to —
+     * has to be checked on a device against real data.
+     */
+    const offerIdRef = '"DriverOffer"."id"';
 
-    // Filter by "To" location geo
-    if (filters.to_city_id) {
-      const city = await GeoCityDistrict.findByPk(filters.to_city_id);
-      if (city) {
-        whereConditions.push({ to_text: { [Op.iLike]: `%${city.name}%` } });
+    const geoSide = async (
+      direction: 'from' | 'to',
+      cityId: number | undefined,
+      provinceId: number | undefined,
+      textColumn: string
+    ) => {
+      let id: number | undefined;
+      let level: PlaceLevel | undefined;
+      let name: string | undefined;
+
+      if (isSafeId(cityId)) {
+        const city = await GeoCityDistrict.findByPk(cityId);
+        if (city) {
+          id = cityId;
+          level = 'city';
+          name = city.name;
+        }
+      } else if (isSafeId(provinceId)) {
+        const province = await GeoProvince.findByPk(provinceId);
+        if (province) {
+          id = provinceId;
+          level = 'province';
+          name = province.name;
+        }
       }
-    } else if (filters.to_province_id) {
-      const province = await GeoProvince.findByPk(filters.to_province_id);
-      if (province) {
-        whereConditions.push({ to_text: { [Op.iLike]: `%${province.name}%` } });
-      }
-    }
+
+      const sql = directionMatchSql(direction, { id, level, name, textColumn }, offerIdRef);
+      if (sql) whereConditions.push(SequelizeLib.literal(sql));
+    };
+
+    await geoSide(
+      'from',
+      filters.from_city_id,
+      filters.from_province_id,
+      '"DriverOffer"."from_text"'
+    );
+    await geoSide('to', filters.to_city_id, filters.to_province_id, '"DriverOffer"."to_text"');
 
     // Filter by from/to text (simple text search for MVP)
     if (filters.from_text) {

@@ -718,6 +718,10 @@ export default {
 
   // Driver Offers
   driverOffers: {
+    activeLimitCount: 'Активных объявлений: {count} / {max}',
+    activeLimitFull:
+      'Лимит исчерпан — завершите или отмените рейс, чтобы разместить новое объявление.',
+    activeLimitHint: 'Одновременно можно держать до {max} объявлений.',
     title: 'Мои объявления',
     createOffer: 'Создать объявление',
     noOffers: 'У вас пока нет объявлений',

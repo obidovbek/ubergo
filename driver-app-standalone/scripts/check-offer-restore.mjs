@@ -215,14 +215,14 @@ eq(
   'places: multi-select sends every district',
   M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null),
   [
-    { country_id: 1, province_id: 10, city_id: 101 },
-    { country_id: 1, province_id: 10, city_id: 102 },
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: null },
+    { country_id: 1, province_id: 10, city_id: 102, settlement_id: null },
   ],
 );
 eq(
   'places: ONE city lives in `primary` with an EMPTY array, and must still be sent',
   M.buildOfferPlaces(UZ, ANDIJON_VIL, [], D[0]),
-  [{ country_id: 1, province_id: 10, city_id: 101 }],
+  [{ country_id: 1, province_id: 10, city_id: 101, settlement_id: null }],
 );
 eq(
   'places: the array wins when both are somehow populated',
@@ -238,13 +238,89 @@ eq(
 eq(
   'places: a missing country/province is null, not dropped',
   M.buildOfferPlaces(null, null, [D[0]], null),
-  [{ country_id: null, province_id: null, city_id: 101 }],
+  [{ country_id: null, province_id: null, city_id: 101, settlement_id: null }],
+);
+
+// ── canPickSettlements / the QFY rows — T-102c-3 ────────────────────────────
+/*
+ * 🛑 THIS REPLACED THE ASSERTION `places: never names a settlement — the wizard cannot pick one
+ * yet`. It was true from T-102c-1 until this step, and flipping it deliberately is the point:
+ * a marker assertion earns its keep only if the step that invalidates it has to come here and
+ * say so.
+ *
+ * 🔴 The two that carry real weight are the LAST two. `resolveEndpointRestore` clears `cities`
+ * for a one-district endpoint and moves it into `city`, so every rule keyed on the ARRAY is
+ * silently skipped for the commonest offer there is — one district, one QFY. That is exactly
+ * the trap T-102c-1 fell into at adm2, repeated one level deeper.
+ */
+const QFY = [
+  { id: 9001, name: 'Chimyon QFY' },
+  { id: 9002, name: '2-Mavze' },
+];
+
+ok('qfy: exactly one district can name a QFY', M.canPickSettlements([D[0]]) === true);
+ok('qfy: no district cannot', M.canPickSettlements([]) === false);
+ok('qfy: two districts cannot', M.canPickSettlements(D) === false);
+
+eq(
+  'qfy: one row per QFY, each carrying its district',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0]], null, QFY),
+  [
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: 9001 },
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: 9002 },
+  ],
 );
 ok(
-  'places: never names a settlement — the wizard cannot pick one yet',
-  M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null).every(
-    (pl) => !Object.prototype.hasOwnProperty.call(pl, 'settlement_id'),
+  'qfy: NO district-only row is emitted beside them — it would widen the offer back out',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0]], null, QFY).every((pl) => pl.settlement_id !== null),
+);
+eq(
+  'qfy: none named falls back to one district row with a null settlement',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0]], null, []),
+  [{ country_id: 1, province_id: 10, city_id: 101, settlement_id: null }],
+);
+eq(
+  'qfy: TWO districts drop the QFYs entirely — the payload cannot lie even if the sheet does',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null, QFY),
+  [
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: null },
+    { country_id: 1, province_id: 10, city_id: 102, settlement_id: null },
+  ],
+);
+eq(
+  'qfy: duplicates collapse (the API UNIQUE index keys on city + settlement)',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0]], null, [QFY[0], QFY[0], QFY[1]]).length,
+  2,
+);
+eq(
+  'qfy: nothing picked sends nothing, QFYs or not',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [], null, QFY),
+  [],
+);
+ok(
+  'qfy: every row carries the key, null included — one shape, one meaning',
+  [
+    ...M.buildOfferPlaces(UZ, ANDIJON_VIL, D, null),
+    ...M.buildOfferPlaces(UZ, ANDIJON_VIL, [D[0]], null, QFY),
+  ].every((pl) => Object.prototype.hasOwnProperty.call(pl, 'settlement_id')),
+);
+
+// 🔴 The single-district endpoint, whose district lives in `primary` and NOT in the array.
+eq(
+  'qfy: the district in `primary` still anchors its QFYs (the T-102c-1 trap, one level deeper)',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, [], D[0], QFY),
+  [
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: 9001 },
+    { country_id: 1, province_id: 10, city_id: 101, settlement_id: 9002 },
+  ],
+);
+const restoredOne = M.resolveEndpointRestore([D[0]]);
+eq(
+  'qfy: restore -> send keeps a one-district offer WITH its QFYs whole',
+  M.buildOfferPlaces(UZ, ANDIJON_VIL, restoredOne.cities, restoredOne.city, QFY).map(
+    (pl) => pl.settlement_id,
   ),
+  [9001, 9002],
 );
 
 // 🔴 The round trip T-102c actually creates: restore -> send. A one-city endpoint must survive.
@@ -263,5 +339,5 @@ if (fails.length) {
 console.log(
   '✓ offer restore: all ' +
     pass +
-    ' assertions pass (split · multi-detect · match · resolve · stops · round trip · places)',
+    ' assertions pass (split · multi-detect · match · resolve · stops · round trip · places · qfy)',
 );
