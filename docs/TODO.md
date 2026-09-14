@@ -662,34 +662,6 @@
 
 ## 🔥 Now (working on it)
 
-- [ ] T-118 (P1) 🧪 **[OWNER 2026-09-14] AUTOMATED TESTS FOR BOTH APPS — "after any change whole
-  device test is crazy, I think we need automatic test".** → `docs/PLAN.md` (its Resume point is
-  the handoff for a new session).
-  ✅ **APPROVED 2026-09-14 AND STEPS 1-11 OF 13 ARE DONE IN CODE THE SAME DAY. NOT COMMITTED.**
-  Both apps now have Jest (`jest-expo` + React Native Testing Library 13, `react-test-renderer`
-  pinned at the app's React), **`npm test` = Jest + the 23 existing `check-*.mjs`** (≈1 min per
-  app), a render harness (`test/render.tsx`: real navigator + providers, a stubbed signed-in
-  user, extra routes for real navigations, and a trap that FAILS a test on a missing translation
-  key), and **13 test files, ~55 tests, every one proven red by mutating the CODE**: the order
-  form, OfferDrivers, MyOrders and the phone → OTP flow in the user app; GeoSheet's QFY rule (the
-  walk item no checker covered), PassengerOrders, the wizard's 34-field edit round trip, MyRides
-  and the phone/id → OTP flow in the driver app; SegmentedModes and one pure util in each.
-  **All six baselines unchanged** (user 6 / 0·208 / 1 · driver 28 / 0·275 / 3); the user lint
-  baseline in `PLAN.md` was corrected from a stale 216 to the journal's 208.
-  🔴 **A REAL DEFECT FOUND ON FIRST RENDER AND FIXED (one character):** `CheckRow.tsx` drew a
-  hyphen before EVERY check-row label on the order form since 2026-08-02 (`-{label}`; the
-  artboard has none). Only runtime change in the card.
-  ❓ **TWO OWNER QUESTIONS SURFACED BY MEASURING, left as is:** ① `MyOrdersScreen` keeps
-  "cancel request" on an EXPIRED request and "cancel booking" on a FINISHED booking in history
-  (the buttons key off the raw status); ② both apps' "incomplete input" toasts on the auth
-  screens are unreachable — the buttons are disabled first. Also: fixture ids must be numeric
-  strings on the driver's rides (`Number(id)` on the wire).
-  🛑 **LEFT FOR THE NEXT SESSION:** step 11's two owed proofs (the user-app `verifyOtp` swap
-  mutation; the post-step `tsc` / lint re-measure in both apps), **step 12 CI — the owner never
-  answered yes/no**, step 13 docs (CLAUDE.md, CHECKLIST, ARCHITECTURE), boarding ①②, the commit.
-  ⚠️ **Still phone-only, by design:** fonts and weights, layout vs artboard, SMS autofill, push
-  delivery, the native build, Google SSO. **T-010 keeps the API half.** E2E is OUT (no OTP bypass).
-
 - [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
   info/error/warning language responses frontend/backend".**
   ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
@@ -2562,6 +2534,30 @@ masofalar'`). **2 of the 6 were on
 
 ## 💡 Later / ideas (parking lot)
 
+- [ ] T-119 (P2) 🧹 **`MyOrdersScreen` cancel buttons key off the RAW status, so history rows keep
+  a cancel button that cannot work.** Surfaced by T-118's tests on 2026-09-14, deliberately left
+  as is and pinned with a comment (rule 1: one task at a time).
+  **What happens:** in the *tarix* (history) tab, an **EXPIRED** open request still shows
+  *So'rovni bekor qilish*, and a **FINISHED** confirmed booking still shows *Bronni bekor qilish*.
+  **Why:** the buttons read the raw `status`, while the tab itself uses the derived lifecycle
+  label — `check-order-lifecycle.mjs` already proves `expired` is derived correctly, so the data
+  is right and only the buttons ignore it.
+  ❓ **OWNER DECISION NEEDED:** hide the cancel button on history rows, or keep it and let the
+  server refuse? *Recommendation: hide it* — a button that always fails is worse than no button.
+  🔴 **Check the driver app's twin list (`MyRidesScreen`) in the same card** — same merged-list
+  shape, same question. (This is the defect class the project keeps repeating.)
+
+- [ ] T-120 (P3) 🧹 **The "incomplete input" toasts on all four auth screens are dead code.**
+  Surfaced by T-118's tests on 2026-09-14 and pinned with a comment.
+  **In BOTH apps** the phone screen's continue button is `disabled` until the number matches the
+  country's local length (driver: or a user id is typed), and the OTP screen's is disabled below
+  4 digits — so the "please enter a complete number/code" branches behind those buttons can never
+  be reached from the UI. The T-118 tests therefore pin the **disabled** state, which is the real
+  behaviour.
+  ❓ **OWNER DECISION:** delete the dead branches, or enable the buttons and let the toast explain?
+  *Recommendation: enable + toast* — a disabled button never says why it is disabled. But that is
+  a UX change rather than a cleanup, so it is the owner's call, not Claude's.
+
 - [ ] T-117 (P2) 🌐 **`GeoSheet` IS NOT LOCALISED AT ALL — every string in it is inline Uzbek.**
   Found 2026-09-14 while adding the QFY step (T-102c-3), which followed the file rather than
   fixing it (CLAUDE.md rule 7 — match the surrounding code).
@@ -3831,8 +3827,9 @@ masofalar'`). **2 of the 6 were on
 - [ ] T-007 (P3) Ratings after trip (driver ↔ passenger)
 - [ ] T-008 (P3) Map + geocoding for offer route selection
 - [ ] T-009 (P3) Real-time updates (WebSocket) for offer/booking status
-- [ ] T-010 (P3) 🟡 **STARTED 2026-08-13 — the API has a real test suite; the other three projects
-  do not.** `npm test` in `api,admin,db/apps/api`.
+- [ ] T-010 (P3) 🟡 **STARTED 2026-08-13 — the API has a real test suite. Re-scoped 2026-09-14:
+  the two RN apps got theirs in T-118, so only the ADMIN PANEL has none.** `npm test` in
+  `api,admin,db/apps/api` — 357 tests.
   ✅ **Zero new dependencies** — `node:test` is built into Node 22 and `tsx` was already a
   devDependency, so CLAUDE.md rule 4 ("ask before adding a dependency") never came into play.
   ✅ **28 tests over `utils/geo.ts` and `utils/validation.ts`** — the geo helpers decide when a
@@ -3858,12 +3855,52 @@ masofalar'`). **2 of the 6 were on
   `OfferPassengerService` into `utils/`, then port today's throwaway suites into permanent ones.
   ❌ No runtime change: tests do not alter app behaviour. ⚠️ CLAUDE.md updated — it claimed no tests
   existed.
-  🔗 **2026-09-14 — the APP half of this idea is now its own P1 card, T-118 in *Now*** (Jest in
-  both RN apps, a render harness, screen behaviour tests). **This card keeps the API half only:**
-  the service extraction and the DB-backed flow tests. Server-side `*.test.ts` files grew to 8
-  meanwhile (T-102, T-115, T-116 each added one beside their utils).
+  🔗 **2026-09-14 — the APP half of this idea shipped as T-118 and is DONE** (Jest in both RN
+  apps, a render harness, 80 screen/behaviour tests, and CI). **THIS CARD IS NOW THE API HALF
+  ONLY:** the service extraction and the DB-backed flow tests — still the same blocker, that every
+  service imports Sequelize models. Server-side `*.test.ts` files grew to 8 meanwhile (T-102,
+  T-115, T-116 each added one beside their utils); the API suite now runs **357 tests**.
+  ⚠️ **`CHECKLIST.md`'s "Later" section is the plan for what is left here** — its item 2 (server
+  flow tests: create an order → driver offers → passenger accepts → `driver_found` + the rest
+  `rejected`) is the next thing this card should do.
 
 ## ✅ Done (newest on top)
+
+- [x] T-118 (P1) 🧪 **AUTOMATED TESTS FOR BOTH RN APPS — DONE 2026-09-14, all 13 steps.**
+  → `docs/PLAN.md`. The owner's line was *"after any change whole device test is crazy, I think
+  we need automatic test."*
+  **Both apps have Jest** (`jest-expo`, RNTL 13, explicit `@jest/globals`, `react-test-renderer`
+  pinned exactly at the app's React 19.1.0) and **`npm test` = Jest + all 11 `check-*.mjs`
+  checkers** (≈1 min per app). The API's own suite is unchanged (357 tests).
+  **80 app tests in 13 files, and EVERY file was proven able to go red** by mutating the code and
+  reverting: the order form, OfferDrivers, MyOrders and phone → OTP (user); GeoSheet's QFY rule
+  (the walk item no checker covered), PassengerOrders, the wizard's 34-field edit round trip,
+  MyRides and phone/id → OTP (driver); SegmentedModes and one pure util in each.
+  **Harness: `test/render.tsx` + `test/setup.ts`, duplicated per app on purpose** — real
+  navigation, stubbed auth, real translations, and **a missing translation key FAILS the test**
+  (the i18n checkers grep; this evaluates). **No snapshot tests** — T-101 repaints every screen.
+  ✅ **CI — the owner said yes 2026-09-14:** `.github/workflows/test.yml` runs all three
+  `npm test`s on every push and PR (Node 22, `npm ci`, no secrets, no device, `fail-fast: false`).
+  🔴 **TWO DEFECTS THE TESTS THEMSELVES FOUND:** ① `CheckRow.tsx` drew a hyphen before EVERY
+  check-row label on the order form since 2026-08-02 (`-{label}`; the artboard has none) — caught
+  on the first render of the first screen test, fixed, one character, and the only runtime change
+  in this card. ② Both new `PhoneRegistrationScreen.test.tsx` fixtures omitted `OtpSendResponse`'s
+  **required `message`**, adding one `tsc` error per app that a fully green suite hid.
+  ⚠️ **Lesson, now in CLAUDE.md §1: run `tsc` as well as `jest` after writing a test file** —
+  Jest strips types without checking them.
+  **All six baselines unchanged:** user `tsc` 6 / lint 0·208 / colours 1 · driver 28 / 0·275 / 3.
+  Two stale numbers in `PLAN.md` were corrected by measuring: the user lint baseline (216 → 208)
+  and the checker count (12 → 11 per app, 22 total — verified it was a stale number and not a
+  checker `run-checks` was silently skipping).
+  📄 **Docs updated:** CLAUDE.md §1 (the tests paragraph + a `test` column) and §6 (the DoD now
+  demands a green `npm test`, a proven-red test, and a baseline measurement); `CHECKLIST.md` —
+  §0 now **starts** with the three `npm test`s and says what they cover, and its "Later" section
+  records 2 of its 4 items done; `ARCHITECTURE.md` — a **Tests & CI** row.
+  ⚠️ **Still phone-only, by design:** fonts and weights, layout vs the artboard, SMS autofill,
+  push delivery, the native build, Google SSO. **T-010 keeps the API's server-flow half** (it
+  needs a test DB and the service extraction). **E2E is OUT** until login has an OTP bypass.
+  **The admin panel still has no tests.**
+  ❓ Its two owner questions are boarded as **T-119** and **T-120** in *Later*.
 
 - [x] T-092 **New user IDs start at 1 100 001** — 2026-08-16. ✅ **VERIFIED ON test3: a real user
   holds id `1100001`** (`max_id: 1100001`, `last_value: 1100001`, `is_called: true`). The card's own

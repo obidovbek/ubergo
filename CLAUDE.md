@@ -17,20 +17,36 @@
 - **Stage:** MVP in active development.
 - **Run commands** (each app has its own folder — see table):
 
-| App | Folder | dev | build | lint |
-|---|---|---|---|---|
-| API | `api,admin,db/apps/api` | `npm run dev` | `npm run build` | `npm run lint` |
-| Admin | `api,admin,db/apps/admin` | `npm run dev` | `npm run build` | `npm run lint` |
-| Driver app | `driver-app-standalone` | `npm start` (:8082) | `npm run android` | `npm run lint` |
-| User app | `user-app-standalone` | `npm start` (:8081) | `npm run android` | `npm run lint` |
+| App | Folder | dev | build | lint | test |
+|---|---|---|---|---|---|
+| API | `api,admin,db/apps/api` | `npm run dev` | `npm run build` | `npm run lint` | `npm test` |
+| Admin | `api,admin,db/apps/admin` | `npm run dev` | `npm run build` | `npm run lint` | — none |
+| Driver app | `driver-app-standalone` | `npm start` (:8082) | `npm run android` | `npm run lint` | `npm test` |
+| User app | `user-app-standalone` | `npm start` (:8081) | `npm run android` | `npm run lint` | `npm test` |
 
 - **DB migrations** (from `api,admin,db/apps/api`): `npm run db:migrate` · undo: `npm run db:migrate:undo` · reset: `npm run db:reset`
-- **Tests (T-010, 2026-08-13):** the **API** has one — `npm test` in `api,admin,db/apps/api`
-  (`node:test` + `tsx`, **no new dependency**). Tests live next to the code as `*.test.ts`.
-  ⚠️ Only DB-free modules are covered so far (`utils/`): services import Sequelize models, so
-  testing them needs the pure logic pulled out of the class first.
-  ⚠️ **The other three projects still have none.** For anything not covered, "working" still means
-  the flow runs end-to-end — verify manually.
+- **Tests (T-010 for the API, T-118 for the apps, 2026-09-14):** **three of the four projects
+  have `npm test`, and it is always ONE command.** Tests live next to the code as `*.test.ts(x)`.
+  - **API** — `node:test` + `tsx`, no test dependency. 357 tests.
+    ⚠️ Only DB-free modules are covered (`utils/`): services import Sequelize models, so testing
+    them needs the pure logic pulled out of the class first. That is still T-010.
+  - **User app / driver app** — `jest && node scripts/run-checks.mjs`: Jest (`jest-expo`,
+    `@testing-library/react-native`, explicit `@jest/globals` imports) and then all 11
+    `scripts/check-*.mjs` checkers per app. 34 + 46 tests, 22 checkers, ≈1 min each.
+    The render harness is `test/render.tsx` + `test/setup.ts`, **duplicated per app on purpose**
+    like the shared components. A screen that renders a **missing translation key fails the
+    test** — the harness traps the hook's warning.
+    ⚠️ **No snapshot tests** — they go red on every repaint and get regenerated blind. Assert
+    behaviour: what renders, what a press calls, what payload leaves.
+  - ⚠️ **The admin panel still has none.**
+  - ⚠️ **What tests cannot see, and still costs a real phone:** fonts and weights, layout against
+    the artboard, SMS autofill, push delivery and routing, the native build, Google SSO.
+    `docs/CHECKLIST.md` keeps those. For anything else not covered, "working" still means the
+    flow runs end-to-end — verify manually.
+  - **CI:** `.github/workflows/test.yml` runs all three `npm test`s on every push and PR
+    (Node 22, `npm ci`, no secrets, no device).
+  - ⚠️ **Run `tsc` as well as `jest` after writing a test file.** Jest strips types without
+    checking them, so a type error in a test file hides behind a fully green suite.
 
 ## 2. Memory files — the real source of truth
 
@@ -87,9 +103,14 @@ If the developer types the words WITHOUT the slash ("start day", "end day"), fol
 
 ## 6. Definition of Done (every task)
 
-- [ ] The flow works end-to-end (run it — the API's `npm test` covers `utils/` only)
-- [ ] If the card added pure logic to the API, it has a `*.test.ts` beside it — **and the test was
-      proven able to fail** (break the code on purpose once; a test that cannot go red proves nothing)
+- [ ] **`npm test` is green in every project the card touched** (API · user app · driver app)
+- [ ] If the card touched a screen, a component or pure logic in one of those three, it has a
+      `*.test.ts(x)` beside it — **and the test was proven able to fail** (break the code on
+      purpose once, watch exactly that test go red, revert; a test that cannot go red proves nothing)
+- [ ] `tsc` and lint measured against the baselines in `docs/PLAN.md` — **never rebaseline upward**;
+      a test file that adds an error or a warning is a defect in the test file
+- [ ] The flow works end-to-end where tests cannot see it (fonts, layout, SMS autofill, push,
+      the native build, Google SSO — `docs/CHECKLIST.md`)
 - [ ] All steps in `docs/PLAN.md` checked
 - [ ] `docs/TODO.md` and `docs/JOURNAL.md` updated
 - [ ] `docs/ARCHITECTURE.md` updated if the structure changed

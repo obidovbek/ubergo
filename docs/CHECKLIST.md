@@ -1,6 +1,8 @@
 # ✅ CHECKLIST — does everything actually work?
 
-> Walk through this on a real phone after every deploy, until we have automatic tests.
+> **Run `npm test` in all three projects first (§0), then walk what is left on a real phone.**
+> Since T-118 the automatic tests cover most of §2, §3, §4, §7 and §8 — the phone walk is now
+> for what tests cannot see: fonts, layout, SMS autofill, push, the native build, Google SSO.
 > Written in plain language on purpose: anyone can run it, not just a programmer.
 >
 > **How to read it:** each line says _what you do_ and _what you should see_.
@@ -12,13 +14,25 @@
 > | ⚪   | Normal check. Should already work.                                                |
 > | 🚫   | **Cannot be tested — the screen does not exist yet.** Not a bug, missing feature. |
 >
-> Last updated: 2026-08-02, after the test3 deploy of the T-018 order screen +
-> the driver-connection fixes.
+> Last updated: 2026-09-14 (T-118 — §0 now starts with the automatic tests, and the
+> "Later" section at the bottom records which of its four items are done).
+> The 🔴 marks below are still from 2026-08-02, after the test3 deploy of the T-018 order
+> screen + the driver-connection fixes.
 
 ---
 
 ## 0. Before you start
 
+- [ ] 🤖 **Run the automatic tests first — they are faster than you and they never get bored.**
+      `npm test` in `api,admin,db/apps/api`, in `user-app-standalone` and in
+      `driver-app-standalone` (≈1 minute each). **If any of them is red, stop and fix that
+      first** — do not start walking the phone. CI runs the same three on every push.
+      *What they already cover, so you can walk past it quickly:* §2 login (both apps, phone →
+      OTP → wrong code → right code), §3 the order form, §4 and §8 the two merged lists,
+      §7 both halves of the driver↔passenger connection, and the district/QFY rules.
+      **They cannot see:** fonts and weights, the layout against the artboard, SMS autofill,
+      push actually arriving, the native build, or anything Google SSO. That is what the rest
+      of this walk is for.
 - [ ] ⚪ The API is running: open `https://test3.fstu.uz/api/health` in a browser.
       You should see `"status": "ok"` and `"database": "connected"`.
 - [ ] ⚪ Install the **newest** build of both apps. An old app + new API will look
@@ -248,18 +262,21 @@ screens are built, this is what must be checked:
 
 ## Later: turning this into automatic tests
 
-When we build the test suite (card **T-010**), this checklist is the plan.
-Suggested order, easiest and most valuable first:
+**Updated 2026-09-14 — items 1 and 3 are DONE.** This section was the plan; here is what is
+left of it.
 
-1. **Server rules** — the fastest to automate and where most bugs were found.
-   One test per rule: "an order with no price is accepted", "a second driver
-   cannot be accepted", "a bad price gives error 400 and not 500", "the budget
-   filter keeps orders that have no price".
-2. **Server flow tests** — create an order → driver offers → passenger accepts →
-   check the order is `driver_found` and the other drivers are `rejected`.
-3. **App screen tests** — the create-order form: fill it in, submit, check what
-   was sent to the server.
-4. **Full run-through on a real device** — last, because it is the slowest.
-
-Sections 2, 3 and 7 above are the ones worth automating first: they cover the
-money, the matching and the login, and they are where every bug so far has been.
+- [x] **App screen tests** (was item 3) — **done, card T-118.** Both apps have `npm test`.
+      Sections 2, 3, 4, 7 and 8 above are covered by behaviour tests, and the create-order form
+      is asserted exactly as written here: fill it in, submit, check what was sent to the server.
+      *The first test written against that form found a real bug on its first render* — a stray
+      hyphen before every check-row label, live for six weeks.
+- [x] **Server rules** (was item 1) — **done, card T-010.** 357 tests over the API's `utils/`.
+- [ ] **Server flow tests** (was item 2) — **still open, still T-010.** Create an order → driver
+      offers → passenger accepts → the order is `driver_found` and the other drivers are
+      `rejected`. Blocked on the same thing it always was: these need a test database, and the
+      services import Sequelize models, so the pure logic has to come out of the class first.
+- [ ] **End-to-end on an emulator** (Maestro / Detox) — **not boarded on purpose.** Login is a
+      real SMS OTP with no test bypass, so an E2E run cannot get past the first screen without
+      a backend change. Board it when that bypass is designed.
+- [ ] **Full run-through on a real device** — last, because it is the slowest, and now much
+      shorter: only the things in §0 that tests cannot see.

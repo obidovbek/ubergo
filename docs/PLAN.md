@@ -32,8 +32,12 @@ unused imports). Proven not to be this card's doing: `git stash` of every T-118 
 in the test file, not a new baseline.
 
 **Checkers that must stay green** (all `node scripts/check-*.mjs`, esbuild-bundled, no runner):
-user app **12** · driver app **11**. Every one has been proven able to go red. They are NOT being
-ported — see Approach.
+user app **11** · driver app **11** = **22**. Every one has been proven able to go red. They are
+NOT being ported — see Approach.
+🔴 **Corrected 2026-09-14 (3): the user count was written as 12 here and the card's "Why now" says
+23 in total.** Counted on disk: `ls scripts/check-*.mjs` returns **11 in each app**, and
+`run-checks` runs all 11 in each. *Verified it was a stale number, not a checker `run-checks` was
+silently skipping* — which is what a wrong count would otherwise hide.
 
 ---
 
@@ -64,7 +68,7 @@ ported — see Approach.
 4. **No snapshot tests.** T-101 is repainting every screen; a snapshot goes red on every repaint
    and gets regenerated blind. Tests assert behaviour: what renders, what a press calls, what
    payload leaves.
-5. **All six app baselines unchanged** (user 6 / 216 / 1 · driver 28 / 275 / 3), measured after
+5. **All six app baselines unchanged** (user 6 / 208 / 1 · driver 28 / 275 / 3), measured after
    every step. No runtime change: nothing in `App.tsx` or any screen changes for the sake of a test.
 6. **The docs say what is automated and what still needs a phone:** CLAUDE.md §1 and §6,
    `CHECKLIST.md` §0 and its "Later" section, T-010 re-scoped to the API half.
@@ -126,7 +130,10 @@ anything Google SSO. The CHECKLIST keeps those; this card shrinks the walk to th
 
 ## Steps
 
-- [ ] **0. Owner decisions (this message).** (a) approve the 4 dev dependencies in both apps;
+- [x] **0. Owner decisions.** ✅ **CLOSED 2026-09-14 (3)** — (a) approved (5 deps in the end, the
+  `react-test-renderer` pin was flagged); (b) T-114 moved *Now* → *Next*; (d) order accepted;
+  (e) `@jest/globals` confirmed by step 1. **(c) answered at last on 2026-09-14 (3): CI on
+  GitHub Actions — YES.** *Original text:* (a) approve the 4 dev dependencies in both apps;
   (b) name the card that leaves *Now* — recommendation **T-114** (planned, not started, its plan
   file loses nothing); (c) CI on GitHub Actions, yes or no (step 12); (d) accept or reorder the
   screen order in steps 4-11; (e) confirm `@jest/globals` explicit imports over `@types/jest`
@@ -341,22 +348,36 @@ anything Google SSO. The CHECKLIST keeps those; this card shrinks the walk to th
   hand-off carrying the store URLs (asserted through a stub screen that echoes its params);
   ⑤ wrong code → remaining 2 + cleared; right code → `verifyOtp(phone, code, { userId:
   undefined })`. SMS autofill itself stays on the checklist.
-  **Prove red — DRIVER DONE:** phone and code swapped in the driver `verifyOtp` call → ③ and ⑤
-  failed; reverted. 🛑 **NOT DONE — the next session starts here:** (a) the same mutation in the
-  USER app (`screens/OTPVerificationScreen.tsx`: `await verifyOtp(phoneNumber, otpCode);` →
-  swap the two → expect test ③ red → `git checkout -- screens/OTPVerificationScreen.tsx`);
-  (b) the post-step `tsc` / lint re-measure in BOTH apps — the driver one was interrupted when
-  the owner stopped the session. Expected: user **6 / 0 · 208 / 1**, driver **28 / 0 · 275 / 3**.
+  **Prove red — BOTH DONE.** Driver: phone and code swapped in the driver `verifyOtp` call → ③
+  and ⑤ failed; reverted. ✅ **User, 2026-09-14 (3):** the same swap in
+  `screens/OTPVerificationScreen.tsx` → **test ③ alone went red** (`Expected: "+998901234567",
+  "1234" · Received: "1234", "+998901234567"`), ① and ② stayed green; reverted with
+  `git checkout`. 🔴 **The re-measure caught a defect the step had missed: BOTH new
+  `PhoneRegistrationScreen.test.tsx` files added exactly one `tsc` error each** (user 7, driver
+  29) — the `sendOtp` fixture omitted `OtpSendResponse`'s REQUIRED `message`. Fixed in both (the
+  twin, per the standing rule), with the real server's wording and the `cooldownSec: 60` the
+  resend path reads. **Re-measured after the fix: user `tsc` 6 · lint 0 / 208; driver 28 · 0 /
+  275** — every baseline back where it was, and both files still pass (3 + 5 tests).
   *Original step text:* phone screen → submit → the OTP screen; entering a code calls verify
   with that code; a wrong code shows the error and stays. Prove red: verify called with the
   phone instead of the code.
-- [ ] **12. CI — only if the owner said yes in 0(c).** `.github/workflows/test.yml`: on push and
-  PR, three jobs — API `npm test`, user `npm test`, driver `npm test` — `npm ci`, Node 22, no
-  secrets, no device. **Prove it runs on a real push before ticking.**
-- [ ] **13. Docs and close.** CLAUDE.md §1 (the tests paragraph) and §6 (DoD line);
-  `CHECKLIST.md` §0 "run `npm test` in all three projects before walking" and the Later section →
-  this card; `ARCHITECTURE.md` a tests row; T-010 card re-scoped to the API half; TODO / JOURNAL;
-  commit proposal.
+- [ ] **12. CI — the owner said YES on 2026-09-14 (3).** ✅ **WRITTEN:**
+  `.github/workflows/test.yml` — on push and pull request, three jobs from a matrix (API ·
+  user-app · driver-app), `npm ci`, Node 22, npm cache keyed per lockfile, no secrets, no
+  database, no device, **`fail-fast: false`** so one red project cannot hide the other two.
+  The API folder's comma is a quoted matrix value; **the YAML was parsed and the matrix resolved
+  locally** (`js-yaml`) rather than debugged on a red first run, and all three `npm test`s were
+  confirmed green locally first (API 357 · user 34 + 11 checkers · driver 46 + 11).
+  🛑 **STILL `[ ]` ON PURPOSE: not yet proven on a real push** — that needs the commit, which is
+  the owner's call. **Tick this only after a green run appears on GitHub.**
+- [x] **13. Docs and close.** ✅ **DONE 2026-09-14 (3).** CLAUDE.md §1 (tests paragraph rewritten
+  + a `test` column in the run table) and §6 (the DoD now demands a green `npm test`, a
+  proven-red test, and a baseline measurement, with "never rebaseline upward" in it);
+  `CHECKLIST.md` §0 now **starts** with the three `npm test`s and says what they cover, and its
+  "Later" section records 2 of 4 items done with the blockers on the other 2; `ARCHITECTURE.md`
+  gained a **Tests & CI** row; T-010 re-scoped to the API half **and its headline corrected**
+  (the admin panel is now the only project with no tests); T-118 moved to *Done*; the two owner
+  questions boarded as **T-119** and **T-120**; JOURNAL entry written; commit proposed.
 
 **Every step from 4 to 11:** write → prove red → revert → all six baselines unchanged → `[x]`.
 
@@ -459,10 +480,35 @@ anything Google SSO. The CHECKLIST keeps those; this card shrinks the walk to th
   user app's step 11, still owed.** Runtime code changed in this card: `CheckRow.tsx` only.
 - **NOTHING IS COMMITTED.** The owner stopped the session to continue in a new one.
 
+### 2026-09-14 (3) — step 11 closed: the last proof, and a defect the proof caught
+
+- **The owner committed the session-2 work as `6c7ca24` "started writing tests"** and re-ran both
+  suites: **user 34 tests + 11 checkers green, driver green.** Tree clean at the start of this one.
+- ✅ **Step 11's owed mutation, done.** The user app's `verifyOtp(phoneNumber, otpCode)` swapped →
+  **test ③ alone went red**, with the argument order named in the failure; ① and ② stayed green.
+  Reverted. Every one of the 13 test files is now proven able to fail.
+- 🔴 **The re-measure was not a formality — it caught a defect in the new test files themselves.**
+  `tsc` read **user 7 (baseline 6) and driver 29 (baseline 28)**: one new error in each, both in
+  `screens/PhoneRegistrationScreen.test.tsx`, both the same — the `sendOtp` fixture omitted
+  `OtpSendResponse`'s **required `message`**. Jest never saw it (types are stripped, not checked),
+  so a green suite hid it; only `tsc` reads the test files. *This is the "fixtures are typed
+  against `api/*.ts`" design working, one step later than intended: **the fixture drifted, not the
+  API**.* Fixed in **both** apps — the twin, per the standing rule — with the server's real
+  wording (`Verification code sent via ${channel}`) and the `cooldownSec: 60` the server always
+  sends and the resend path reads (`response?.data?.cooldownSec ?? DEFAULT_RESEND_COOLDOWN_SEC`).
+- **Lesson for the next test file: run `tsc` after writing one, not only `jest`.** A green suite
+  is not evidence the test file type-checks.
+- **All baselines re-measured after the fix and unchanged:** user `tsc` **6** · lint **0 / 208**;
+  driver `tsc` **28** · lint **0 / 275**. Colour ceilings untouched (no colour changed). Both
+  edited files still pass: user 3 tests, driver 5.
+- **Steps 1-11 are now fully done. Open: 12 (CI — the owner has still never answered) and 13.**
+
 ## Resume point
 
-> **Updated 2026-09-14 at the END of the session (the owner stopped it to continue in a new
-> one). Steps 1-11 are DONE in code; steps 12-13 are not started; NOTHING IS COMMITTED.**
+> **Updated 2026-09-14 (3) at the END of the session. Steps 0-11 and 13 are DONE and measured;
+> every test file has been mutated red and reverted. Step 12 (CI) is WRITTEN but deliberately
+> still `[ ]` — the workflow has never run. Session 2's work is committed as `6c7ca24`; this
+> session's work (the fixture fix, the workflow, and all the docs) is NOT yet committed.**
 > A new session needs only this file. Read the Task, the Approach, the step lines above (each
 > `[x]` line records what was measured and what changed) and the Session notes.
 
@@ -475,18 +521,22 @@ scripts/run-checks.mjs`, a harness in `test/render.tsx` + `test/setup.ts`, and t
 `screens/PassengerOrders`, `screens/OfferWizard`, `screens/MyRides`, `screens/PhoneRegistration`.
 Last measured baselines: user `tsc` 6 · lint 0 / 208 · tokens 1; driver 28 · 0 / 275 · 3.
 
-**▶️ DO THIS FIRST, IN ORDER:**
-1. `cd user-app-standalone && npm test` and `cd driver-app-standalone && npm test` — both must be
-   green (≈1 min each; the checkers are most of it). If either is red, that is the first job.
-2. Finish step 11's owed proofs (its 🛑 line): the user-app `verifyOtp` swap → red → revert; then
-   `npx tsc --noEmit --pretty false | grep -c "error TS"` and `npm run lint` in BOTH apps against
-   the baselines above. **Never rebaseline upward; a downward move must be explained.**
-3. Step 12 (CI) — **the owner never answered 0(c)**. Ask once, plainly: "CI on GitHub Actions,
-   yes or no?" Build `.github/workflows/test.yml` only on a yes; prove it on a real push.
-4. Step 13 (docs + close): CLAUDE.md §1 tests paragraph and §6 DoD; `docs/CHECKLIST.md` §0 and
-   its "Later" section; `docs/ARCHITECTURE.md` tests row; T-010 already re-scoped; then TODO /
-   JOURNAL via `/end-day` and the commit proposal. Also board the two owner questions from the
-   Session notes (history cancel buttons; dead "incomplete" toasts) as small cards in *Later*.
+**▶️ ONLY ONE THING IS LEFT ON THIS CARD:**
+1. 🛑 **Commit, push, and watch the first CI run.** Everything else in steps 0-13 is done and
+   measured. The workflow is written and its YAML validated, but **step 12 stays `[ ]` until a
+   green run appears on GitHub** — a workflow that has never run is not a workflow that works.
+   If it is red, the likely suspects in order: `npm ci` disagreeing with a lockfile; the comma in
+   `api,admin,db/apps/api` as a matrix value; a checker that reads something not in the repo.
+2. Then this card closes. The board's *Now* becomes **T-116** and **T-101**.
+
+**Rules from this card that outlive it** (also in CLAUDE.md §1 and §6):
+- **Run `tsc` as well as `jest` after writing a test file.** Jest strips types without checking
+  them; session 3 found one `tsc` error per app hiding behind a fully green suite.
+- **Never rebaseline upward.** A test file that adds an error or a warning is a defect in the
+  test file. This card corrected three stale numbers by measuring instead of trusting the doc
+  (user lint 216 → 208, checkers 12 → 11 per app, "23 checkers" → 22).
+- **Prove every new test red** by mutating the code, watching exactly that test fail, and
+  reverting with `git checkout`.
 
 **Rules that cost something to learn (do not relearn them):** write every test file with the
 editor tool, never a shell heredoc (the shell mangles backslashes and long heredocs); prove

@@ -50,7 +50,11 @@ let verifyOtp: jest.Mock<AuthValue['verifyOtp']>;
 beforeEach(() => {
   jest.mocked(getCountries).mockResolvedValue([UZBEKISTAN]);
   sendOtp = jest.fn<AuthValue['sendOtp']>();
-  sendOtp.mockResolvedValue({ success: true, data: { sent: true, channel: 'sms', expiresInSec: 120 } });
+  sendOtp.mockResolvedValue({
+    success: true,
+    data: { sent: true, channel: 'sms', expiresInSec: 120, cooldownSec: 60 },
+    message: 'Verification code sent via sms',
+  });
   verifyOtp = jest.fn<AuthValue['verifyOtp']>();
   verifyOtp.mockResolvedValue(undefined);
 });

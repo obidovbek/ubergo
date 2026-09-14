@@ -1,0 +1,45 @@
+name: tests
+
+# T-118 step 12. Runs the same `npm test` the developer runs locally, in all three
+# projects, on every push and pull request. No secrets, no database, no device:
+# the API suite covers DB-free `utils/` only, and the app suites are Jest plus the
+# `scripts/check-*.mjs` checkers, which are all pure logic.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      # One red project must not hide the state of the other two.
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            # The folder really is named with a comma — quote it everywhere.
+            dir: "api,admin,db/apps/api"
+          - name: user-app
+            dir: user-app-standalone
+          - name: driver-app
+            dir: driver-app-standalone
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+
+      - name: install
+        run: npm ci
+        working-directory: ${{ matrix.dir }}
+
+      - name: npm test
+        run: npm test
+        working-directory: ${{ matrix.dir }}

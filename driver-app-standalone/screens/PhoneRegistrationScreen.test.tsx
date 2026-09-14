@@ -39,7 +39,11 @@ let verifyOtp: jest.Mock<AuthValue['verifyOtp']>;
 
 beforeEach(() => {
   sendOtp = jest.fn<AuthValue['sendOtp']>();
-  sendOtp.mockResolvedValue({ success: true, data: { sent: true, channel: 'push', expiresInSec: 120 } });
+  sendOtp.mockResolvedValue({
+    success: true,
+    data: { sent: true, channel: 'push', expiresInSec: 120, cooldownSec: 60 },
+    message: 'Verification code sent via push',
+  });
   verifyOtp = jest.fn<AuthValue['verifyOtp']>();
   verifyOtp.mockResolvedValue(undefined);
 });

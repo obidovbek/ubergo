@@ -5,6 +5,68 @@
 
 ---
 
+## 2026-09-14 (3) — T-118 closed: the last proof, CI, and a defect hiding behind a green suite
+
+- **Task:** T-118, steps 11-13 — the card is now **DONE, all 13 steps**. The owner had committed
+  session 2's work as `6c7ca24` and re-run both suites green before this session started.
+
+### The proof that was owed, and what it caught
+
+- ✅ **Step 11's last mutation.** Swapped the user app's `verifyOtp(phoneNumber, otpCode)` →
+  **test ③ alone went red**, naming the argument order in the failure; ① and ② stayed green;
+  reverted. **All 13 test files are now proven able to fail.**
+- 🔴 **The re-measure that follows every step was not a formality — it found a real defect.**
+  `tsc` read **user 7 (baseline 6) and driver 29 (baseline 28)**. One new error in each app, in
+  the same file, with the same cause: the new `PhoneRegistrationScreen.test.tsx` `sendOtp` fixture
+  omitted `OtpSendResponse`'s **required `message`**.
+  **Jest never saw it — it strips types without checking them — so a fully green suite hid it.**
+  Only `tsc` reads test files. Fixed in **both** apps (the twin, per the standing rule), using the
+  server's real wording and the `cooldownSec: 60` it always sends and the resend path reads.
+  **→ The lesson is now in CLAUDE.md §1: run `tsc` as well as `jest` after writing a test file.**
+- 🟡 **A third stale number, found by counting:** the plan's board state said the user app had
+  **12** checkers; `ls scripts/check-*.mjs` returns **11 in each app**, and `run-checks` runs all
+  11. Verified it was a stale number and *not* a checker being silently skipped — which is exactly
+  what a wrong count would otherwise hide. That is the third stale figure this card has corrected
+  (user lint 216 → 208, checker count 12 → 11, and the card's "23 checkers" → 22).
+- **Baselines after the fix, all unchanged:** user `tsc` **6** · lint **0 / 208** · colours **1**;
+  driver **28** · **0 / 275** · **3**. Both suites green: user 34 tests + 11 checkers, driver 46 +
+  11. **80 app tests, 22 checkers, plus the API's 357.**
+
+### Step 12 — CI, finally answered
+
+- **The owner said yes.** `.github/workflows/test.yml`: on push and pull request, three jobs
+  (API · user app · driver app), `npm ci`, Node 22, no secrets, no database, no device.
+  `fail-fast: false` so one red project cannot hide the state of the other two.
+- The API folder's comma (`api,admin,db/apps/api`) survives as a matrix value — the YAML was
+  parsed and the matrix resolved before committing, rather than discovered on a red first run.
+- 🛑 **Not yet proven on a real push** — that needs the commit, which is the owner's call.
+
+### Step 13 — docs
+
+- **CLAUDE.md** §1: the tests paragraph rewritten (three of four projects have `npm test`; what
+  the harness is; no snapshots; what still needs a phone; CI) and a `test` column added to the run
+  table. §6: the Definition of Done now demands a green `npm test`, a test *proven able to go red*,
+  and a baseline measurement — with "never rebaseline upward" written into it.
+- **CHECKLIST.md**: §0 now **starts** with the three `npm test`s and lists what they already cover,
+  so the phone walk skips it; the "Later: turning this into automatic tests" section records 2 of
+  its 4 items done and says why the other 2 are blocked (a test DB; no OTP bypass for E2E).
+- **ARCHITECTURE.md**: a **Tests & CI** row in the component table.
+- **Board:** T-118 → *Done*. T-010 re-scoped to the API half only (and its headline corrected — the
+  admin panel is now the only project with no tests). The two owner questions the tests surfaced
+  are boarded as **T-119** (history rows keep a dead cancel button — check `MyRidesScreen` too)
+  and **T-120** (the unreachable "incomplete input" toasts on all four auth screens).
+
+**Verification.** Both app suites and the API suite run green; `tsc` and lint re-measured in both
+apps and at baseline; the workflow YAML parsed and its matrix checked. **Not verified:** CI on a
+real push (needs the commit), and nothing in this card has been on a phone — by design, it changes
+no runtime code beyond session 2's one-character `CheckRow.tsx` fix.
+
+- **Problems / left open:** the commit + push, and watching the first CI run go green.
+- **Next:** the board's *Now* is T-116 and T-101; T-119 / T-120 wait for owner answers.
+
+---
+
+
 ## 2026-09-14 (2) — T-118: both apps get a test runner, and the tests find a bug on first render
 
 - **Task:** T-118, boarded and planned in the morning from the owner's one line — *"after any
