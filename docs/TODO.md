@@ -662,6 +662,56 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-121 (P1) 🧪 **[OWNER 2026-09-14, "Is there continue of writing test?"] JEST TESTS FOR THE
+  UNTESTED `utils/` IN BOTH APPS — the four byte-identical twins and the four that drifted.**
+  → `docs/PLAN.md` (its Resume point is the handoff for a new session).
+  ✅ **APPROVED AND STEPS 1-3 OF 9 DONE 2026-09-14 (4). NOT COMMITTED.** Three test files, **59
+  tests, all proven red**, taking both apps from **80 to 139 tests**: `tokenStore` in BOTH apps
+  (17 each) and `notificationRouting` in the user app (25).
+  🔴 **`notificationRouting`'s test is the first thing that has ever verified T-047's fix** — the
+  parked-tap logic for a killed app. It does not close T-047 (that still needs a `logcat` line
+  from a real device) but the decision logic is pinned, including the exact
+  discard-instead-of-re-park regression, proven by restoring the bug and watching three tests go
+  red.
+  🔴 **LESSON THAT COST TWO FALSE GREENS:** a mock whose implementation **throws still records the
+  call**, so `toHaveBeenLastCalledWith` cannot tell "delivered" from "attempted and dropped".
+  **Assert the call COUNT on anything retry-shaped.** Caught only because the red set was
+  predicted before each mutation ran.
+  🔴 **`core.autocrlf=true`: `git checkout` rewrites line endings**, so a working-tree `diff`
+  reports byte-identical twins as wholly different. **Compare twins with `git show HEAD:<path>`.**
+  **Baselines unchanged throughout:** user `tsc` 6 / lint 0·208 · driver 28 / 0·275; both suites
+  and all 22 checkers green.
+  ⚠️ **STEPS 4-9 REMAIN:** 4 `notificationRouting` driver (**different routing table — read it**),
+  5 `errorHandler` ×2, 6-7 `date` ×2 **including the dead-block deletion**, 8 tier 2
+  (`contactPhone`, `format`, `pendingOtp`, `validation`), 9 close.
+  ❓ **ONE ASSUMPTION TO CONFIRM:** *"i confirm"* was read as approving the step-6 `date.ts`
+  deletion too (T-118 precedent: a one-word approval takes the recommendations). Flagged to the
+  owner and not contradicted, but never answered in words. **Ask once before deleting.**
+  **It takes the *Now* slot T-118 vacated; T-101 is the other active card.**
+  **Why, measured not guessed:** T-118 covered "the screens that keep needing a phone" and left
+  **~12 utils per app with no coverage of any kind** — no Jest test and no `check-*.mjs` checker.
+  These are the cheapest tests in the project (pure logic, no harness, no device) and **three sit
+  on open or parked bugs:**
+  ① **`tokenStore`** — the T-038 refresh-token path; `ARCHITECTURE.md` still says *"not yet
+  confirmed working on a device"*, and before T-038 every session died after 15 minutes.
+  ② **`notificationRouting`** — **T-047 (killed-app tap) is PARKED.** The code already carries a
+  fix (a bounded re-park instead of a discard) with a long comment about the regression it caused.
+  **Nothing has ever verified it.** The test is written as that regression guard.
+  ③ **`date`** — 🔴 **contains a CONFIRMED dead block:** lines ~97-102 of the user app's
+  `utils/date.ts` are a verbatim copy of ~88-93, comment and all, unreachable because the first
+  block returns. It is **one of the user app's 6 live `tsc` errors** (TS2367, comparing
+  `'en' | 'ru'` against `'uz'`). ❓ **Step 0 asks the owner** whether to delete it — doing so takes
+  the user `tsc` baseline **6 → 5**, the one kind of baseline move that is allowed.
+  **Scope:** tier 1 `tokenStore` · `notificationRouting` · `errorHandler` · `date`; tier 2
+  `contactPhone` · `format` · `pendingOtp` · `validation`. Each proven red by a code mutation.
+  **No new dependency, no harness change, no screen touched** — T-118 built everything needed.
+  ⚠️ **Twins are written twice on purpose** (the project duplicates shared code), but the copy is
+  re-run and re-proven every time: `validation` and `date` already differ by **219 and 201 lines**.
+  🛑 **If a test proves a real defect, the card STOPS, records it and boards it** — it does not
+  fix it, except at `CheckRow.tsx` size.
+  🛑 **OUT:** more screen tests (the slice the owner did not pick), the admin panel (no runner at
+  all — its own card), the API's server-flow tests (**T-010**), de-duplicating the board (**T-122**).
+
 - [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
   info/error/warning language responses frontend/backend".**
   ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
@@ -2533,6 +2583,25 @@ masofalar'`). **2 of the 6 were on
   at `/passengers` (`PASSENGERS_NOT_SHOWING_DEBUG.md`)
 
 ## 💡 Later / ideas (parking lot)
+
+- [ ] T-122 (P2) 🧹 **THIS BOARD CONTRADICTS ITSELF — `docs/TODO.md` has TWO `## 🔥 Now` sections
+  and 22 duplicated cards.** Measured 2026-09-14 while boarding T-121, not fixed then (rule 1).
+  **The numbers:** two `## 🔥 Now (working on it)` headers (around lines 64 and 663) whose
+  contents overlap; **142 card lines for 118 distinct T-### ids**; **22 ids appear more than
+  once** and **T-078 appears four times**, including one struck-through copy that still says
+  *"PLAN WRITTEN AND AWAITING APPROVAL"* about a plan approved in August.
+  🔴 **Why it matters more than it looks:** CLAUDE.md §2 calls these files *"the permanent memory
+  of the project"* and rule 1 caps *Now* at two cards. A board with two *Now* sections cannot
+  enforce either, and a duplicated card means **one copy is always stale** — so whichever a future
+  session reads first wins. That is the same class as the three stale baselines T-118 corrected,
+  except it is the task board rather than a number.
+  **The job:** merge the two *Now* sections, keep the newest copy of each duplicated card, drop
+  the struck-through leftovers, and re-apply the max-2 rule to whatever remains.
+  ⚠️ **Read both copies before deleting either** — they are not always identical, and the later
+  one on the page is not reliably the newer one.
+  ❓ **Owner question for when this starts:** which two cards should *Now* actually hold? Today it
+  is effectively **T-101** and **T-121**, with T-088, T-116 and T-115 also sitting in a *Now*
+  section.
 
 - [ ] T-119 (P2) 🧹 **`MyOrdersScreen` cancel buttons key off the RAW status, so history rows keep
   a cancel button that cannot work.** Surfaced by T-118's tests on 2026-09-14, deliberately left

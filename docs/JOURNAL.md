@@ -5,6 +5,77 @@
 
 ---
 
+## 2026-09-14 (4) — T-118 committed and pushed; T-121 opened and its first three steps done
+
+- **T-118 is CLOSED and committed as `7526742`**, then pushed. 🛑 **Its one remaining item is not
+  code:** nobody has confirmed the first CI run went green on GitHub. Step 12 stays unticked until
+  someone opens the Actions tab — a workflow that has never run is not a workflow that works.
+  (It cannot be checked from the Claude shell: no `gh`, and the network is cert-blocked there.)
+- **The owner then asked: *"Is there continue of writing test?"*** Measured answer: yes — user
+  **4 of 16** screens tested, driver **4 of 23**, and **~12 utils per app with no coverage of any
+  kind**, neither Jest nor a `check-*.mjs` checker. The admin panel still has no runner at all,
+  and the API's server-flow tests are still T-010. Offered the slices; the owner picked the utils.
+
+### T-121 — boarded, planned, approved, steps 1-3 done
+
+- **Card:** Jest tests for the untested `utils/` in both apps, tier 1 being the four with open bugs
+  behind them (`tokenStore`, `notificationRouting`, `errorHandler`, `date`). → `docs/PLAN.md`;
+  T-118's plan preserved verbatim at `docs/PLAN-T118.md`. Approved with *"i confirm"*.
+- **Three files, 59 new tests, all proven red. Totals went 80 → 139.**
+  - **`tokenStore` (both apps, 17 each).** The JWT expiry maths including **the inclusive
+    60-second skew boundary**; `TOKEN_KEYS.ACCESS` pinned at `'@auth_token'` (renaming it logs out
+    every existing install — nothing migrates the key); and the rule that **`setTokens(access)`
+    alone must NOT erase the stored refresh token**, which is the T-038 failure itself.
+  - **`notificationRouting` (user, 25).** The routing table; the source's documented trap that
+    **`offer_id` names a DriverOffer in some payloads and the passenger's own PassengerOffer in
+    others**, asserted so `driver_join_request` reaches `OfferDrivers` and provably not
+    `OfferDetails`; six malformed ids each falling back to a list instead of emitting `NaN`; and
+    the **T-047 block** — a failed flush re-parks, survives repeated failures, gives up for good
+    at 10, and the retry budget resets on both a clear and a success.
+    🔴 **T-047 is PARKED on the board and this is the first thing that has ever verified its fix.**
+    It does not close the card — that still needs a `logcat` line from a real killed app — but the
+    decision logic is now pinned, including the exact discard-instead-of-re-park regression.
+
+### 🔴 The two things worth remembering from this session
+
+1. **A mock whose implementation THROWS still records the call** — so
+   `expect(navigate).toHaveBeenLastCalledWith(...)` reads *identically* whether the target was
+   delivered or attempted-and-dropped. **Three of my retry tests were fake-green because of it:**
+   one mutation reddened 2 of 3 predicted tests, the next reddened **none**. The fix is to assert
+   the **call COUNT** ("three attempts: the park, the failed flush, the delivery"). *This was
+   caught only because the red set was predicted BEFORE each mutation was run* — a mutation that
+   reddens fewer tests than expected is a finding about the tests, not a miscount.
+2. **`core.autocrlf=true` + `git checkout` = rewritten line endings.** The revert half of the
+   prove-red ritual converts a file LF → CRLF, after which a working-tree `diff` calls two
+   byte-identical twins *"153 of 153 lines changed"*. Nothing wrong reaches the repo (git
+   normalises on compare, and `git status` stays clean) — but **twin comparison must use
+   `git show HEAD:<path>`**. The plan's drift numbers were re-verified that way and all held:
+   `contactPhone` / `format` / `pendingOtp` / `tokenStore` identical; `pushEvents` 3 lines apart,
+   `errorHandler` 59, `notificationRouting` 123, `date` 201, `validation` 219.
+
+- **One transient regression, fixed rather than rebaselined:** the new routing test cost an
+  `import/first` warning (lint 208 → 209) because `jest.mock` sat between the two imports.
+  `babel-plugin-jest-hoist` lifts it above them anyway, so the block moved below the imports —
+  mock still installed, warning gone.
+- **Also boarded:** **T-122** — `docs/TODO.md` has **two `## 🔥 Now` sections** with overlapping
+  contents and **22 duplicated card ids** (T-078 four times), 142 card lines for 118 distinct ids.
+  CLAUDE.md calls these files the project's permanent memory; a board that contradicts itself
+  means one copy is always stale and whichever a session reads first wins.
+
+**Verification.** Both suites green — user **76 tests + 11 checkers**, driver **63 + 11**.
+Baselines re-measured after every step and unchanged: user `tsc` **6** / lint **0 · 208**;
+driver **28** / **0 · 275**. **Nothing in T-121 has been committed.** No runtime code changed in
+this card yet.
+
+- **Problems / left open:** T-118's CI run still unconfirmed; T-121 steps 4-9; and **one
+  assumption to confirm** — *"i confirm"* was read as approving the `date.ts` dead-block deletion
+  (step 6) on the T-118 precedent, flagged and not contradicted, but never answered in words.
+- **Next:** step 4 — `notificationRouting` in the DRIVER app. **Different routing table; read it,
+  do not copy the user app's expectations.** The park/flush half is the same. Assert call COUNTS.
+
+---
+
+
 ## 2026-09-14 (3) — T-118 closed: the last proof, CI, and a defect hiding behind a green suite
 
 - **Task:** T-118, steps 11-13 — the card is now **DONE, all 13 steps**. The owner had committed

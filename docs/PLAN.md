@@ -4,551 +4,295 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> 📦 **T-101 (the design system) → `docs/PLAN-T101.md`, moved 2026-09-14 when T-118 took this
-> file.** It is still in *Now*; steps 2b and 19-26 are open; its sub-plans are
-> `PLAN-T101-step14b/16/17/18/19.md` and `PLAN-T101-SCOPES.md`. Resume it from that file.
+> 📦 **T-118 (the app test suites) → `docs/PLAN-T118.md`, moved 2026-09-14 when T-121 took this
+> file.** It is **DONE and committed as `7526742`** except **step 12's proof**: the CI workflow
+> is written and pushed but **nobody has confirmed a green run on GitHub yet**. Tick it there.
+> 📦 **T-101 (the design system) → `docs/PLAN-T101.md`.** Still in *Now*; steps 2b and 19-26 are
+> open; sub-plans `PLAN-T101-step14b/16/17/18/19.md` and `PLAN-T101-SCOPES.md`.
 > 📦 **T-102 → `PLAN-T102.md`** (T-102i next, the read side) · **T-102c-3 → `PLAN-T102c3.md`**.
-> 📦 **T-088 (Paynet) → `docs/PLAN-T088.md`.** Still in *Now*; one code step (`ChangePassword`
-> persistence), the rest is T-100 and Paynet's credentials.
+> 📦 **T-088 (Paynet) → `docs/PLAN-T088.md`.** One code step (`ChangePassword` persistence), the
+> rest is T-100 and Paynet's credentials.
 > 📦 **T-114 → `PLAN-T114.md`**, sub-step ① planned, not started.
 > ✅ **T-092** → `PLAN-T092.md`. ✅ **T-091** → `PLAN-T091.md`. ✅ **T-087** → `PLAN-T087.md`.
 > ✅ **T-081** → `PLAN-T081.md`. ✅ **T-078** → `PLAN-T078.md`. ✅ **T-077** → `PLAN-T077.md`.
 > ✅ **T-065** → `PLAN-T065.md`. ✅ **T-066+T-067** → `PLAN-T066-T067.md`. ✅ **T-061** → `PLAN-T061.md`.
-> 🔴 **T-047 PARKED.** 🛑 **T-031 — item 1 CLOSED by the owner, do NOT reopen** → `PLAN-T031.md`.
+> 🔴 **T-047 PARKED** — but see step 3 below: **this card tests the code that was supposed to fix
+> it**, which is the closest anyone has come to proving whether it is actually fixed.
+> 🛑 **T-031 — item 1 CLOSED by the owner, do NOT reopen** → `PLAN-T031.md`.
 > ⏸️ **T-040 · T-039 · T-037 · T-033 · T-030 · T-027 · T-018 · T-026A · T-025** → their own files.
 
-> 🤝 **`docs/HANDOFF-2026-09-12.md`** still describes the board state for the T-101 / T-102 work.
+---
 
-## 🔴 BOARD STATE 2026-09-14 — read before starting anything
+## 🔴 BOARD STATE 2026-09-14 (4) — read before starting anything
 
 **`tsc` BASELINES: API 281 · admin 6 (via `tsc -b`) · user 6 · driver 28.** All four lint at
 **0 errors**. **Lint WARNING baselines: user 208 · driver 275.** **Raw-colour ceilings: user 1 ·
 driver 3**, enforced by `scripts/check-design-tokens.mjs` in each app.
-🔴 **USER LINT CORRECTED 216 → 208 on 2026-09-14.** This file was written from the 09-11 resume
-point; the journal had recorded **0/208** four times since 09-12 (the T-102 / T-115 work removed
-unused imports). Proven not to be this card's doing: `git stash` of every T-118 file still read
-208. *The stale number would have read a real 8-warning regression as "at baseline".*
 🔴 **Never rebaseline upward.** A test file that adds a `tsc` error or a lint warning is a defect
-in the test file, not a new baseline.
+in the test file, not a new baseline. T-118 corrected **three** stale numbers by measuring
+(user lint 216 → 208, checkers 12 → 11 per app, "23 checkers" → 22). **Re-measure; do not trust
+these numbers, including these.**
+🟢 **This card is EXPECTED to move the user `tsc` baseline DOWN, 6 → 5** (step 6). That is the one
+kind of baseline move that is allowed, and only with the explanation written into the step.
 
-**Checkers that must stay green** (all `node scripts/check-*.mjs`, esbuild-bundled, no runner):
-user app **11** · driver app **11** = **22**. Every one has been proven able to go red. They are
-NOT being ported — see Approach.
-🔴 **Corrected 2026-09-14 (3): the user count was written as 12 here and the card's "Why now" says
-23 in total.** Counted on disk: `ls scripts/check-*.mjs` returns **11 in each app**, and
-`run-checks` runs all 11 in each. *Verified it was a stale number, not a checker `run-checks` was
-silently skipping* — which is what a wrong count would otherwise hide.
+**Test suites that must stay green** (all three are `npm test`):
+**API 357** · **user app 34 Jest + 11 checkers** · **driver app 46 Jest + 11 checkers**.
+⚠️ **Run `tsc` as well as `jest` after writing a test file** — Jest strips types without checking
+them, so a type error in a test file hides behind a fully green suite (T-118 lost a step to this).
+
+**Board rot, noted and NOT fixed here (rule 1):** `docs/TODO.md` has **two `## 🔥 Now` sections**
+(lines ~64 and ~663) whose contents overlap, and **22 card IDs appear more than once** (T-078 four
+times) — 142 card lines for 118 distinct ids. A board that contradicts itself is a memory that
+cannot be trusted. **Boarded as T-122 in *Later*.**
 
 ---
 
 ## Task
 
-- **ID / name:** T-118 — automated tests for both RN apps (a Jest runner, a render harness, and
-  behaviour tests for the screens that keep needing a phone)
-- **Why now:** the owner, 2026-09-14: *"after any change whole device test is crazy, I think we
-  need automatic test."* The journal agrees — **seven unverified changes are stacked on the driver
-  app**, steps 14b-18 of T-101 have never been on a phone, and the last three cards each carried
-  a "🛑 NOT ON A DEVICE" line. The apps have **23 checker scripts and no test runner**; the only
-  suite in the repo is the API's `node:test` over `utils/` (T-010). Every rendered screen, every
-  interaction and every "did the rewrite silently drop the ✕ button" question still costs a phone.
+- **ID / name:** T-121 — Jest tests for the untested `utils/` in both RN apps, starting with the
+  four byte-identical twins and the four that have drifted apart
+- **Why now:** the owner, straight after T-118 closed: *"Is there continue of writing test?"*
+  Measured answer: **yes.** T-118 deliberately covered "the screens that keep needing a phone".
+  It left **~12 utils per app with no coverage of any kind** — not Jest, not a `check-*.mjs`
+  checker. These are the cheapest tests in the project (pure logic, no harness, no device) and
+  **three of them sit directly on open or parked bugs**:
+  - `tokenStore` — the T-038 refresh-token path. `ARCHITECTURE.md` still marks it
+    *"Not yet confirmed working on a device"*; before T-038 every session died after 15 minutes.
+  - `notificationRouting` — **T-047**, the killed-app tap, is still *PARKED*. The code already
+    contains a fix (a bounded re-park instead of a discard) with a long comment explaining the
+    regression it caused. **Nothing has ever verified it.**
+  - `date` — contains a **confirmed dead duplicate block** and is one of the 6 live `tsc` errors.
+- **What is NOT the reason:** the four twins being byte-identical is *fine* — the apps duplicate
+  shared code on purpose. The point is that one test file protects both copies, so the cost per
+  app is halved. Equally, `notificationRouting` differing by 123 lines between apps is **expected**
+  (different screens, different push types), not evidence of a bug.
 
 ### Goal (definition of "done")
 
-1. **`npm test` exists in both apps and is ONE command:** Jest, then every existing
-   `scripts/check-*.mjs`. Green on `main`. Red when any of them is red.
-2. **A render harness** (`test/render.tsx` + `test/setup.ts` per app, duplicated on purpose like
-   the components) so a screen is rendered in a test in a few lines: providers, navigation, a
-   stubbed signed-in user, the real translations, and the native modules mocked once.
-   **A screen that renders a missing translation key FAILS the test** (the hook's warning is
-   trapped) — the i18n checkers grep; this evaluates.
-3. **Behaviour tests exist for the risk points the CHECKLIST and the journal name** — §3 the order
-   form, §7 both halves of the driver↔passenger connection, §2 login, §4/§8 the two merged lists,
-   `GeoSheet`'s QFY rule (the walk item no checker covers), and the wizard's 34-field edit round
-   trip. Each is **proven able to fail** (one mutation, caught by exactly that test, reverted).
-4. **No snapshot tests.** T-101 is repainting every screen; a snapshot goes red on every repaint
-   and gets regenerated blind. Tests assert behaviour: what renders, what a press calls, what
-   payload leaves.
-5. **All six app baselines unchanged** (user 6 / 208 / 1 · driver 28 / 275 / 3), measured after
-   every step. No runtime change: nothing in `App.tsx` or any screen changes for the sake of a test.
-6. **The docs say what is automated and what still needs a phone:** CLAUDE.md §1 and §6,
-   `CHECKLIST.md` §0 and its "Later" section, T-010 re-scoped to the API half.
-7. *(owner's call, step 12)* **CI runs all three `npm test`s on every push** so "after any change"
-   is literally automatic.
+1. **Jest tests exist for these eight utils, in both apps where both have them**, each proven able
+   to fail by mutating the code and reverting:
+   **Tier 1 (the ones with open bugs behind them)** — `tokenStore`, `notificationRouting`,
+   `errorHandler`, `date`.
+   **Tier 2 (cheap and identical)** — `contactPhone`, `format`, `pendingOtp`, `validation`.
+2. **`notificationRouting`'s test is the T-047 regression guard**, explicitly: a tap that arrives
+   before the navigator is ready is **parked**; a flush whose `navigate` throws **re-parks** it
+   rather than discarding it; after `MAX_FLUSH_ATTEMPTS` (10) it gives up **once and for all**;
+   and `clearPendingNotification` resets the retry budget so one target's failures are not charged
+   to the next. *That third behaviour is the exact bug the owner saw as "it opens the main menu".*
+3. **`tokenStore`'s test pins the JWT expiry maths** (`getTokenExpirySec`, `isTokenExpiringSoon`
+   and its 60-second skew) and the `onAuthLost` / `notifyAuthLost` listener contract — the
+   mechanism that decides when a session silently dies.
+4. **`routeForNotification`'s documented trap is pinned:** `offer_id` means a **DriverOffer** in
+   some payloads and the passenger's **own PassengerOffer** in others, and the id must agree with
+   the screen. A malformed or missing id must fall back to the list, never push `NaN` into a
+   screen that reads `route.params.offerId`.
+5. **The dead duplicate in `user-app-standalone/utils/date.ts` is deleted** and the **user `tsc`
+   baseline moves 6 → 5**, with the reason recorded in this plan, the journal and the board.
+   ⚠️ Check the driver app's `date.ts` for the same duplication before assuming it is user-only.
+6. **All baselines otherwise unchanged and re-measured after every step:** user `tsc` 5 (after
+   step 6; 6 before) / lint 0·208 / colours 1 · driver 28 / 0·275 / 3. **Both suites green.**
+7. **No new dependency.** The harness, the mocks and the runner all already exist (T-118).
 
 ### Explicitly OUT of scope
 
-- 🛑 **Server flow tests against a database** (CHECKLIST "Later" items 1-2). They need a test DB
-  and the service extraction T-010 already describes. **T-010 keeps the API half.**
-- 🛑 **End-to-end on an emulator (Maestro / Detox).** Login is a real SMS OTP with no test bypass,
-  so an E2E run cannot get past the first screen without a backend change. Board it when the
-  bypass is designed; not here.
-- 🛑 **Refactoring a screen to make it testable.** If a screen will not render under the harness,
-  the step logs why in Session notes, boards a card, and moves on (rule 1: one task at a time).
-- 🛑 **Porting the 23 checkers into Jest.** They work, they are proven, and porting is busywork.
-  `npm test` wraps them. New PURE-logic tests go into Jest from now on; the esbuild pattern stops
-  growing.
-- 🛑 **A tsc / lint baseline ratchet script.** Wanted (the colour ratchet already exists), but a
-  separate small card → *Later*.
-
-### What stays phone-only, stated up front
-
-Fonts and weights (a wrong weight renders *nearly* right) · layout against the artboard · SMS
-autofill (OR-003) · push delivery and routing from a real notification · the native build (2b) ·
-anything Google SSO. The CHECKLIST keeps those; this card shrinks the walk to them.
+- 🛑 **More screen tests.** That is the other slice the owner was offered and did not pick; it
+  stays available as its own card.
+- 🛑 **The admin panel.** It has no runner at all — a T-118-shaped card of its own.
+- 🛑 **The API's server-flow tests.** Still **T-010**, still blocked on extracting logic from the
+  Sequelize-importing services.
+- 🛑 **Fixing the two utils whose tests may go red.** If a test proves a real defect, the card
+  **stops, records it, and boards it** — except where the fix is as small and as provable as the
+  `date.ts` deletion in step 6. *T-118's one-character `CheckRow.tsx` fix is the precedent for
+  what counts as small enough.*
+- 🛑 **De-duplicating `docs/TODO.md`.** Real, boarded as T-122, not this card.
+- 🛑 **Refactoring a util to make it testable.** `routeForNotification` is module-private on
+  purpose; test it through `handleNotificationTap`, which is the public behaviour anyway. If
+  something genuinely cannot be reached, log why and move on (rule 1).
 
 ## Approach
 
-- **Runner: `jest-expo`** — Expo's own preset, already knows Expo modules, fonts, assets and the
-  RN transform. **`@testing-library/react-native` 13.x** for rendering and queries (14 switched to
-  a new `test-renderer` package that jest-expo 54 does not ship; 13 uses the `react-test-renderer`
-  19.1.0 jest-expo already depends on). **Jest 29.7** — jest-expo 54 pins `babel-jest` and
-  `jest-snapshot` at ^29; Jest 30 is not it.
-- **Explicit imports, no globals:** `import { describe, it, expect, jest } from '@jest/globals'`,
-  mirroring the API's `import { describe, it } from 'node:test'`. Both apps' `tsconfig.json` have
-  `"types": []`, which is why ambient `@types/jest` would silently NOT apply. ⚠️ **Step 1 is the
-  decision point:** if RNTL's matcher types do not attach to `@jest/globals`' `expect`, switch to
-  `@types/jest` + `"types": ["jest"]` — a one-line tsconfig change, measured for `tsc` drift.
-- **Dependencies (rule 4 — owner approves in step 0), devDependencies only, both apps:**
-  `jest@~29.7.0` · `jest-expo@~54.0.18` · `@testing-library/react-native@^13` ·
-  `@jest/globals@~29.7.0` (or `@types/jest`). **No runtime change, no native change — no rebuild
-  is caused by this card.** `expo install` picks the jest / jest-expo versions.
-- **No `babel.config.js` unless step 1 proves jest-expo needs one.** Metro injects
-  `babel-preset-expo` when the file is absent; if Jest does not, the file is the documented
-  three lines and changes nothing Metro does.
-- **Tests live beside the code as `*.test.ts(x)`** — the API's convention (CLAUDE.md §1).
-  Harness and fixtures in `test/` at each app's root. Fixtures are typed against `api/*.ts`, so
-  a payload shape drift is a `tsc` error, not a stale fixture.
-- **The API layer is what gets mocked** (`api/passengerOffers.ts` etc. — screens do not call
-  `fetch`; 3 + 1 screens import `config/api` directly and those get `config/api` mocked). Native
-  modules (`@react-native-firebase/*`, `react-native-otp-verify`, `google-signin`, async-storage's
-  official jest mock, `expo-font`'s `useFonts` → loaded) are mocked ONCE in `test/setup.ts`.
-- **Prove red, every time.** The rule this project has used since T-010: one deliberate mutation
-  per test file, caught by exactly the test that should catch it, then reverted. Written into each
-  step below; a step is not `[x]` until its mutation line is filled in.
-- **Order: harness first, then by risk, driver and user alternating.** The CHECKLIST's own order
-  is §3 → §7 → §2; the journal's loudest gap is `GeoSheet`. Owner may reorder in step 0.
+- **Everything needed already exists.** T-118 built the runner, and `test/setup.ts` already mocks
+  AsyncStorage with its official jest mock — which is `tokenStore`'s only import. **No new
+  dependency, no harness change, no `App.tsx` change.**
+- **These are `*.test.ts`, not `.tsx`** — pure logic, no rendering, no `renderScreen`. They will
+  run in milliseconds, unlike the screen tests.
+- **Module-level state is the trap in this card.** `notificationRouting` keeps `pendingTarget` and
+  `flushAttempts` at module scope, so tests leak into each other. Use the author's own seam —
+  `clearPendingNotification()` in `beforeEach` (its doc comment literally says *"Test seam"*) —
+  and `jest.resetModules()` only if that proves insufficient. `clearMocks: true` is already on in
+  both configs.
+- **`navigationRef` is the seam for routing tests:** mock `@react-navigation/native`'s
+  `createNavigationContainerRef` so `isReady()` and `navigate()` are controllable
+  `jest.fn()`s — that is what lets a test reproduce a cold start, and a `navigate` that throws.
+  ⚠️ **Spread `jest.requireActual`** — the T-118 lesson: an automock blanks the module's other
+  exports and the assertions go quiet.
+- **Twins get ONE test file written twice**, per app, like the components — not a shared import.
+  That is the project's deliberate convention (`CLAUDE.md`, and the harness itself). Write the
+  user app's, prove it red, then copy and re-prove in the driver app; **do not assume the copy
+  passes** — `validation` and `date` differ by 219 and 201 lines.
+- **Prove red, every time.** One deliberate mutation per test file, caught by exactly the test
+  that should catch it, then `git checkout` the file. A step is not `[x]` until its mutation line
+  is filled in with what actually failed.
+- **Measure before writing each file.** T-118's card text was wrong about a screen four separate
+  times; every correction came from reading the code first. Read the util, then write the test.
 
 ## Steps
 
-- [x] **0. Owner decisions.** ✅ **CLOSED 2026-09-14 (3)** — (a) approved (5 deps in the end, the
-  `react-test-renderer` pin was flagged); (b) T-114 moved *Now* → *Next*; (d) order accepted;
-  (e) `@jest/globals` confirmed by step 1. **(c) answered at last on 2026-09-14 (3): CI on
-  GitHub Actions — YES.** *Original text:* (a) approve the 4 dev dependencies in both apps;
-  (b) name the card that leaves *Now* — recommendation **T-114** (planned, not started, its plan
-  file loses nothing); (c) CI on GitHub Actions, yes or no (step 12); (d) accept or reorder the
-  screen order in steps 4-11; (e) confirm `@jest/globals` explicit imports over `@types/jest`
-  globals (step 1 falls back if the types refuse).
-- [x] **1. User app — the runner, proven red.** ✅ **DONE 2026-09-14.** `jest ~29.7.0` ·
-  `jest-expo ~54.0.18` · `@testing-library/react-native ^13.3.3` · `@jest/globals ~29.7.0` —
-  **plus `react-test-renderer` pinned EXACTLY at `19.1.0`** (a fifth devDependency, flagged to
-  the owner): RNTL 13's peer on it made npm reach for 19.3.0, which wants React 19.3, and the app
-  is on 19.1.0; the pin is the version jest-expo already ships. **No `babel.config.js` needed** —
-  jest-expo transformed TS without one. **Typing route: `@jest/globals`, no tsconfig change.**
-  `utils/rideTime.test.ts` 12 tests · **proved red by mutating the CODE** (`latestDeparture`
-  made to prefer the window's start → exactly the defect-③ test failed, 11 passed; reverted with
-  `git checkout`). **`npm test` = 12 tests + 11 checkers green in 54 s.** **Measured: `tsc` 6 ·
-  lint 0 / 208 · tokens 1** — the 208 is the true baseline, see the board-state correction.
-  *Original step text:* `npx expo install jest-expo jest --dev`, then
-  `@testing-library/react-native@13` and `@jest/globals`. `"jest"` block in `package.json`
-  (`preset: jest-expo`, `setupFilesAfterEnv: ['<rootDir>/test/setup.ts']`, ignore `android/`,
-  `.expo/`, `tmp/`). `test/setup.ts`: async-storage mock, firebase / google-signin / otp-verify /
-  `useFonts` mocks, **and the `console.warn` trap for "Translation key not found"**.
-  First test: `utils/rideTime.test.ts` — one rule `check-ride-time.mjs` already pins, so the two
-  runners are shown to agree. `scripts/run-checks.mjs` runs every `check-*.mjs` in order, stops
-  on the first red; `"test": "jest && node scripts/run-checks.mjs"`.
-  **Prove red:** flip one assertion → `npm test` exits non-zero → revert.
-  **Measure:** `tsc` 6 · lint 0 / 216 · tokens 1. Note the typing route chosen (Approach).
-- [x] **2. Driver app — the same, copied not re-derived.** ✅ **DONE 2026-09-14.** Same five
-  devDependencies, `react-test-renderer` pinned exactly from the start (no conflict this time).
-  `test/setup.ts` differs from the user copy only by LACKING the Google sign-in and OTP mocks —
-  neither package is a driver dependency, and `jest.mock` of an absent module throws.
-  `utils/activeOffers.test.ts` 19 tests · **proved red by mutating the CODE** (`>=` → `>` in
-  `isActiveOffer` → exactly the "leaving exactly now" test failed, 18 passed; reverted).
-  **`npm test` = 19 tests + 11 checkers green in 44 s. Measured: `tsc` 28 · lint 0 / 275 ·
-  tokens 3 — all at baseline, none of the three new files adds an error or a warning.**
-  *Original step text:* smoke test `utils/activeOffers.test.ts` (the T-115 counter rules; the
-  API has the twin test). Prove red. **Measure:** 28 · 0 / 275 · 3.
-- [x] **3. The render harness, both apps.** ✅ **DONE 2026-09-14.** `test/render.tsx` →
-  `await renderScreen(ui, { auth?, routeName?, params? })`. **Three things measured differently
-  from the step text:** ① **it is `async`** — the user app's real `LanguageProvider` sets state
-  after an AsyncStorage read resolves, which React reports as an update outside `act`; the
-  harness lets one round of mount-time promises settle, which real screens need anyway. ② **No
-  `test/api.ts` / `mockApi` helper** — `jest.mock` is hoisted per FILE, so each test mocks its
-  own `api/*` module at the top; a helper cannot do it. ③ **`AuthContext.Provider` is fed a
-  stub, not the real `AuthProvider`** (which validates the token and registers a push token on
-  mount) — `buildAuth()` returns a signed-in user and `jest.fn()` methods. The driver copy
-  has no `LanguageProvider` (its hook keeps local state) and types the stub as `DriverProfile`:
-  **the driver app has NO `User` type — `AuthContext.tsx` imports one that `api/users.ts` does
-  not export, one of its 28 baseline errors.** `SegmentedModes.test.tsx` × 2 (identical): 5
-  tests — tabs by accessible name (count folded in, zero still drawn, none = bare label),
-  selected state, press → `onChange('history')` once, radius 12, pill = `full`. **Prove red:**
-  `SEGMENT_RADIUS = 24` → exactly the radius test failed in each app; reverted. **Measured:
-  user 6 / 0 · 208 / 1 · driver 28 / 0 · 275 / 3** (the driver stub first read 29 — the
-  profile's two timestamp fields — fixed in the test file, not the baseline).
-  *Original step text:* `SafeAreaProvider` with `initialMetrics`, `LanguageProvider`,
-  `AuthProvider` with a stubbed signed-in user, `ConfirmDialogProvider`, and a
-  `NavigationContainer` holding a one-screen stack so `useNavigation` / `useRoute` are real.
-  Proof on `SegmentedModes` in BOTH apps: a press calls `onChange` with the mode, and the pill
-  draws `borderRadius: 12` — the defect 17b measured at 24 in both apps.
-- [x] **4. Driver: `GeoSheet` — the rule no checker covers.** ✅ **DONE 2026-09-14.**
-  `components/geo/GeoSheet.test.tsx`, 7 tests, `api/geo` automocked (it re-exports `./driver`;
-  the automock follows). Mounted the way the wizard mounts it (`multiSelectAt` adm2 + adm3,
-  `canAdvance={canPickSettlements}`): ① one district → *Tayyor* → the QFY level opens, the
-  fetch is for that district's id, the chosen QFY comes back; ② two districts → done at adm2
-  with NO `settlements` / `settlement` key and no settlement fetch; ③ **walk item 3** — a QFY
-  ticked, back, a second district ticked → *Tayyor (2)* → no `settlements`; ④ a stop row
-  (`endLevel='district'`) never offers QFYs; ⑤ *Butun tuman* returns `settlements: []` (the
-  empty answer, not a missing one); ⑥ zero districts → the footer is disabled and `onDone`
-  never fires; ⑦ the full cascade from the country. **Measured, not assumed: the wizard
-  REOPENS the sheet at the country level** (`geoSheetInitialPath()` carries `settlements`, but
-  the first country tap deletes every deeper key), so a stale QFY cannot survive a reopen —
-  the rule only has to hold within one open session, which ③ pins. **Prove red:** the rule
-  inverted in `utils/offerRestore.ts` (`=== 1` → `!== 1`) → exactly the 5 QFY-dependent tests
-  failed, the 2 that do not consult it passed; reverted. **Found and fixed on the way:**
-  `clearMocks: true` added to BOTH apps' Jest config — without it a mock's call history leaks
-  between tests and a `not.toHaveBeenCalled()` reads an earlier test's call (two false reds).
-  **Measured: driver 28 / 0 · 275 / 3; user suite re-run under the new config, 17 green.**
-  *Original step text:* mock the geo loader with a fixture: 2 districts, 3 QFYs. (a)
-  `endLevel='settlement'`, one district ticked → *Tayyor* → the QFY level opens; (b) two
-  districts ticked → *Tayyor* → `onDone` fires at district level and the path carries no
-  `settlements`; (c) `endLevel='district'` (a stop row) never shows QFYs.
-- [x] **5. User: `CreatePassengerOfferScreen` (CHECKLIST §3).** ✅ **DONE 2026-09-14.**
-  `screens/CreatePassengerOfferScreen.test.tsx`, 5 tests; `api/geo`, `api/passengerOffers` and
-  `utils/toast` mocked at the module boundary; a frozen `Date.now` so the default departure is
-  exactly computable. 🔴 **The step text was STALE and was measured before writing:** 8c rebuilt
-  `LocationCard` onto `GeoSheet`, so the "two ✕ clear buttons" no longer exist, the 255 cap is
-  on the LANDMARK field (shown only once a district is chosen), and the screen has a NAMED
-  export (the navigator imports it by name — no `export default` to lose). Pinned instead:
-  ① mounts, fetches countries once, both endpoints empty; ② empty submit → the from/to errors
-  render, the toast fires, nothing reaches the API; ③ province → district → QFY through the
-  sheet, the row reads QFY over ancestors, the landmark field appears capped at 255; ④ the
-  minimal order (route + *Butun salon* + *Naqd*) leaves ONCE with texts, all six geo ids,
-  `start_at` = now + 60 min, `is_urgent: false`, `match_scope: 'aro'`, the payment flags,
-  `salon_scope`, `front_seat: true`, `currency`, and `seat_counts` / windows / note absent —
-  then the success dialog, not a toast; ⑤ the clock moved 45 min → the default departure is
-  inside the 31-minute floor → `errorTime`, no API call.
-  🔴 **A REAL DEFECT, FOUND BY ④ AND FIXED (one character, runtime code):** `CheckRow.tsx`
-  rendered `-{label}` — a literal hyphen before EVERY check-row label on the order form
-  ("-Butun salon", "-Naqd"…), since the owner's commit `49c0c5b` of **2026-08-02**, surviving
-  the 8c and step-15 rewrites; `UserBuyurtma.dc.html` draws no dash. Only occurrence in either
-  app. *This is the class of thing the walk was for, and the test found it on first render.*
-  **Prove red:** `from_settlement_id` blanked in the payload builder → exactly ④ failed;
-  reverted. **Measured: 6 / 0 · 208 / 1.**
-  *Original step text:* default export renders under the harness; both ✕ clear buttons exist
-  and clear; the comment field has `maxLength` 255; a past departure is refused at submit
-  (T-069's real premise); the minimal valid order calls create once with the expected payload.
-- [x] **6. Driver: `PassengerOrdersScreen` (§7, driver side).** ✅ **DONE 2026-09-14.**
-  `screens/PassengerOrdersScreen.test.tsx`, 4 tests. **Mock shape that matters:**
-  `api/passengerOffers` is mocked with a `jest.requireActual` spread so the PURE helpers
-  (`passengerNameOf`, `passengerPhoneOf`) stay real — an automock blanks every name and phone
-  and the assertions go silent; `api/driver` (the vehicle) and `utils/toast` are automocked.
-  ① incoming = search results MINUS the orders already bid on, with the count line and title;
-  ② card → sheet → *Qabul qilish* → the confirm dialog → join called ONCE with
-  `{ vehicle_id, seats_offered: 2, offered_price_per_seat: 50000 }` (the listed price) → the
-  accept result dialog; ③ *Taklif yuborish* → the per-seat field is SEEDED from the listed
-  50 → typed 45 → join called with `offered_price_per_seat: 45000` (per seat, thousands ×
-  1000), `seats_offered: 2`, `message: undefined` → the sent result → *Yopish* → the list is
-  in sent mode; ④ sent mode: a pending request shows *Bekor qilish* and the T-054
-  "opens once confirmed" line, cancel → dialog → confirm → cancel called with THAT request's
-  id; a confirmed request shows neither the hidden line nor "no phone" nor cancel.
-  **Two harness lessons:** the sheet's *Taklif yuborish* shares its text with a list label, so
-  the sheet's copy is the LAST match; a mount-time API promise needs one `act` flush after
-  `waitFor` sees the call, or the state it sets is not there yet. **Prove red:** the
-  counter-offer sent as `thousands × 1000 × seatsNeeded` → exactly ③ failed; reverted.
-  **Measured: driver 28 / 0 · 275 / 3.**
-  *Original step text:* incoming fixture → a card → the sheet: accept at the listed price calls
-  the join API with that price; a per-seat counter-offer sends the per-seat price; the phone
-  row is absent until the T-054 gate allows it; cancel while pending calls cancel.
-- [x] **7. User: `OfferDriversScreen` (§7, passenger side).** ✅ **DONE 2026-09-14.**
-  `screens/OfferDriversScreen.test.tsx`, 5 tests; `api/passengerOffers` mocked with the pure
-  `driverNameOf` left real (same lesson as step 6). ① three bids render with name, car line,
-  terms, status pill, and NO contact box; ② accept → the dialog names the driver AND "2"
-  rivals → confirm → `confirmDriver('bid-1')` once, no reject, the list reloads; ③ with no
-  rival pending the plain message (no count) is used; ④ reject → the dialog names the driver →
-  `rejectDriver('bid-2')` once, no reason, no confirm; ⑤ two confirmed bids → two contact
-  boxes, one with the phone and one with the T-054 "no phone" line, and no accept/reject
-  anywhere. **Prove red:** the rival filter's `d.id !== join.id` clause removed → ② (count 3)
-  and ③ (a count where none is due) both failed; reverted. **Measured: user 6 / 0 · 208 / 1.**
-  *Original step text:* fixture with three bids → accept one → the confirm dialog names the
-  rival count (2) → accept API called with that bid; reject → reject API.
-- [x] **8. Driver: `OfferWizardScreen` edit round trip (§8, the silent-blanking guard at UI
-  level).** ✅ **DONE 2026-09-14 — and it rendered first time; the "will not render" exit was
-  not needed.** `screens/OfferWizardScreen.test.tsx`, 2 tests; `api/driver`, `api/driverOffers`
-  and `utils/toast` automocked. 🔴 **The step text's "34-field fixture in the checker" did not
-  exist** — `check-offer-restore.mjs` carries city lists, not an offer; the fixture was written
-  here in the awkward shape pg sends: DECIMALs as STRINGS (`'150000.00'`), a legitimate **0**
-  (`pickup_fee: '0.00'`, `free_waiting_min: 0`) and a legitimate **false** (`payment_card`) —
-  the values a careless `||` erases (T-078) — plus a `from` place WITH a QFY and a `to` place
-  without, so both `buildOfferPlaces` branches run. ① the load walks countries → provinces →
-  districts → QFYs (fetched ONCE, for the one-district side only) → the vehicle, and the two
-  districts and the QFY are on screen; ② *E'lonni yangilash* without touching anything →
-  `updateDriverOffer(token, id, payload)` ONCE with all 34 scalar fields back as sent (strings
-  → numbers, 0 → 0, false → false), `from_places` with the QFY id, `to_places` with
-  `settlement_id: null`, `stops` and `arrive_from` absent. **Measured, not assumed: the schedule
-  is NOT re-derived on a plain save** — `start_at` / `depart_until` / `arrive_until` only change
-  through `commitSchedule`, so the ISO strings round-trip byte-for-byte. **Prove red:**
-  `parcel_max_kg` blanked in the restore → exactly ② failed; reverted. **Harness fix on the
-  way:** `onUnhandledAction` silenced on the one-screen navigator (a save ends in `goBack()`,
-  which has nowhere to go in a test) — both apps. **Measured: driver 28 / 0 · 275 / 3.**
-  *Original step text:* mock `api/driverOffers` get with the 34-field fixture the checker
-  carries; open in edit mode; press save without touching anything; the update payload equals
-  the fixture field-for-field. ⚠️ 1 895 lines, four sheets, geo effects on mount — the step most
-  likely to hit the "will not render" exit.
-- [x] **9. User: `MyOrdersScreen` (§4).** ✅ **DONE 2026-09-14.** `screens/MyOrdersScreen.test.tsx`,
-  4 tests; both `api/*` modules mocked with their pure helpers (`driverPhoneOf`) left real. A
-  7-row fixture across both sources: ① ONE fetch per source (T-051), pills *Jarayonda 2 · Faol
-  2 · Tarix 3*, the open request and pending booking in Jarayonda with their cancel buttons and
-  no rate button; ② mode switches fire NO request — Faol shows the matched request and the
-  confirmed booking's call button (T-054), Tarix shows two requests and the finished booking's
-  rate button; ③ cancel request → dialog → *Ha* → `cancelPassengerOffer(11)` once, then a
-  reload; ④ cancel booking → dialog → *Ha* → `cancelJoin(token, 'b-21')` once.
-  ❓ **MEASURED AND LEFT AS IS — an owner question, not a fix:** the cancel buttons key off the
-  RAW status, not the phase. An open request that has EXPIRED (still `published` on the server)
-  keeps *So'rovni bekor qilish* in history, and a FINISHED booking (still `confirmed`) keeps
-  *Bronni bekor qilish*. My first assertion assumed history rows cannot be cancelled and went
-  red; the test now pins the real rule with a comment. → boarded as a question on T-118's card.
-  **Prove red:** `offerMode` made to bucket `cancelled` as active → ① and ② failed; reverted.
-  **Measured: user 6 / 0 · 208 / 1.**
-  *Original step text:* one fixture → the three modes hold the right rows and the count pills
-  the right numbers; cancel calls the API with the right id. Prove red: put an archived row in
-  the active mode.
-- [x] **10. Driver: `MyRidesScreen` (§8).** ✅ **DONE 2026-09-14 — passed on the first run.**
-  `screens/MyRidesScreen.test.tsx`, 4 tests; `api/driverOffers`, `api/offerPassengers` and
-  `utils/toast` automocked, with the offers mock keyed on a "confirmed on the server" flag so a
-  reload returns the ride FULL. ① phases derived from the rows (*Jarayonda 1 · Faol buyurtmalar
-  1 · Buyurtmalar tarixi 2*), the first ride expands by itself and its passengers load (the
-  count line reads 2), the pending passenger has confirm + reject, the confirmed one the call
-  button and the number (T-054), the seat labels are right; switching phase expands THAT
-  phase's first ride and fetches its passengers; ② confirm → the dialog names the passenger
-  and the seats → `confirmPassenger(token, 'j-1')` once → the reload returns the ride full →
-  *Jarayonda 0 · Faol 2* and the empty line — **the phase move is real, not asserted on
-  state**; ③ reject → the nine-reason sheet → a listed reason → `rejectPassenger(token,
-  'j-1', <that reason's text>)`; ④ *Boshqa* → the sheet's button is DISABLED until text is
-  typed, a press does nothing, then the trimmed text is sent. ⚠️ Ride ids are numeric strings
-  on the wire — the screen calls the passengers API with `Number(id)`; a UUID fixture would
-  have sent `NaN` and hidden that. **Prove red:** the reason dropped from the reject call → ③
-  and ④ failed; reverted. **Measured: driver 28 / 0 · 275 / 3.**
-  *Original step text:* one fixture → the three DERIVED phases; confirming a passenger moves
-  the ride to the next phase; reject with a reason sends that reason.
-- [x] **11. Auth (§2), both apps.** ✅ **CODE DONE 2026-09-14, all green — TWO PROOFS STILL OWED
-  (see 🛑 below).** `screens/PhoneRegistrationScreen.test.tsx` in each app — a FLOW test: the OTP
-  screen is registered in the harness (the new `screens` option), so the phone screen's
-  `navigate('OTPVerification', …)` is a REAL screen change the test keeps working on.
-  🔴 **Measured before writing: BOTH apps' continue buttons are `disabled` until the input is
-  complete** (phone: the country's local length; driver: or a user id; OTP: 4 digits), **so the
-  screens' "incomplete" warnings are UNREACHABLE from the UI** — the tests pin the disabled state,
-  not the toast. **User (3 tests):** ① continue disabled below 9 digits, enabled at 9, a press does
-  nothing; ② `sendOtp('+998901234567', 'sms')` once → the OTP screen; ③ the OTP continue is
-  disabled below 4 digits; a pasted 4-digit code (the autofill path) verifies at once with THAT
-  phone and THAT code; a wrong code → `errorIncorrect` + "2" remaining, boxes cleared, still on the
-  OTP screen; the right code typed digit by digit verifies on the fourth. **Driver (5 tests):**
-  ① disabled until a full phone OR an id; ② `sendOtp(E.164, 'push', { userId: undefined })` →
-  the OTP screen; ③ an id alone → `sendOtp(undefined, 'push', { userId })`, then
-  `verifyOtp('', code, { userId })`; ④ `USER_NOT_REGISTERED` from the API → the RegisterFirst
-  hand-off carrying the store URLs (asserted through a stub screen that echoes its params);
-  ⑤ wrong code → remaining 2 + cleared; right code → `verifyOtp(phone, code, { userId:
-  undefined })`. SMS autofill itself stays on the checklist.
-  **Prove red — BOTH DONE.** Driver: phone and code swapped in the driver `verifyOtp` call → ③
-  and ⑤ failed; reverted. ✅ **User, 2026-09-14 (3):** the same swap in
-  `screens/OTPVerificationScreen.tsx` → **test ③ alone went red** (`Expected: "+998901234567",
-  "1234" · Received: "1234", "+998901234567"`), ① and ② stayed green; reverted with
-  `git checkout`. 🔴 **The re-measure caught a defect the step had missed: BOTH new
-  `PhoneRegistrationScreen.test.tsx` files added exactly one `tsc` error each** (user 7, driver
-  29) — the `sendOtp` fixture omitted `OtpSendResponse`'s REQUIRED `message`. Fixed in both (the
-  twin, per the standing rule), with the real server's wording and the `cooldownSec: 60` the
-  resend path reads. **Re-measured after the fix: user `tsc` 6 · lint 0 / 208; driver 28 · 0 /
-  275** — every baseline back where it was, and both files still pass (3 + 5 tests).
-  *Original step text:* phone screen → submit → the OTP screen; entering a code calls verify
-  with that code; a wrong code shows the error and stays. Prove red: verify called with the
-  phone instead of the code.
-- [ ] **12. CI — the owner said YES on 2026-09-14 (3).** ✅ **WRITTEN:**
-  `.github/workflows/test.yml` — on push and pull request, three jobs from a matrix (API ·
-  user-app · driver-app), `npm ci`, Node 22, npm cache keyed per lockfile, no secrets, no
-  database, no device, **`fail-fast: false`** so one red project cannot hide the other two.
-  The API folder's comma is a quoted matrix value; **the YAML was parsed and the matrix resolved
-  locally** (`js-yaml`) rather than debugged on a red first run, and all three `npm test`s were
-  confirmed green locally first (API 357 · user 34 + 11 checkers · driver 46 + 11).
-  🛑 **STILL `[ ]` ON PURPOSE: not yet proven on a real push** — that needs the commit, which is
-  the owner's call. **Tick this only after a green run appears on GitHub.**
-- [x] **13. Docs and close.** ✅ **DONE 2026-09-14 (3).** CLAUDE.md §1 (tests paragraph rewritten
-  + a `test` column in the run table) and §6 (the DoD now demands a green `npm test`, a
-  proven-red test, and a baseline measurement, with "never rebaseline upward" in it);
-  `CHECKLIST.md` §0 now **starts** with the three `npm test`s and says what they cover, and its
-  "Later" section records 2 of 4 items done with the blockers on the other 2; `ARCHITECTURE.md`
-  gained a **Tests & CI** row; T-010 re-scoped to the API half **and its headline corrected**
-  (the admin panel is now the only project with no tests); T-118 moved to *Done*; the two owner
-  questions boarded as **T-119** and **T-120**; JOURNAL entry written; commit proposed.
+- [ ] **0. Owner approval of this plan** (rule 3), plus one question: **step 6 deletes 6 lines of
+  unreachable duplicate from `user-app-standalone/utils/date.ts` and lowers the user `tsc`
+  baseline 6 → 5.** That is a runtime file, so it is the owner's call, not mine. Yes or no?
+  *(If no: the test still gets written, the dead block stays, and the baseline stays 6.)*
+- [x] **1. `tokenStore`, user app.** ✅ **DONE 2026-09-14 (4).** `utils/tokenStore.test.ts`,
+  **17 tests**: `TOKEN_KEYS.ACCESS` pinned at `'@auth_token'` (renaming it logs out every existing
+  install — nothing migrates the key); the pair round trip; **`setTokens('access')` alone must NOT
+  erase the stored refresh token**, and `null` / `''` count as "not supplied" rather than "erase"
+  (this is the T-038 failure itself); `clearTokens`; the listener contract including **a throwing
+  listener not stopping the others**; `getTokenExpirySec` on a good token, on base64url needing
+  `-`/`_` mapped back, on every unreadable shape → `null`, and the unparseable-payload fallback;
+  `isTokenExpiringSoon` across expired / healthy / **the inclusive 60-second skew boundary** /
+  a custom skew / unknown-expiry-means-false.
+  **Prove red:** `<=` → `<` in the skew comparison → **exactly the two boundary tests failed**,
+  the other 15 stayed green; reverted with `git checkout`. Baselines after: `tsc` **6**, lint
+  **0 / 208**.
+- [x] **2. `tokenStore`, driver app.** ✅ **DONE 2026-09-14 (4).** Copied, header re-pointed,
+  **17 tests pass**; the same mutation re-proved red there (same two tests) and was reverted.
+  Baselines after: `tsc` **28**, lint **0 / 275**.
+  🔴 **Gotcha found here, worth more than the step:** `core.autocrlf=true` in this repo, so
+  **`git checkout` — the revert half of the prove-red ritual — rewrites the file's line endings**
+  (LF → CRLF). A plain working-tree `diff` then reports two byte-identical twins as *153 of 153
+  lines changed*. Git itself still sees the file as unmodified, so **nothing wrong reaches the
+  repo** — but it destroys `diff` as a drift check. **Compare twins with
+  `git show HEAD:<path>`**, which is what re-confirmed the numbers in the Resume point.
+- [x] **3. `notificationRouting`, user app — the T-047 guard.** ✅ **DONE 2026-09-14 (4).**
+  `utils/notificationRouting.test.ts`, **25 tests**: the full routing table; the
+  `offer_id`-means-two-entities rule (`driver_join_request` → `OfferDrivers`, and asserted NOT to
+  reach `OfferDetails`); six malformed ids (missing, empty, `abc`, `0`, `-3`, `NaN`) each falling
+  back to the list rather than emitting `NaN`; unknown/absent types → `Notifications`; parking
+  when not ready; replay once and only once; and the T-047 block — a failed flush **re-parks**,
+  survives repeated failures, **gives up for good at 10**, and the budget is reset both by
+  `clearPendingNotification` and by a successful delivery.
+  **Prove red — THREE separate mutations, each caught by exactly its own test:** ⓐ the flush's
+  `pendingTarget = target` removed (the literal T-047 bug) → the three re-park tests; ⓑ
+  `clearPendingNotification` not resetting `flushAttempts` → the "does not charge one target's
+  failures" test; ⓒ the success path not resetting it → the "resets the budget" test. All reverted.
+  🔴 **THE STEP FOUND A DEFECT IN ITS OWN TESTS FIRST, TWICE.** Mutation ⓐ initially reddened only
+  2 of 3 expected tests, and mutation ⓑ reddened **none**. Cause, and it is worth remembering:
+  **a `navigate` that THROWS is still a recorded call**, so `toHaveBeenLastCalledWith(...)` passes
+  identically whether the target was delivered or attempted-and-dropped. The fix is to assert the
+  **call count** — "three attempts: the park, the failed flush, the delivery" — which is what
+  actually distinguishes the two. *Three tests were rewritten; the comments in the file say why.*
+  **A mutation that reddens fewer tests than predicted is a finding about the tests, not a
+  miscount** — predicting the red set before running it is what exposed this.
+  🔴 **`import/first` cost one lint warning (208 → 209)** because `jest.mock` sat between the two
+  imports. `babel-plugin-jest-hoist` lifts `jest.mock` above the imports anyway, so the block
+  moved BELOW them: mock still installed, warning gone, back to 208. Baselines after: `tsc` **6**,
+  lint **0 / 208**.
+- [ ] **4. `notificationRouting`, driver app.** Same structure, **different routing table** (its
+  own push types and screens — read them, do not copy the user app's expectations). Re-prove red.
+- [ ] **5. `errorHandler`, both apps.** The axios-shaped `.response` convention (both apps use
+  `fetch`, yet errors carry `.response` — the shape every screen reads). Pin what a 400 with
+  `errors[]`, a 409 duplicate, a 422, a network failure and a thrown string each produce.
+  ⚠️ The two files differ by 59 lines — read both. **Prove red** in each.
+- [ ] **6. `date`, user app — the dead block.** *Only if the owner said yes in step 0.* Delete the
+  duplicated `if (language === 'uz')` block at lines ~97-102 (identical to ~88-93, comment
+  included, unreachable because the first returns). **Then test the function** — uz manual month
+  mapping, ru/en locale formatting — so the deletion is proven not to change behaviour.
+  **Re-measure: user `tsc` 6 → 5.** Record the drop here, in the journal and on the board.
+  🔴 **Check the driver app's `date.ts` for the same duplication first** — the two differ by 201
+  lines, so it may or may not be there. *This is the defect class this project repeats most.*
+- [ ] **7. `date`, driver app.** Whatever step 6 found. Test either way; re-prove red.
+- [ ] **8. Tier 2, both apps: `contactPhone`, `format`, `pendingOtp`, `validation`.** The first
+  three are byte-identical twins (write once, copy, re-prove). `validation` differs by **219
+  lines** — read both, write two real files, not a copy.
+- [ ] **9. Close.** Re-measure all six baselines and both suites; update `CLAUDE.md` §1 only if
+  the covered-modules sentence is now wrong; `docs/TODO.md` + `docs/JOURNAL.md`; propose the
+  commit. **Board anything a test proved that this card did not fix.**
 
-**Every step from 4 to 11:** write → prove red → revert → all six baselines unchanged → `[x]`.
+**Every step:** read the util → write the test → prove it red → revert the mutation → `tsc` AND
+lint AND both suites → `[x]` with the mutation recorded.
 
 ## Files to touch
 
-**Both apps (mirrored):**
-- `package.json` — 4 devDependencies, `"jest"` block, `test` script
-- `test/setup.ts` (new) — mocks + the translation-warning trap
-- `test/render.tsx` (new) — the harness · `test/api.ts` (new) — the API mock helper
-- `test/fixtures/*.ts` (new) — typed against `api/*.ts`
-- `scripts/run-checks.mjs` (new) — runs every `check-*.mjs`
-- `components/chrome/SegmentedModes.test.tsx` (new)
-
-**User app:** `utils/rideTime.test.ts` · `screens/CreatePassengerOfferScreen.test.tsx` ·
-`screens/OfferDriversScreen.test.tsx` · `screens/MyOrdersScreen.test.tsx` · auth screen tests.
-**Driver app:** `utils/activeOffers.test.ts` · `components/geo/GeoSheet.test.tsx` ·
-`screens/PassengerOrdersScreen.test.tsx` · `screens/OfferWizardScreen.test.tsx` ·
-`screens/MyRidesScreen.test.tsx` · auth screen tests.
-**Maybe:** `babel.config.js` (both, only if step 1 proves it needed) · `tsconfig.json` `types`
-(only if the `@jest/globals` route fails).
-**Repo:** `.github/workflows/test.yml` (step 12, owner's call) · `CLAUDE.md` · `docs/CHECKLIST.md`
-· `docs/ARCHITECTURE.md` · `docs/TODO.md` · `docs/JOURNAL.md`.
-**Never:** `App.tsx`, any screen's runtime code, `android/`, any `.env`, `api,admin,db/infra/**`.
+**New, user app:** `utils/{tokenStore,notificationRouting,errorHandler,date,contactPhone,format,pendingOtp,validation}.test.ts`
+**New, driver app:** the same eight.
+**Changed (runtime), at most one file:** `user-app-standalone/utils/date.ts` — 6 lines deleted,
+and only on the owner's yes in step 0. Possibly its driver twin (step 6).
+**Docs:** `docs/PLAN.md` (this file) · `docs/TODO.md` · `docs/JOURNAL.md` · `CLAUDE.md` §1 if the
+tests paragraph becomes inaccurate.
+**NOT touched:** `test/setup.ts`, `test/render.tsx`, `package.json`, any screen, any navigator.
 
 ## Risks / open questions
 
-1. **jest-expo without `babel.config.js`.** Both apps have none (Metro injects the preset).
-   Step 1 proves whether Jest does the same; the fallback is the documented three-line file and
-   costs nothing.
-2. **Typing route.** `"types": []` blocks ambient globals, so `@jest/globals` is the plan; RNTL's
-   matcher augmentation may only attach to the global `jest` namespace. Step 1 decides, measured.
-3. **A screen that will not render.** Mount effects that fetch geo, locate the device, or start
-   timers can make a render hang or throw. The exit is fixed: log, board, move on — **never
-   refactor a screen inside this card.** Step 8 is the likely case.
-4. **Reanimated / gesture-handler.** Only `App.tsx` and two template components import them;
-   navigation libraries pull them in transitively. If a screen test trips on them, the standard
-   mocks go into `test/setup.ts` — not into the screen.
-5. **Fixtures drifting from the API.** Mitigated by typing them against `api/*.ts`; a server-side
-   shape change that the client types do not follow is invisible to these tests by design — that is
-   T-010's half.
-6. **Run time.** The checkers each shell out to `npx esbuild`; 23 of them plus Jest might reach a
-   couple of minutes. Acceptable; if it is not, `run-checks.mjs` can bundle once — later.
-7. **Windows.** Jest needs no watchman; the apps live outside the comma-named folder; the shell
-   halves backslashes in heredocs and choked on a quoted heredoc while this very plan was being
-   written — **write every test file with the editor tool** (memory).
-8. ❓ **Which card leaves *Now*?** It holds T-101, T-088, T-116, T-115, T-114. Recommendation:
-   **T-114 → *Next*** (not started). Owner decides.
-9. ❓ **CI on GitHub Actions?** The repo is on GitHub, the API tests need no DB, the app tests need
-   no device: the workflow is ~30 lines and no secrets. It is the step that makes "after any
-   change" automatic rather than "when someone remembers to run it".
-10. ❓ **Fold T-010's server half in?** Recommendation **no** — it needs a test DB and the service
-    extraction; separate card, kept at P3 until this one lands.
+- ❓ **Step 0, for the owner:** delete the 6 dead lines in `date.ts` and take the user baseline to
+  5, or leave them and keep 6? *Recommendation: delete.* It is unreachable code that the compiler
+  already flags, and the test written alongside proves the deletion changes nothing.
+- 🔴 **A test may prove a real defect rather than pinning correct behaviour.** Most likely in
+  `notificationRouting` (T-047 is parked precisely because nobody knows if it is fixed) and in
+  `errorHandler` (59 lines of drift between apps that nobody chose deliberately). **The card's
+  rule: stop, record, board it — do not fix it here.** The exception is a `CheckRow.tsx`-sized
+  one-liner, which is a judgement call to be stated out loud, not made quietly.
+- ⚠️ **Module-level state leaking between tests** (`pendingTarget`, `flushAttempts`). T-118 already
+  lost time to a mock's call history leaking; this is the same class. `clearPendingNotification`
+  in `beforeEach` is the intended seam.
+- ⚠️ **"Byte-identical" is true today.** Copy the test, but re-run and re-prove in the second app
+  every time — the twins are maintained by hand and drift silently. That is exactly how
+  `validation` came to differ by 219 lines.
+- ⚠️ **These tests cannot see anything a device sees.** No fonts, no layout, no real push arriving.
+  `notificationRouting`'s test proves the *decision*, not that a tapped notification on a real
+  killed app reaches it. **T-047 needs a `logcat` line to close, and this card does not close it.**
+- ❓ **Is `pushEvents` worth a file?** 111/114 lines, 3 lines of drift, and it is the thin event
+  bus the screens subscribe to. Left out of the eight for now; decide in step 8.
 
 ## Session notes
 
-### 2026-09-14 — approved; step 1 done, step 2 started
+### 2026-09-14 (4) — approved; steps 1-3 done
 
-- **Owner: "approved".** Step-0 answers taken as the recommendations: **T-114 moved *Now* →
-  *Next*** (dated note on the card); **CI (step 12) stays undecided** — not asked again until
-  step 11 is done; `@jest/globals` chosen.
-- **Step 1 findings worth keeping:** ① `expo install` resolves jest / jest-expo, but the RNTL
-  install needs `react-test-renderer` pinned at the app's React version FIRST or npm resolves
-  the peer to a newer React and refuses. ② npm saved the pin with a caret (`^19.1.0`) — a fresh
-  install would drift back into the conflict; re-saved with `--save-exact`. ③ jest-expo needs
-  no `babel.config.js` on this stack. ④ `utils/smsRetriever.ts` reads the OTP functions straight
-  off the `require`d module, so its mock exposes them at the top level AND under `default`.
-- **The lint baseline in this file was stale** (216 vs the journal's 208) — corrected above.
-  The habit that caught it: never accept a downward move without proving it pre-existed.
-- ⚠️ **The full `npm test` is 54 s, 49 of them the 11 checkers** (each spawns `npx esbuild`).
-  Acceptable for now; noted against risk 6.
-
-### 2026-09-14 (later) — steps 3-11 done in one sitting; session stopped by the owner at 11
-
-- **The harness grew four things, all recorded in `test/render.tsx` of BOTH apps:** `async`
-  (one `act` flush of mount-time promises); `onUnhandledAction` silenced (one-screen navigator,
-  `goBack()` has nowhere to go); **`screens?: Record<string, ComponentType>`** — extra routes the
-  screen under test may `navigate()` to, so phone → OTP is a real screen change; **`AuthValue`
-  exported** so a test can type its own `sendOtp` / `verifyOtp` stubs. Plus `clearMocks: true`
-  in both Jest configs (step 4's two false reds).
-- **The pattern every screen test now follows:** `jest.mock('../api/<module>')` at the top —
-  **with a `jest.requireActual` spread whenever the module also exports PURE helpers**
-  (`passengerNameOf`, `driverNameOf`, `driverPhoneOf`): an automock blanks them and the
-  assertions go silent; `jest.mock('../utils/toast')` and assert on `showToast.error/success`;
-  `await renderScreen(<Screen />, { params })`; `waitFor` the mount fetch; query by accessible
-  name or visible `uz` string (`import uz from '../translations/uz'` — typed, so a wrong key is
-  a `tsc` error); a dialog's button shares its text with the card's, so press the LAST match.
-- 🔴 **REAL DEFECT FOUND AND FIXED (one character, runtime):** `user-app-standalone/components/
-  passengerOffer/CheckRow.tsx` rendered `-{label}` — a hyphen before every check-row label on the
-  order form since `49c0c5b` (2026-08-02). The artboard draws none. Step 5's test found it on
-  first render.
-- ❓ **OWNER QUESTIONS SURFACED BY MEASURING (left as is, pinned with comments):** in the user
-  `MyOrdersScreen`, the cancel buttons key off the RAW status — an EXPIRED open request keeps
-  *So'rovni bekor qilish* in history and a FINISHED confirmed booking keeps *Bronni bekor qilish*.
-  And in both apps the "incomplete input" toasts on the auth screens are dead code (the buttons
-  are disabled first).
-- **Card text that was stale, corrected by measuring:** step 5 (no ✕ buttons, no default export,
-  255 is on the landmark), step 8 (no 34-field fixture existed in the checker), step 6/7 (pure
-  helpers must stay real), step 10 (ride ids are numeric strings — `Number(id)` on the wire).
-- **Every test file was proven red by a CODE mutation, reverted with `git checkout` — except the
-  user app's step 11, still owed.** Runtime code changed in this card: `CheckRow.tsx` only.
-- **NOTHING IS COMMITTED.** The owner stopped the session to continue in a new one.
-
-### 2026-09-14 (3) — step 11 closed: the last proof, and a defect the proof caught
-
-- **The owner committed the session-2 work as `6c7ca24` "started writing tests"** and re-ran both
-  suites: **user 34 tests + 11 checkers green, driver green.** Tree clean at the start of this one.
-- ✅ **Step 11's owed mutation, done.** The user app's `verifyOtp(phoneNumber, otpCode)` swapped →
-  **test ③ alone went red**, with the argument order named in the failure; ① and ② stayed green.
-  Reverted. Every one of the 13 test files is now proven able to fail.
-- 🔴 **The re-measure was not a formality — it caught a defect in the new test files themselves.**
-  `tsc` read **user 7 (baseline 6) and driver 29 (baseline 28)**: one new error in each, both in
-  `screens/PhoneRegistrationScreen.test.tsx`, both the same — the `sendOtp` fixture omitted
-  `OtpSendResponse`'s **required `message`**. Jest never saw it (types are stripped, not checked),
-  so a green suite hid it; only `tsc` reads the test files. *This is the "fixtures are typed
-  against `api/*.ts`" design working, one step later than intended: **the fixture drifted, not the
-  API**.* Fixed in **both** apps — the twin, per the standing rule — with the server's real
-  wording (`Verification code sent via ${channel}`) and the `cooldownSec: 60` the server always
-  sends and the resend path reads (`response?.data?.cooldownSec ?? DEFAULT_RESEND_COOLDOWN_SEC`).
-- **Lesson for the next test file: run `tsc` after writing one, not only `jest`.** A green suite
-  is not evidence the test file type-checks.
-- **All baselines re-measured after the fix and unchanged:** user `tsc` **6** · lint **0 / 208**;
-  driver `tsc` **28** · lint **0 / 275**. Colour ceilings untouched (no colour changed). Both
-  edited files still pass: user 3 tests, driver 5.
-- **Steps 1-11 are now fully done. Open: 12 (CI — the owner has still never answered) and 13.**
+- **Owner approved the plan with "i confirm"**, taken as the recommendations per the T-118
+  precedent — including **yes to the `date.ts` deletion** in step 6. Flagged in the reply so it
+  can be corrected before step 6 runs.
+- **Three test files, 59 tests, all proven red.** `tokenStore` ×2 (17 each) and
+  `notificationRouting` user (25).
+- 🔴 **The most valuable thing learned is about testing, not about the app:** asserting
+  `toHaveBeenLastCalledWith` on a mock whose implementation **throws** cannot tell "delivered"
+  from "attempted and discarded" — the throwing call is recorded either way. Two mutations slipped
+  through green tests before this was spotted. **Assert the call COUNT for anything retry-shaped.**
+  It was caught only because the red set was predicted before each mutation was run.
+- 🔴 **`core.autocrlf=true` + `git checkout` (the revert half of prove-red) rewrites line endings**,
+  so a working-tree `diff` calls two identical twins "153 of 153 lines changed". Nothing reaches
+  the repo — git normalises — but **twin comparison must use `git show HEAD:<path>`.** The plan's
+  drift numbers were re-verified that way and all held.
+- **Still to do: steps 4-9.** Nothing committed yet.
 
 ## Resume point
 
-> **Updated 2026-09-14 (3) at the END of the session. Steps 0-11 and 13 are DONE and measured;
-> every test file has been mutated red and reverted. Step 12 (CI) is WRITTEN but deliberately
-> still `[ ]` — the workflow has never run. Session 2's work is committed as `6c7ca24`; this
-> session's work (the fixture fix, the workflow, and all the docs) is NOT yet committed.**
-> A new session needs only this file. Read the Task, the Approach, the step lines above (each
-> `[x]` line records what was measured and what changed) and the Session notes.
+> **Updated 2026-09-14 (4). Steps 0-3 are DONE (the owner approved with "i confirm", read as yes
+> to the `date.ts` deletion). Steps 4-9 are open. NOTHING IS COMMITTED.**
+> Three new test files exist and are green: `utils/tokenStore.test.ts` in BOTH apps (17 tests
+> each) and `utils/notificationRouting.test.ts` in the user app (25). Baselines re-measured and
+> unchanged: user `tsc` 6 / lint 0·208 · driver `tsc` 28 / lint 0·275.
+> **▶️ NEXT IS STEP 4** — `notificationRouting` in the DRIVER app, which has a different routing
+> table (`passenger_join_request` → `OfferPassengers`, `driver_request_confirmed` /
+> `driver_request_rejected` / `driver_not_chosen` / `offer_cancelled_by_passenger` →
+> `MyJoinRequests`, `passenger_offer_updated` → `PassengerOfferDetails`). **Read it; do not copy
+> the user app's expectations.** The park/flush half IS the same and can be copied.
+> ⚠️ **When you write it, assert call COUNTS on the retry tests** — see Session notes.
 
-**STATE, exactly:** both apps have Jest (`jest-expo`, RNTL 13.3.3, Jest 29.7, `@jest/globals`,
-`react-test-renderer` pinned exactly at 19.1.0), `npm test` = `jest && node
-scripts/run-checks.mjs`, a harness in `test/render.tsx` + `test/setup.ts`, and these test files:
-**user** — `utils/rideTime`, `components/chrome/SegmentedModes`, `screens/CreatePassengerOffer`,
-`screens/OfferDrivers`, `screens/MyOrders`, `screens/PhoneRegistration` (the phone → OTP flow);
-**driver** — `utils/activeOffers`, `components/chrome/SegmentedModes`, `components/geo/GeoSheet`,
-`screens/PassengerOrders`, `screens/OfferWizard`, `screens/MyRides`, `screens/PhoneRegistration`.
-Last measured baselines: user `tsc` 6 · lint 0 / 208 · tokens 1; driver 28 · 0 / 275 · 3.
+**STATE:** T-118 is done and committed (`7526742`); its plan is preserved at `docs/PLAN-T118.md`
+and its **only open item is confirming the first CI run went green on GitHub** — nobody has looked
+yet, and it cannot be checked from the Claude shell (no `gh`, network cert-blocked). Both apps
+have a working Jest setup and a harness. **Test totals now: user 76, driver 63 (139 total, up
+from 80).** This card adds **pure-logic `*.test.ts` files only** — no new dependency, no harness
+change, and so far one runtime file touched (none yet; `date.ts` is step 6).
 
-**▶️ ONLY ONE THING IS LEFT ON THIS CARD:**
-1. 🛑 **Commit, push, and watch the first CI run.** Everything else in steps 0-13 is done and
-   measured. The workflow is written and its YAML validated, but **step 12 stays `[ ]` until a
-   green run appears on GitHub** — a workflow that has never run is not a workflow that works.
-   If it is red, the likely suspects in order: `npm ci` disagreeing with a lockfile; the comma in
-   `api,admin,db/apps/api` as a matrix value; a checker that reads something not in the repo.
-2. Then this card closes. The board's *Now* becomes **T-116** and **T-101**.
+**⚠️ ONE ASSUMPTION TO CONFIRM BEFORE STEP 6:** the owner's "i confirm" was read as approving the
+plan **including** the `date.ts` deletion, on the T-118 precedent that a one-word approval takes
+the recommendations. It was flagged in the reply and not contradicted, but it was never answered
+in so many words. **If in doubt, ask once before deleting.**
 
-**Rules from this card that outlive it** (also in CLAUDE.md §1 and §6):
-- **Run `tsc` as well as `jest` after writing a test file.** Jest strips types without checking
-  them; session 3 found one `tsc` error per app hiding behind a fully green suite.
-- **Never rebaseline upward.** A test file that adds an error or a warning is a defect in the
-  test file. This card corrected three stale numbers by measuring instead of trusting the doc
-  (user lint 216 → 208, checkers 12 → 11 per app, "23 checkers" → 22).
-- **Prove every new test red** by mutating the code, watching exactly that test fail, and
-  reverting with `git checkout`.
-
-**Rules that cost something to learn (do not relearn them):** write every test file with the
-editor tool, never a shell heredoc (the shell mangles backslashes and long heredocs); prove
-every new test red by mutating the CODE, then `git checkout` the file; `jest.mock` a module with
-a `requireActual` spread when it exports pure helpers; press the LAST match when a dialog repeats
-a button's text; a mount-time promise needs one `act` flush after `waitFor` sees the call.
-
-- T-101's plan is preserved verbatim in `docs/PLAN-T101.md`.
-- The board card is **T-118**, top of *Now* in `docs/TODO.md`; T-010 in *Later* points at it;
-  T-114 sits at the top of *Next*.
-
-- T-101's plan is preserved verbatim in `docs/PLAN-T101.md`.
-- The board card is **T-118**, top of *Now* in `docs/TODO.md`; T-010 in *Later* points at it;
-  T-114 sits at the top of *Next*.
-- Copy the user app's `package.json` `jest` block verbatim into the driver app; then step 3.
+**▶️ RESUMING: steps 0-3 are done; start at step 4.** The measurements
+that grounded this plan (so they do not need redoing): user has 4 of 16 screens and ~12 utils
+untested; driver 4 of 23 and ~12; `contactPhone` / `format` / `pendingOtp` / `tokenStore` are
+**byte-identical** across the apps, while `pushEvents` / `errorHandler` / `notificationRouting` /
+`validation` / `date` differ by 3 / 59 / 123 / 219 / 201 lines; `routeForNotification` is
+module-private and reached through `handleNotificationTap`; `date.ts` lines ~97-102 are a verbatim
+unreachable duplicate of ~88-93 and are one of the user app's 6 `tsc` errors.
