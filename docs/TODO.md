@@ -64,11 +64,11 @@
 ## 🔥 Now (working on it)
 
 > 🎨 **T-101 IS THE ACTIVE CARD: the new design system.** The owner drew **33 artboards** in
-> `htmlDesign/` with Claude Design on 2026-08-29. → `docs/PLAN.md`.
+> `htmlDesign/` with Claude Design on 2026-08-29. → `docs/PLAN-T101.md`.
 > 🟢 **2026-08-31 — ITS COLOUR HALF IS COMPLETE IN BOTH APPS (1 803 literals removed) and committed
 > through `c005785`.** 🛑 **Its VISUAL half has not started: tokenized is not rebuilt, and almost
 > nothing has run on a device.** Full detail in `docs/JOURNAL.md` 2026-08-31; the handoff a fresh
-> session should read is the **Resume point** at the bottom of `docs/PLAN.md`.
+> session should read is the **Resume point** at the bottom of `docs/PLAN-T101.md`.
 > 🔴 **CORRECTION TO THE NOTE THAT STOOD HERE SINCE 2026-08-16: it said "*Now* HOLDS TWO CARDS:
 > T-088 and T-100". BOTH HALVES WERE WRONG.** **T-100 was never a card in *Now*** — it has always
 > been in *Later* (search `T-100`), so nothing had to be moved to make room for T-101. And *Now* did
@@ -86,7 +86,7 @@
 
 - [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
-  converts pages one by one, user app first** → `docs/PLAN.md`.
+  converts pages one by one, user app first** → `docs/PLAN-T101.md`.
   ✅ **PLAN APPROVED 2026-08-30. Phase 1 (foundation) complete. Committed through `c005785`.**
   🟢 **2026-09-11 — STEP 16 (`DriverElon`, the driver's offer wizard) IS CLOSED: 16a-16g.** The
   4-step wizard is ONE scrolling form with four sheets; the edit path restores all 34 fields (a real
@@ -662,6 +662,34 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-118 (P1) 🧪 **[OWNER 2026-09-14] AUTOMATED TESTS FOR BOTH APPS — "after any change whole
+  device test is crazy, I think we need automatic test".** → `docs/PLAN.md` (its Resume point is
+  the handoff for a new session).
+  ✅ **APPROVED 2026-09-14 AND STEPS 1-11 OF 13 ARE DONE IN CODE THE SAME DAY. NOT COMMITTED.**
+  Both apps now have Jest (`jest-expo` + React Native Testing Library 13, `react-test-renderer`
+  pinned at the app's React), **`npm test` = Jest + the 23 existing `check-*.mjs`** (≈1 min per
+  app), a render harness (`test/render.tsx`: real navigator + providers, a stubbed signed-in
+  user, extra routes for real navigations, and a trap that FAILS a test on a missing translation
+  key), and **13 test files, ~55 tests, every one proven red by mutating the CODE**: the order
+  form, OfferDrivers, MyOrders and the phone → OTP flow in the user app; GeoSheet's QFY rule (the
+  walk item no checker covered), PassengerOrders, the wizard's 34-field edit round trip, MyRides
+  and the phone/id → OTP flow in the driver app; SegmentedModes and one pure util in each.
+  **All six baselines unchanged** (user 6 / 0·208 / 1 · driver 28 / 0·275 / 3); the user lint
+  baseline in `PLAN.md` was corrected from a stale 216 to the journal's 208.
+  🔴 **A REAL DEFECT FOUND ON FIRST RENDER AND FIXED (one character):** `CheckRow.tsx` drew a
+  hyphen before EVERY check-row label on the order form since 2026-08-02 (`-{label}`; the
+  artboard has none). Only runtime change in the card.
+  ❓ **TWO OWNER QUESTIONS SURFACED BY MEASURING, left as is:** ① `MyOrdersScreen` keeps
+  "cancel request" on an EXPIRED request and "cancel booking" on a FINISHED booking in history
+  (the buttons key off the raw status); ② both apps' "incomplete input" toasts on the auth
+  screens are unreachable — the buttons are disabled first. Also: fixture ids must be numeric
+  strings on the driver's rides (`Number(id)` on the wire).
+  🛑 **LEFT FOR THE NEXT SESSION:** step 11's two owed proofs (the user-app `verifyOtp` swap
+  mutation; the post-step `tsc` / lint re-measure in both apps), **step 12 CI — the owner never
+  answered yes/no**, step 13 docs (CLAUDE.md, CHECKLIST, ARCHITECTURE), boarding ①②, the commit.
+  ⚠️ **Still phone-only, by design:** fonts and weights, layout vs artboard, SMS autofill, push
+  delivery, the native build, Google SSO. **T-010 keeps the API half.** E2E is OUT (no OTP bypass).
+
 - [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
   info/error/warning language responses frontend/backend".**
   ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
@@ -745,54 +773,6 @@
   it means the codebase's first one — that is **T-026A**, not this card. `offerActionLimiter`
   covers the realistic double-tap.
   ❌ No migration. ⚠️ **Needs an API deploy** — the apps talk to `test3.fstu.uz`.
-
-- [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
-  FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
-  ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
-  drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
-  **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
-  🛑 **Device check §8 of the plan, item 2 first** — changing the root must CLEAR both endpoints,
-  and no checker can cover that.
-  🛑 **② IS NOT STARTED** (per-scope completeness: `yaqin` requiring a QFY, the MATCH strip).
-  ✅ **DEVICE-FIXED 2026-09-13, three owner reports:** ① the root/from-to pickers rendered EMPTY
-  (`GeoSheet` answers a missing ancestor with an empty list and no error — the country was never
-  put back into the path); ② after creating an order the app **stayed on the form** (a tab route
-  reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
-  stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
-  reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
-  ✅ ④ **the search tab now follows an edited order** — it is a tab that mounts once and seeded
-  its route once, so an edit never reached it. Fixed through storage + a REVISION
-  (`utils/lastSearch.ts`), because the screen writes that same key itself and a plain re-read on
-  focus would overwrite a search the passenger typed. `check-last-search.mjs`: 11 assertions,
-  red on 6 mutations, both failure directions.
-  ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
-  **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
-  is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.
-  Owner: *"user app user order … there must be different FROM, TO part"*, naming all four boards.
-  ✅ **Measured 2026-09-13, not assumed — and it is SMALLER than it reads.**
-  🟢 **`GeoSheet` ALREADY TAKES `startLevel` + `initialPath`, and was built for this card** — its
-  header says *"that is the whole reason the artboards have four `UserBuyurtma*` files."*
-  🔴 **`LocationCard.tsx:207-208` hardcodes both as literals** and takes neither as a prop, so the
-  capability is wired to nothing. `CreatePassengerOfferScreen.tsx:127` reads `scope` and spends it
-  on the header subtitle — its own comment at line 125 admits that is "the only thing separating
-  the four scopes".
-  **The four boards differ by ENTRY LEVEL and PINNING, nothing else** (all four pickers are
-  byte-identical; `openFrom` is the only line that changes):
-  · `aro` — no root card, opens at **viloyat**
-  · `viloyat` — root card **`Viloyat (Adm1)`**, opens at **tuman**, province pinned
-  · `tuman` — root card **`Tuman (Adm2)`**, opens at **QFY**, province + district pinned
-  · `yaqin` — no root card, opens at **viloyat**
-  ⚠️ **`aro` and `yaqin` are IDENTICAL in sub-step ①** — measured, not an oversight. They diverge
-  only in completeness (`yaqin` requires adm3), which is ②.
-  🔴 **A CONTRADICTION FOUND: the Tuman board accepts an endpoint with NO QFY, but
-  `validateScope(order,'tuman')` matches at adm3 and refuses it.** An order that form accepts, the
-  matcher rejects. ✅ **Owner decided 2026-09-13: the QFY is REQUIRED on Tuman** — the rules module
-  stands and the form tightens beyond the artboard. Enforcement is ②.
-  **SCOPE NOW = ① ONLY** (owner's call): root card + entry levels. ② (per-scope completeness, the
-  MATCH strip) is a follow-up card and half-overlaps T-102's validation.
-  ❌ No migration, no API change — `PassengerOffer` already has and populates all 8 geo id columns.
-  ⚠️ **Fix all four boards together** — `ubexgo-fix-the-class-not-the-instance`, four times in one
-  screen.
 
 > 🤝 **START HERE: `docs/HANDOFF-2026-09-12.md`.** Written at the owner's request and complete
 > on its own — state, the three blockers, the nine card corrections made that day, the two
@@ -1964,6 +1944,57 @@ masofalar'`). **2 of the 6 were on
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+
+- [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
+  FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
+  ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
+  drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
+  **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
+  🛑 **Device check §8 of the plan, item 2 first** — changing the root must CLEAR both endpoints,
+  and no checker can cover that.
+  🛑 **② IS NOT STARTED** (per-scope completeness: `yaqin` requiring a QFY, the MATCH strip).
+  ✅ **DEVICE-FIXED 2026-09-13, three owner reports:** ① the root/from-to pickers rendered EMPTY
+  (`GeoSheet` answers a missing ancestor with an empty list and no error — the country was never
+  put back into the path); ② after creating an order the app **stayed on the form** (a tab route
+  reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
+  stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
+  reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
+  ✅ ④ **the search tab now follows an edited order** — it is a tab that mounts once and seeded
+  its route once, so an edit never reached it. Fixed through storage + a REVISION
+  (`utils/lastSearch.ts`), because the screen writes that same key itself and a plain re-read on
+  focus would overwrite a search the passenger typed. `check-last-search.mjs`: 11 assertions,
+  red on 6 mutations, both failure directions.
+  ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
+  **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
+  is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.
+  Owner: *"user app user order … there must be different FROM, TO part"*, naming all four boards.
+  ✅ **Measured 2026-09-13, not assumed — and it is SMALLER than it reads.**
+  🟢 **`GeoSheet` ALREADY TAKES `startLevel` + `initialPath`, and was built for this card** — its
+  header says *"that is the whole reason the artboards have four `UserBuyurtma*` files."*
+  🔴 **`LocationCard.tsx:207-208` hardcodes both as literals** and takes neither as a prop, so the
+  capability is wired to nothing. `CreatePassengerOfferScreen.tsx:127` reads `scope` and spends it
+  on the header subtitle — its own comment at line 125 admits that is "the only thing separating
+  the four scopes".
+  **The four boards differ by ENTRY LEVEL and PINNING, nothing else** (all four pickers are
+  byte-identical; `openFrom` is the only line that changes):
+  · `aro` — no root card, opens at **viloyat**
+  · `viloyat` — root card **`Viloyat (Adm1)`**, opens at **tuman**, province pinned
+  · `tuman` — root card **`Tuman (Adm2)`**, opens at **QFY**, province + district pinned
+  · `yaqin` — no root card, opens at **viloyat**
+  ⚠️ **`aro` and `yaqin` are IDENTICAL in sub-step ①** — measured, not an oversight. They diverge
+  only in completeness (`yaqin` requires adm3), which is ②.
+  🔴 **A CONTRADICTION FOUND: the Tuman board accepts an endpoint with NO QFY, but
+  `validateScope(order,'tuman')` matches at adm3 and refuses it.** An order that form accepts, the
+  matcher rejects. ✅ **Owner decided 2026-09-13: the QFY is REQUIRED on Tuman** — the rules module
+  stands and the form tightens beyond the artboard. Enforcement is ②.
+  **SCOPE NOW = ① ONLY** (owner's call): root card + entry levels. ② (per-scope completeness, the
+  MATCH strip) is a follow-up card and half-overlaps T-102's validation.
+  ❌ No migration, no API change — `PassengerOffer` already has and populates all 8 geo id columns.
+  ⚠️ **Fix all four boards together** — `ubexgo-fix-the-class-not-the-instance`, four times in one
+  screen.
+  ⏸️ **MOVED *Now* → *Next* 2026-09-14** to make room for T-118 — the owner approved that plan
+  and the recommendation that this card, the only one in *Now* with nothing started, is the one
+  that waits. Nothing was lost: resume from `docs/PLAN-T114.md`, sub-step ①.
 
 - [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
   scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
@@ -3827,6 +3858,10 @@ masofalar'`). **2 of the 6 were on
   `OfferPassengerService` into `utils/`, then port today's throwaway suites into permanent ones.
   ❌ No runtime change: tests do not alter app behaviour. ⚠️ CLAUDE.md updated — it claimed no tests
   existed.
+  🔗 **2026-09-14 — the APP half of this idea is now its own P1 card, T-118 in *Now*** (Jest in
+  both RN apps, a render harness, screen behaviour tests). **This card keeps the API half only:**
+  the service extraction and the DB-backed flow tests. Server-side `*.test.ts` files grew to 8
+  meanwhile (T-102, T-115, T-116 each added one beside their utils).
 
 ## ✅ Done (newest on top)
 

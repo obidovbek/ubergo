@@ -59,7 +59,7 @@ export const CheckRow: React.FC<CheckRowProps> = ({
         disabled && styles.labelDisabled,
       ]}
     >
-      -{label}
+      {label}
     </Text>
   </TouchableOpacity>
 );

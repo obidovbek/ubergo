@@ -5,6 +5,87 @@
 
 ---
 
+## 2026-09-14 (2) — T-118: both apps get a test runner, and the tests find a bug on first render
+
+- **Task:** T-118, boarded and planned in the morning from the owner's one line — *"after any
+  change whole device test is crazy, I think we need automatic test"* — approved with one word,
+  then steps 1-11 of 13 built in the same session. → `docs/PLAN.md` (T-101's plan moved to
+  `PLAN-T101.md`; T-114 moved *Now* → *Next* to make room, the only unstarted card there).
+
+### What exists now (nothing committed — the owner stopped the session to continue in a new one)
+
+- **Runner in both apps:** `jest-expo ~54.0.18`, RNTL `13.3.3`, Jest `29.7`, `@jest/globals`
+  (explicit imports, no tsconfig change — both apps have `"types": []`), and `react-test-renderer`
+  **pinned exactly at 19.1.0**: RNTL's peer on it made npm reach for 19.3.0, which wants React
+  19.3 on an app at 19.1.0; npm then saved the pin with a caret, which would have drifted back
+  into the conflict on the next fresh install. No `babel.config.js` was needed.
+- **`npm test` = `jest && node scripts/run-checks.mjs`** — the 23 existing checkers are NOT ported
+  (they work and are proven); they run after Jest, one process each, stop at the first red.
+  ≈54 s user / 44 s driver, the checkers being most of it.
+- **The harness, `test/render.tsx` (duplicated per app on purpose):** real `NavigationContainer`
+  + a one-screen native stack (`useNavigation` / `useRoute` are real; `params` become
+  `route.params`; extra `screens` can be registered so a `navigate()` is a real screen change),
+  `SafeAreaProvider` with fixed metrics, `ConfirmDialogProvider`, the user app's real
+  `LanguageProvider`, and a STUBBED `AuthContext` (`buildAuth()`: a signed-in test user and
+  `jest.fn()` methods) — the real provider validates tokens and registers push tokens on mount.
+  `test/setup.ts` mocks the native modules once (async-storage's official mock, Firebase
+  messaging/app, Google sign-in, OTP retriever, `useFonts`) and **turns the translation hook's
+  `console.warn` into a failing test** — a rendered screen with a missing key goes red.
+- **13 test files, ~55 tests, every file proven red by mutating the CODE and reverted:** user —
+  `rideTime`, `SegmentedModes`, `CreatePassengerOfferScreen`, `OfferDriversScreen`,
+  `MyOrdersScreen`, `PhoneRegistrationScreen` (phone → OTP); driver — `activeOffers`,
+  `SegmentedModes`, `GeoSheet` (walk item 3: a second district CLEARS the QFYs — the one no
+  checker covered), `PassengerOrdersScreen`, `OfferWizardScreen` (the 34-field edit round trip,
+  with pg's DECIMAL strings, a real 0 and a real false), `MyRidesScreen`, `PhoneRegistrationScreen`.
+
+### 🔴 What the tests found
+
+1. **A real defect, fixed (one character):** `user-app-standalone/components/passengerOffer/
+   CheckRow.tsx` rendered `-{label}` — a literal hyphen before EVERY check-row label on the order
+   form ("-Butun salon", "-Naqd"…) since the owner's `49c0c5b` of 2026-08-02, through two rewrites.
+   `UserBuyurtma.dc.html` draws no dash. Step 5's test hit it on first render. *This is the class
+   of thing the device walk was for.*
+2. **The user lint baseline written in `PLAN.md` was stale** — 216, from the 09-11 resume point;
+   the journal had recorded 0/208 four times since 09-12. Proven not to be T-118's doing by
+   `git stash`. Corrected to 208. *A stale baseline reads a real 8-warning regression as "at
+   baseline".*
+3. **Two owner questions, left as they are and pinned with comments:** `MyOrdersScreen`'s cancel
+   buttons key off the RAW status — an EXPIRED open request keeps "cancel request" in history, a
+   FINISHED confirmed booking keeps "cancel booking"; and both apps' auth screens have
+   "incomplete input" toasts that cannot be reached, because the buttons are disabled first.
+4. **Card text corrected by measuring before writing:** step 5's "two ✕ buttons / default export /
+   255 on the comment" were all stale (8c rebuilt the card onto `GeoSheet`; the export is named;
+   255 is on the landmark); step 8's "34-field fixture in the checker" did not exist; the wizard
+   REOPENS the sheet at the country level so a stale QFY cannot survive a reopen.
+
+### Lessons for whoever writes the next test (also in `PLAN.md`'s Resume point)
+
+- `jest.mock` a module with a `jest.requireActual` spread when it also exports PURE helpers
+  (`passengerNameOf`, `driverNameOf`, `driverPhoneOf`) — an automock blanks them and the
+  assertions go silent. `clearMocks: true` is in both configs: without it a mock's call history
+  leaks between tests (two false reds in step 4).
+- A dialog repeats the card's button text — press the LAST match. A mount-time promise needs one
+  `act` flush after `waitFor` sees the call. The harness is `async` for the same reason.
+- Ride ids are numeric STRINGS on the wire (`Number(id)`); a UUID fixture sends `NaN` silently.
+- The shell mangles long heredocs as well as backslashes — every file here went through the
+  editor tool; the board (CRLF) was spliced with a one-line PowerShell array edit.
+
+**Verification.** Both suites green at the last run; baselines re-measured after every step:
+user `tsc` **6** · lint **0 / 208** · tokens **1**; driver **28** · **0 / 275** · **3**.
+
+- **Problems / left open:** 🛑 step 11's two owed proofs (the user-app `verifyOtp` swap mutation;
+  the post-step `tsc` / lint re-measure in both apps — the driver run was interrupted); **step 12
+  (CI) — the owner never answered yes/no**; step 13 (CLAUDE.md still says the apps have no tests;
+  CHECKLIST §0; ARCHITECTURE); boarding the two questions above; **the commit**.
+- **Next:** a new session starts at `docs/PLAN.md` → Resume point → "DO THIS FIRST".
+- **Commit (proposed, not made):** `T-118 steps 1-11: Jest in both apps, render harness, 13
+  screen/util test suites; CheckRow stray hyphen fixed` — everything under `user-app-standalone/`
+  and `driver-app-standalone/` (`package.json`, `package-lock.json`, `test/`, `scripts/run-checks.mjs`,
+  the `*.test.ts(x)` files, `CheckRow.tsx`) plus `docs/PLAN.md`, `docs/PLAN-T101.md`,
+  `docs/TODO.md`, `docs/JOURNAL.md`.
+
+---
+
 ## 2026-09-14 — T-102c-3: the driver can name a QFY, and the card's real hole turned up while measuring
 
 - **Task:** T-102c-3, the last sub-step of T-102c. Owner picked it directly. → `docs/PLAN-T102c3.md`.
