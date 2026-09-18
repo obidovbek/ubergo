@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-09-18 — T-121 CLOSED: the owed proof for step 8, and both apps at 530 tests
+
+- **The session opened on a contradiction.** `docs/PLAN.md` said *"next is step 8"*; the working
+  tree already held **all ten of step 8's test files, green** — written on 09-15 and abandoned
+  mid-ritual, with no tick, no session note and **not one mutation recorded**. *(Nothing was lost;
+  the files are good. But a green test that has never been red proves nothing, so they were not
+  yet work that counted.)*
+- **All 18 mutations were run before closing the card.** 17 red sets predicted exactly, one
+  under-predicted, none over-predicted. `contactPhone` (re-adding the T-056 `canOpenURL` gate —
+  the regression the file exists to prevent), `format` (the `Math.round` that keeps pg's
+  `"5000.00"` from rendering as `5 000.00`), `pendingOtp` (the 30-minute TTL, and that a stale
+  record is **deleted** rather than ignored), `pushEvents` (**`otp` added to the ride-data list** —
+  five tests stand on that one rule) and `validation` in both apps, which are two different
+  modules, not twins.
+- 🔴 **A new edge on the card's central rule.** Steps 3 and 5 learned that **fewer** reds than
+  predicted is a finding about the tests (a fake-green assertion). Today `pushEvents` gave **one
+  more** than predicted — a belt-and-braces test proving the global `otp` filter runs *before* the
+  per-listener one. **More than predicted is a finding about the prediction; fewer is a finding
+  about the tests.** Only the second kind is a defect; only predicting first tells them apart.
+- **Steps 4-7 (2026-09-15, three sessions, never journalled) in one line each:**
+  `notificationRouting` in the driver app (25 tests, a routing table sharing **not one push type**
+  with the user app's); `errorHandler` in both (50 + 57, and it found **T-123**); `date` in the
+  user app (29, plus the **dead-block deletion that took `tsc` 6 → 5**); `date` in the driver app
+  (33, and **five of its eight exports turned out to be dead code**).
+- **Closing measurements — all six baselines unchanged:** user `tsc` **5** / lint **0 · 208** /
+  colours **1** · driver **28** / **0 · 275** / **3**. **Suites green: user 252 Jest + 11 checkers,
+  driver 278 + 11, API 357.** The ten new files add **no `tsc` error and no lint warning** —
+  measured, because that is exactly the defect the previous three sessions each found in their own
+  test files.
+- **Boarded, not fixed: T-124 (P3)** — three dead util halves that would misbehave if wired up:
+  `format.ts`'s US-shaped half (`formatPhoneNumber` returns an Uzbek number **unchanged**), the
+  user app's `validation.ts` password/URL predicates (**hardcoded English** messages), and
+  `isValidPhone` requiring **≥ 10 digits in one app and ≥ 9 in the other**. All three are pinned
+  from both sides in the tests, so the cleanup has its spec already.
+- **Docs updated:** `CLAUDE.md` §1 and `ARCHITECTURE.md`'s Tests & CI row (both still carried
+  T-118's "34 + 46", two cards stale); T-121 moved to *Done*; T-124 boarded.
+- **Problems / left open:** **T-118's CI run is still unconfirmed** — nobody has opened the GitHub
+  Actions tab, and it cannot be checked from the Claude shell (no `gh`, network cert-blocked).
+  **T-123** (the OTP timeout) and **T-124** are boarded and unfixed by choice. **Nothing of T-121
+  is committed beyond `d9b7dac`** (steps 1-3) — a commit for steps 4-9 is proposed and waiting.
+- **Next:** the owner's pick. *Now* holds **T-101** (design system, step 18) and **T-088**'s one
+  code step; the obvious small follow-ups are T-123, then the admin panel, which still has no test
+  runner at all.
+
+---
+
 ## 2026-09-14 (4) — T-118 committed and pushed; T-121 opened and its first three steps done
 
 - **T-118 is CLOSED and committed as `7526742`**, then pushed. 🛑 **Its one remaining item is not

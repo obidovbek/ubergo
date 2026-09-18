@@ -93,15 +93,6 @@ export const formatDate = (
   }
   
   // For other languages, use locale formatting
-  // For Uzbek, use manual month mapping for better reliability
-  if (language === 'uz') {
-    const month = formatMonth(dateObj, 'uz', 'short');
-    const day = dateObj.getDate();
-    const year = dateObj.getFullYear();
-    return `${day} ${month}, ${year}`;
-  }
-  
-  // For other languages, use locale formatting
   return dateObj.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',

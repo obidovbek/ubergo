@@ -662,56 +662,6 @@
 
 ## 🔥 Now (working on it)
 
-- [ ] T-121 (P1) 🧪 **[OWNER 2026-09-14, "Is there continue of writing test?"] JEST TESTS FOR THE
-  UNTESTED `utils/` IN BOTH APPS — the four byte-identical twins and the four that drifted.**
-  → `docs/PLAN.md` (its Resume point is the handoff for a new session).
-  ✅ **APPROVED AND STEPS 1-3 OF 9 DONE 2026-09-14 (4). NOT COMMITTED.** Three test files, **59
-  tests, all proven red**, taking both apps from **80 to 139 tests**: `tokenStore` in BOTH apps
-  (17 each) and `notificationRouting` in the user app (25).
-  🔴 **`notificationRouting`'s test is the first thing that has ever verified T-047's fix** — the
-  parked-tap logic for a killed app. It does not close T-047 (that still needs a `logcat` line
-  from a real device) but the decision logic is pinned, including the exact
-  discard-instead-of-re-park regression, proven by restoring the bug and watching three tests go
-  red.
-  🔴 **LESSON THAT COST TWO FALSE GREENS:** a mock whose implementation **throws still records the
-  call**, so `toHaveBeenLastCalledWith` cannot tell "delivered" from "attempted and dropped".
-  **Assert the call COUNT on anything retry-shaped.** Caught only because the red set was
-  predicted before each mutation ran.
-  🔴 **`core.autocrlf=true`: `git checkout` rewrites line endings**, so a working-tree `diff`
-  reports byte-identical twins as wholly different. **Compare twins with `git show HEAD:<path>`.**
-  **Baselines unchanged throughout:** user `tsc` 6 / lint 0·208 · driver 28 / 0·275; both suites
-  and all 22 checkers green.
-  ⚠️ **STEPS 4-9 REMAIN:** 4 `notificationRouting` driver (**different routing table — read it**),
-  5 `errorHandler` ×2, 6-7 `date` ×2 **including the dead-block deletion**, 8 tier 2
-  (`contactPhone`, `format`, `pendingOtp`, `validation`), 9 close.
-  ❓ **ONE ASSUMPTION TO CONFIRM:** *"i confirm"* was read as approving the step-6 `date.ts`
-  deletion too (T-118 precedent: a one-word approval takes the recommendations). Flagged to the
-  owner and not contradicted, but never answered in words. **Ask once before deleting.**
-  **It takes the *Now* slot T-118 vacated; T-101 is the other active card.**
-  **Why, measured not guessed:** T-118 covered "the screens that keep needing a phone" and left
-  **~12 utils per app with no coverage of any kind** — no Jest test and no `check-*.mjs` checker.
-  These are the cheapest tests in the project (pure logic, no harness, no device) and **three sit
-  on open or parked bugs:**
-  ① **`tokenStore`** — the T-038 refresh-token path; `ARCHITECTURE.md` still says *"not yet
-  confirmed working on a device"*, and before T-038 every session died after 15 minutes.
-  ② **`notificationRouting`** — **T-047 (killed-app tap) is PARKED.** The code already carries a
-  fix (a bounded re-park instead of a discard) with a long comment about the regression it caused.
-  **Nothing has ever verified it.** The test is written as that regression guard.
-  ③ **`date`** — 🔴 **contains a CONFIRMED dead block:** lines ~97-102 of the user app's
-  `utils/date.ts` are a verbatim copy of ~88-93, comment and all, unreachable because the first
-  block returns. It is **one of the user app's 6 live `tsc` errors** (TS2367, comparing
-  `'en' | 'ru'` against `'uz'`). ❓ **Step 0 asks the owner** whether to delete it — doing so takes
-  the user `tsc` baseline **6 → 5**, the one kind of baseline move that is allowed.
-  **Scope:** tier 1 `tokenStore` · `notificationRouting` · `errorHandler` · `date`; tier 2
-  `contactPhone` · `format` · `pendingOtp` · `validation`. Each proven red by a code mutation.
-  **No new dependency, no harness change, no screen touched** — T-118 built everything needed.
-  ⚠️ **Twins are written twice on purpose** (the project duplicates shared code), but the copy is
-  re-run and re-proven every time: `validation` and `date` already differ by **219 and 201 lines**.
-  🛑 **If a test proves a real defect, the card STOPS, records it and boards it** — it does not
-  fix it, except at `CheckRow.tsx` size.
-  🛑 **OUT:** more screen tests (the slice the owner did not pick), the admin panel (no runner at
-  all — its own card), the API's server-flow tests (**T-010**), de-duplicating the board (**T-122**).
-
 - [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
   info/error/warning language responses frontend/backend".**
   ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
@@ -2584,6 +2534,48 @@ masofalar'`). **2 of the 6 were on
 
 ## 💡 Later / ideas (parking lot)
 
+- [ ] T-124 (P3) 🧹 **THREE DEAD UTIL HALVES THAT WOULD MISBEHAVE THE MOMENT ANYONE WIRED THEM UP
+  — delete them or fix them, but do not leave them as a trap.** Found 2026-09-18 by T-121 step 8,
+  **recorded not fixed** (T-121's rule). All three are unreachable today, so **nothing is broken
+  for a user right now** — the cost is that each looks like the helper a future screen wants.
+  ① **`utils/format.ts`'s US half, both apps** — `formatPhoneNumber` formats 10-digit and
+  `1`-prefixed 11-digit **US** numbers and returns a 12-digit `+998…` number **completely
+  unchanged**; `formatNumber`, `truncate`, `capitalize`, `toTitleCase`, `formatDistance`,
+  `formatFileSize` and `formatPercentage` have no callers at all. Only `formatNumberWithSpaces`
+  (every price in both apps) and `formatCurrency` (one call site each) are live. ⚠️ `contactPhone.ts`
+  exists **because** `formatPhoneNumber` is wrong for Uzbek numbers — its header says so.
+  ② **`user-app-standalone/utils/validation.ts`'s password/URL/length predicates** — no callers,
+  and `isValidPassword`'s messages are **hardcoded English sentences, not translation keys**, so
+  wiring it into the Uzbek UI would show English.
+  ③ **`isValidPhone` disagrees between the apps: ≥ 10 digits in the user app, ≥ 9 in the driver
+  app** — a 9-digit Uzbek national number passes one and fails the other. Unreachable today (the
+  user app never imports it; in the driver app it is reachable only through a `'phone'` rule, and
+  **no screen in either app uses one** — counted: `required` 47, `minLength` 25, `custom` 16,
+  `date` 4, `in` 2, `email` 2).
+  **All three are pinned from both sides in `utils/format.test.ts` and `utils/validation.test.ts`,
+  each `describe` labelled LIVE or DEAD**, so the cleanup already has its spec and a failing test
+  will read correctly. ⚠️ **Deleting exported code needs the owner's yes** (rule 4).
+
+- [ ] T-123 (P2) 🐛 **A TIMED-OUT OTP SEND IS NOT RECOGNISED AS A TIMEOUT — IN BOTH APPS.**
+  Found 2026-09-15 by T-121 step 5's `errorHandler` tests; **recorded, not fixed** (T-121's rule
+  is to board what it finds). **The mismatch is one substring:** `handleBackendError` and
+  `isNetworkError` both test `error.message?.includes('timeout')`, and every API module throws
+  *"Request timeout. Please try again."* — **except `api/auth.ts`, which throws "Request timed
+  out. Please check your internet connection."** (`user-app-standalone/api/auth.ts:107` and
+  `driver-app-standalone/api/auth.ts:126`). *"timed out"* does not contain *"timeout"*.
+  **What the user sees:** the network branch never reads `error.message`, so a dropped connection
+  on the OTP send — the first screen in the app, and the one every new install goes through —
+  shows the caller's generic default (`phoneRegistration.errorOtpSend`, "could not send the
+  code") instead of telling them they are offline. The thrown sentence is discarded, and
+  `isNetworkError` answers `false` for what is unambiguously a network failure.
+  **The job:** decide where the fix belongs — match both spellings in `errorHandler` (safer, one
+  file, catches future throwers) or re-word the two throws (narrower). Then flip the two tests
+  that currently pin the wrong behaviour on purpose: `📌 DEFECT, pinned as-is` in
+  `utils/errorHandler.test.ts` in **both** apps. They are written to go red when this is fixed —
+  **that is deliberate; do not delete them.**
+  ⚠️ **Both apps, same line.** This is the project's most-repeated defect class (fixing the one
+  app the report came from and walking past its twin), so fix them together.
+
 - [ ] T-122 (P2) 🧹 **THIS BOARD CONTRADICTS ITSELF — `docs/TODO.md` has TWO `## 🔥 Now` sections
   and 22 duplicated cards.** Measured 2026-09-14 while boarding T-121, not fixed then (rule 1).
   **The numbers:** two `## 🔥 Now (working on it)` headers (around lines 64 and 663) whose
@@ -3934,6 +3926,46 @@ masofalar'`). **2 of the 6 were on
   `rejected`) is the next thing this card should do.
 
 ## ✅ Done (newest on top)
+
+- [x] T-121 (P1) 🧪 **[OWNER 2026-09-14, "Is there continue of writing test?"] JEST TESTS FOR THE
+  UNTESTED `utils/` IN BOTH APPS — DONE 2026-09-18, all 9 steps.** → `docs/PLAN.md`.
+  **Thirteen test files, 353 tests, every single one proven able to fail** by mutating the code and
+  reverting. **Both apps went 80 → 530 tests** (user 155 → 252, driver 178 → 278; the API is
+  untouched at 357). `tokenStore` (17 each), `notificationRouting` (25 each), `errorHandler`
+  (user 50 / driver 57), `date` (29 / 33), `contactPhone` (15), `format` (16), `pendingOtp` (15),
+  `pushEvents` (23), `validation` (28 / 31). **37 mutations across the card, every red set
+  predicted before it was run.**
+  🟢 **THE USER `tsc` BASELINE MOVED DOWN, 6 → 5** (step 6) — the only baseline move this card
+  allowed and its only runtime change: `user-app-standalone/utils/date.ts` held a **verbatim
+  unreachable duplicate** of its Uzbek short-date block, which *was* the 6th error (TS2367 — the
+  compiler had already narrowed `language` past `'uz'`). 9 lines deleted, 29 tests written
+  alongside proving the deletion changed nothing. **5 is the floor. Never upward.**
+  🔴 **STEP 8 WAS WRITTEN ON 09-15 AND LEFT UNPROVEN — ten green test files, no tick, no session
+  note, no mutation recorded.** A fresh session found the plan's Resume point contradicting the
+  working tree and ran all 18 mutations before closing the card. **A test that has never been red
+  proves nothing**, and a plan file is only worth what was measured against it.
+  🔴 **T-123 boarded from step 5, recorded not fixed:** a timed-out OTP send is not recognised as a
+  timeout **in both apps** — `api/auth.ts` throws *"Request timed **out**"* where the substring
+  match expects *"timeout"*. **Two tests pin the wrong-but-real behaviour on purpose and go red
+  when it is fixed** — flip them then, do not delete them.
+  🔴 **T-124 boarded from step 8, recorded not fixed:** three dead util halves that would misbehave
+  the moment anyone wired them up.
+  🔴 **`notificationRouting`'s test is the first thing that has ever verified T-047's fix** — the
+  parked-tap logic for a killed app. It does not close T-047 (that still needs a `logcat` line from
+  a real device), but the decision logic is pinned, including the exact discard-instead-of-re-park
+  regression, proven by restoring the bug and watching the T-047 block go red.
+  🔴 **THE THREE LESSONS THAT COST REAL TIME:** ① a mock whose implementation **throws still
+  records the call**, so `toHaveBeenLastCalledWith` cannot tell "delivered" from "attempted and
+  dropped" — **assert the call COUNT** on anything retry-shaped. ② **`toEqual` ignores `undefined`
+  properties** — use `toStrictEqual`. ③ **`core.autocrlf=true`: `git checkout` rewrites line
+  endings**, so compare twins with `git show HEAD:<path>` and revert mutations from a scratchpad
+  copy. **Fewer reds than predicted is a finding about the tests; more is a finding about the
+  prediction** — both only visible because the red set was predicted first.
+  ⚠️ **Three sessions running, the post-step `tsc` found errors in the new test files that a fully
+  green Jest run hid** (`it.each([...] as const)`, and a concise `beforeEach` body returning
+  `jest.useFakeTimers()`). Fixed in the test files, never rebaselined.
+  **All six baselines re-measured at close and holding:** user `tsc` 5 / lint 0·208 / colours 1 ·
+  driver 28 / 0·275 / 3. Both suites and all 22 checkers green.
 
 - [x] T-118 (P1) 🧪 **AUTOMATED TESTS FOR BOTH RN APPS — DONE 2026-09-14, all 13 steps.**
   → `docs/PLAN.md`. The owner's line was *"after any change whole device test is crazy, I think
