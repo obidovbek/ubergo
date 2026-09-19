@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-09-19 (3) — T-088 committed; T-115 parked; T-116: the apps speak the user's language on failure
+
+- **T-088 committed as `db8e17d`.** **T-115 turned out to be code-complete** — its status line said
+  "the counter UI is not", its own body and commit `0d8635c` said both counters were done; T-122 had
+  sorted it into *Next* on that stale line. → *Parked* (API deploy + device walk).
+- **T-116 approved as option A** — translate every message a user can see; the rest stays English
+  by a written rule. The card said ~37 English messages were left; **there were 131**, and **7 a
+  user can hit** once every one was traced to a screen (step 1). Keyed in uz/ru/en; the Uzbek and
+  Russian reuse the apps' own words (the RegisterFirst title, the salon-price labels).
+- 🔴 **The app side held four live defects the card never mentioned — 11 of the apps' "accepted"
+  `tsc` errors:** both `getErrorMessage`s leaked the runtime's English and 5xx bodies (while
+  `handleBackendError` knew better — the T-123 class again, now one shared rule per app); **the
+  driver's notification toasts had never once shown** (`showToast` is an object; the screen called
+  it); its timestamps read *"{count} daqiqa oldin"*; and a screen passed a string as the translator.
+  **Baselines lowered: user `tsc` 5 → 3, driver 28 → 19.** *A baseline is a list of things someone
+  decided not to look at.*
+- 🔴 **My own fix created a crash path** (that string-as-translator screen would have thrown on every
+  dropped connection once `getErrorMessage` began calling its translator) — **caught by the step-5
+  re-measure**, fixed, pinned by a test that goes red with the string restored.
+- **Guards so it cannot regrow:** the API ratchet `unkeyedErrors.test.ts` (107 English 4xx, may only
+  fall) and `check-raw-error-toasts.mjs` in each app (no toast shows a raw `.message`). A parity
+  test runs every status 400-599 through both error readers.
+- **Verification:** ~30 mutations, every red set predicted. **API 363 · user 273 + 12 · driver
+  295 + 12**; `tsc` 281 / 3 / 19; lint 0 / 230 · 208 · 275.
+- **Problems / left open:** **needs the API deploy and both rebuilds** (`CHECKLIST.md` §10). **T-126**
+  boarded — the driver app hardcodes Uzbek in 40 toasts, and its photo upload matches the server's
+  English text (so the 4 upload messages stay English until that is fixed). `NotificationContext`'s
+  first load never toasts a failure (a stale `loading`) — seen, not changed. Owner: read the 3 new
+  server strings (PLAN resume point).
+- **Next:** the owner's pick — top of *Next* is **T-114**; **T-126** follows naturally from this card.
+
+---
+
 ## 2026-09-19 (2) — T-122 committed; T-088's last code: don't offer ChangePassword, and a 401
 
 - **T-122 committed as `636ba45`** — after catching one pointer it had broken (T-088's card said its

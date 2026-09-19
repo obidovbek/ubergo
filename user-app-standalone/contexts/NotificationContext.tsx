@@ -4,6 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import * as NotificationsAPI from '../api/notifications';
 import { setupForegroundNotificationHandler } from '../services/PushService';
 import { showToast } from '../utils/toast';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export interface Notification {
     id: string;
@@ -74,7 +75,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             console.error('Failed to load notifications:', error);
             // Only show toast on manual refresh or initial load, not background updates
             if (isRefresh || loading) {
-                showToast.error(t('notifications.loadError'), error.message || t('notifications.loadErrorDescription'));
+                // T-116: never the raw `error.message` — that is "Network request failed" in
+                // English, or a 5xx's internals. `getErrorMessage` names both, in the user's language.
+                showToast.error(t('notifications.loadError'), getErrorMessage(error, t, 'notifications.loadErrorDescription'));
             }
         } finally {
             setLoading(false);
@@ -123,7 +126,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (error: any) {
             console.error('Failed to mark notification as read:', error);
-            showToast.error(t('notifications.markReadError'), error.message);
+            showToast.error(t('notifications.markReadError'), getErrorMessage(error, t));
             throw error;
         }
     };
@@ -138,7 +141,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             showToast.success(t('notifications.allMarkedRead'));
         } catch (error: any) {
             console.error('Failed to mark all as read:', error);
-            showToast.error(t('notifications.markAllReadError'), error.message);
+            showToast.error(t('notifications.markAllReadError'), getErrorMessage(error, t));
             throw error;
         }
     };
@@ -157,7 +160,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             showToast.success(t('notifications.deleted'));
         } catch (error: any) {
             console.error('Failed to delete notification:', error);
-            showToast.error(t('notifications.deleteError'), error.message);
+            showToast.error(t('notifications.deleteError'), getErrorMessage(error, t));
             throw error;
         }
     };

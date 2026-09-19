@@ -323,9 +323,64 @@
 > apps. ❌ No migration in any of the eight. ⚠️ **T-046 still needs its own migration**, between the
 > deploy and the rebuilds.
 
+- [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
+  Owner: *"user or driver have possibility max two active offers"*.
+  ✅ **CODE-COMPLETE 2026-09-13 — server enforcement AND both counters (committed `0d8635c`).**
+  ⏸️ **PARKED 2026-09-19:** this line said *"the counter UI is not"* while the card below said both
+  were done — T-122 sorted it into *Next* on that stale line. Measured: both `ActiveLimitRow`s, both
+  `check-active-offers.mjs` and the `MenuScreen` guard are on disk and committed. **What waits: an
+  API deploy and a device walk.** The concurrency hole stays **T-026A**'s.
+  🟢 **The number was already drawn**: `DriverMyOrder.dc.html` carries `MAX_ELON = 2`, a
+  `Faol e'lon: n / 2` chip and the note *"Limit to'ldi — yangi e'lon berish uchun reysni
+  yakunlang yoki bekor qiling."* **T-110 ⑥ had logged that nothing enforced it** — *"a ceiling
+  the server does not enforce is decoration that lies."* This is that card's server half.
+  🔴 **"ACTIVE" IS TWO CONDITIONS, and the second is the one that is easy to miss:**
+  ① a live STATUS — driver `published`; passenger `published` **or `driver_found`** (a matched
+  order has not travelled yet, so it still occupies a slot). The two lists are deliberately
+  separate: `driver_found` does not exist on the driver side.
+  ② **a departure still AHEAD.** The search already hides `start_at < now`, so a past
+  `published` row is invisible to everyone; counting it would lock a driver out over rows
+  nobody can see, for ever, since nothing ages a row out of `published`.
+  🔴 **ENFORCED ON CREATE *AND* RE-PUBLISH.** Create-only is trivially bypassable: fill both
+  slots, archive one, create a third, re-publish the archived one → three.
+  ⚠️ **NEVER on update** — editing a live offer creates nothing, and refusing an edit because
+  two offers exist would strand someone fixing a typo.
+  ✅ `src/utils/activeOffers.ts` + **21 tests (API 284 → 305), red on 8 mutations**; a 9th
+  mutation proved a null-guard branch was DEAD CODE and it was removed rather than left
+  untestable.
+  ✅ **409 with a structured `data.code`**, not a bare English 400 — both apps' `getErrorMessage`
+  now prefers a translated `errors.codes.*` over the server's English sentence, falling through
+  when the app has never heard the code. Keys in **uz · ru · en × both apps**, Uzbek wording
+  taken verbatim from the artboard.
+  ✅ **DRIVER COUNTER UI DONE 2026-09-13** — `ActiveLimitRow` on `MyRidesScreen`, exactly where
+  `DriverMyOrder` draws it: the `Faol e'lon: n / 2` chip (grey → `dangerTint` when full) and the
+  artboard's own note, verbatim. The `+` button dims at the limit and, when tapped, **says why
+  rather than doing nothing** — a dead control is the other half of the same complaint.
+  ✅ **`check-active-offers.mjs` — 16 assertions, red on 6 mutations, INCLUDING TWO CROSS-PROJECT
+  DRIFT CASES**: it reads the API's `activeOffers.ts` and the artboard's `MAX_ELON` and fails if
+  either stops matching the app. The count is a second implementation of a server rule, which is
+  the classic way a UI starts lying; this is what stops that being silent.
+  ✅ **PASSENGER COUNTER DONE 2026-09-13 — the twin, done deliberately.** `ActiveLimitRow` on
+  `MyOrdersScreen`, its own `utils/activeOffers.ts` (passenger statuses: `published` **and**
+  `driver_found`), and `check-active-offers.mjs` with the same API-parity assertions —
+  **17 assertions, red on 5 mutations including 2 cross-project.**
+  🔴 **THE GUARD WENT WHERE ORDERS ACTUALLY START, NOT WHERE THE BUTTON WAS OBVIOUS.** The user
+  app's only visible create button is the EMPTY-STATE CTA; real orders begin on the home
+  carousel. So `MenuScreen` now refuses through one `openOrderForm()` used by **both** the CTA
+  **and** the recent-route chips — two buttons doing one thing, and guarding only the obvious
+  one is how the other becomes the way round the rule. `useHomeOrders` already loaded the
+  orders, so the count cost no extra request.
+  ⚠️ **No artboard draws the passenger counter** (only `DriverMyOrder` does), so the measurements
+  and wording are the driver's, carried across deliberately rather than invented.
+  🛑 **A CONCURRENCY HOLE IS OPEN AND NOT PAPERED OVER:** two requests landing together can both
+  read 1 and both insert. These services use **no transactions at all** (measured), so closing
+  it means the codebase's first one — that is **T-026A**, not this card. `offerActionLimiter`
+  covers the realistic double-tap.
+  ❌ No migration. ⚠️ **Needs an API deploy** — the apps talk to `test3.fstu.uz`.
+
 - [ ] T-088 (P1) 💳 **CODE-COMPLETE 2026-09-19 — ALL FIVE METHODS WE OFFER BUILT, THE MONEY PATH
   VERIFIED AGAINST THE REAL test3 DATABASE, `ChangePassword` DELIBERATELY NOT OFFERED.**
-  → `docs/PLAN.md` (2026-09-19) · `docs/PLAN-T088.md` (2026-08-16).
+  → `docs/PLAN-T088-finish.md` (2026-09-19) · `docs/PLAN-T088.md` (2026-08-16).
   ✅ **2026-09-19 — the last code closed, after re-reading the originals:** `ChangePassword` is
   **optional** (§2.1, §3.6), and Paynet rotates on first connect only *if* we offer it. **Owner: do
   not offer it** — it answers `603`, the password comes by a secure channel into env, and nothing
@@ -1231,90 +1286,6 @@ masofalar'`). **2 of the 6 were on
 
 ## 📋 Next (ready to start)
 
-- [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
-  Owner: *"user or driver have possibility max two active offers"*.
-  ✅ **SERVER ENFORCEMENT DONE 2026-09-13. The counter UI is not (see below).**
-  🟢 **The number was already drawn**: `DriverMyOrder.dc.html` carries `MAX_ELON = 2`, a
-  `Faol e'lon: n / 2` chip and the note *"Limit to'ldi — yangi e'lon berish uchun reysni
-  yakunlang yoki bekor qiling."* **T-110 ⑥ had logged that nothing enforced it** — *"a ceiling
-  the server does not enforce is decoration that lies."* This is that card's server half.
-  🔴 **"ACTIVE" IS TWO CONDITIONS, and the second is the one that is easy to miss:**
-  ① a live STATUS — driver `published`; passenger `published` **or `driver_found`** (a matched
-  order has not travelled yet, so it still occupies a slot). The two lists are deliberately
-  separate: `driver_found` does not exist on the driver side.
-  ② **a departure still AHEAD.** The search already hides `start_at < now`, so a past
-  `published` row is invisible to everyone; counting it would lock a driver out over rows
-  nobody can see, for ever, since nothing ages a row out of `published`.
-  🔴 **ENFORCED ON CREATE *AND* RE-PUBLISH.** Create-only is trivially bypassable: fill both
-  slots, archive one, create a third, re-publish the archived one → three.
-  ⚠️ **NEVER on update** — editing a live offer creates nothing, and refusing an edit because
-  two offers exist would strand someone fixing a typo.
-  ✅ `src/utils/activeOffers.ts` + **21 tests (API 284 → 305), red on 8 mutations**; a 9th
-  mutation proved a null-guard branch was DEAD CODE and it was removed rather than left
-  untestable.
-  ✅ **409 with a structured `data.code`**, not a bare English 400 — both apps' `getErrorMessage`
-  now prefers a translated `errors.codes.*` over the server's English sentence, falling through
-  when the app has never heard the code. Keys in **uz · ru · en × both apps**, Uzbek wording
-  taken verbatim from the artboard.
-  ✅ **DRIVER COUNTER UI DONE 2026-09-13** — `ActiveLimitRow` on `MyRidesScreen`, exactly where
-  `DriverMyOrder` draws it: the `Faol e'lon: n / 2` chip (grey → `dangerTint` when full) and the
-  artboard's own note, verbatim. The `+` button dims at the limit and, when tapped, **says why
-  rather than doing nothing** — a dead control is the other half of the same complaint.
-  ✅ **`check-active-offers.mjs` — 16 assertions, red on 6 mutations, INCLUDING TWO CROSS-PROJECT
-  DRIFT CASES**: it reads the API's `activeOffers.ts` and the artboard's `MAX_ELON` and fails if
-  either stops matching the app. The count is a second implementation of a server rule, which is
-  the classic way a UI starts lying; this is what stops that being silent.
-  ✅ **PASSENGER COUNTER DONE 2026-09-13 — the twin, done deliberately.** `ActiveLimitRow` on
-  `MyOrdersScreen`, its own `utils/activeOffers.ts` (passenger statuses: `published` **and**
-  `driver_found`), and `check-active-offers.mjs` with the same API-parity assertions —
-  **17 assertions, red on 5 mutations including 2 cross-project.**
-  🔴 **THE GUARD WENT WHERE ORDERS ACTUALLY START, NOT WHERE THE BUTTON WAS OBVIOUS.** The user
-  app's only visible create button is the EMPTY-STATE CTA; real orders begin on the home
-  carousel. So `MenuScreen` now refuses through one `openOrderForm()` used by **both** the CTA
-  **and** the recent-route chips — two buttons doing one thing, and guarding only the obvious
-  one is how the other becomes the way round the rule. `useHomeOrders` already loaded the
-  orders, so the count cost no extra request.
-  ⚠️ **No artboard draws the passenger counter** (only `DriverMyOrder` does), so the measurements
-  and wording are the driver's, carried across deliberately rather than invented.
-  🛑 **A CONCURRENCY HOLE IS OPEN AND NOT PAPERED OVER:** two requests landing together can both
-  read 1 and both insert. These services use **no transactions at all** (measured), so closing
-  it means the codebase's first one — that is **T-026A**, not this card. `offerActionLimiter`
-  covers the realistic double-tap.
-  ❌ No migration. ⚠️ **Needs an API deploy** — the apps talk to `test3.fstu.uz`.
-
-- [ ] T-116 (P1) 🌐 **[OWNER 2026-09-13] MESSAGES ANSWER IN ENGLISH — "correct everywhere
-  info/error/warning language responses frontend/backend".**
-  ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
-  is NOT.** Measured, not estimated.
-  🟢 **The infrastructure was already complete on BOTH ends** — both apps send `Accept-Language`
-  (`config/api.ts`) and the API resolves it (`getLanguageFromHeaders`). Nothing was missing;
-  the wiring simply stopped short.
-  🔴 **THE MEASUREMENT: 221 `new AppError(...)` in the API — 68 translated, 130 English
-  literals** (115 plain + 15 template). The error handler already answered in the caller's
-  language on EVERY branch except the `AppError` one, which passed `err.message` through raw.
-  ✅ **FIXED AT THE EDGE, NOT AT THE THROW SITE.** Most literals live in helpers with no `req`
-  and so no language (`validateOfferData`, `parsePrice`, `parseDate`, `buildOfferFields`);
-  localising there meant threading `language` through ~15 signatures and remembering it for ever
-  after. Instead `errorHandler` translates `data.messageKey` (+ `data.messageParams`) with the
-  request language, and **falls back to the English literal when a key is missing** — which is
-  what lets throw sites migrate one at a time with nothing breaking.
-  ✅ **Both apps now prefer a translated `errors.codes.*` over the server's sentence**
-  (`getErrorMessage`), so an app can out-speak the server for codes it knows.
-  ✅ **`messageKeys.test.ts` — reads the real service sources, extracts every `messageKey` in
-  use and resolves it in uz/ru/en. RED on 4 mutations** (typo'd key · wrong namespace · one
-  locale short · a lost `{placeholder}`). **This guard is the point**: the English fallback that
-  makes migration safe is exactly what makes a typo INVISIBLE.
-  🛑 **WHAT IS LEFT, precisely:** ~29 field-validation literals of the shape
-  `${field} must be a number` / `seat_counts must be an object` in `DriverOfferService` and
-  `PassengerOfferService`. **These are developer-shaped and a well-behaved app never triggers
-  them** — they signal a client bug, and leaving them diagnosable in English is arguably right.
-  **Decide deliberately rather than by drift.** Plus 4 in `DriverService`'s siblings and 4 in
-  the admin services (different audience — the admin panel is not localised at all).
-  ⚠️ **Success/info messages are NOT the problem they look like:** 28 `successResponse` literals
-  exist but **24 are admin controllers**, and both apps render their own local success toasts
-  (`t('common.success')`), ignoring the server's text. Only 4 could ever reach a phone.
-  ❌ No migration. ⚠️ **Needs an API deploy.**
-
 - [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
   FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
   ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
@@ -1714,6 +1685,28 @@ masofalar'`). **2 of the 6 were on
   2026-08-08). → `docs/OWNER_REQUESTS.md` OR-012
 
 ## 💡 Later / ideas (parking lot)
+
+- [ ] T-126 (P2) 🌐 **THE DRIVER APP HARDCODES UZBEK — a Russian or English driver reads Uzbek in
+  registration, and the photo upload matches the server's ENGLISH text.** Found 2026-09-19 by
+  T-116 step 1, **recorded not fixed** (outside its approved scope). The mirror image of T-116.
+  ① **40 toast calls pass a hardcoded Uzbek sentence** instead of `t()` — `DriverVehicleScreen`
+  13 · `DriverPersonalInfoScreen` 9 · `DriverPassportScreen` 9 · `OfferWizardScreen` 4 ·
+  `DriverTaxiLicenseScreen` 4 · `PhoneRegistrationScreen` 1 (single-line calls; more hide in
+  variables assigned a literal first). **The user app has none.**
+  ② 🔴 **The upload path matches on server TEXT:** `api/driver.ts:227` re-throws only messages
+  containing *Rasm / hajmi / xatolik*, and `DriverPersonalInfoScreen.tsx:970` swaps in a hardcoded
+  Uzbek sentence when the text contains `'size'` — which is how the server's ENGLISH *"Image size
+  exceeds…"* is caught today. **Translating that server message (T-116 left the 4 upload messages
+  English for exactly this reason) would break the match** — decide on a status or `data.code`
+  first, then translate `UploadController`'s 4 messages here.
+  ③ The server's `constants/index.ts` `ErrorMessages` / `SuccessMessages` are **Uzbek literals**;
+  `ErrorMessages` has 1 use (a notification race), `SuccessMessages` 55 (the apps mostly show their
+  own success toasts — T-116's card measured 4 that could reach a phone). **And `ERROR_MESSAGES`**
+  (same file, same Uzbek) feeds ~60 `NotFoundError` / `ConflictError` / `UnauthorizedError` throws —
+  11 of 13 files `Admin*` (fine: Uzbek is the admin's language), but `AuthService` and `UserService`
+  are app-side. **A subclass takes a message only, so it cannot carry a `messageKey`** — T-116's
+  ratchet (`unkeyedErrors.test.ts`) holds literal-message subclass throws at 2 and says why.
+  ❌ No migration. The screens' texts need uz/ru/en keys in the driver app.
 
 - [ ] T-125 (P3) 🧹 **WHAT DOES *DONE* MEAN? At least four cards sit in *Done* that were never
   walked on a device.** Found 2026-09-19 by T-122, **recorded not fixed** (not that card's question).
@@ -2916,6 +2909,56 @@ masofalar'`). **2 of the 6 were on
   `rejected`) is the next thing this card should do.
 
 ## ✅ Done (newest on top)
+
+- [x] T-116 (P1) 🌐 **MESSAGES ANSWER IN THE USER'S LANGUAGE — DONE 2026-09-19, all 7 steps** (option A)
+  → `docs/PLAN.md`. Owner: *"correct everywhere info/error/warning language responses frontend/backend"*.
+  🔴 **Measured, the card undercounted by 4×: 131 English `AppError`s, not ~37** — it had counted two
+  services. But **only 7 throw sites a user can really hit** (step 1 traced every one to a screen, or
+  ruled it out: app-enforced backstops · no app caller · 5xx · admin · behind `authenticate`) — now
+  keyed in uz/ru/en, 3 new keys worded as the apps already word them. The rest stay English **by a
+  rule written in `errorHandler.ts`**, held by a ratchet (`unkeyedErrors.test.ts`, 107, may only fall).
+  🔴 **The app half was deeper than the card knew — four live defects, 11 "accepted" `tsc` errors:**
+  ① both apps' `getErrorMessage` showed the runtime's English ("Network request failed") and 5xx
+  bodies — `handleBackendError` knew better; the two readers now share ONE rule (the T-123 class
+  again) · ② the driver's notifications toasts **never showed**: `showToast` is an object, the
+  screen called it as a function (6 baseline errors) · ③ its timestamps read "{count} daqiqa oldin"
+  (3) · ④ `MyPassengerOffersScreen` passed a string as the translator (2) — **a crash path my own
+  fix created, caught by the re-measure.** `check-raw-error-toasts.mjs` (a 12th checker per app)
+  keeps raw `.message` off every toast. **`tsc` baselines LOWERED: user 5 → 3, driver 28 → 19.**
+  **API 363 · user 273 + 12 · driver 295 + 12**, every mutation predicted. 📌 **T-126** holds the
+  driver app's hardcoded Uzbek and the upload text-matching. ⚠️ **Needs the API deploy + both
+  rebuilds** — `docs/CHECKLIST.md` §10.
+  still unlocalised, not ~37** — the "what is left" line below counted only the offer services.
+  ✅ **THE MECHANISM IS BUILT AND THE USER-FACING LIFECYCLE ERRORS ARE CONVERTED. The long tail
+  is NOT.** Measured, not estimated.
+  🟢 **The infrastructure was already complete on BOTH ends** — both apps send `Accept-Language`
+  (`config/api.ts`) and the API resolves it (`getLanguageFromHeaders`). Nothing was missing;
+  the wiring simply stopped short.
+  🔴 **THE MEASUREMENT: 221 `new AppError(...)` in the API — 68 translated, 130 English
+  literals** (115 plain + 15 template). The error handler already answered in the caller's
+  language on EVERY branch except the `AppError` one, which passed `err.message` through raw.
+  ✅ **FIXED AT THE EDGE, NOT AT THE THROW SITE.** Most literals live in helpers with no `req`
+  and so no language (`validateOfferData`, `parsePrice`, `parseDate`, `buildOfferFields`);
+  localising there meant threading `language` through ~15 signatures and remembering it for ever
+  after. Instead `errorHandler` translates `data.messageKey` (+ `data.messageParams`) with the
+  request language, and **falls back to the English literal when a key is missing** — which is
+  what lets throw sites migrate one at a time with nothing breaking.
+  ✅ **Both apps now prefer a translated `errors.codes.*` over the server's sentence**
+  (`getErrorMessage`), so an app can out-speak the server for codes it knows.
+  ✅ **`messageKeys.test.ts` — reads the real service sources, extracts every `messageKey` in
+  use and resolves it in uz/ru/en. RED on 4 mutations** (typo'd key · wrong namespace · one
+  locale short · a lost `{placeholder}`). **This guard is the point**: the English fallback that
+  makes migration safe is exactly what makes a typo INVISIBLE.
+  🛑 **WHAT IS LEFT, precisely:** ~29 field-validation literals of the shape
+  `${field} must be a number` / `seat_counts must be an object` in `DriverOfferService` and
+  `PassengerOfferService`. **These are developer-shaped and a well-behaved app never triggers
+  them** — they signal a client bug, and leaving them diagnosable in English is arguably right.
+  **Decide deliberately rather than by drift.** Plus 4 in `DriverService`'s siblings and 4 in
+  the admin services (different audience — the admin panel is not localised at all).
+  ⚠️ **Success/info messages are NOT the problem they look like:** 28 `successResponse` literals
+  exist but **24 are admin controllers**, and both apps render their own local success toasts
+  (`t('common.success')`), ignoring the server's text. Only 4 could ever reach a phone.
+  ❌ No migration. ⚠️ **Needs an API deploy.**
 
 - [x] T-122 (P2) 🧹 **THE BOARD CONTRADICTED ITSELF — TWO *Now* SECTIONS, 22 DUPLICATED CARDS —
   FIXED 2026-09-19, all 8 steps.** → `docs/PLAN-T122.md`. Boarded 2026-09-14; picked 2026-09-19 (owner:

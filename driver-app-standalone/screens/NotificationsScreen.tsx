@@ -23,6 +23,7 @@ import { useAuth } from '../hooks/useAuth';
 import { createTheme } from '../themes';
 import { useTranslation } from '../hooks/useTranslation';
 import { showToast } from '../utils/toast';
+import { getErrorMessage } from '../utils/errorHandler';
 import { showConfirmDialog } from '../utils/confirmDialog';
 import * as NotificationsAPI from '../api/notifications';
 import type { Notification } from '../api/notifications';
@@ -50,7 +51,12 @@ export const NotificationsScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Failed to load notifications:', error);
-      showToast('error', t('notifications.loadError'), error.message || t('notifications.loadErrorDescription'));
+      // T-116: never the raw `error.message` — that is "Network request failed" in English, or a
+      // 5xx's internals. `getErrorMessage` names both, in the driver's language.
+      // 🔴 And `showToast.error`, not `showToast('error', …)`: this app's `showToast` is an
+      // OBJECT, so the old call threw a TypeError inside this catch — no toast ever showed.
+      // (It was 6 of the driver app's 28 baseline `tsc` errors: "This expression is not callable".)
+      showToast.error(t('notifications.loadError'), getErrorMessage(error, t, 'notifications.loadErrorDescription'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -77,7 +83,7 @@ export const NotificationsScreen: React.FC = () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error: any) {
       console.error('Failed to mark notification as read:', error);
-      showToast('error', t('notifications.markReadError'), error.message);
+      showToast.error(t('notifications.markReadError'), getErrorMessage(error, t));
     }
   };
 
@@ -115,10 +121,10 @@ export const NotificationsScreen: React.FC = () => {
               await NotificationsAPI.markAllNotificationsAsRead(token);
               setNotifications(prev => prev.map(n => ({ ...n, read: true })));
               setUnreadCount(0);
-              showToast('success', t('notifications.allMarkedRead'));
+              showToast.success(t('notifications.allMarkedRead'));
             } catch (error: any) {
               console.error('Failed to mark all as read:', error);
-              showToast('error', t('notifications.markAllReadError'), error.message);
+              showToast.error(t('notifications.markAllReadError'), getErrorMessage(error, t));
         }
       },
     });
@@ -141,10 +147,10 @@ export const NotificationsScreen: React.FC = () => {
               if (!notification.read) {
                 setUnreadCount(prev => Math.max(0, prev - 1));
               }
-              showToast('success', t('notifications.deleted'));
+              showToast.success(t('notifications.deleted'));
             } catch (error: any) {
               console.error('Failed to delete notification:', error);
-              showToast('error', t('notifications.deleteError'), error.message);
+              showToast.error(t('notifications.deleteError'), getErrorMessage(error, t));
         }
       },
     });
@@ -159,9 +165,12 @@ export const NotificationsScreen: React.FC = () => {
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) return t('notifications.justNow');
-    if (minutes < 60) return t('notifications.minutesAgo', { count: minutes });
-    if (hours < 24) return t('notifications.hoursAgo', { count: hours });
-    if (days < 7) return t('notifications.daysAgo', { count: days });
+    // T-116: this app's `t` takes a key only — the `{ count }` it used to be handed was ignored,
+    // and every timestamp read "{count} daqiqa oldin" literally. Fill it the way the rest of
+    // the app does (`MyRidesScreen`).
+    if (minutes < 60) return t('notifications.minutesAgo').replace('{count}', String(minutes));
+    if (hours < 24) return t('notifications.hoursAgo').replace('{count}', String(hours));
+    if (days < 7) return t('notifications.daysAgo').replace('{count}', String(days));
     return date.toLocaleDateString();
   };
 

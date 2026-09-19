@@ -329,6 +329,48 @@ describe('getErrorMessage', () => {
     expect(getErrorMessage({}, undefined, 'Could not join')).toBe('Could not join');
     expect(getErrorMessage({})).toBe('An error occurred');
   });
+
+  it.each([
+    ['a raw AbortError', Object.assign(new Error('Aborted'), { name: 'AbortError' }), 'errors.timeout'],
+    ['a "timed out" sentence', new Error('Request timed out. Please check your connection.'), 'errors.timeout'],
+    ['a network code', { code: 'ERR_NETWORK' }, 'errors.network'],
+    ['the runtime’s own English', new Error('Network request failed'), 'errors.network'],
+  ])('🔴 T-116: names %s instead of showing the runtime’s English', (_label, error, expected) => {
+    // Until 2026-09-19 these fell through to `error.message` — "Network request failed" or
+    // "Aborted", in English, to an Uzbek driver. `handleBackendError` already knew better (T-123).
+    expect(getErrorMessage(error, t, 'errors.loadFailed')).toBe(expected);
+  });
+
+  it('a local error that is not a connection failure keeps its own message', () => {
+    // The guard against a branch that swallows: this app throws its own sentences too (T-126).
+    expect(getErrorMessage(new Error('Rasmni tanlashda xatolik'), t)).toBe('Rasmni tanlashda xatolik');
+  });
+
+  it('without a translator the old behaviour stands', () => {
+    expect(getErrorMessage(new Error('Network request failed'))).toBe('Network request failed');
+    expect(getErrorMessage(new ApiError(500, { message: 'ECONNREFUSED at pg' }))).toBe('ECONNREFUSED at pg');
+  });
+
+  it.each([500, 502, 503, 504])('🔴 T-116: never shows a %s body — try-again instead', (status) => {
+    // A 5xx body is a stack trace, an nginx page or an English internal message. The API's rule
+    // that 5xx text never reaches a phone was true of `handleBackendError` only, until this.
+    expect(getErrorMessage(new ApiError(status, { message: 'ECONNREFUSED at pg' }), t)).toBe(
+      'errors.serverError. errors.tryAgain'
+    );
+  });
+
+  it('agrees with handleBackendError on EVERY status from 400 to 599 about hiding the body', () => {
+    // The two readers drifting apart is the defect class (T-123, now T-116) — so pin them.
+    const hidden = 'errors.serverError. errors.tryAgain';
+    const disagreements: number[] = [];
+    for (let status = 400; status < 600; status++) {
+      const error = new ApiError(status, { message: 'X' });
+      const viaGet = getErrorMessage(error, t) === hidden;
+      const viaHandle = handleBackendError(error, { t, showToastNotification: false }) === hidden;
+      if (viaGet !== viaHandle) disagreements.push(status);
+    }
+    expect(disagreements).toEqual([]);
+  });
 });
 
 describe('isNetworkError / isAuthError', () => {

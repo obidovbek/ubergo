@@ -211,6 +211,9 @@ export default {
     notAuthenticated: 'Siz tizimga kirmagansiz',
     insufficientPermissions: 'Sizda bunga ruxsat yo\'q',
     adminTokenInvalid: 'Admin tokeni noto\'g\'ri',
+    // T-116 — the driver app's login, for a number never registered as a passenger. Worded
+    // exactly as the driver app's own RegisterFirst screen title says it.
+    registerInPassengerAppFirst: "Avval foydalanuvchi ilovasida ro'yxatdan o'ting",
   },
 
   // OTP messages
@@ -269,6 +272,10 @@ export default {
     onlySeatsAvailable: 'Faqat {count} ta o\'rin mavjud',
     seatsOutOfRange: 'O\'rinlar soni 1 dan 8 gacha bo\'lishi kerak',
     offerNotFound: 'E\'lon topilmadi',
+    // T-116 — two driver-offer rules the wizard does not check itself.
+    wholeSalonBelowBackSalon: "Butun salon narxi orqa salon narxidan past bo'lmasligi kerak",
+    cannotReduceSeatsBelowBooked:
+      "O'rinlar sonini {newTotal} taga kamaytirib bo'lmaydi: {booked} ta o'rin allaqachon band qilingan",
     joinFailed: 'E\'longa qo\'shilishda xatolik',
     cancelFailed: 'Bekor qilishda xatolik',
     confirmFailed: 'Tasdiqlashda xatolik',

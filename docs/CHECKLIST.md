@@ -232,6 +232,20 @@ screens are built, this is what must be checked:
 - [ ] ⚪ Tapping a notification opens the right screen.
 - [ ] ⚪ Change the language inside the app, close it, open it again → new
       notifications arrive in the new language.
+- [ ] 🔴 **T-116 — errors in YOUR language, not English** (needs the API deploy AND both
+      rebuilds). With the phone set to **Russian**, then again in **Uzbek**:
+      - **Driver app:** open a ride that already has a booking and lower its seat count below the
+        booked seats → the refusal reads *"Нельзя уменьшить количество мест до …"* / *"O'rinlar
+        sonini … taga kamaytirib bo'lmaydi …"*, with both numbers filled in — never English.
+      - **Driver app:** offer wizard, type a *whole-salon* price LOWER than the *back-salon* price
+        → the refusal is in your language.
+      - **Driver app → Xabarnomalar:** each notification's time reads *"5 daqiqa oldin"* — a real
+        number, **never `{count}`**. Then turn on airplane mode and pull to refresh → a toast
+        appears saying the internet is down, in your language. *(Before T-116 this screen showed
+        no toast at all — the call crashed.)*
+      - **User app → my orders / create an order / notifications:** with airplane mode on, every
+        failure says the internet is down in your language — never *"Network request failed"*.
+      _Tests prove the code; only a phone proves the rebuild shipped it and the server was deployed._
 
 ---
 

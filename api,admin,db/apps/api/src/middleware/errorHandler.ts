@@ -120,6 +120,22 @@ export const errorHandler = (
      * ⚠️ `data.messageKey` is the API's i18n key; `data.code` is the STABLE, app-facing code
      * the two apps map to their own strings (`errors.codes.*`). Separate fields because they
      * have separate jobs — a code is a contract, a key is an implementation detail.
+     *
+     * 🔴 WHAT STAYS ENGLISH, AND WHY — decided 2026-09-19 (T-116, owner: option A). Every
+     * message a real user can hit carries a key. The ~107 unkeyed 4xx that remain fall in four
+     * classes, and a new English 4xx that fits none of them is a bug:
+     *   ① UNREACHABLE — `'Unauthorized'` behind `authenticate` (every route mounts it first,
+     *     and it answers in the caller's language); endpoints no app calls (archive, driver
+     *     location, the wallet).
+     *   ② 5xx — never shown: both apps answer every 5xx with their own translated message.
+     *   ③ ADMIN — the admin panel is not localised at all.
+     *   ④ CLIENT-BUG FORMAT CHECKS — `${field} must be a number` and kin. The apps enforce these
+     *     rules before sending; only a bug reaches them, and an Uzbek sentence wrapped round a
+     *     raw column name like `seat_counts.front` would help nobody.
+     * The count is held by `i18n/unkeyedErrors.test.ts` (it may only fall), and every key used
+     * is resolved in uz/ru/en — with its parameters — by `i18n/messageKeys.test.ts`.
+     * (The 4 upload messages are English for another reason: the driver app matches on their
+     * text. They move with that fix — T-126.)
      */
     const errorData = (err as {
       data?: { messageKey?: unknown; messageParams?: Record<string, unknown> };

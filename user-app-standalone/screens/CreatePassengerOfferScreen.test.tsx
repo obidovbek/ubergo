@@ -30,6 +30,7 @@ import {
 import { createPassengerOffer } from '../api/passengerOffers';
 import { renderScreen } from '../test/render';
 import uz from '../translations/uz';
+import { ApiError } from '../utils/errorHandler';
 import { MIN_ADVANCE_MS } from '../utils/rideTime';
 import { showToast } from '../utils/toast';
 import { CreatePassengerOfferScreen } from './CreatePassengerOfferScreen';
@@ -180,5 +181,29 @@ describe('CreatePassengerOfferScreen', () => {
 
     expect(showToast.error).toHaveBeenCalledWith(uz.common.error, T.errorTime);
     expect(createPassengerOffer).not.toHaveBeenCalled();
+  });
+
+  it('🔴 T-116: a create with no connection says so in Uzbek, not "Network request failed"', async () => {
+    // The toast used to show the thrown message raw — the runtime's English for a dropped line.
+    jest.mocked(createPassengerOffer).mockRejectedValue(new Error('Network request failed'));
+    await mount();
+    await fillMinimalOrder();
+    submit();
+
+    await waitFor(() =>
+      expect(showToast.error).toHaveBeenCalledWith(T.errorCreate, uz.errors.network),
+    );
+  });
+
+  it('T-116: a server refusal (4xx) is still shown as the server worded it', async () => {
+    // What the old comment meant to keep: a 4xx arrives in the user's language (the API keys
+    // it — `offers.startAtTooSoon` since T-116), so it is shown verbatim, not replaced.
+    const refusal = "Jo'nash vaqti kamida 30 daqiqadan keyin bo'lishi kerak";
+    jest.mocked(createPassengerOffer).mockRejectedValue(new ApiError(400, { message: refusal }));
+    await mount();
+    await fillMinimalOrder();
+    submit();
+
+    await waitFor(() => expect(showToast.error).toHaveBeenCalledWith(T.errorCreate, refusal));
   });
 });

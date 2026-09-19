@@ -105,6 +105,31 @@ const messageOf = (error: unknown): string => {
 };
 
 /**
+ * What to call a request that never got a response — T-116.
+ *
+ * 🔴 ONE RULE, THREE READERS: `handleBackendError`, `getErrorMessage` and `isNetworkError`.
+ * Until 2026-09-19 only `handleBackendError` knew a timeout or a dead network by name, and
+ * `getErrorMessage` — 16 callers here — handed the user the runtime's own English: "Network
+ * request failed", "Aborted". Null for anything else, so a local error keeps its own message.
+ */
+const connectionFailureKey = (error: unknown): 'errors.timeout' | 'errors.network' | null => {
+  if (isTimeoutError(error)) return 'errors.timeout';
+  const code = (error as { code?: unknown } | null | undefined)?.code;
+  if (code === 'ERR_NETWORK' || messageOf(error).includes('Network')) return 'errors.network';
+  return null;
+};
+
+/**
+ * The statuses whose body is never shown: a 5xx carries a stack trace or an nginx page, not a
+ * sentence for a user. Read by `handleBackendError` AND `getErrorMessage` (T-116) — the API's
+ * rule that "5xx text never reaches a phone" (`middleware/errorHandler.ts`) depends on both.
+ */
+const SERVER_FAILURE_STATUSES: readonly number[] = [500, 502, 503, 504];
+
+const serverFailureText = (t: (key: string) => string): string =>
+  `${t('errors.serverError')}. ${t('errors.tryAgain')}`;
+
+/**
  * Handle backend errors with translation and toast notification
  */
 export const handleBackendError = (
@@ -123,11 +148,11 @@ export const handleBackendError = (
 
   // Check if it's a network error — i.e. we never got a response at all
   if (status === undefined) {
-    if (isTimeoutError(error)) {
-      errorMessage = t('errors.timeout');
-    } else if (error?.code === 'ERR_NETWORK' || messageOf(error).includes('Network')) {
-      errorMessage = t('errors.network');
-    }
+    const key = connectionFailureKey(error);
+    if (key) errorMessage = t(key);
+  } else if (SERVER_FAILURE_STATUSES.includes(status)) {
+    errorTitle = t('errors.serverError');
+    errorMessage = serverFailureText(t);
   } else {
     // Handle HTTP status codes
     const body = error?.response?.data ?? error?.data;
@@ -164,13 +189,7 @@ export const handleBackendError = (
         errorTitle = t('common.error');
         errorMessage = serverMessage || t('errors.tooManyRequests');
         break;
-      case 500:
-      case 502:
-      case 503:
-      case 504:
-        errorTitle = t('errors.serverError');
-        errorMessage = `${t('errors.serverError')}. ${t('errors.tryAgain')}`;
-        break;
+      // 500 / 502 / 503 / 504 never get here — `SERVER_FAILURE_STATUSES`, above.
       default:
         if (defaultMessage && serverMessage) {
           errorMessage = `${defaultMessage}: ${serverMessage}`;
@@ -214,6 +233,21 @@ export const getErrorMessage = (error: any, t?: (key: string) => string, default
     if (translated !== key) return translated;
   }
 
+  /*
+   * 🔴 T-116 — THE SAME TWO RULES AS `handleBackendError`, read from the same place, so the two
+   * readers cannot drift apart again: a request that never got a response is NAMED (timeout /
+   * network) instead of handing the user the runtime's English, and a 5xx body is never shown.
+   * Both need a translator; without one the old behaviour stands.
+   */
+  const status: number | undefined = error?.response?.status ?? error?.status;
+  if (t && status === undefined) {
+    const key = connectionFailureKey(error);
+    if (key) return t(key);
+  }
+  if (t && status !== undefined && SERVER_FAILURE_STATUSES.includes(status)) {
+    return serverFailureText(t);
+  }
+
   // Prefer backend-translated messages (they're already in user's language)
   if (error?.response?.data?.message) return error.response.data.message;
   if (error?.response?.data?.error) return error.response.data.error;
@@ -232,16 +266,11 @@ export const getErrorMessage = (error: any, t?: (key: string) => string, default
 /**
  * Check if error is a network error
  *
- * ⚠️ Shares `isTimeoutError` with `handleBackendError` deliberately — T-123 was exactly the two
- * readers of one rule drifting apart. Change the rule there, not here.
+ * ⚠️ Shares `connectionFailureKey` with `handleBackendError` and `getErrorMessage` deliberately —
+ * T-123 was exactly two readers of one rule drifting apart. Change the rule there, not here.
  */
 export const isNetworkError = (error: any): boolean => {
-  return (
-    !error?.response &&
-    (error?.code === 'ERR_NETWORK' ||
-      isTimeoutError(error) ||
-      messageOf(error).includes('Network'))
-  );
+  return !error?.response && connectionFailureKey(error) !== null;
 };
 
 /**

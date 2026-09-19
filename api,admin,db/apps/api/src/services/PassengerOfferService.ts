@@ -774,7 +774,13 @@ export class PassengerOfferService {
       if (fields.start_at < minStartAt) {
         throw new AppError(
           `start_at must be at least ${this.MIN_ADVANCE_MINUTES} minutes in the future`,
-          400
+          400,
+          {
+            // T-116 — reachable: the app's floor is 31 min, but a phone clock running fast
+            // gets past it. Same key and param as DriverOfferService's twin.
+            messageKey: 'offers.startAtTooSoon',
+            messageParams: { minutes: this.MIN_ADVANCE_MINUTES }
+          }
         );
       }
     }
@@ -938,7 +944,7 @@ export class PassengerOfferService {
     // an integer column raises a database error the handler turns into a 500,
     // so a bad id has to become a plain 404 here.
     if (!/^\d+$/.test(String(offerId))) {
-      throw new AppError('Offer not found', 404);
+      throw new AppError('Offer not found', 404, { messageKey: 'offers.offerNotFound' });
     }
 
     const offer = await PassengerOffer.findByPk(offerId, {
@@ -1027,7 +1033,8 @@ export class PassengerOfferService {
     });
 
     if (!offer) {
-      throw new AppError('Offer not found', 404);
+      // T-116 — reachable: opening an order that has been deleted (a push tap, a stale list).
+      throw new AppError('Offer not found', 404, { messageKey: 'offers.offerNotFound' });
     }
 
     // Check ownership if userId provided

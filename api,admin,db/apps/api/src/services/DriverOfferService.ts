@@ -214,7 +214,9 @@ export class DriverOfferService {
     if (backSalon !== undefined && wholeSalon !== undefined && wholeSalon < backSalon) {
       throw new AppError(
         'price_whole_salon must be greater than or equal to price_back_salon',
-        400
+        400,
+        // T-116 — reachable: the driver wizard neither clamps nor validates this pair.
+        { messageKey: 'offers.wholeSalonBelowBackSalon' }
       );
     }
 
@@ -734,7 +736,12 @@ export class DriverOfferService {
       if (newSeatsTotal < bookedSeats) {
         throw new AppError(
           `Cannot reduce seats_total to ${newSeatsTotal}: ${bookedSeats} seat(s) are already booked`,
-          400
+          400,
+          {
+            // T-116 — reachable: editing a ride with bookings, seats lowered below them.
+            messageKey: 'offers.cannotReduceSeatsBelowBooked',
+            messageParams: { newTotal: newSeatsTotal, booked: bookedSeats }
+          }
         );
       }
       seatsFree = newSeatsTotal - bookedSeats;

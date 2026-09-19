@@ -143,7 +143,10 @@ export const MyPassengerOffersScreen: React.FC = () => {
         });
       } else {
         // For other errors, show the error message
-        const errorMessage = getErrorMessage(error, t('passengerOffers.errorLoadMessage'));
+        // T-116: `t` itself, then the KEY — this passed `t('…')`, a string, as the translator. It
+        // was 2 of this app's baseline `tsc` errors for months, harmless until `getErrorMessage`
+        // began calling its translator on every network failure: then it threw inside this catch.
+        const errorMessage = getErrorMessage(error, t, 'passengerOffers.errorLoadMessage');
         showToast.error(t('passengerOffers.errorLoad'), errorMessage);
       }
     } finally {
@@ -293,7 +296,8 @@ export const MyPassengerOffersScreen: React.FC = () => {
               onCancel: () => {},
             });
           } else {
-            const errorMessage = getErrorMessage(error, t('passengerOffers.cancelErrorMessage'));
+            // T-116: the translator, then the key (see the load path above).
+            const errorMessage = getErrorMessage(error, t, 'passengerOffers.cancelErrorMessage');
             showToast.error(t('passengerOffers.cancelError'), errorMessage);
           }
         }

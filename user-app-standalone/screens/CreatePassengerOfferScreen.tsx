@@ -61,6 +61,7 @@ import {
   type SpecialOrderValue,
 } from "../components/passengerOffer/SpecialOrderPanel";
 import { showToast } from "../utils/toast";
+import { getErrorMessage } from "../utils/errorHandler";
 import { showConfirmDialog } from "../utils/confirmDialog";
 import { theme, font } from "../themes";
 import {
@@ -882,12 +883,15 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         isEdit
           ? t("passengerOffers.errorUpdate")
           : t("passengerOffers.errorCreate"),
-        // The server's 400s are already translated (including "this order can no
-        // longer be edited" and the ≥30-minutes rule), so show them verbatim.
-        error.message ||
-          (isEdit
-            ? t("passengerOffers.errorUpdateMessage")
-            : t("passengerOffers.errorCreateMessage")),
+        // The server's 400s arrive in the user's language — the ≥30-minutes rule only since
+        // T-116 (2026-09-19); this comment claimed it before it was true. `getErrorMessage`
+        // shows them as they come, and names a dropped connection or a 5xx instead of passing
+        // the runtime's English through, which showing the thrown message raw here used to do.
+        getErrorMessage(
+          error,
+          t,
+          isEdit ? "passengerOffers.errorUpdateMessage" : "passengerOffers.errorCreateMessage",
+        ),
       );
     } finally {
       setIsLoading(false);

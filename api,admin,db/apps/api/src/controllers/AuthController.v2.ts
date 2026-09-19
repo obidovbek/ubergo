@@ -59,6 +59,7 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
           400,
           {
             code: 'USER_NOT_REGISTERED',
+            messageKey: 'auth.registerInPassengerAppFirst',
             app_store_urls: {
               android: appStoreUrls.android_url,
               ios: appStoreUrls.ios_url
@@ -162,6 +163,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
           400,
           {
             code: 'USER_NOT_REGISTERED',
+            messageKey: 'auth.registerInPassengerAppFirst',
             app_store_urls: {
               android: appStoreUrls.android_url,
               ios: appStoreUrls.ios_url

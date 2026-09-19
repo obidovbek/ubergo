@@ -199,6 +199,9 @@ export default {
     notAuthenticated: 'Вы не вошли в систему',
     insufficientPermissions: 'У вас нет прав на это действие',
     adminTokenInvalid: 'Неверный админ-токен',
+    // T-116 — the driver app's login, for a number never registered as a passenger. Worded
+    // exactly as the driver app's own RegisterFirst screen title says it.
+    registerInPassengerAppFirst: 'Сначала зарегистрируйтесь в приложении пользователя',
   },
 
   // OTP messages
@@ -256,6 +259,10 @@ export default {
     onlySeatsAvailable: 'Доступно только {count} мест',
     seatsOutOfRange: 'Количество мест должно быть от 1 до 8',
     offerNotFound: 'Объявление не найдено',
+    // T-116 — two driver-offer rules the wizard does not check itself.
+    wholeSalonBelowBackSalon: 'Цена за весь салон не может быть ниже цены за задний салон',
+    cannotReduceSeatsBelowBooked:
+      'Нельзя уменьшить количество мест до {newTotal}: уже забронировано мест — {booked}',
     joinFailed: 'Не удалось присоединиться к объявлению',
     cancelFailed: 'Не удалось отменить',
     confirmFailed: 'Не удалось подтвердить',

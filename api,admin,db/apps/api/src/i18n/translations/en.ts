@@ -199,6 +199,8 @@ export default {
     notAuthenticated: 'You are not signed in',
     insufficientPermissions: 'You do not have permission to do this',
     adminTokenInvalid: 'Invalid admin token',
+    // T-116 — the driver app's login, for a number never registered as a passenger.
+    registerInPassengerAppFirst: 'Please register in the passenger app first',
   },
 
   // OTP messages
@@ -256,6 +258,10 @@ export default {
     onlySeatsAvailable: 'Only {count} seats available',
     seatsOutOfRange: 'Seats must be between 1 and 8',
     offerNotFound: 'Offer not found',
+    // T-116 — two driver-offer rules the wizard does not check itself.
+    wholeSalonBelowBackSalon: 'The whole salon price must not be lower than the back salon price',
+    cannotReduceSeatsBelowBooked:
+      'Cannot reduce the number of seats to {newTotal}: {booked} seat(s) are already booked',
     joinFailed: 'Failed to join offer',
     cancelFailed: 'Failed to cancel',
     confirmFailed: 'Failed to confirm',
