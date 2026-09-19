@@ -73,6 +73,12 @@
       _(Before today, one person hitting the limit blocked everybody.)_
 - [ ] ⚪ Log in, then have the account deleted in the admin panel, then use the
       app → you are thrown out to the login screen.
+- [ ] 🔴 **Turn on airplane mode WHILE the code is being sent** (press the button,
+      then switch it on immediately) → the message must say the connection timed
+      out, in your language — **not** "could not send the code".
+      **Do it in BOTH apps.** _(T-123, fixed 2026-09-18. Before today every kind of
+      dropped connection looked like a generic failure, and nothing in the test
+      suites can see this one — it needs a real radio.)_
 
 ---
 

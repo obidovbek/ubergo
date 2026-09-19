@@ -66,6 +66,45 @@ export const getRetryAfterSec = (error: any): number | undefined => {
 };
 
 /**
+ * Did this request time out? — T-123.
+ *
+ * 🔴 **Match the ABORT, not the prose.** Both readers below used to test only
+ * `message.includes('timeout')`, and the wording is not one thing:
+ * - `api/auth.ts` throws **"Request timed out…"**, which contains no `timeout`;
+ * - the `passengerOffers` abort branches throw **"Request timeout…"** and were matched;
+ * - and most of `auth.ts` has **no abort branch at all** — 4 of its 5 exported functions
+ *   re-throw the raw `AbortError`, whose message is "Aborted" and matches neither.
+ * So a dropped connection on the OTP screen — the first screen every new install sees —
+ * answered with the caller's generic default instead of "you are offline".
+ *
+ * `name === 'AbortError'` is the one thing every case shares: it is what `controller.abort()`
+ * produces, whatever the module then chooses to say about it. The message tests stay for the
+ * sentences that are re-thrown as plain `Error`s, which lose the name.
+ * ⚠️ The message is read defensively — it is untrusted input and need not be a string.
+ */
+const isTimeoutError = (error: unknown): boolean => {
+  const shape = error as { name?: unknown; code?: unknown } | null | undefined;
+  if (shape?.name === 'AbortError' || shape?.code === 'ECONNABORTED') {
+    return true;
+  }
+  const message = messageOf(error);
+  return message.includes('timeout') || message.includes('timed out');
+};
+
+/**
+ * The error's message, only if it really is one.
+ *
+ * ⚠️ `error.message?.includes(…)` looks safe and is not: optional chaining guards `null` and
+ * `undefined`, so a message that is a **number** reaches `.includes` and throws `TypeError`.
+ * Every caller here runs inside a `catch`, where a throw is a crash — and the errors reaching
+ * them come from push payloads and native bridges, which hand us whatever they like.
+ */
+const messageOf = (error: unknown): string => {
+  const message = (error as { message?: unknown } | null | undefined)?.message;
+  return typeof message === 'string' ? message : '';
+};
+
+/**
  * Handle backend errors with translation and toast notification
  */
 export const handleBackendError = (
@@ -84,9 +123,9 @@ export const handleBackendError = (
 
   // Check if it's a network error — i.e. we never got a response at all
   if (status === undefined) {
-    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+    if (isTimeoutError(error)) {
       errorMessage = t('errors.timeout');
-    } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+    } else if (error?.code === 'ERR_NETWORK' || messageOf(error).includes('Network')) {
       errorMessage = t('errors.network');
     }
   } else {
@@ -192,14 +231,16 @@ export const getErrorMessage = (error: any, t?: (key: string) => string, default
 
 /**
  * Check if error is a network error
+ *
+ * ⚠️ Shares `isTimeoutError` with `handleBackendError` deliberately — T-123 was exactly the two
+ * readers of one rule drifting apart. Change the rule there, not here.
  */
 export const isNetworkError = (error: any): boolean => {
   return (
-    !error.response &&
-    (error.code === 'ERR_NETWORK' ||
-      error.code === 'ECONNABORTED' ||
-      error.message?.includes('Network') ||
-      error.message?.includes('timeout'))
+    !error?.response &&
+    (error?.code === 'ERR_NETWORK' ||
+      isTimeoutError(error) ||
+      messageOf(error).includes('Network'))
   );
 };
 

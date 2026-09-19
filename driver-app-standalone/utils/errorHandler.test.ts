@@ -209,23 +209,54 @@ describe('handleBackendError — no response at all', () => {
     expect(handleBackendError(error, { t })).toBe(expected);
   });
 
-  it('📌 DEFECT, pinned as-is: "Request timed out." is NOT recognised as a timeout', () => {
-    // 🔴 Found by this test, in BOTH apps, and NOT fixed here (the card records and boards).
-    // The branch matches the substring `timeout`. Most API modules throw "Request timeout. Please
-    // try again." and are matched — but `api/auth.ts`, the OTP send, throws **"Request timed
-    // out. Please check your internet connection."**, which contains no such substring. So the
-    // most-used screen in the app answers a dropped connection with its generic
-    // `phoneRegistration.errorOtpSend` default instead of telling the user they are offline,
-    // and the thrown sentence is discarded (the network branch never reads `error.message`).
-    // Same line exists in the driver app's `api/auth.ts`. Boarded as T-123.
-    // ⚠️ This test asserts the WRONG-but-REAL behaviour on purpose. When T-123 is fixed this
-    // test must go red — that is the point of it. Flip it then; do not delete it.
+  it('🟢 T-123 FIXED: "Request timed out." IS recognised as a timeout', () => {
+    // This test was written by T-121 asserting the WRONG-but-real behaviour on purpose, so that
+    // it would go red the day the defect was fixed. **2026-09-18 is that day** — it was flipped,
+    // not deleted, and the history is the point: the branch used to match only the substring
+    // `timeout`, while `api/auth.ts`'s OTP send throws "Request timed **out**. Please check your
+    // internet connection." So the first screen every new install sees answered a dropped
+    // connection with its generic `phoneRegistration.errorOtpSend` default.
     const timeout = { message: 'Request timed out. Please check your internet connection.' };
 
     expect(handleBackendError(timeout, { t, defaultMessage: 'Could not send the code' })).toBe(
-      'Could not send the code'
+      'errors.timeout'
     );
-    expect(isNetworkError(timeout)).toBe(false);
+    expect(isNetworkError(timeout)).toBe(true);
+  });
+
+  it('🔴 T-123, the bigger half: a RAW AbortError is a timeout, whatever its message says', () => {
+    // 4 of this app's 5 `api/auth.ts` functions have no abort branch at all — only `sendOtp`
+    // converts it. The rest re-throw the raw `AbortError`, whose message is "Aborted" and matches
+    // NEITHER spelling. Matching the name is what covers them, because it is what
+    // `controller.abort()` produces however a module words it afterwards.
+    // ⚠️ Built by hand on purpose: Node 22 words an aborted fetch "This operation was aborted"
+    // and React Native's polyfill says "Aborted". Neither is ours to pin — the NAME is.
+    const aborted = Object.assign(new Error('Aborted'), { name: 'AbortError' });
+
+    expect(handleBackendError(aborted, { t, defaultMessage: 'Could not send the code' })).toBe(
+      'errors.timeout'
+    );
+    expect(isNetworkError(aborted)).toBe(true);
+  });
+
+  it('does NOT call everything a timeout — the guard against a predicate that swallows', () => {
+    // The fix widened the rule, so this is the test that keeps it honest: a failure that is
+    // neither an abort nor a timeout must still reach the caller's own default.
+    expect(handleBackendError({ message: 'Something else failed' }, { t, defaultMessage: 'D' })).toBe(
+      'D'
+    );
+    expect(isNetworkError({ message: 'Something else failed' })).toBe(false);
+    expect(isNetworkError({ name: 'TypeError', message: 'undefined is not a function' })).toBe(
+      false
+    );
+  });
+
+  it('survives an error whose message is not a string at all', () => {
+    // Push payloads and native bridges hand us whatever they like; `.includes` on a number
+    // throws, and this runs inside a catch block where a throw is a crash.
+    expect(handleBackendError({ message: 42 }, { t, defaultMessage: 'D' })).toBe('D');
+    expect(handleBackendError({ message: null }, { t })).toBe('errors.unknown');
+    expect(isNetworkError({ message: 42 })).toBe(false);
   });
 
   it('falls back to the caller’s default for a failure it cannot name', () => {

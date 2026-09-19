@@ -2556,26 +2556,6 @@ masofalar'`). **2 of the 6 were on
   each `describe` labelled LIVE or DEAD**, so the cleanup already has its spec and a failing test
   will read correctly. ⚠️ **Deleting exported code needs the owner's yes** (rule 4).
 
-- [ ] T-123 (P2) 🐛 **A TIMED-OUT OTP SEND IS NOT RECOGNISED AS A TIMEOUT — IN BOTH APPS.**
-  Found 2026-09-15 by T-121 step 5's `errorHandler` tests; **recorded, not fixed** (T-121's rule
-  is to board what it finds). **The mismatch is one substring:** `handleBackendError` and
-  `isNetworkError` both test `error.message?.includes('timeout')`, and every API module throws
-  *"Request timeout. Please try again."* — **except `api/auth.ts`, which throws "Request timed
-  out. Please check your internet connection."** (`user-app-standalone/api/auth.ts:107` and
-  `driver-app-standalone/api/auth.ts:126`). *"timed out"* does not contain *"timeout"*.
-  **What the user sees:** the network branch never reads `error.message`, so a dropped connection
-  on the OTP send — the first screen in the app, and the one every new install goes through —
-  shows the caller's generic default (`phoneRegistration.errorOtpSend`, "could not send the
-  code") instead of telling them they are offline. The thrown sentence is discarded, and
-  `isNetworkError` answers `false` for what is unambiguously a network failure.
-  **The job:** decide where the fix belongs — match both spellings in `errorHandler` (safer, one
-  file, catches future throwers) or re-word the two throws (narrower). Then flip the two tests
-  that currently pin the wrong behaviour on purpose: `📌 DEFECT, pinned as-is` in
-  `utils/errorHandler.test.ts` in **both** apps. They are written to go red when this is fixed —
-  **that is deliberate; do not delete them.**
-  ⚠️ **Both apps, same line.** This is the project's most-repeated defect class (fixing the one
-  app the report came from and walking past its twin), so fix them together.
-
 - [ ] T-122 (P2) 🧹 **THIS BOARD CONTRADICTS ITSELF — `docs/TODO.md` has TWO `## 🔥 Now` sections
   and 22 duplicated cards.** Measured 2026-09-14 while boarding T-121, not fixed then (rule 1).
   **The numbers:** two `## 🔥 Now (working on it)` headers (around lines 64 and 663) whose
@@ -3926,6 +3906,41 @@ masofalar'`). **2 of the 6 were on
   `rejected`) is the next thing this card should do.
 
 ## ✅ Done (newest on top)
+
+- [x] T-123 (P2) 🐛 **A TIMED-OUT REQUEST WAS NOT RECOGNISED AS A TIMEOUT, IN BOTH APPS — FIXED
+  2026-09-18, all 5 steps.** → `docs/PLAN.md`. Found 2026-09-15 by T-121's `errorHandler` tests
+  and recorded rather than fixed; the owner picked it at T-121's close and **confirmed the wide
+  fix in words**.
+  **What the user gets:** lose signal while registering and the screen now says the connection
+  timed out, in their own language, instead of the generic *"could not send the code"*. **That is
+  the first screen every new install sees.**
+  🔴 **THE MEASUREMENT MADE THE CARD BIGGER, AND THAT CHANGED THE FIX.** The board said *"one
+  substring"* — `errorHandler` matched `'timeout'` while `api/auth.ts` throws *"Request timed
+  **out**"*. True, but **most of `auth.ts` has no abort branch at all**: 7 of the user app's 8
+  exported functions and 4 of the driver's 5 re-throw the **raw `AbortError`** (message
+  *"Aborted"*), matching neither spelling. Fixing the spelling alone would have fixed `sendOtp`
+  and left **twelve functions wrong**, including `verifyOtp` and `refreshAccessToken`.
+  **The fix: match the abort, not the prose.** One `isTimeoutError` per app —
+  `name === 'AbortError'`, `code === 'ECONNABORTED'`, then **both** spellings — read by
+  `handleBackendError` **and** `isNetworkError`, so the two readers of one rule cannot drift apart
+  again. **That drift was the whole defect.**
+  🔴 **A SECOND DEFECT, FOUND BY A NEW TEST AND FIXED HERE (one line):**
+  `error.message?.includes(…)` **throws a `TypeError` when the message is not a string** —
+  optional chaining guards `null` and `undefined` and nothing else, and both readers run inside a
+  `catch`, where a throw is a crash. Extracted as `messageOf`.
+  ✅ **The two tests T-121 wrote to pin the defect were FLIPPED, not deleted** — they were written
+  to go red exactly here, and they did. **+6 tests (user 50 → 53, driver 57 → 60), 8 mutations,
+  every red set predicted before it ran.**
+  🔴 **Lint caught me rebaselining 208 → 210** (both helpers took `error: any`); rewritten with
+  `unknown`, back to 208. ⚠️ **And the mutations were re-run against the final code** — the first
+  four ran against the version I then edited, and a proof against code you change afterwards is
+  not a proof.
+  📌 **`isNetworkError` has no callers in either app** — the card's second symptom was dead code.
+  It was fixed anyway because it is the twin read of the same rule.
+  **All six baselines unchanged:** user `tsc` 5 / lint 0·208 / colours 1 · driver 28 / 0·275 / 3.
+  **Suites: user 255 + 11 checkers · driver 281 + 11 · API 357.**
+  ⚠️ **ONE DEVICE CHECK IS OWED and is in `docs/CHECKLIST.md`:** airplane mode on mid-OTP-send, in
+  both apps. Nothing in the test suites can see it.
 
 - [x] T-121 (P1) 🧪 **[OWNER 2026-09-14, "Is there continue of writing test?"] JEST TESTS FOR THE
   UNTESTED `utils/` IN BOTH APPS — DONE 2026-09-18, all 9 steps.** → `docs/PLAN.md`.

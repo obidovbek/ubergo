@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-09-18 (2) — T-123 fixed in both apps: a timeout is now recognised by the abort itself
+
+- **The card the tests found, closed the same week they found it.** T-121 recorded T-123 rather
+  than fixing it, and wrote two tests that asserted the wrong-but-real behaviour **so they would
+  go red the day it was fixed**. Today they were **flipped, not deleted** — which is the cheapest
+  proof this project has ever had that a fix does what it says.
+- 🔴 **Measuring first made the card bigger, and that changed the fix.** The board said the defect
+  was *one substring*: `errorHandler` matched `'timeout'`, `api/auth.ts` throws *"Request timed
+  **out**"*. True — but **most of `auth.ts` has no abort branch at all**. 7 of the user app's 8
+  exported functions (and 4 of the driver's 5) re-throw the **raw `AbortError`**, message
+  *"Aborted"*, matching neither spelling. **Fixing the wording would have fixed `sendOtp` and left
+  twelve functions wrong**, including `verifyOtp` and `refreshAccessToken`. The owner confirmed
+  the wide fix, so the rule now matches **the abort itself** (`name === 'AbortError'`), plus
+  `ECONNABORTED` and both spellings — **one predicate per app, shared by `handleBackendError` and
+  `isNetworkError`, because those two drifting apart IS the defect.**
+- 🔴 **A second defect, found by a test written for another purpose.**
+  `error.message?.includes(…)` **throws on a non-string message** — optional chaining stops at
+  `null`/`undefined`, so a numeric message reaches `.includes`. Both readers run inside a `catch`,
+  so it is a crash path. One line, in the file this card already owned → fixed here, not boarded
+  (the `CheckRow.tsx` precedent). *The test was meant to prove the predicate could not swallow
+  everything, and it failed for a reason I had not predicted. That is the useful kind of failure.*
+- 🔴 **I rebaselined lint by two and the re-measure caught it:** 208 → 210, because both helpers
+  took `error: any`. Rewritten with `unknown` plus an explicit narrowing cast, back to 208.
+  ⚠️ **And the eight mutations were re-run against the final code** — the first four had run
+  against the version I then edited, and **a proof against code you change afterwards is not a
+  proof.** The re-run also corrected an under-prediction (the type guard covers an *absent*
+  message too, not only a wrongly-typed one).
+- **Verification:** 8 mutations, every red set predicted before it ran, all matched. **+6 tests**
+  (user 50 → 53, driver 57 → 60). Suites green: **user 255 + 11 checkers, driver 281 + 11, API
+  357**. All six baselines unchanged: user `tsc` 5 / lint 0·208 / colours 1 · driver 28 / 0·275 / 3.
+- 📌 **`isNetworkError` has no callers in either app** — the board's second symptom was dead code.
+  Fixed anyway, as the twin read of the same rule.
+- **Problems / left open:** **one device check is owed and is now in `docs/CHECKLIST.md` §2** —
+  airplane mode on mid-OTP-send, both apps. No test suite can see it. **T-118's CI run is still
+  unconfirmed on GitHub.** Nothing else from this card is outstanding.
+- **Next:** the owner's pick. *Now* holds **T-101** (design system, step 18) and **T-088**'s one
+  code step; **T-124** and **T-122** are the cheap ones.
+
+---
+
 ## 2026-09-18 — T-121 CLOSED: the owed proof for step 8, and both apps at 530 tests
 
 - **The session opened on a contradiction.** `docs/PLAN.md` said *"next is step 8"*; the working
