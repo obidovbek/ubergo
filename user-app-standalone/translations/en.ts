@@ -344,6 +344,10 @@ export default {
     clear: 'Clear',
     noRidesAvailable: 'No rides available',
     resultsCount: '{count} offers',
+    // T-102i — searching FOR the passenger's own order, and how an offer matched it.
+    forYourOrder: 'For your order',
+    clearOrderMatch: 'Stop matching your order',
+    matchedDistrictOnly: 'The driver named only the district, not the settlement',
     noRidesMessage: 'No offers found for this route. Try adjusting your search criteria.',
     selectLocations: 'Select Locations',
     selectLocationsMessage: 'Choose your departure and destination to find available rides',

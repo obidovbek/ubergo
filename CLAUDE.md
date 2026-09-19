@@ -28,13 +28,14 @@
 - **Tests (T-010 for the API; T-118 then T-121 for the apps, 2026-09-18):** **three of the four
   projects have `npm test`, and it is always ONE command.** Tests live next to the code as
   `*.test.ts(x)`.
-  - **API** — `node:test` + `tsx`, no test dependency. 363 tests (2026-09-19), including T-116's
-    `i18n/unkeyedErrors.test.ts` — a ratchet: English 4xx errors may only get fewer.
+  - **API** — `node:test` + `tsx`, no test dependency. 391 tests (2026-09-19), including T-116's
+    `i18n/unkeyedErrors.test.ts` — a ratchet: English 4xx errors may only get fewer — and T-102i's
+    parity test holding `geoMatch`'s rule and the SQL built from it together.
     ⚠️ Only DB-free modules are covered (`utils/`): services import Sequelize models, so testing
     them needs the pure logic pulled out of the class first. That is still T-010.
   - **User app / driver app** — `jest && node scripts/run-checks.mjs`: Jest (`jest-expo`,
     `@testing-library/react-native`, explicit `@jest/globals` imports) and then all 12
-    `scripts/check-*.mjs` checkers per app. **273 + 295 tests**, 24 checkers, ≈1½ min each
+    `scripts/check-*.mjs` checkers per app. **278 + 295 tests**, 24 checkers, ≈1½ min each
     (2026-09-19; T-116 added `check-raw-error-toasts.mjs` — no toast may show a raw `.message`).
     Screens are covered by T-118, `utils/` by T-121; **every test file has been proven able to go
     red** by mutating the code and reverting — that is the bar for a new one.

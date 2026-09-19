@@ -156,6 +156,17 @@
       passenger) use Uzbek. _(This was backwards until today.)_
 - [ ] ⚪ The trip appears in "My bookings".
 - [ ] ⚪ Cancel the booking → the driver gets a notification.
+- [ ] 🔴 **T-102i — searching FOR your order, by village (QFY).** Needs the API deploy AND a user-app
+      rebuild. Set it up with two drivers on the same trip: driver A picks the **QFY** (e.g. *Yaypan*)
+      in his offer; driver B picks only the **district** (*Qo'qon*), no QFY.
+      - As a passenger, create a **Tuman ichi** order *from Yaypan* → after "OK" you land on the search.
+        A dark chip reads *"Buyurtmangiz bo'yicha · Tuman ichi"*, and the route names **Yaypan**.
+      - **Both** drivers appear; **only B's card** says *"Haydovchi faqat tumanni ko'rsatgan, QFYni
+        emas"*. A driver who picked a **different** QFY in Qo'qon must **not** appear.
+      - Tap **✕** on the chip → the chip and the QFY vanish and the list is the plain district search.
+      - Change the route by hand (tap from/to) → the chip goes away too.
+      - A **Viloyatlar aro** order behaves exactly as before — district level, no card notes.
+      _Few village matches at first is expected: most offers predate QFYs until the backfill runs._
 
 ---
 

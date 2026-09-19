@@ -26,6 +26,14 @@ export type SearchOffersParams = {
   fromCity?: GeoOption | null;
   toProvince?: GeoOption | null;
   toCity?: GeoOption | null;
+  /**
+   * T-102i — the order itself, so the search can match IT: its QFYs and its scope. With a
+   * scope the screen is in "for your order" mode, and a `tuman` / `yaqin` side that named a
+   * QFY is matched at that QFY on the server.
+   */
+  fromSettlement?: GeoOption | null;
+  toSettlement?: GeoOption | null;
+  scope?: OrderScope | null;
 };
 
 /**

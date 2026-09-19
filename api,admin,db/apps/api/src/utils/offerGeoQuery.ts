@@ -25,6 +25,8 @@
  * all (CLAUDE.md: the suite covers DB-free modules only).
  */
 
+import { LOOSE_PARENT_MATCH, type GeoPathIds } from './geoMatch.js';
+
 export type Direction = 'from' | 'to';
 
 /** The geo columns a search can constrain, shallowest first. */
@@ -109,4 +111,131 @@ export const directionMatchSql = (
   if (!byText) return `(${byId})`;
 
   return `(${byId} OR (${hasNoPlacesSql(offerIdRef)} AND ${byText}))`;
+};
+
+// ---------------------------------------------------------------------------- adm3 — T-102i
+
+/**
+ * One place-row condition, as DATA: every named column must equal its value, `null` meaning
+ * IS NULL. Data first, SQL second, so the parity test can evaluate the very clauses the SQL is
+ * rendered from against `geoMatch.placeHit` — without a database.
+ */
+export type PlaceClause = Partial<Record<'city_id' | 'settlement_id', number | null>>;
+
+const CLAUSE_COLUMNS: ReadonlySet<string> = new Set(['city_id', 'settlement_id']);
+
+/**
+ * The adm3 match for one direction, as clauses — a row matches when ANY holds. These are
+ * `geoMatch.placeHit`'s two branches:
+ *   ① exact — the row names the order's QFY;
+ *   ② loose — the row names the order's DISTRICT and NO QFY (`LOOSE_PARENT_MATCH`). The
+ *     `settlement_id: null` is the whole rule: a row naming a different QFY in the same
+ *     district is not "anywhere in the district".
+ * With no district id known, ② is omitted — narrower, never wider.
+ */
+export const adm3Clauses = (
+  settlementId: number,
+  cityId: number | undefined,
+  loose: boolean = LOOSE_PARENT_MATCH,
+): PlaceClause[] => [
+  { settlement_id: settlementId },
+  ...(loose && isSafeId(cityId) ? [{ settlement_id: null, city_id: cityId }] : []),
+];
+
+/** Does a place row satisfy a clause? The equality the SQL expresses, for the parity test. */
+export const rowSatisfies = (row: GeoPathIds, clause: PlaceClause): boolean =>
+  Object.entries(clause).every(
+    ([column, value]) => (row[column as keyof GeoPathIds] ?? null) === value,
+  );
+
+/** A clause as an `EXISTS` over one direction's place rows. Ids are checked, columns listed. */
+export const clauseExistsSql = (
+  direction: Direction,
+  clause: PlaceClause,
+  offerIdRef: string,
+): string => {
+  const conditions = Object.entries(clause).map(([column, value]) => {
+    if (!CLAUSE_COLUMNS.has(column)) throw new Error(`unknown place column: ${column}`);
+    if (value === null) return `dop.${column} IS NULL`;
+    if (!isSafeId(value)) throw new Error(`unsafe geo id: ${String(value)}`);
+    return `dop.${column} = ${value}`;
+  });
+  if (conditions.length === 0) throw new Error('an empty clause would match every row');
+  return (
+    `EXISTS (SELECT 1 FROM driver_offer_places dop ` +
+    `WHERE dop.offer_id = ${offerIdRef} ` +
+    `AND dop.direction = '${direction}' ` +
+    `AND ${conditions.join(' AND ')})`
+  );
+};
+
+/** A `driver_offer_places` row as a raw query returns it. */
+export interface PlaceRow {
+  offer_id: number | string;
+  direction: Direction;
+  province_id?: number | string | null;
+  city_id?: number | string | null;
+  settlement_id?: number | string | null;
+}
+
+/**
+ * Raw place rows → each offer's place set, ready for `geoMatch`.
+ *
+ * 🔴 BIGINT COMES BACK AS A STRING. `offer_id` and every geo column on `driver_offer_places`
+ * are BIGINT, and `pg` returns BIGINT as TEXT in a raw row — while `DriverOffer.id` and the
+ * search's ids are numbers. Unconverted, the lookup by offer never finds its rows and
+ * `placeHit`'s `===` is never exact: every result would be labelled `district`, silently, with
+ * nothing failing. Converted here, once, where it can be tested.
+ */
+export const groupPlaceRows = (
+  rows: readonly PlaceRow[],
+): Map<number, { from: GeoPathIds[]; to: GeoPathIds[] }> => {
+  const idOf = (value: unknown): number | null =>
+    value === null || value === undefined ? null : Number(value);
+  const byOffer = new Map<number, { from: GeoPathIds[]; to: GeoPathIds[] }>();
+  for (const row of rows) {
+    const offerId = Number(row.offer_id);
+    const entry = byOffer.get(offerId) ?? { from: [], to: [] };
+    (row.direction === 'to' ? entry.to : entry.from).push({
+      province_id: idOf(row.province_id),
+      city_id: idOf(row.city_id),
+      settlement_id: idOf(row.settlement_id),
+    });
+    byOffer.set(offerId, entry);
+  }
+  return byOffer;
+};
+
+export interface SettlementFilter {
+  /** The order's QFY on this side. */
+  settlementId: number;
+  /** Its district — needed for the loose clause. */
+  cityId?: number | undefined;
+  /** The DISTRICT's name, for an offer with no place rows (a QFY name is rarely in free text). */
+  districtName?: string | undefined;
+  /** `from_text` or `to_text`. */
+  textColumn: string;
+}
+
+/**
+ * One direction at adm3: any clause's `EXISTS`; an offer with NO place rows falls back to its
+ * free text on the district's name, exactly as `directionMatchSql` does at adm2 — and is later
+ * labelled `district`, because it never named a village.
+ */
+export const settlementMatchSql = (
+  direction: Direction,
+  filter: SettlementFilter,
+  offerIdRef: string,
+): string => {
+  if (!isSafeId(filter.settlementId)) throw new Error(`unsafe geo id: ${String(filter.settlementId)}`);
+  const byId = adm3Clauses(filter.settlementId, filter.cityId)
+    .map((clause) => clauseExistsSql(direction, clause, offerIdRef))
+    .join(' OR ');
+  const byText =
+    filter.districtName && filter.districtName.trim() !== ''
+      ? `${filter.textColumn} ILIKE ${quoteLiteral(`%${filter.districtName}%`)}`
+      : null;
+  return byText
+    ? `((${byId}) OR (${hasNoPlacesSql(offerIdRef)} AND ${byText}))`
+    : `(${byId})`;
 };

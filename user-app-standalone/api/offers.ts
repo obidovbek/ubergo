@@ -24,6 +24,12 @@ export interface DriverOffer {
    */
   vehicle_class?: string | null;
   /**
+   * T-102i — how this offer matched the passenger's ORDER, present only when the search matched
+   * some side at a QFY. `district` means the driver named the district and no QFY (or, for an
+   * old offer, only wrote free text) — the card says so, because the passenger asked for a QFY.
+   */
+  match_precision?: 'exact' | 'district';
+  /**
    * T-083 — which seats are free, front vs back. `seats_free` is one pool
    * number and cannot answer that.
    *
@@ -168,6 +174,10 @@ export interface SearchOffersParams {
   from_city_id?: number;
   to_province_id?: number;
   to_city_id?: number;
+  /** T-102i — the order's QFYs and scope, when the search is matching a passenger's order. */
+  from_settlement_id?: number;
+  to_settlement_id?: number;
+  scope?: string;
   // New filter parameters
   min_rating?: number;
   max_price?: number;
@@ -213,6 +223,9 @@ export const searchOffers = async (
     if (params.from_city_id) queryParams.append('from_city_id', String(params.from_city_id));
     if (params.to_province_id) queryParams.append('to_province_id', String(params.to_province_id));
     if (params.to_city_id) queryParams.append('to_city_id', String(params.to_city_id));
+    if (params.from_settlement_id) queryParams.append('from_settlement_id', String(params.from_settlement_id));
+    if (params.to_settlement_id) queryParams.append('to_settlement_id', String(params.to_settlement_id));
+    if (params.scope) queryParams.append('scope', params.scope);
     // New filters
     if (params.min_rating) queryParams.append('min_rating', String(params.min_rating));
     if (params.max_price) queryParams.append('max_price', String(params.max_price));

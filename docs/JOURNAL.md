@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-09-19 (4) — T-116 committed; T-114 parked; T-102i: a passenger's village finally counts
+
+- **T-116 committed as `cba0be1`.** **T-114 turned out to be code-complete** (① built 2026-09-13,
+  ② split off by the owner) → *Parked*; ② boarded as **T-127**, which the plan had said it "needs"
+  and nobody had created.
+- **T-102i, owner's option A — "for your order".** A passenger picking a QFY for a *Tuman ichi* or
+  *Yaqin* order was comparing it with nothing: the hand-off to the search dropped it, and the server
+  matched at the district. Now the order's scope and QFYs travel with it (both hand-off channels, the
+  stored route extended additively), the server matches that side at the QFY, and a driver who named
+  only the district is let through **with a note on the card saying so**. A chip names the order and
+  clears back to the plain search, which is unchanged.
+- 🔴 **The rules had existed, tested, for a week with no reader** (`geoMatch`'s matching half). They
+  are now the ONE source: the SQL is rendered from clauses derived from `placeHit`, a parity test
+  holds the two together, and the result label is decided by the rule module itself.
+- 🔴 **A trap caught by reading before running:** `driver_offer_places` ids are BIGINT, which `pg`
+  returns as strings; the offer's id is INTEGER. Every result would have been labelled "district" with
+  nothing failing. Pulled into a pure function and pinned with string ids, as pg sends them.
+- **Found and boarded, not fixed: T-128** — drivers find passenger orders by typed text only; the ids
+  every order has carried since T-102 are never read. The mirror of T-102e.
+- **Verification:** 16 mutations, 15 predicted exactly, 1 under-predicted (an older test also rested
+  on the guard). **API 391 · user 278 + 12**; `tsc` 281 / 3; lint 0 / 230 · 208; driver untouched.
+- **Problems / left open:** SQL-verified, not DB-verified — the device check (`CHECKLIST.md` §5) and a
+  walk of T-102e itself are the proof. Few village matches until the backfill runs (the owner's).
+- **Next:** the owner's pick — T-127 pairs naturally with this; T-128, T-126, or T-102f/h.
+
+---
+
 ## 2026-09-19 (3) — T-088 committed; T-115 parked; T-116: the apps speak the user's language on failure
 
 - **T-088 committed as `db8e17d`.** **T-115 turned out to be code-complete** — its status line said

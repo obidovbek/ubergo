@@ -23,8 +23,12 @@ export class PublicOfferController {
         date, 
         from_province_id, 
         from_city_id, 
-        to_province_id, 
+        to_province_id,
         to_city_id,
+        // T-102i — a passenger's order: its QFYs and scope
+        from_settlement_id,
+        to_settlement_id,
+        scope,
         // New filter parameters
         min_rating,
         max_price,
@@ -58,6 +62,17 @@ export class PublicOfferController {
       }
       if (to_city_id) {
         filters.to_city_id = parseInt(to_city_id as string);
+      }
+      // T-102i — parsed loosely here; the service refuses anything that is not a safe id or a
+      // known scope (`isSafeId` / `isOrderScope`), which leaves the search exactly as before.
+      if (from_settlement_id) {
+        filters.from_settlement_id = parseInt(from_settlement_id as string);
+      }
+      if (to_settlement_id) {
+        filters.to_settlement_id = parseInt(to_settlement_id as string);
+      }
+      if (scope) {
+        filters.scope = scope as string;
       }
       
       // New filters

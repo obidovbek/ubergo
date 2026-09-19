@@ -22,6 +22,58 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
+  scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
+  `docs/PLAN-T102.md` §9.
+  ✅ **2026-09-19 — T-102i DONE (owner: option A, "for your order") → `docs/PLAN.md`.** After a
+  passenger creates or edits an order, the search matches THAT order at its scope's level — a *Tuman
+  ichi* / *Yaqin* side at the QFY; a driver who named only the district is let through and the card
+  says so. One rule (`geoMatch.placeHit`), SQL derived from it, a parity test between them; a BIGINT-
+  as-string trap that would have mislabelled every result caught before it ran. API 391 · user 278.
+  🛑 **Left in T-102:** T-102f (admin neighbours) · T-102h · the backfill RUN (the owner's). Needs the
+  API deploy + a user-app rebuild; `CHECKLIST.md` §5. **T-128** = the driver side, still by text.
+  🟢 **2026-09-14 — T-102c IS CLOSED (1 · 2 · 3).** Sub-step 3, the driver naming a QFY, is
+  `docs/PLAN-T102c3.md`: **a client-only step — the API had been finished for it since 09-13.**
+  `GeoSheet` gained a second multi-select level and a confirm that ADVANCES instead of finishing;
+  the rule *"only an endpoint naming exactly ONE district may name a QFY"* (owner decision ①) is
+  `canPickSettlements`, **injected into the sheet rather than known by it** — the sheet is a geo
+  picker a search screen also uses, and an offer rule has no business inside it.
+  49 → **60 assertions, red on all 7 mutations.** All baselines identical (`tsc` 28 proved as a
+  SET, lint 0/275, 3 colours, 11 checkers).
+  🔴 **AND MEASURING IT FOUND THE HOLE IN THIS CARD: NOTHING READS THE IDS AT adm3.**
+  `getPublicOffers` filters on city/province only, `SearchOffersScreen` sends nothing deeper, and
+  **the whole matching half of `utils/geoMatch.ts` — `matchesOrder`, `matchLevelFor`,
+  `matchPrecision`, `hasMatchableIds`, `validateScope`, `neighborsFirst` — has ZERO consumers.**
+  T-102e rewrote the *search*; nothing matches an *order* at its own scope's level, which is what
+  the card promises. → **T-102i**, now in the plan's §6. *Fifth time a card has claimed a thing
+  the code did not do; measuring, not reading, is what found it.*
+  🔴 **§4 ③ of the plan overstated the artboard** and is corrected there: `DriverElon` draws **no**
+  QFY picker (`toggleAdm3` has zero callers, the sheet is `1/2`→`2/2`). It contributes the data
+  model and the two-line display; the picker was new UI.
+  🛑 **NOT ON A DEVICE.** `PLAN-T102c3.md` §6 lists six walks; **item 3 — ticking a second
+  district must CLEAR the QFYs — is the one no checker covers.**
+  🔴 **`DriverOffer` HAS NO GEO COLUMNS AT ALL** — only `from_text`/`to_text` free strings, and
+  search is `ILIKE '%name%'` against them (`DriverOfferService.ts:812-839`). **So three of the
+  owner's four scopes cannot be expressed**, and "match adm2 but do NOT descend into it" — the rule
+  separating *Viloyat ichi* from *Viloyatlar aro* — is not representable at all.
+  ⚠️ **`PassengerOffer` is half-built the other way:** it HAS
+  `from_/to_{country,province,city,settlement}_id` and **no search code reads them** — grepping
+  every service for those columns in a `where` returns nothing. Columns written, never queried.
+  ✅ **adm3 = `GeoSettlement`** (decided 2026-08-30 from the schema: `GeoAdministrativeArea`,
+  `GeoSettlement` and `GeoNeighborhood` are **siblings** on `city_district_id`, not depths —
+  four levels, three kinds of adm3. `GeoSettlement` is the only one with a `type` column, which is
+  where QFY/shahar/qishloq lives, and `PassengerOffer` already chose it).
+  ✅ **"Yaqin" = a NEIGHBOURS TABLE** (owner, 2026-08-30) — `geo_district_neighbors`, not a radius
+  and not "same province".
+  🔴 **Adjacency is SYMMETRIC and the DB will not enforce it** — write both rows, or store one with
+  `CHECK (a < b)` and `UNION` both directions. A half-populated table means A finds B but B does
+  not find A, which presents as "sometimes search works".
+  🔴 **Add `CHECK (city_district_id <> neighbor_city_district_id)`** or *Yaqin* silently degrades
+  into *Tuman ichi*.
+  ⚠️ Needs an admin screen to populate ~200 districts. Until populated, *Yaqin* returns nothing —
+  correct behaviour, but the screen needs a real empty state saying so.
+  🛑 **T-101 step 8 must not present the scopes as working until this lands.**
+
 - [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
   converts pages one by one, user app first** → `docs/PLAN-T101.md`.
@@ -322,6 +374,60 @@
 > **They clear in the runs already queued:** one API deploy (**T-065** only) and one rebuild of both
 > apps. ❌ No migration in any of the eight. ⚠️ **T-046 still needs its own migration**, between the
 > deploy and the rebuilds.
+
+- [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
+  FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
+  ⏸️ **PARKED 2026-09-19:** sub-step ① — the whole scope the owner set (*"SCOPE NOW = ① ONLY"*) — is
+  built and committed (`a17e78e`); **only the device walk waits** (`PLAN-T114.md` §8, item 2 first).
+  It sat in *Next* since 2026-09-14 as if unstarted. **② is now its own card, T-127.**
+  ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
+  drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
+  **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
+  🛑 **Device check §8 of the plan, item 2 first** — changing the root must CLEAR both endpoints,
+  and no checker can cover that.
+  🛑 **② IS NOT STARTED** (per-scope completeness: `yaqin` requiring a QFY, the MATCH strip).
+  ✅ **DEVICE-FIXED 2026-09-13, three owner reports:** ① the root/from-to pickers rendered EMPTY
+  (`GeoSheet` answers a missing ancestor with an empty list and no error — the country was never
+  put back into the path); ② after creating an order the app **stayed on the form** (a tab route
+  reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
+  stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
+  reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
+  ✅ ④ **the search tab now follows an edited order** — it is a tab that mounts once and seeded
+  its route once, so an edit never reached it. Fixed through storage + a REVISION
+  (`utils/lastSearch.ts`), because the screen writes that same key itself and a plain re-read on
+  focus would overwrite a search the passenger typed. `check-last-search.mjs`: 11 assertions,
+  red on 6 mutations, both failure directions.
+  ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
+  **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
+  is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.
+  Owner: *"user app user order … there must be different FROM, TO part"*, naming all four boards.
+  ✅ **Measured 2026-09-13, not assumed — and it is SMALLER than it reads.**
+  🟢 **`GeoSheet` ALREADY TAKES `startLevel` + `initialPath`, and was built for this card** — its
+  header says *"that is the whole reason the artboards have four `UserBuyurtma*` files."*
+  🔴 **`LocationCard.tsx:207-208` hardcodes both as literals** and takes neither as a prop, so the
+  capability is wired to nothing. `CreatePassengerOfferScreen.tsx:127` reads `scope` and spends it
+  on the header subtitle — its own comment at line 125 admits that is "the only thing separating
+  the four scopes".
+  **The four boards differ by ENTRY LEVEL and PINNING, nothing else** (all four pickers are
+  byte-identical; `openFrom` is the only line that changes):
+  · `aro` — no root card, opens at **viloyat**
+  · `viloyat` — root card **`Viloyat (Adm1)`**, opens at **tuman**, province pinned
+  · `tuman` — root card **`Tuman (Adm2)`**, opens at **QFY**, province + district pinned
+  · `yaqin` — no root card, opens at **viloyat**
+  ⚠️ **`aro` and `yaqin` are IDENTICAL in sub-step ①** — measured, not an oversight. They diverge
+  only in completeness (`yaqin` requires adm3), which is ②.
+  🔴 **A CONTRADICTION FOUND: the Tuman board accepts an endpoint with NO QFY, but
+  `validateScope(order,'tuman')` matches at adm3 and refuses it.** An order that form accepts, the
+  matcher rejects. ✅ **Owner decided 2026-09-13: the QFY is REQUIRED on Tuman** — the rules module
+  stands and the form tightens beyond the artboard. Enforcement is ②.
+  **SCOPE NOW = ① ONLY** (owner's call): root card + entry levels. ② (per-scope completeness, the
+  MATCH strip) is a follow-up card and half-overlaps T-102's validation.
+  ❌ No migration, no API change — `PassengerOffer` already has and populates all 8 geo id columns.
+  ⚠️ **Fix all four boards together** — `ubexgo-fix-the-class-not-the-instance`, four times in one
+  screen.
+  ⏸️ **MOVED *Now* → *Next* 2026-09-14** to make room for T-118 — the owner approved that plan
+  and the recommendation that this card, the only one in *Now* with nothing started, is the one
+  that waits. Nothing was lost: resume from `docs/PLAN-T114.md`, sub-step ①.
 
 - [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
   Owner: *"user or driver have possibility max two active offers"*.
@@ -1286,101 +1392,22 @@ masofalar'`). **2 of the 6 were on
 
 ## 📋 Next (ready to start)
 
-- [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
-  FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
-  ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
-  drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
-  **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
-  🛑 **Device check §8 of the plan, item 2 first** — changing the root must CLEAR both endpoints,
-  and no checker can cover that.
-  🛑 **② IS NOT STARTED** (per-scope completeness: `yaqin` requiring a QFY, the MATCH strip).
-  ✅ **DEVICE-FIXED 2026-09-13, three owner reports:** ① the root/from-to pickers rendered EMPTY
-  (`GeoSheet` answers a missing ancestor with an empty list and no error — the country was never
-  put back into the path); ② after creating an order the app **stayed on the form** (a tab route
-  reached from a screen pushed OVER the tab bar switches the tab underneath without unwinding the
-  stack; `MainTabs` was also typed `undefined`, so the correct call was a type error); ③ **edit now
-  reopens in the order's own scope** — that needed **T-102d's scope half**, which was built.
-  ✅ ④ **the search tab now follows an edited order** — it is a tab that mounts once and seeded
-  its route once, so an edit never reached it. Fixed through storage + a REVISION
-  (`utils/lastSearch.ts`), because the screen writes that same key itself and a plain re-read on
-  focus would overwrite a search the passenger typed. `check-last-search.mjs`: 11 assertions,
-  red on 6 mutations, both failure directions.
-  ⚠️ Orders created before 2026-09-13 have `match_scope` NULL and open with the default.
-  **Inferring it from the stored geo was rejected as a guess** — an `aro` order inside one district
-  is indistinguishable from a `tuman` one, which is why the column stores the scope, not the level.
-  Owner: *"user app user order … there must be different FROM, TO part"*, naming all four boards.
-  ✅ **Measured 2026-09-13, not assumed — and it is SMALLER than it reads.**
-  🟢 **`GeoSheet` ALREADY TAKES `startLevel` + `initialPath`, and was built for this card** — its
-  header says *"that is the whole reason the artboards have four `UserBuyurtma*` files."*
-  🔴 **`LocationCard.tsx:207-208` hardcodes both as literals** and takes neither as a prop, so the
-  capability is wired to nothing. `CreatePassengerOfferScreen.tsx:127` reads `scope` and spends it
-  on the header subtitle — its own comment at line 125 admits that is "the only thing separating
-  the four scopes".
-  **The four boards differ by ENTRY LEVEL and PINNING, nothing else** (all four pickers are
-  byte-identical; `openFrom` is the only line that changes):
-  · `aro` — no root card, opens at **viloyat**
-  · `viloyat` — root card **`Viloyat (Adm1)`**, opens at **tuman**, province pinned
-  · `tuman` — root card **`Tuman (Adm2)`**, opens at **QFY**, province + district pinned
-  · `yaqin` — no root card, opens at **viloyat**
-  ⚠️ **`aro` and `yaqin` are IDENTICAL in sub-step ①** — measured, not an oversight. They diverge
-  only in completeness (`yaqin` requires adm3), which is ②.
-  🔴 **A CONTRADICTION FOUND: the Tuman board accepts an endpoint with NO QFY, but
-  `validateScope(order,'tuman')` matches at adm3 and refuses it.** An order that form accepts, the
-  matcher rejects. ✅ **Owner decided 2026-09-13: the QFY is REQUIRED on Tuman** — the rules module
-  stands and the form tightens beyond the artboard. Enforcement is ②.
-  **SCOPE NOW = ① ONLY** (owner's call): root card + entry levels. ② (per-scope completeness, the
-  MATCH strip) is a follow-up card and half-overlaps T-102's validation.
-  ❌ No migration, no API change — `PassengerOffer` already has and populates all 8 geo id columns.
-  ⚠️ **Fix all four boards together** — `ubexgo-fix-the-class-not-the-instance`, four times in one
-  screen.
-  ⏸️ **MOVED *Now* → *Next* 2026-09-14** to make room for T-118 — the owner approved that plan
-  and the recommendation that this card, the only one in *Now* with nothing started, is the one
-  that waits. Nothing was lost: resume from `docs/PLAN-T114.md`, sub-step ①.
+- [ ] T-127 (P2) 📍 **T-114 ② — PER-SCOPE COMPLETENESS: each order scope demands the geo depth it
+  matches at, and the form shows it (the MATCH strip).** Split out of T-114 by the owner (2026-09-13,
+  *"SCOPE NOW = ① ONLY"*); `PLAN-T114.md` §8 said *"needs its own card"* — boarded 2026-09-19.
+  ✅ **Owner decided the blocking piece 2026-09-13: the QFY is REQUIRED on *Tuman ichi*** — the rules
+  module (`validateScope`, matching at adm3) stands and the form tightens beyond the artboard.
+  `yaqin` requires a QFY on both ends. ⚠️ **Half-overlaps T-102i** (the read side) — do it after, or
+  with it: completeness only matters once something matches at adm3.
 
-- [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
-  scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
-  `docs/PLAN-T102.md` §9.
-  🟢 **2026-09-14 — T-102c IS CLOSED (1 · 2 · 3).** Sub-step 3, the driver naming a QFY, is
-  `docs/PLAN-T102c3.md`: **a client-only step — the API had been finished for it since 09-13.**
-  `GeoSheet` gained a second multi-select level and a confirm that ADVANCES instead of finishing;
-  the rule *"only an endpoint naming exactly ONE district may name a QFY"* (owner decision ①) is
-  `canPickSettlements`, **injected into the sheet rather than known by it** — the sheet is a geo
-  picker a search screen also uses, and an offer rule has no business inside it.
-  49 → **60 assertions, red on all 7 mutations.** All baselines identical (`tsc` 28 proved as a
-  SET, lint 0/275, 3 colours, 11 checkers).
-  🔴 **AND MEASURING IT FOUND THE HOLE IN THIS CARD: NOTHING READS THE IDS AT adm3.**
-  `getPublicOffers` filters on city/province only, `SearchOffersScreen` sends nothing deeper, and
-  **the whole matching half of `utils/geoMatch.ts` — `matchesOrder`, `matchLevelFor`,
-  `matchPrecision`, `hasMatchableIds`, `validateScope`, `neighborsFirst` — has ZERO consumers.**
-  T-102e rewrote the *search*; nothing matches an *order* at its own scope's level, which is what
-  the card promises. → **T-102i**, now in the plan's §6. *Fifth time a card has claimed a thing
-  the code did not do; measuring, not reading, is what found it.*
-  🔴 **§4 ③ of the plan overstated the artboard** and is corrected there: `DriverElon` draws **no**
-  QFY picker (`toggleAdm3` has zero callers, the sheet is `1/2`→`2/2`). It contributes the data
-  model and the two-line display; the picker was new UI.
-  🛑 **NOT ON A DEVICE.** `PLAN-T102c3.md` §6 lists six walks; **item 3 — ticking a second
-  district must CLEAR the QFYs — is the one no checker covers.**
-  🔴 **`DriverOffer` HAS NO GEO COLUMNS AT ALL** — only `from_text`/`to_text` free strings, and
-  search is `ILIKE '%name%'` against them (`DriverOfferService.ts:812-839`). **So three of the
-  owner's four scopes cannot be expressed**, and "match adm2 but do NOT descend into it" — the rule
-  separating *Viloyat ichi* from *Viloyatlar aro* — is not representable at all.
-  ⚠️ **`PassengerOffer` is half-built the other way:** it HAS
-  `from_/to_{country,province,city,settlement}_id` and **no search code reads them** — grepping
-  every service for those columns in a `where` returns nothing. Columns written, never queried.
-  ✅ **adm3 = `GeoSettlement`** (decided 2026-08-30 from the schema: `GeoAdministrativeArea`,
-  `GeoSettlement` and `GeoNeighborhood` are **siblings** on `city_district_id`, not depths —
-  four levels, three kinds of adm3. `GeoSettlement` is the only one with a `type` column, which is
-  where QFY/shahar/qishloq lives, and `PassengerOffer` already chose it).
-  ✅ **"Yaqin" = a NEIGHBOURS TABLE** (owner, 2026-08-30) — `geo_district_neighbors`, not a radius
-  and not "same province".
-  🔴 **Adjacency is SYMMETRIC and the DB will not enforce it** — write both rows, or store one with
-  `CHECK (a < b)` and `UNION` both directions. A half-populated table means A finds B but B does
-  not find A, which presents as "sometimes search works".
-  🔴 **Add `CHECK (city_district_id <> neighbor_city_district_id)`** or *Yaqin* silently degrades
-  into *Tuman ichi*.
-  ⚠️ Needs an admin screen to populate ~200 districts. Until populated, *Yaqin* returns nothing —
-  correct behaviour, but the screen needs a real empty state saying so.
-  🛑 **T-101 step 8 must not present the scopes as working until this lands.**
+- [ ] T-128 (P2) 📍 **DRIVERS FIND PASSENGER ORDERS BY TYPED TEXT ONLY — the ids are never read.**
+  Found 2026-09-19 while measuring T-102i. `PassengerOfferService.getPublicOffers` (what the driver
+  app's passenger-orders list calls) filters `from_text` / `to_text` with `ILIKE` and nothing else,
+  although every order since T-102 carries `from_/to_{province,city,settlement}_id` and a
+  `match_scope`. **The mirror of T-102e**, which fixed the passenger's side (search offers by ids)
+  and left this one. ⚠️ Reuse T-102i's adm3 SQL and `geoMatch`'s rules — the matching sentence is
+  the same with the roles swapped (the driver's place SET against the order's single path).
+  ❌ No migration. ⚠️ Needs an API deploy.
 
 - [ ] T-103 (P2) ⚡ **"HOZIROQ" ON DRIVER OFFERS — `is_urgent`, the driver's stated intent.**
   Owner defined it 2026-08-30: *"driver wants quick passenger that go as soon as possible maybe
@@ -2911,7 +2938,7 @@ masofalar'`). **2 of the 6 were on
 ## ✅ Done (newest on top)
 
 - [x] T-116 (P1) 🌐 **MESSAGES ANSWER IN THE USER'S LANGUAGE — DONE 2026-09-19, all 7 steps** (option A)
-  → `docs/PLAN.md`. Owner: *"correct everywhere info/error/warning language responses frontend/backend"*.
+  → `docs/PLAN-T116.md`. Owner: *"correct everywhere info/error/warning language responses frontend/backend"*.
   🔴 **Measured, the card undercounted by 4×: 131 English `AppError`s, not ~37** — it had counted two
   services. But **only 7 throw sites a user can really hit** (step 1 traced every one to a screen, or
   ruled it out: app-enforced backstops · no app caller · 5xx · admin · behind `authenticate`) — now

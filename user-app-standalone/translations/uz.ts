@@ -379,6 +379,10 @@ export default {
     clear: "Tozalash",
     noRidesAvailable: "Safar mavjud emas",
     resultsCount: "{count} ta taklif",
+    // T-102i — searching FOR the passenger's own order, and how an offer matched it.
+    forYourOrder: "Buyurtmangiz bo'yicha",
+    clearOrderMatch: "Buyurtma bo'yicha saralashni olib tashlash",
+    matchedDistrictOnly: "Haydovchi faqat tumanni ko'rsatgan, QFYni emas",
     noRidesMessage:
       "Bu yo'nalish bo'yicha takliflar topilmadi. Qidiruv mezonlarini o'zgartirib ko'ring.",
     selectLocations: "Manzilni tanlang",

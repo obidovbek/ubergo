@@ -114,30 +114,51 @@ const idAt = (path: GeoPathIds, level: MatchLevel): number | null | undefined =>
 export type DirectionHit = 'exact' | 'district' | null;
 
 /**
- * One direction: is the order's node AMONG the offer's places at this level?
+ * ONE place row against the order's side, at one level — the rule at its smallest. T-102i.
  *
- * Exported because the service builds its `EXISTS` subquery from the same shape.
+ * 🔴 The SQL filter (`offerGeoQuery.adm3Clauses`) is built from this function's two branches,
+ * and `offerGeoQuery.test.ts` runs the same fixture rows through both. Change a branch here and
+ * that parity test goes red until the SQL says the same thing — the two cannot drift silently.
  */
-export const directionHit = (
+export const placeHit = (
+  place: GeoPathIds,
   orderSide: GeoPathIds,
-  offerSide: PlaceSet,
   level: MatchLevel,
 ): DirectionHit => {
   const wanted = idAt(orderSide, level);
   // An order that never named a node at this level cannot be matched on it.
   if (wanted == null) return null;
 
-  if (offerSide.some((p) => idAt(p, level) === wanted)) return 'exact';
+  if (idAt(place, level) === wanted) return 'exact';
 
-  // The offer only named the district — see LOOSE_PARENT_MATCH.
+  // The row names only the district — see LOOSE_PARENT_MATCH. A row that named a DIFFERENT
+  // QFY in the same district is not "anywhere in the district" and never matches loosely.
   if (level === 'adm3' && LOOSE_PARENT_MATCH) {
     const orderCity = orderSide.city_id;
-    if (orderCity == null) return null;
-    const districtOnly = offerSide.some(
-      (p) => p.settlement_id == null && p.city_id != null && p.city_id === orderCity,
-    );
-    if (districtOnly) return 'district';
+    if (
+      orderCity != null &&
+      place.settlement_id == null &&
+      place.city_id != null &&
+      place.city_id === orderCity
+    ) {
+      return 'district';
+    }
   }
+  return null;
+};
+
+/**
+ * One direction: is the order's node AMONG the offer's places at this level? The best
+ * `placeHit` over the offer's rows — an exact row beats a district-only one.
+ */
+export const directionHit = (
+  orderSide: GeoPathIds,
+  offerSide: PlaceSet,
+  level: MatchLevel,
+): DirectionHit => {
+  const hits = offerSide.map((place) => placeHit(place, orderSide, level));
+  if (hits.includes('exact')) return 'exact';
+  if (hits.includes('district')) return 'district';
   return null;
 };
 
@@ -176,6 +197,27 @@ export const matchPrecision = (
   const b = directionHit(order.to, offer.to, level);
   if (a === null || b === null) return null;
   return a === 'exact' && b === 'exact' ? 'exact' : 'district';
+};
+
+/**
+ * The label a SEARCH result carries when some of its directions were matched at adm3 — T-102i.
+ *
+ * `adm3Directions` are the sides the search actually matched at the QFY (a side whose order
+ * named no QFY was matched at adm2, exactly as before, and has nothing to label).
+ * `'exact'` only when every such side hit a row naming the QFY itself; `'district'` otherwise —
+ * including an offer with NO place rows, which the search reached through its free text and
+ * which never named a village at all. **Never over-promise:** anything uncertain is `'district'`.
+ */
+export const offerMatchPrecision = (
+  order: Journey,
+  offer: OfferPlaces | undefined,
+  adm3Directions: readonly Direction[],
+): 'exact' | 'district' => {
+  if (!offer) return 'district';
+  const allExact = adm3Directions.every(
+    (direction) => directionHit(order[direction], offer[direction], 'adm3') === 'exact',
+  );
+  return allExact ? 'exact' : 'district';
 };
 
 // ---------------------------------------------------------------------------- order validation

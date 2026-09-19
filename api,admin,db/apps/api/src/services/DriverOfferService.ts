@@ -27,12 +27,23 @@ import type {
   DriverOfferStatus,
   DriverOfferVehicleClass
 } from '../database/models/DriverOffer.js';
-import { validateOfferPlaces, type GeoPathIds } from '../utils/geoMatch.js';
+import {
+  isOrderScope,
+  matchLevelFor,
+  offerMatchPrecision,
+  validateOfferPlaces,
+  type GeoPathIds,
+  type Journey,
+  type OfferPlaces
+} from '../utils/geoMatch.js';
 import { Sequelize as SequelizeLib } from 'sequelize';
 import {
   directionMatchSql,
+  groupPlaceRows,
   isSafeId,
-  type PlaceLevel
+  settlementMatchSql,
+  type PlaceLevel,
+  type PlaceRow
 } from '../utils/offerGeoQuery.js';
 import {
   DRIVER_ACTIVE_STATUSES,
@@ -988,6 +999,10 @@ export class DriverOfferService {
     from_city_id?: number;
     to_province_id?: number;
     to_city_id?: number;
+    /** T-102i — the order's QFYs and scope, when the search is matching a passenger's order. */
+    from_settlement_id?: number;
+    to_settlement_id?: number;
+    scope?: string;
     min_rating?: number;
     max_price?: number;
     min_price?: number;
@@ -1026,10 +1041,22 @@ export class DriverOfferService {
      */
     const offerIdRef = '"DriverOffer"."id"';
 
+    /*
+     * 🔴 T-102i — AN ORDER'S QFY FINALLY COUNTS. When the search carries a passenger's order
+     * (`scope` + a QFY), a side whose scope matches at adm3 (`tuman`, `yaqin`) and whose order
+     * named a QFY is matched at that QFY — the offer names it, or (LOOSE_PARENT_MATCH) names the
+     * district and no QFY. Every other side, and every search without an order, is untouched.
+     * The sides matched this way are remembered so each result can say HOW it matched.
+     */
+    const scope = isOrderScope(filters.scope) ? filters.scope : undefined;
+    const matchesAtAdm3 = scope !== undefined && matchLevelFor(scope) === 'adm3';
+    const adm3Directions: Array<'from' | 'to'> = [];
+
     const geoSide = async (
       direction: 'from' | 'to',
       cityId: number | undefined,
       provinceId: number | undefined,
+      settlementId: number | undefined,
       textColumn: string
     ) => {
       let id: number | undefined;
@@ -1052,6 +1079,24 @@ export class DriverOfferService {
         }
       }
 
+      if (matchesAtAdm3 && isSafeId(settlementId)) {
+        // The text fallback (offers with no place rows) uses the DISTRICT's name — a QFY name
+        // is rarely in free text. Such an offer is labelled `district` below.
+        const sql = settlementMatchSql(
+          direction,
+          {
+            settlementId,
+            cityId: level === 'city' ? id : undefined,
+            districtName: level === 'city' ? name : undefined,
+            textColumn
+          },
+          offerIdRef
+        );
+        whereConditions.push(SequelizeLib.literal(sql));
+        adm3Directions.push(direction);
+        return;
+      }
+
       const sql = directionMatchSql(direction, { id, level, name, textColumn }, offerIdRef);
       if (sql) whereConditions.push(SequelizeLib.literal(sql));
     };
@@ -1060,9 +1105,16 @@ export class DriverOfferService {
       'from',
       filters.from_city_id,
       filters.from_province_id,
+      filters.from_settlement_id,
       '"DriverOffer"."from_text"'
     );
-    await geoSide('to', filters.to_city_id, filters.to_province_id, '"DriverOffer"."to_text"');
+    await geoSide(
+      'to',
+      filters.to_city_id,
+      filters.to_province_id,
+      filters.to_settlement_id,
+      '"DriverOffer"."to_text"'
+    );
 
     // Filter by from/to text (simple text search for MVP)
     if (filters.from_text) {
@@ -1254,6 +1306,32 @@ export class DriverOfferService {
       });
     }
 
+    /*
+     * T-102i — HOW each result matched, decided by the rule module itself (`geoMatch`), from
+     * the offers' real place rows: one grouped query, the same shape as the two above.
+     * `district` means the driver named the district and no QFY (or, for an old offer, only
+     * wrote free text) — the card has to say so, or the passenger believes a precision the
+     * driver never promised.
+     */
+    const precisionById = new Map<number, 'exact' | 'district'>();
+    if (adm3Directions.length > 0 && offerIds.length > 0) {
+      const placeRows = await DriverOfferPlace.findAll({
+        where: { offer_id: { [Op.in]: offerIds } },
+        attributes: ['offer_id', 'direction', 'province_id', 'city_id', 'settlement_id'],
+        raw: true
+      });
+      // BIGINT rows come back as strings — `groupPlaceRows` converts them (and says why).
+      const placesByOffer = groupPlaceRows(placeRows as unknown as PlaceRow[]);
+      const journey: Journey = {
+        from: { city_id: filters.from_city_id ?? null, settlement_id: filters.from_settlement_id ?? null },
+        to: { city_id: filters.to_city_id ?? null, settlement_id: filters.to_settlement_id ?? null }
+      };
+      for (const id of offerIds) {
+        const places: OfferPlaces | undefined = placesByOffer.get(Number(id));
+        precisionById.set(Number(id), offerMatchPrecision(journey, places, adm3Directions));
+      }
+    }
+
     // Map offers with ratings
     let mappedOffers = offers.map((offer) => {
       const offerWithIncludes = offer as any;
@@ -1279,6 +1357,10 @@ export class DriverOfferService {
 
       return {
         id: offer.id,
+        // T-102i — present only when the search matched some side at a QFY.
+        ...(adm3Directions.length > 0
+          ? { match_precision: precisionById.get(Number(offer.id)) ?? 'district' }
+          : {}),
         from_text: offer.from_text,
         to_text: offer.to_text,
         start_at: offer.start_at,

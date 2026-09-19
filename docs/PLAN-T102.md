@@ -269,7 +269,15 @@ symmetric or "either direction" match would offer a passenger a ride going the w
       makes the next report's numbers a lie and nobody would know where it stopped.
       🛑 **Run the REPORT first and read it.** The counts (writable / ambiguous / no-match) are
       the evidence for whether `--apply` is safe on this data — I cannot see the database.
-- [ ] 🔴 **T-102i. THE READ SIDE — the step this plan never had.** Boarded 2026-09-14, on measuring
+- [x] ✅ **T-102i DONE 2026-09-19 → `docs/PLAN.md` (to be archived as `PLAN-T102i.md`).** Owner chose
+      **option A — "for your order"**: after creating (or editing) an order, the search matches THAT
+      order at its scope's level — a `tuman` / `yaqin` side at the QFY, a driver who named only the
+      district let through by `LOOSE_PARENT_MATCH` and **labelled** so on the card; the plain
+      search unchanged. `geoMatch.placeHit` is the one rule; the SQL is rendered from clauses
+      derived from it, held together by a parity test; `pg`'s BIGINT-as-string trap caught and
+      pinned. The design question below is answered: **order↔offer, via the search**, not a new
+      village level in the plain search (option B, not chosen).
+      🔴 **T-102i. THE READ SIDE — the step this plan never had.** Boarded 2026-09-14, on measuring
       that **nothing reads the ids at adm3**: `getPublicOffers` builds its geo filter from
       `from_city_id` / `from_province_id` only, `SearchOffersScreen` sends nothing deeper, and
       `matchesOrder` · `matchLevelFor` · `matchPrecision` · `hasMatchableIds` · `validateScope` ·
@@ -417,8 +425,9 @@ than assumed: it reduces to **one equality per direction at the order's level**,
 (persisted places · no more fake stops · **QFY selection, 2026-09-14**) · T-102d (the scope half) ·
 T-102e (the search reads the table) · T-102g (**written and tested, NOT RUN**).
 
-**Left:** **T-102i** (the read side — new, and the one that matters) · T-102f (admin neighbours) ·
-T-102g's actual run · T-102h.
+**Left:** ~~T-102i~~ ✅ **done 2026-09-19** (see §6) · T-102f (admin neighbours) · T-102g's actual
+run (the owner's) · T-102h. **Also boarded from T-102i's measuring: T-128** — drivers find passenger
+orders by typed text only, the mirror of what T-102e fixed.
 
 ### The next step, in order of what unblocks what
 

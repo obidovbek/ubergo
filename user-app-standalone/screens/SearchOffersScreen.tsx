@@ -78,6 +78,7 @@ import { OfferResultCard } from '../components/search/OfferResultCard';
 import { DriverBlock, RatingBreakdownSheet } from '../components/search/DriverBlock';
 import { RouteSummary } from '../components/search/RouteSummary';
 import { ClassStrip } from '../components/search/ClassStrip';
+import { ORDER_SCOPES, isOrderScope, type OrderScope } from '../types/orderScope';
 import {
   ALL_CLASSES,
   classCounts,
@@ -132,6 +133,16 @@ export default function SearchOffersScreen() {
   const [cls, setCls] = useState<string>(ALL_CLASSES);
   const [sort, setSort] = useState<SortState>({ key: 'match', priceDesc: false, seatsAsc: false });
 
+  /*
+   * 🔴 T-102i — "FOR YOUR ORDER". Set when the route arrives FROM an order (the hand-off after
+   * creating one, or a bumped route after an edit): the search then sends the order's scope and
+   * QFYs, and the server matches a `tuman` / `yaqin` side at the QFY. The QFYs ride on the paths
+   * themselves (`GeoPath.settlement`), so the route summary names them with no extra display.
+   * ⚠️ Any change the passenger makes to the route ends the mode — the order no longer
+   * describes what is being searched. Clearing it returns to the plain search exactly.
+   */
+  const [orderScope, setOrderScope] = useState<OrderScope | null>(null);
+
   const [ratingFor, setRatingFor] = useState<OffersAPI.DriverOffer | null>(null);
   const [ratingSummary, setRatingSummary] = useState<DriverRatingSummary | null>(null);
   const [ratingLoading, setRatingLoading] = useState(false);
@@ -143,6 +154,8 @@ export default function SearchOffersScreen() {
   const selectedToCountry = toPath.country ?? null;
   const selectedToProvince = toPath.province ?? null;
   const selectedToCity = toPath.district ?? null;
+  const selectedFromSettlement = fromPath.settlement ?? null;
+  const selectedToSettlement = toPath.settlement ?? null;
 
   // ---------------------------------------------------------------- saved search
 
@@ -204,11 +217,15 @@ export default function SearchOffersScreen() {
         setFromPath({
           province: handoff.fromProvince,
           ...(handoff.fromCity ? { district: handoff.fromCity } : {}),
+          ...(handoff.fromSettlement ? { settlement: handoff.fromSettlement } : {}),
         });
         setToPath({
           province: handoff.toProvince,
           ...(handoff.toCity ? { district: handoff.toCity } : {}),
+          ...(handoff.toSettlement ? { settlement: handoff.toSettlement } : {}),
         });
+        // T-102i — the route came from an order: search FOR that order.
+        setOrderScope(isOrderScope(handoff.scope) ? handoff.scope : null);
         return;
       }
       await loadLastSearch();
@@ -258,12 +275,16 @@ export default function SearchOffersScreen() {
           ...(route.fromCountry ? { country: route.fromCountry } : {}),
           ...(route.fromProvince ? { province: route.fromProvince } : {}),
           ...(route.fromCity ? { district: route.fromCity } : {}),
+          ...(route.fromSettlement ? { settlement: route.fromSettlement } : {}),
         });
         setToPath({
           ...(route.toCountry ? { country: route.toCountry } : {}),
           ...(route.toProvince ? { province: route.toProvince } : {}),
           ...(route.toCity ? { district: route.toCity } : {}),
+          ...(route.toSettlement ? { settlement: route.toSettlement } : {}),
         });
+        // T-102i — a bumped route is an ORDER's route (only the order form bumps).
+        setOrderScope(isOrderScope(route.scope) ? route.scope : null);
       })();
       return () => {
         cancelled = true;
@@ -294,6 +315,14 @@ export default function SearchOffersScreen() {
           from_city_id: selectedFromCity?.id,
           to_province_id: selectedToProvince.id,
           to_city_id: selectedToCity?.id,
+          // T-102i — only in "for your order" mode; the plain search sends none of these.
+          ...(orderScope
+            ? {
+                scope: orderScope,
+                from_settlement_id: selectedFromSettlement?.id,
+                to_settlement_id: selectedToSettlement?.id,
+              }
+            : {}),
           // ⚠️ `match` and `seats` have no server twin; `serverSortFor` returns undefined
           // rather than quietly substituting one, and the ordering happens client-side.
           sort_by: serverSortFor(sort),
@@ -307,7 +336,17 @@ export default function SearchOffersScreen() {
         if (!silent) setLoading(false);
       }
     },
-    [selectedFromProvince, selectedFromCity, selectedToProvince, selectedToCity, sort, t],
+    [
+      selectedFromProvince,
+      selectedFromCity,
+      selectedToProvince,
+      selectedToCity,
+      selectedFromSettlement,
+      selectedToSettlement,
+      orderScope,
+      sort,
+      t,
+    ],
   );
 
   /**
@@ -360,7 +399,26 @@ export default function SearchOffersScreen() {
   const swapLocations = () => {
     setFromPath(toPath);
     setToPath(fromPath);
+    // The order goes one way; swapped, it no longer describes the search.
+    setOrderScope(null);
   };
+
+  /**
+   * T-102i — back to the plain search: no scope, and no QFYs on the route either, since the
+   * plain search matches at the district and a QFY on the summary would claim otherwise.
+   */
+  const clearOrderMatch = () => {
+    const withoutSettlement = (path: GeoPath): GeoPath => {
+      const next = { ...path };
+      delete next.settlement;
+      return next;
+    };
+    setOrderScope(null);
+    setFromPath(withoutSettlement);
+    setToPath(withoutSettlement);
+  };
+
+  const orderScopeLabelKey = ORDER_SCOPES.find((s) => s.key === orderScope)?.labelKey;
 
   const handleOpenOffer = (offer: OffersAPI.DriverOffer) => {
     if (!token) {
@@ -455,6 +513,24 @@ export default function SearchOffersScreen() {
             onPressTo={() => setGeoSheet('to')}
             onSwap={swapLocations}
           />
+
+          {orderScope && (
+            <View style={styles.orderChip}>
+              <Text style={styles.orderChipLabel} numberOfLines={1}>
+                {orderScopeLabelKey
+                  ? `${t('searchOffers.forYourOrder')} · ${t(orderScopeLabelKey)}`
+                  : t('searchOffers.forYourOrder')}
+              </Text>
+              <Pressable
+                onPress={clearOrderMatch}
+                accessibilityRole="button"
+                accessibilityLabel={t('searchOffers.clearOrderMatch')}
+                hitSlop={10}
+              >
+                <Text style={styles.orderChipLabel}>✕</Text>
+              </Pressable>
+            </View>
+          )}
 
           <ClassStrip
             items={[ALL_CLASSES, ...CLASSES].map((c) => ({
@@ -587,6 +663,8 @@ export default function SearchOffersScreen() {
         onDone={(path) => {
           if (geoSheet === 'from') setFromPath(path);
           else setToPath(path);
+          // T-102i — the passenger changed the route by hand: it is no longer the order's.
+          setOrderScope(null);
           setGeoSheet(null);
         }}
         onClose={() => setGeoSheet(null)}
@@ -625,6 +703,18 @@ const styles = StyleSheet.create({
     backgroundColor: theme.palette.surfaceSunken,
   },
   sortChipOn: { backgroundColor: theme.palette.text.primary },
+  // T-102i — "for your order": the active sort chip's colours, so it reads as a setting in force.
+  orderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 10,
+    minHeight: 30,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.palette.text.primary,
+  },
+  orderChipLabel: { fontSize: 11.5, ...theme.font('sans', 700), color: theme.palette.text.onDark },
   sortLabel: { fontSize: 10.5, ...theme.font('sans', 700), color: theme.palette.text.muted },
   sortLabelOn: { color: theme.palette.text.onDark },
 

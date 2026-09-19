@@ -164,6 +164,17 @@ export const OfferResultCard: React.FC<OfferResultCardProps> = (props) => {
               </Text>
             )}
           </View>
+          {/*
+            T-102i — the passenger asked for a QFY and this driver named only the district (or,
+            on an old offer, wrote free text). `LOOSE_PARENT_MATCH` lets the offer through; this
+            line is the promise it comes with — without it the passenger would believe the driver
+            goes to their village.
+          */}
+          {offer?.match_precision === 'district' && (
+            <Text style={styles.precisionNote} numberOfLines={2}>
+              {t('searchOffers.matchedDistrictOnly')}
+            </Text>
+          )}
         </View>
 
         {isBid ? (
@@ -276,6 +287,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
   car: { fontSize: 15, ...theme.font('sans', 800), color: theme.palette.text.primary, lineHeight: 19 },
   colorName: { fontSize: 11.5, ...theme.font('sans', 600), color: theme.palette.text.secondary },
+  precisionNote: { fontSize: 11.5, ...theme.font('sans', 600), color: theme.palette.text.secondary },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   classPill: {
     paddingVertical: 2,

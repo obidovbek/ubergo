@@ -29,8 +29,11 @@ import {
 } from '../api/geo';
 import { createPassengerOffer } from '../api/passengerOffers';
 import { renderScreen } from '../test/render';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import uz from '../translations/uz';
 import { ApiError } from '../utils/errorHandler';
+import { LAST_SEARCH_KEY } from '../utils/lastSearch';
 import { MIN_ADVANCE_MS } from '../utils/rideTime';
 import { showToast } from '../utils/toast';
 import { CreatePassengerOfferScreen } from './CreatePassengerOfferScreen';
@@ -168,6 +171,26 @@ describe('CreatePassengerOfferScreen', () => {
     // Success is told through the confirm dialog, not a toast.
     expect(await screen.findByText(T.successMessage)).toBeOnTheScreen();
     expect(showToast.error).not.toHaveBeenCalled();
+  });
+
+  it('🔴 T-102i: hands the ORDER to the search tab — its QFYs and scope travel with the route', async () => {
+    // Before T-102i the stored route carried province + district only, so the QFY the
+    // passenger picked was dropped on the way to the search and matched nothing.
+    await mount();
+    await fillMinimalOrder();
+    submit();
+    expect(await screen.findByText(T.successMessage)).toBeOnTheScreen();
+
+    const stored = JSON.parse((await AsyncStorage.getItem(LAST_SEARCH_KEY)) ?? '{}');
+    expect(stored).toEqual(
+      expect.objectContaining({
+        fromCity: QOQON,
+        fromSettlement: YAYPAN,
+        toCity: RISHTON,
+        toSettlement: CHIMYON,
+        scope: 'aro',
+      }),
+    );
   });
 
   it('refuses a scheduled departure that slipped inside the 31-minute floor', async () => {

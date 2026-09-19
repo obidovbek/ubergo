@@ -22,6 +22,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { OrderScope } from '../types/orderScope';
 
 /** ⚠️ Must stay byte-identical to `SearchOffersScreen`'s own constant. */
 export const LAST_SEARCH_KEY = '@ubexgo:last_search';
@@ -33,7 +34,15 @@ export interface LastSearchNode {
   name: string;
 }
 
-/** The stored payload — the 2026-08 shape, unchanged. */
+/**
+ * The stored payload — the 2026-08 shape, unchanged, plus three OPTIONAL fields (T-102i).
+ *
+ * ⚠️ The additions are the order the route came from: its QFYs and its scope. They are
+ * written only by `bumpLastSearchRoute` (the order form) and read only when the screen ADOPTS
+ * a bumped route; the screen's own saves keep writing the 2026-08 fields alone. So the "for
+ * your order" mode arrives with an order and is gone after the next manual change or restart —
+ * transient by design, and an old save (which has none of them) reads exactly as before.
+ */
 export interface LastSearchRoute {
   fromCountry?: LastSearchNode | null;
   fromProvince?: LastSearchNode | null;
@@ -41,6 +50,9 @@ export interface LastSearchRoute {
   toCountry?: LastSearchNode | null;
   toProvince?: LastSearchNode | null;
   toCity?: LastSearchNode | null;
+  fromSettlement?: LastSearchNode | null;
+  toSettlement?: LastSearchNode | null;
+  scope?: OrderScope | null;
 }
 
 /**

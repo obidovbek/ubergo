@@ -20,6 +20,13 @@
  * sheet opens, which is what the four artboards actually differ by. What is still NOT wired
  * is the MATCHING — `matchLevel` remains unsent, and `DriverOffer` gains searchable geo only
  * with T-102. **A passenger can now state a scope precisely; the search still ignores it.**
+ *
+ * ✅ **UPDATED 2026-09-19 (T-102i): THE SEARCH NO LONGER IGNORES IT — for an order.** After a
+ * passenger creates or edits an order, the search runs "for your order": it sends the scope
+ * and the QFYs, and the server matches a `tuman` / `yaqin` side at the QFY (a driver who named
+ * only the district matches too, labelled so). The server derives the level from the scope
+ * itself (`geoMatch.matchLevelFor`), so `matchLevel` here is still documentation, not sent. The
+ * plain search, with no order behind it, is unchanged.
  */
 export const ORDER_SCOPES = [
   { key: 'tuman', labelKey: 'menu.scopeTuman', matchLevel: 'adm3' },

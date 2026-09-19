@@ -33,7 +33,9 @@ import {
   matchLevelFor,
   matchPrecision,
   neighborsFirst,
+  offerMatchPrecision,
   ORDER_SCOPES,
+  placeHit,
   validateOfferPlaces,
   validateScope,
   type Journey,
@@ -294,5 +296,46 @@ describe('pre-T-102 rows', () => {
   it('and such an order matches nothing rather than everything', () => {
     const legacy = order(place(null, null), place(null, null));
     for (const s of ORDER_SCOPES) assert.ok(!matchesOrder(legacy, F_CORRIDOR, s as OrderScope));
+  });
+});
+
+// ------------------------------------------------------------------------------ T-102i
+
+describe('placeHit — one row, the rule at its smallest', () => {
+  it('the order’s own QFY is exact', () => {
+    assert.equal(placeHit(place(1, 10, 100), O3.from, 'adm3'), 'exact');
+  });
+
+  it('the district with NO QFY matches loosely — LOOSE_PARENT_MATCH', () => {
+    assert.equal(placeHit(place(1, 10), O3.from, 'adm3'), LOOSE_PARENT_MATCH ? 'district' : null);
+  });
+
+  it('🔴 another QFY in the same district is NOT "anywhere in the district"', () => {
+    assert.equal(placeHit(place(1, 10, 101), O3.from, 'adm3'), null);
+  });
+
+  it('an order side that named no QFY cannot be matched at adm3', () => {
+    assert.equal(placeHit(place(1, 10, 100), O2.from, 'adm3'), null);
+  });
+});
+
+describe('offerMatchPrecision — the label a search result carries', () => {
+  it('exact on every adm3 side → exact', () => {
+    assert.equal(offerMatchPrecision(O3, F_EXACT3, ['from', 'to']), 'exact');
+  });
+
+  it('a district-only driver → district (the promise the card has to state)', () => {
+    assert.equal(offerMatchPrecision(O3, F_CORRIDOR, ['from', 'to']), 'district');
+  });
+
+  it('only the sides matched at adm3 count — a side matched at adm2 has nothing to label', () => {
+    // exact QFY on FROM, district-only on TO — but only FROM was searched at adm3.
+    const mixed = offer([place(1, 10, 100)], [place(2, 20)]);
+    assert.equal(offerMatchPrecision(O3, mixed, ['from']), 'exact');
+    assert.equal(offerMatchPrecision(O3, mixed, ['from', 'to']), 'district');
+  });
+
+  it('an offer with NO place rows (reached by its free text) never claims a village', () => {
+    assert.equal(offerMatchPrecision(O3, undefined, ['from', 'to']), 'district');
   });
 });

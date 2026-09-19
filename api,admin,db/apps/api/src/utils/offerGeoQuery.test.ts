@@ -2,12 +2,18 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  adm3Clauses,
+  clauseExistsSql,
   directionMatchSql,
+  groupPlaceRows,
   hasNoPlacesSql,
   isSafeId,
   placeExistsSql,
   quoteLiteral,
+  rowSatisfies,
+  settlementMatchSql,
 } from './offerGeoQuery.js';
+import { placeHit, type GeoPathIds } from './geoMatch.js';
 
 const REF = '"DriverOffer"."id"';
 
@@ -132,5 +138,127 @@ describe('hasNoPlacesSql', () => {
     const outer = hasNoPlacesSql(REF);
     assert.equal(inner.includes(' dop '), true);
     assert.equal(outer.includes(' dop2 '), true);
+  });
+});
+
+// ------------------------------------------------------------------------------ T-102i, adm3
+
+describe('adm3Clauses — the QFY match, as data', () => {
+  it('exact QFY, or (loose) the district with NO QFY', () => {
+    assert.deepEqual(adm3Clauses(100, 10), [
+      { settlement_id: 100 },
+      { settlement_id: null, city_id: 10 },
+    ]);
+  });
+
+  it('the loose clause needs the district — without it, exact only (narrower, never wider)', () => {
+    assert.deepEqual(adm3Clauses(100, undefined), [{ settlement_id: 100 }]);
+  });
+
+  it('LOOSE_PARENT_MATCH off → exact only', () => {
+    assert.deepEqual(adm3Clauses(100, 10, false), [{ settlement_id: 100 }]);
+  });
+});
+
+/*
+ * 🔴 THE PARITY TEST — two readers of one rule, held together (the T-123 / T-116 lesson).
+ * `geoMatch.placeHit` decides whether one place row serves the order; the SQL filter is rendered
+ * from `adm3Clauses`. Every fixture row goes through both, and they must agree. A branch changed
+ * on one side only turns this red.
+ */
+describe('adm3Clauses ⇔ geoMatch.placeHit — parity over fixture rows', () => {
+  const order: GeoPathIds = { province_id: 1, city_id: 10, settlement_id: 100 };
+  const rows: Array<[string, GeoPathIds]> = [
+    ['the order’s own QFY', { province_id: 1, city_id: 10, settlement_id: 100 }],
+    ['ANOTHER QFY in the same district', { province_id: 1, city_id: 10, settlement_id: 101 }],
+    ['the same district, no QFY', { province_id: 1, city_id: 10, settlement_id: null }],
+    ['the same district, QFY absent (undefined)', { province_id: 1, city_id: 10 }],
+    ['another district, no QFY', { province_id: 1, city_id: 11, settlement_id: null }],
+    ['another district’s QFY', { province_id: 1, city_id: 11, settlement_id: 200 }],
+    ['a row naming no district', { province_id: 1, settlement_id: null }],
+  ];
+
+  for (const [label, row] of rows) {
+    it(label, () => {
+      const bySql = adm3Clauses(100, 10).some((clause) => rowSatisfies(row, clause));
+      const byRule = placeHit(row, order, 'adm3') !== null;
+      assert.equal(bySql, byRule, `SQL says ${bySql}, the rule says ${byRule}`);
+    });
+  }
+
+  it('the fixtures cover both answers (a parity test that only ever says "no" proves nothing)', () => {
+    const answers = new Set(rows.map(([, row]) => placeHit(row, order, 'adm3') !== null));
+    assert.deepEqual([...answers].sort(), [false, true]);
+  });
+});
+
+describe('clauseExistsSql', () => {
+  it('renders the loose clause with IS NULL — the whole rule', () => {
+    const sql = clauseExistsSql('from', { settlement_id: null, city_id: 10 }, REF);
+    assert.match(sql, /dop\.direction = 'from'/);
+    assert.match(sql, /dop\.settlement_id IS NULL AND dop\.city_id = 10/);
+  });
+
+  it('throws on an unsafe id rather than emitting it', () => {
+    assert.throws(() => clauseExistsSql('to', { settlement_id: Number('1 OR 1=1') }, REF), /unsafe geo id/);
+  });
+
+  it('refuses a column it does not know, and an empty clause that would match everything', () => {
+    assert.throws(
+      () => clauseExistsSql('to', { ['province_id; DROP' as 'city_id']: 1 }, REF),
+      /unknown place column/,
+    );
+    assert.throws(() => clauseExistsSql('to', {}, REF), /empty clause/);
+  });
+});
+
+describe('groupPlaceRows — raw BIGINT rows, as pg really returns them', () => {
+  /*
+   * 🔴 Every id below is a STRING, because that is what a raw `findAll` on BIGINT columns
+   * hands back. Unconverted, offer 7's rows are filed under "7" and never found by the
+   * number 7, and no QFY is ever `===` the order's — every label silently `district`.
+   */
+  const rows = [
+    { offer_id: '7', direction: 'from' as const, province_id: '1', city_id: '10', settlement_id: '100' },
+    { offer_id: '7', direction: 'to' as const, province_id: '2', city_id: '20', settlement_id: null },
+    { offer_id: '8', direction: 'from' as const, province_id: '1', city_id: '11', settlement_id: null },
+  ];
+
+  it('files rows under the NUMERIC offer id, split by direction', () => {
+    const grouped = groupPlaceRows(rows);
+    assert.deepEqual([...grouped.keys()].sort(), [7, 8]);
+    assert.equal(grouped.get(7)?.from.length, 1);
+    assert.equal(grouped.get(7)?.to.length, 1);
+  });
+
+  it('turns every id into a number — so the rule can see an exact QFY', () => {
+    const from = groupPlaceRows(rows).get(7)!.from[0]!;
+    assert.deepEqual(from, { province_id: 1, city_id: 10, settlement_id: 100 });
+    assert.equal(placeHit(from, { city_id: 10, settlement_id: 100 }, 'adm3'), 'exact');
+  });
+
+  it('keeps a missing QFY as null, not 0 — "district only" must stay district only', () => {
+    assert.equal(groupPlaceRows(rows).get(7)!.to[0]!.settlement_id, null);
+  });
+});
+
+describe('settlementMatchSql — one direction at adm3', () => {
+  const textColumn = '"DriverOffer"."to_text"';
+
+  it('either clause, and the text fallback only for an offer with NO places', () => {
+    const sql = settlementMatchSql('to', { settlementId: 100, cityId: 10, districtName: "Qo'qon", textColumn }, REF);
+    assert.match(sql, /dop\.settlement_id = 100/);
+    assert.match(sql, /dop\.settlement_id IS NULL AND dop\.city_id = 10/);
+    // the fallback is guarded, exactly as at adm2
+    assert.match(sql, /OR \(NOT EXISTS \(SELECT 1 FROM driver_offer_places dop2[\s\S]*ILIKE '%Qo''qon%'/);
+  });
+
+  it('no district name → no fallback: an old offer simply cannot match a QFY order', () => {
+    const sql = settlementMatchSql('to', { settlementId: 100, cityId: 10, textColumn }, REF);
+    assert.doesNotMatch(sql, /ILIKE/);
+  });
+
+  it('throws on an unsafe QFY id', () => {
+    assert.throws(() => settlementMatchSql('to', { settlementId: 1.5, textColumn }, REF), /unsafe geo id/);
   });
 });

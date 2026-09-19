@@ -338,6 +338,10 @@ export default {
     clear: 'Очистить',
     noRidesAvailable: 'Поездки недоступны',
     resultsCount: '{count} предложений',
+    // T-102i — searching FOR the passenger's own order, and how an offer matched it.
+    forYourOrder: 'По вашему заказу',
+    clearOrderMatch: 'Убрать подбор по заказу',
+    matchedDistrictOnly: 'Водитель указал только район, а не СГМ',
     noRidesMessage: 'По этому маршруту предложения не найдены. Попробуйте изменить критерии поиска.',
     selectLocations: 'Выберите местоположения',
     selectLocationsMessage: 'Выберите место отправления и назначения, чтобы найти доступные поездки',

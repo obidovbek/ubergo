@@ -813,6 +813,10 @@ export const CreatePassengerOfferScreen: React.FC = () => {
         fromCity: fromLocation.cityDistrict,
         toProvince: toLocation.province,
         toCity: toLocation.cityDistrict,
+        // T-102i — the ORDER travels too, so the search can match it at its own level.
+        fromSettlement: fromLocation.settlement ?? null,
+        toSettlement: toLocation.settlement ?? null,
+        scope,
       });
 
       // A dialog, NOT a toast: OK is what returns the user to their list. A
@@ -867,6 +871,10 @@ export const CreatePassengerOfferScreen: React.FC = () => {
               fromCity: fromLocation.cityDistrict,
               toProvince: toLocation.province,
               toCity: toLocation.cityDistrict,
+              // T-102i — both channels carry the order (see `bumpLastSearchRoute` above).
+              fromSettlement: fromLocation.settlement ?? null,
+              toSettlement: toLocation.settlement ?? null,
+              scope,
             },
           });
         },
