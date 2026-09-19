@@ -84,7 +84,8 @@ flowchart TD
 ```
 UbexGo/
 ├── CLAUDE.md                  ← rules & commands (Claude reads automatically)
-├── docs/                      ← project memory (this folder)
+├── docs/                      ← project memory (this folder); TODO-ARCHIVE.md = cards that left the board
+├── scripts/check-board.mjs    ← docs/TODO.md is ONE board: one Now, ≤ 2 cards, each id once (T-122)
 ├── api,admin,db/              ← backend monorepo-ish (NOTE: comma in the name)
 │   ├── apps/
 │   │   ├── api/               ← Express + TS + Sequelize backend

@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-09-19 — T-123 committed; T-122 closed: the task board is one board again
+
+- **T-123 committed as `fed25f9`** on the owner's word, after its test files (53 / 60) and `tsc`
+  (5 / 28) were re-run green.
+- **T-122 picked by me** — the owner said *"any, you choose"* — because every other card is read
+  through this board. Planned, approved (*"ok"* to all three recommendations) and finished the same
+  session.
+- 🔴 **The two *Now* sections were one paste accident.** The file's whole 63-line header,
+  `## 🔥 Now` included, sat pasted mid-file beside a 125-line copy of four cards. **22 ids were
+  carded twice or more** (T-078 four times), and ***Now* held 23 cards** against a rule of 2 —
+  most of them *"code-complete and untested"*, which is word for word the definition of *Parked*,
+  the next section down. **The section existed; nobody moved the cards into it.**
+- **Measuring rewrote the card before any edit:** T-026/T-026A are two different cards, T-080's
+  unbuilt original was the one missing from the count, and **T-097 (2026-08-15) was this same card**,
+  boarded five weeks earlier and never started — *the board had duplicated its own duplication card.*
+- **What changed:** one *Now* (T-101 alone, now T-122 is done) · 14 cards → *Parked* and 5 → *Next*,
+  each by its own status line · **20 stale copies, 7 notes and T-097 → new `docs/TODO-ARCHIVE.md`,
+  verbatim** · a short, true header · **352 KB → 273 KB**.
+- **Verification:** every edit a content-anchored script that refused to run on a surprise; every
+  step predicted first. **Nothing lost, proven:** all 150 cards and every line of `fed25f9`'s board
+  survive in board ∪ archive, by a check that went red on each mutation aimed at it. **Two
+  predictions missed, both my fixtures** — one counted a shared blank line, one aimed a *Now*
+  mutation into *Parked*. *A mutation that misses its target proves nothing either way.*
+- **Decisions:** T-101 shares *Now* · stale copies archived, not deleted · **`scripts/check-board.mjs`
+  kept** (one *Now*, ≤ 2 cards, each id once, no pasted blocks), run by `/end-day`, not CI.
+- **Problems / left open:** 📌 **T-125** — *Done* holds cards never walked on a device (T-024's
+  plan step 7 is open; T-034 · T-043 · T-045 were listed untested). What *Done* means is the owner's
+  call. 🔴 **I wrote a false sentence into the new header** (blaming stale notes for the two *Now*
+  sections) and corrected it on read-back. 🔧 `/end-day` still said *"There is no test suite yet"*
+  — fixed in the file this card already touched. Still unconfirmed: T-118's CI run on GitHub,
+  T-123's airplane-mode check.
+- **Next:** the owner's pick; *Now* has a free slot. Top of *Next*: **T-088 → T-115 → T-116**.
+
+---
+
 ## 2026-09-18 (2) — T-123 fixed in both apps: a timeout is now recognised by the abort itself
 
 - **The card the tests found, closed the same week they found it.** T-121 recorded T-123 rather
