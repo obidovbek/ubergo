@@ -110,8 +110,9 @@ describe('🔴 paynetBasicAuth fails closed when unconfigured', () => {
     // environment), so this is the real unconfigured path, not a stub.
     assert.equal(paynetCredentials.isConfigured(), false, 'precondition: env is unset here');
 
-    const { passed, body } = runAuth(fakeRequest(basic('paynet', 'anything')));
+    const { passed, sent, body } = runAuth(fakeRequest(basic('paynet', 'anything')));
     assert.equal(passed, false, 'an unconfigured service must admit nobody');
+    assert.equal(sent.status, 401, 'spec §2.2: a login that cannot succeed is HTTP 401');
     assert.equal(body().error.code, PAYNET_ERRORS.BAD_LOGIN);
   });
 
@@ -122,15 +123,18 @@ describe('🔴 paynetBasicAuth fails closed when unconfigured', () => {
 
 describe('paynetBasicAuth — configured', () => {
   // Set the credentials directly rather than reaching into process.env, which
-  // is read once at construction.
+  // is read once at construction. Nothing in the app writes them at runtime
+  // (there is no ChangePassword), so a cast is the only way in — test-only.
+  const store = paynetCredentials as unknown as { username: string; password: string };
+
   function configure(password: string) {
-    (paynetCredentials as unknown as { username: string }).username = 'paynet';
-    paynetCredentials.setPassword(password);
+    store.username = 'paynet';
+    store.password = password;
   }
 
   function unconfigure() {
-    (paynetCredentials as unknown as { username: string }).username = '';
-    paynetCredentials.setPassword('');
+    store.username = '';
+    store.password = '';
   }
 
   it('admits the correct pair', () => {
@@ -142,12 +146,16 @@ describe('paynetBasicAuth — configured', () => {
     }
   });
 
-  it('refuses a wrong password, a wrong username, and a missing header', () => {
+  it('refuses a wrong password, a wrong username, and a missing header — each with HTTP 401', () => {
+    // Spec §2.2 names both cases: the header "не передан" (missing) and "неверные
+    // данные" (wrong). Each must be a 401, not only "not passed".
     configure('correct-horse');
     try {
-      assert.equal(runAuth(fakeRequest(basic('paynet', 'wrong'))).passed, false);
-      assert.equal(runAuth(fakeRequest(basic('someone', 'correct-horse'))).passed, false);
-      assert.equal(runAuth(fakeRequest(undefined)).passed, false);
+      for (const header of [basic('paynet', 'wrong'), basic('someone', 'correct-horse'), undefined]) {
+        const { passed, sent } = runAuth(fakeRequest(header));
+        assert.equal(passed, false);
+        assert.equal(sent.status, 401);
+      }
     } finally {
       unconfigure();
     }
@@ -160,20 +168,6 @@ describe('paynetBasicAuth — configured', () => {
     try {
       assert.equal(runAuth(fakeRequest(basic('paynet', 'x'))).passed, false);
       assert.equal(runAuth(fakeRequest(basic('paynet', 'correct-horse-and-more'))).passed, false);
-    } finally {
-      unconfigure();
-    }
-  });
-
-  it('reflects a rotated password immediately', () => {
-    // What ChangePassword depends on: the new secret takes effect without a
-    // redeploy, and the old one stops working at once.
-    configure('old-password');
-    try {
-      assert.ok(runAuth(fakeRequest(basic('paynet', 'old-password'))).passed);
-      paynetCredentials.setPassword('new-password');
-      assert.equal(runAuth(fakeRequest(basic('paynet', 'old-password'))).passed, false);
-      assert.ok(runAuth(fakeRequest(basic('paynet', 'new-password'))).passed);
     } finally {
       unconfigure();
     }
@@ -197,7 +191,9 @@ describe('paynetBasicAuth — configured', () => {
     try {
       const { sent, body } = runAuth(fakeRequest(basic('paynet', 'wrong'), { id: 77 }));
       assert.equal(body().id, 77);
-      assert.equal(sent.status, 200);
+      // Was 200 until 2026-09-19 — this line pinned the defect. Spec §2.2 ("Важно!!!")
+      // requires 401; the 412 body and the echoed id ride along with it.
+      assert.equal(sent.status, 401);
     } finally {
       unconfigure();
     }

@@ -263,6 +263,14 @@ screens are built, this is what must be checked:
       _(That warning should be gone after this deploy.)_
 - [ ] ⚪ Uploaded photos still open after a redeploy.
 - [ ] ⚪ Restart the API pod → the app keeps working, nobody is logged out.
+- [ ] 🔴 **Paynet endpoint, a WRONG password → HTTP `401`** (T-088, 2026-09-19). From an allowed IP
+      (or with T-100 still open, however you reach it), `POST /api/paynet` with a bad Basic login and
+      a JSON-RPC body with `"id": 1`. **Look at the STATUS, not only the body:** it must be `401`,
+      and the body should still be JSON with `"error": {"code": 412}` and `"id": 1`.
+      _Tests prove the API sends that; only this proves nginx/Traefik let it through untouched — an
+      ingress can swap a 401's body for its own error page._
+- [ ] ⚪ Same endpoint, method `ChangePassword` with the RIGHT login → `"error": {"code": 603}`.
+      _We deliberately do not offer it — Paynet must be told so; the password lives in env._
 
 ---
 

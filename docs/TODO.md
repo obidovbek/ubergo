@@ -323,6 +323,65 @@
 > apps. ❌ No migration in any of the eight. ⚠️ **T-046 still needs its own migration**, between the
 > deploy and the rebuilds.
 
+- [ ] T-088 (P1) 💳 **CODE-COMPLETE 2026-09-19 — ALL FIVE METHODS WE OFFER BUILT, THE MONEY PATH
+  VERIFIED AGAINST THE REAL test3 DATABASE, `ChangePassword` DELIBERATELY NOT OFFERED.**
+  → `docs/PLAN.md` (2026-09-19) · `docs/PLAN-T088.md` (2026-08-16).
+  ✅ **2026-09-19 — the last code closed, after re-reading the originals:** `ChangePassword` is
+  **optional** (§2.1, §3.6), and Paynet rotates on first connect only *if* we offer it. **Owner: do
+  not offer it** — it answers `603`, the password comes by a secure channel into env, and nothing
+  can rotate us out. 🔴 **And a defect in shipped code: a bad or missing login answered HTTP 200;
+  §2.2 (*"Важно!!!"*) says 401.** Fixed, proven red, `tsc` 281 · lint 0/230 · tests 357.
+  🛑 **WHAT WAITS IS THE OWNER'S, NOT CODE:** ① tell Paynet `ChangePassword` is **not implemented**
+  · ② **T-100** · ③ Paynet's credentials → server env only · ④ deploy, then one probe: a wrong
+  password gets **HTTP 401 through the ingress** (`docs/CHECKLIST.md`).
+  ✅ **PROVEN, not reasoned:** a credit lands · 🔴 **the same `transactionId` twice credits ONCE and
+  returns the same `providerTrnId`** · check reports 1 → 2 after cancel · cancel restores the balance
+  exactly · unknown txn → **203** · `GetStatement` lists it **once** · **net effect zero.**
+  ✅ **Also proven on the live server:** no credentials → 412 · wrong password → 412 *(the body code;
+  the HTTP status was 200 — it is 401 since 2026-09-19)* · unknown method
+  → 603 · bad jsonrpc → 603 · **a forged `X-Forwarded-For: 213.230.106.112` is ignored.**
+  ✅ `tsc` **281** · lint **230/0 errors** · tests **238/238** (from 128 at the start of the day).
+  🔴 **A DEFECT ONLY A REAL DATABASE COULD FIND: `GetInformation` returned an EMPTY payer name**, so
+  an agent would have had a blank screen and nothing to confirm the payer by before taking cash.
+  I read the `phones` table; **the registration number is `users.phone_e164`** (`phones` holds
+  *additional* contacts and is empty for most accounts). **19 unit tests passed because they fed the
+  masker a number directly and never exercised the lookup.** Fixed + regression test.
+  🛑 *(2026-08-16)* **WHAT REMAINS IS NOT APPLICATION CODE:** **T-100** (below) · ~~`ChangePassword`
+  persistence (step 6)~~ *not needed — not offered, 2026-09-19* · Paynet's credentials (requested 2026-08-16).
+  🔴 **Found while building it and boarded as T-099: `auditLogger.ts:59` trusts a forgeable header.**
+  Copying that nearby helper — the natural move — **would have made this allow-list decorative.**
+  🛑 **STEP 5 IS THE REAL RISK: the six handlers, the first code that moves money.** Both governing
+  rules already have their machinery built (201 = catch the DB's unique violation; 77 = `canDebit`
+  under a row lock).
+  ✅ ~~**Step 6 outstanding:** `ChangePassword` has no persistence, so a pod restart reverts the
+  password.~~ **RESOLVED 2026-09-19 without persistence:** the method is not offered, so Paynet
+  never rotates the password and there is nothing to persist.
+  ⚠️ **`ACTIVE` since:** plan approved 2026-08-16. Full contract in **`docs/PAYNET.md`**; the card's own detail (its
+  boarding copy, rewritten 2026-08-14 after the owner's documents were read) is in
+  `docs/TODO-ARCHIVE.md` since T-122.
+  ✅ **The four blockers are all VALUES, not STRUCTURES**, which is why the card can start:
+  credentials are **env**, the `fields` set is **one adapter**, the error-code sign is **one
+  constant**, the ceiling is **one check**. None of them changes the six method handlers.
+  ✅ **T-087's ledger was built FOR this card and has never been used by anything** — append-only,
+  signed BIGINT `amount`, and `wallet_transactions.id` doubles as Paynet's `providerTrnId`.
+  ✅ **Idempotency is already enforced BY THE DATABASE** — a partial unique index on
+  `(provider, external_id)` plus a CHECK closing the NULL-inequality hole. **So error 201 falls out
+  of a caught unique violation**, not application locking.
+  🔴 **Error 77 (refuse a cancellation once the money is spent) needs the balance read under the
+  same row lock as the write**, inside the **≤500 ms** contractual budget.
+  🔴 **`GetInformation` is a lookup oracle on `users.id`, and T-092 just made ids enumerable from a
+  known origin.** Mask server-side, rate-limit, audit — the IP allow-list is the main mitigation and
+  it is contractual.
+  ⚠️ **There is no Paynet sandbox in these documents.** The first real exercise of this code is an
+  agent taking real cash from a real person.
+
+> ✅ **T-092 and T-091 both CLOSED 2026-08-16 and moved to *Done*** (bottom of this file). Their full
+> detail lives there and in `docs/PLAN-T092.md` / `docs/PLAN-T091.md` — not repeated here.
+> ⚠️ **Carried forward from T-092/T-091 because later cards depend on it:**
+> **Today's users keep ids like `7`**, which a Paynet operator cannot tell from a typo — that is
+> **T-088's** lookup problem. **`users.promo_code` means the REFERRER's code, the OPPOSITE of
+> `own_promo_code`** — reading the wrong one pays the wrong person (T-089).
+
 > 📥 **2026-08-13 — THE DRIVER'S OFFER SCREEN IS A STUB, and the owner's `D_Elon berish` mockup shows
 > what it should be.** Owner: *"Driver eloni shunaqa bo'lish kerak edi"*.
 > 🔴 **`DriverOffer` carries ~20 columns; `PassengerOffer` carries 51.** Nearly everything the mockup
@@ -1171,54 +1230,6 @@ masofalar'`). **2 of the 6 were on
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
-
-- [ ] T-088 (P1) 💳 🔥 **ACTIVE — STEPS 1-8a DONE 2026-08-16. FIVE OF SIX METHODS BUILT AND THE MONEY
-  PATH VERIFIED AGAINST THE REAL test3 DATABASE** → `docs/PLAN.md`.
-  ✅ **PROVEN, not reasoned:** a credit lands · 🔴 **the same `transactionId` twice credits ONCE and
-  returns the same `providerTrnId`** · check reports 1 → 2 after cancel · cancel restores the balance
-  exactly · unknown txn → **203** · `GetStatement` lists it **once** · **net effect zero.**
-  ✅ **Also proven on the live server:** no credentials → 412 · wrong password → 412 · unknown method
-  → 603 · bad jsonrpc → 603 · **a forged `X-Forwarded-For: 213.230.106.112` is ignored.**
-  ✅ `tsc` **281** · lint **230/0 errors** · tests **238/238** (from 128 at the start of the day).
-  🔴 **A DEFECT ONLY A REAL DATABASE COULD FIND: `GetInformation` returned an EMPTY payer name**, so
-  an agent would have had a blank screen and nothing to confirm the payer by before taking cash.
-  I read the `phones` table; **the registration number is `users.phone_e164`** (`phones` holds
-  *additional* contacts and is empty for most accounts). **19 unit tests passed because they fed the
-  masker a number directly and never exercised the lookup.** Fixed + regression test.
-  🛑 **WHAT REMAINS IS NOT APPLICATION CODE:** **T-100** (below) · `ChangePassword` persistence
-  (step 6) · Paynet's credentials (requested 2026-08-16).
-  🔴 **Found while building it and boarded as T-099: `auditLogger.ts:59` trusts a forgeable header.**
-  Copying that nearby helper — the natural move — **would have made this allow-list decorative.**
-  🛑 **STEP 5 IS THE REAL RISK: the six handlers, the first code that moves money.** Both governing
-  rules already have their machinery built (201 = catch the DB's unique violation; 77 = `canDebit`
-  under a row lock).
-  ⚠️ **Step 6 outstanding:** `ChangePassword` has no persistence, so a **pod restart reverts the
-  password** — and Paynet rotates on first connect, which is how we get locked out.
-  ⚠️ **`ACTIVE` since:** plan approved 2026-08-16. Full contract in **`docs/PAYNET.md`**; the card's own detail (its
-  boarding copy, rewritten 2026-08-14 after the owner's documents were read) is in
-  `docs/TODO-ARCHIVE.md` since T-122.
-  ✅ **The four blockers are all VALUES, not STRUCTURES**, which is why the card can start:
-  credentials are **env**, the `fields` set is **one adapter**, the error-code sign is **one
-  constant**, the ceiling is **one check**. None of them changes the six method handlers.
-  ✅ **T-087's ledger was built FOR this card and has never been used by anything** — append-only,
-  signed BIGINT `amount`, and `wallet_transactions.id` doubles as Paynet's `providerTrnId`.
-  ✅ **Idempotency is already enforced BY THE DATABASE** — a partial unique index on
-  `(provider, external_id)` plus a CHECK closing the NULL-inequality hole. **So error 201 falls out
-  of a caught unique violation**, not application locking.
-  🔴 **Error 77 (refuse a cancellation once the money is spent) needs the balance read under the
-  same row lock as the write**, inside the **≤500 ms** contractual budget.
-  🔴 **`GetInformation` is a lookup oracle on `users.id`, and T-092 just made ids enumerable from a
-  known origin.** Mask server-side, rate-limit, audit — the IP allow-list is the main mitigation and
-  it is contractual.
-  ⚠️ **There is no Paynet sandbox in these documents.** The first real exercise of this code is an
-  agent taking real cash from a real person.
-
-> ✅ **T-092 and T-091 both CLOSED 2026-08-16 and moved to *Done*** (bottom of this file). Their full
-> detail lives there and in `docs/PLAN-T092.md` / `docs/PLAN-T091.md` — not repeated here.
-> ⚠️ **Carried forward from T-092/T-091 because later cards depend on it:**
-> **Today's users keep ids like `7`**, which a Paynet operator cannot tell from a typo — that is
-> **T-088's** lookup problem. **`users.promo_code` means the REFERRER's code, the OPPOSITE of
-> `own_promo_code`** — reading the wrong one pays the wrong person (T-089).
 
 - [ ] T-115 (P1) 🚦 **[OWNER 2026-09-13] MAX TWO ACTIVE OFFERS, per person, both sides.**
   Owner: *"user or driver have possibility max two active offers"*.
@@ -2907,7 +2918,7 @@ masofalar'`). **2 of the 6 were on
 ## ✅ Done (newest on top)
 
 - [x] T-122 (P2) 🧹 **THE BOARD CONTRADICTED ITSELF — TWO *Now* SECTIONS, 22 DUPLICATED CARDS —
-  FIXED 2026-09-19, all 8 steps.** → `docs/PLAN.md`. Boarded 2026-09-14; picked 2026-09-19 (owner:
+  FIXED 2026-09-19, all 8 steps.** → `docs/PLAN-T122.md`. Boarded 2026-09-14; picked 2026-09-19 (owner:
   *"any, you choose"*), the plan approved the same day with **T-101** as the other *Now* card.
   🔴 **The two *Now* sections were one paste:** the file's whole 63-line header, `## 🔥 Now`
   included, pasted mid-file beside a 125-line card block. **22 ids were carded twice or more**
@@ -2938,7 +2949,7 @@ masofalar'`). **2 of the 6 were on
   section.
 
 - [x] T-123 (P2) 🐛 **A TIMED-OUT REQUEST WAS NOT RECOGNISED AS A TIMEOUT, IN BOTH APPS — FIXED
-  2026-09-18, all 5 steps.** → `docs/PLAN.md`. Found 2026-09-15 by T-121's `errorHandler` tests
+  2026-09-18, all 5 steps.** → `docs/PLAN-T123.md`. Found 2026-09-15 by T-121's `errorHandler` tests
   and recorded rather than fixed; the owner picked it at T-121's close and **confirmed the wide
   fix in words**.
   **What the user gets:** lose signal while registering and the screen now says the connection

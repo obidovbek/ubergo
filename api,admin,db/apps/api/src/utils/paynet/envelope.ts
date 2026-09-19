@@ -19,14 +19,24 @@
 
 import { PaynetError, paynetErrorCode, type PaynetErrorName } from './errors.js';
 
-/** The six mandatory methods (docs/PAYNET.md §3). Anything else is 603. */
+/**
+ * The methods we implement (docs/PAYNET.md §3). Anything else is 603.
+ *
+ * 🔴 `ChangePassword` IS DELIBERATELY ABSENT. The spec makes it optional
+ * (§2.1, §3.6: "необязательный метод"), and offering it is what obliges Paynet
+ * to rotate the password on first connect (the questionnaire: "при наличии
+ * метода ChangePassword…"). A rotation we must persist, across restarts and
+ * replicas, and survive a lost reply to, is the one way this service can lock
+ * itself out of its own contract. Not offering it, the password is handed over
+ * by a secure channel and lives in the server env. T-088, owner's decision
+ * 2026-09-19. Paynet calling it anyway gets 603, like any method we lack.
+ */
 export const PAYNET_METHODS = [
   'PerformTransaction',
   'CheckTransaction',
   'CancelTransaction',
   'GetStatement',
-  'GetInformation',
-  'ChangePassword'
+  'GetInformation'
 ] as const;
 
 export type PaynetMethod = (typeof PAYNET_METHODS)[number];
@@ -101,9 +111,8 @@ export function parseRequest(body: unknown): PaynetRequest {
     throw new PaynetError('BAD_COMMAND', `unknown method: ${method}`);
   }
 
-  // `params` absent is treated as empty rather than rejected: ChangePassword is
-  // the only method with a single required field, and per-method validation is
-  // the handler's job, not the envelope's.
+  // `params` absent is treated as empty rather than rejected: per-method
+  // validation is the handler's job, not the envelope's.
   const rawParams = record.params ?? {};
   if (typeof rawParams !== 'object' || rawParams === null || Array.isArray(rawParams)) {
     throw new PaynetError('MISSING_PARAMETER', 'params must be an object');

@@ -56,12 +56,40 @@ describe('parseRequest — Paynet’s own samples', () => {
     assert.equal(parsed.params.transactionId, 12345678900);
   });
 
-  it('accepts all six mandatory methods', () => {
+  it('accepts exactly the five methods we implement', () => {
     for (const method of PAYNET_METHODS) {
       const parsed = parseRequest({ jsonrpc: '2.0', method, id: 1, params: {} });
       assert.equal(parsed.method, method);
     }
-    assert.equal(PAYNET_METHODS.length, 6);
+    // The exact list, not a count: a count would pass with the wrong five.
+    assert.deepEqual(
+      [...PAYNET_METHODS],
+      ['PerformTransaction', 'CheckTransaction', 'CancelTransaction', 'GetStatement', 'GetInformation']
+    );
+  });
+
+  it('answers ChangePassword 603 with the id echoed — the optional method is NOT offered', () => {
+    // Spec §2.1 / §3.6: "необязательный метод". Offering it obliges Paynet to
+    // rotate the password on first connect; T-088 chose not to (owner,
+    // 2026-09-19), so the password arrives by a secure channel and lives in env.
+    // Paynet's own §3.6 sample, verbatim apart from the stray space in its method name:
+    const body = {
+      jsonrpc: '2.0',
+      method: 'ChangePassword',
+      id: 12351,
+      params: { newPassword: 'newDifficultPassword' }
+    };
+    let caught: unknown;
+    assert.throws(
+      () => parseRequest(body),
+      (error: unknown) => {
+        caught = error;
+        return error instanceof PaynetError && error.errorName === 'BAD_COMMAND';
+      }
+    );
+    const response = failureFrom(extractId(body), caught);
+    assert.equal(response.id, 12351);
+    assert.equal(response.error.code, PAYNET_ERRORS.BAD_COMMAND);
   });
 });
 
@@ -197,9 +225,10 @@ describe('response envelopes', () => {
 });
 
 describe('isPaynetMethod', () => {
-  it('recognises exactly the six', () => {
+  it('recognises exactly the five', () => {
     assert.ok(isPaynetMethod('PerformTransaction'));
-    assert.ok(isPaynetMethod('ChangePassword'));
+    // Was assert.ok until 2026-09-19 — ChangePassword is deliberately not offered.
+    assert.equal(isPaynetMethod('ChangePassword'), false);
     assert.equal(isPaynetMethod('Perform'), false);
     assert.equal(isPaynetMethod(''), false);
     // Not fooled by Object.prototype members.

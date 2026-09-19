@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-09-19 (2) — T-122 committed; T-088's last code: don't offer ChangePassword, and a 401
+
+- **T-122 committed as `636ba45`** — after catching one pointer it had broken (T-088's card said its
+  detail was "in *Later* below"; that copy had moved to the archive).
+- **T-088 picked up** — top of *Next* in the owner's order. Its card said one code step was left:
+  **persist `ChangePassword`**, or a pod restart reverts the password and locks us out.
+- 🔴 **Re-reading the originals dissolved the step.** `ChangePassword` is **optional** — the spec
+  says *"необязательный метод"* twice — and the questionnaire's obligation is conditional: *"**при
+  наличии** метода ChangePassword UZPAYNET обязан поменять пароль…; в других случаях пароль
+  передается… по безопасным каналам"*. **Paynet rotates only if we offer the method.** The card,
+  the old plan, three code comments and `PAYNET.md` all said it was obligatory; none quoted the
+  sentence. **Owner chose not to offer it** (option A): it answers 603, the password lives in env,
+  and the lock-out risk is gone rather than managed. The alternative was a migration, a hashed
+  credential row and a two-phase rotation to survive a lost reply.
+- 🔴 **A defect in shipped code, found by the same read: a bad or missing login answered HTTP 200.**
+  Spec §2.2, marked *"Важно!!!"*, requires **401**, and a comment in the middleware argued the
+  opposite. The August probes had written down "→ 412" — the body code — and never the status.
+  **Now 401 with the 412 body kept**, both refusal paths through one `refuse()` so they cannot drift.
+- **Verification:** 4 mutations, every red set predicted — ⓐ-ⓒ the 401 on each path (3 · 1 · 2 red),
+  ⓓ `ChangePassword` put back in the list → 3 tests red **and `tsc` 282**, so re-adding it without a
+  handler cannot compile. **`tsc` 281 · lint 0 / 230 · tests 357**, unchanged throughout.
+- **Also fixed:** T-122's and T-123's *Done* entries pointed at `PLAN.md` after their plans had
+  moved — a pointer class I created twice today. Repointed; `/new-task` now says to do it.
+- **Problems / left open:** **T-088 waits only on the owner** — tell Paynet `ChangePassword` is not
+  implemented · T-100 · credentials into env · deploy, then two `CHECKLIST.md` §13 probes (401
+  through the ingress; 603). T-118's CI run and T-123's airplane-mode check are still unconfirmed.
+- **Next:** the owner's pick; *Now* holds T-101 alone. Top of *Next*: **T-115 → T-116**.
+
+---
+
 ## 2026-09-19 — T-123 committed; T-122 closed: the task board is one board again
 
 - **T-123 committed as `fed25f9`** on the owner's word, after its test files (53 / 60) and `tsc`

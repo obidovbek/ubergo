@@ -3,16 +3,12 @@
  *
  * docs/PAYNET.md §2: the transport is HTTP username/password over HTTPS.
  *
- * 🔴 THE PASSWORD MUST BE ROTATABLE WITHOUT A REDEPLOY. Paynet is obliged to
- * change it on first successful connection (§3), so a value baked into an image
- * cannot satisfy the contract — `ChangePassword` would succeed on their side and
- * lock us out on ours at the next restart.
- *
- * The store below is the seam for that. It reads the env at startup and holds
- * the current password in memory; `ChangePassword` (step 6) replaces it and
- * persists it. **Until that persistence exists, a restart reverts to the env
- * value — which is written down rather than hidden, because it is the exact
- * failure that locks us out.**
+ * The credentials come from the env (`PAYNET_USERNAME` / `PAYNET_PASSWORD`),
+ * read once at startup, and nothing at runtime changes them. **That is a
+ * decision, not a gap:** we do not offer the optional `ChangePassword`, so
+ * Paynet never rotates the password — it is handed over by a secure channel
+ * instead (see `PAYNET_METHODS` in `utils/paynet/envelope.ts`). Rotating it is
+ * changing the secret and restarting the pod. Never bake it into an image.
  *
  * 🔴 NOTHING HERE MAY BE LOGGED. Rule 5: credentials live in env only.
  */
@@ -22,13 +18,10 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { extractId, failure } from '../utils/paynet/envelope.js';
 
-/**
- * The credentials, held in one place so `ChangePassword` has something to
- * update and everything else has one thing to read.
- */
+/** The credentials, held in one place so everything has one thing to read. */
 class PaynetCredentials {
-  private username: string;
-  private password: string;
+  private readonly username: string;
+  private readonly password: string;
 
   constructor() {
     this.username = process.env.PAYNET_USERNAME ?? '';
@@ -45,11 +38,6 @@ class PaynetCredentials {
     // first differing byte through timing, and this endpoint is reachable by
     // anyone who gets past the IP gate — including Paynet's own network.
     return safeEqual(username, this.username) && safeEqual(password, this.password);
-  }
-
-  /** Called by ChangePassword (step 6). */
-  setPassword(next: string): void {
-    this.password = next;
   }
 }
 
@@ -101,12 +89,24 @@ export function parseBasicAuth(header: string | undefined): { username: string; 
 }
 
 /**
- * Require valid Basic credentials.
+ * Refuse a request that did not authenticate.
  *
- * ⚠️ Answers JSON-RPC `412` (bad login), not an HTTP 401 with a
- * `WWW-Authenticate` challenge: Paynet's terminal is not a browser and the
- * contract expresses failures in the RPC body.
+ * 🔴 HTTP 401, NOT 200 — spec §2.2, marked "Важно!!!": *"Если в запросе не
+ * передан заголовок с данными аутентификации или переданы неверные данные,
+ * система должна вернуть HTTP статус 401 – Unauthorized."* Until 2026-09-19 this
+ * answered 200, on the theory that Paynet reads failures from the RPC body; the
+ * spec says otherwise. The body still carries JSON-RPC `412` (the error table's
+ * "wrong login or password") with the request id echoed, so a client reading
+ * either signal gets the same answer. No `WWW-Authenticate` challenge: Paynet's
+ * caller is not a browser.
+ *
+ * Both refusal paths come through here so their answers cannot drift apart.
  */
+function refuse(req: Request, res: Response, message: string): void {
+  res.status(401).json(failure(extractId(req.body), 'BAD_LOGIN', message));
+}
+
+/** Require valid Basic credentials; every refusal goes through `refuse`. */
 export function paynetBasicAuth(req: Request, res: Response, next: NextFunction): void {
   if (!paynetCredentials.isConfigured()) {
     // 🔴 Fail CLOSED. An unconfigured service must never be an open one —
@@ -116,7 +116,7 @@ export function paynetBasicAuth(req: Request, res: Response, next: NextFunction)
       'T-088: PAYNET_USERNAME / PAYNET_PASSWORD are not set — refusing every request. ' +
         'Set them in the environment (never in code or a commit).'
     );
-    res.status(200).json(failure(extractId(req.body), 'BAD_LOGIN', 'Service not configured'));
+    refuse(req, res, 'Service not configured');
     return;
   }
 
@@ -126,7 +126,7 @@ export function paynetBasicAuth(req: Request, res: Response, next: NextFunction)
     // ⚠️ Deliberately does not say WHICH of the two was wrong, and never echoes
     // the attempted username back.
     console.warn('T-088: refused a Paynet request with bad or missing credentials');
-    res.status(200).json(failure(extractId(req.body), 'BAD_LOGIN', 'Bad login'));
+    refuse(req, res, 'Bad login');
     return;
   }
 

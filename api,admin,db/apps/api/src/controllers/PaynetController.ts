@@ -1,17 +1,18 @@
 /**
  * Paynet JSON-RPC controller — T-088.
  *
- * The dispatcher. Five of the six methods are live against `PaynetService`;
- * **`ChangePassword` remains a deliberate stub until step 6 gives it somewhere
- * to persist the new secret** — accepting a rotation we cannot store would lose
- * it at the next restart and lock us out of the contract.
+ * The dispatcher. All five methods we offer are live against `PaynetService`.
+ * The optional sixth, `ChangePassword`, is deliberately not offered — see
+ * `PAYNET_METHODS` in `utils/paynet/envelope.ts` for why.
  *
  * 🔴 THIS IS NOW A LIVE MONEY PATH. `PerformTransaction` credits a real
  * account. The guarantees it depends on live in the ledger, not here: 201 comes
  * from a database unique index, 77 from `applyEntry` under a row lock.
  *
  * ⚠️ It answers HTTP 200 with a JSON-RPC error, never a bare HTTP status —
- * Paynet's terminal reads the RPC body (docs/PAYNET.md §4).
+ * Paynet's terminal reads the RPC body (docs/PAYNET.md §4). **The one exception
+ * is authentication**, which the spec requires to be HTTP 401 (§2.2) and which
+ * `middleware/paynetAuth.ts` answers before a request ever reaches here.
  */
 
 import type { Request, Response } from 'express';
@@ -80,17 +81,6 @@ export class PaynetController {
 
       case 'GetStatement':
         return success(id, await PaynetService.getStatement(params));
-
-      case 'ChangePassword':
-        // 🔴 STILL A STUB, AND DELIBERATELY SO — step 6. Answering "supported"
-        // here would be worse than refusing: Paynet is obliged to rotate the
-        // password on first connect, and accepting a rotation we cannot PERSIST
-        // means the new password is lost at the next pod restart and we are
-        // locked out of our own contract.
-        throw new PaynetError(
-          'SERVICE_UNSUPPORTED',
-          'ChangePassword is not implemented yet'
-        );
 
       default:
         return assertNever(request.method, request.id);

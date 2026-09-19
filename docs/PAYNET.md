@@ -33,7 +33,7 @@ collect money. Payme and Click are separate integrations with their own (differe
 | | |
 |---|---|
 | Protocol | **JSON-RPC 2.0** over HTTPS (SOAP 1.1/1.2 also allowed — pick JSON-RPC) |
-| Auth | HTTP username/password. Sample doc shows `Username: paynet`, password over a secure channel |
+| Auth | HTTP Basic, username/password. Sample doc shows `Username: paynet`, password over a secure channel. 🔴 **A missing or wrong login answers HTTP `401`** — spec §2.2, marked *"Важно!!!"* (we also send JSON-RPC `412` in the body). *This file said nothing about it until 2026-09-19, and the code answered 200.* |
 | Source IPs | **`213.230.106.112/28` and `213.230.65.80/28` ONLY** |
 | Network | Provider must connect only from **TAS-IX** |
 | Response time | **≤ 500 ms**, exceptionally ≤ 1 s (max 30 min/day). 30 s = connection dropped |
@@ -47,20 +47,29 @@ with the URL `https://navpay.tn.uz/paynet/api/webservice`. **UbexGo has no `serv
 username and no password yet** — those come from Paynet when the contract is signed.
 ⚠️ **Do not hard-code anything from that table.** Env only (rule 5).
 
-## 3. The six methods — all mandatory
+## 3. The methods — five we implement, one optional we do not
 
-| Method | Purpose |
-|---|---|
-| `PerformTransaction` | Take a payment into the provider's account |
-| `CheckTransaction` | Report the state of a payment |
-| `CancelTransaction` | Reverse a payment |
-| `GetStatement` | Return all transactions in a date range (daily reconciliation) |
-| `GetInformation` | Look up a payer — **this is what the agent sees before taking the cash** |
-| `ChangePassword` | Rotate the web-service password |
+| Method | Purpose | UbexGo |
+|---|---|---|
+| `PerformTransaction` | Take a payment into the provider's account | ✅ implemented |
+| `CheckTransaction` | Report the state of a payment | ✅ implemented |
+| `CancelTransaction` | Reverse a payment | ✅ implemented |
+| `GetStatement` | Return all transactions in a date range (daily reconciliation) | ✅ implemented |
+| `GetInformation` | Look up a payer — **this is what the agent sees before taking the cash** | ✅ implemented |
+| `ChangePassword` | Rotate the web-service password — **optional** | ❌ **not offered — answers `603`** |
 
-⚠️ **If `ChangePassword` exists, Paynet is obliged to rotate the password on first successful
-connection.** So it must work from day one, and the password must live somewhere rotatable — **not
-in a config file baked into an image.**
+🔴 **CORRECTED 2026-09-19 — this section used to say "the six methods — all mandatory".**
+`ChangePassword` is optional, twice over in the spec: §2.1 *"ChangePassword – изменение пароля
+(**необязательный метод**)"* and §3.6 *"**Необязательный** метод ChangePassword…"*. The annex's
+footnote is conditional: *"**при наличии** метода ChangePassword UZPAYNET обязан поменять пароль при
+первом успешном соединении… **В других случаях пароль передается отдельно по любым безопасным
+каналам.**"* — Paynet rotates on first connect **only if we offer the method**.
+✅ **Owner's decision (T-088, 2026-09-19): we do not offer it.** Offering it meant persisting a
+rotated password across restarts and replicas, and surviving a lost reply — the one failure that
+locks us out of our own contract. So: **tell Paynet `ChangePassword` is not implemented**; the
+password arrives by a secure channel and lives in the **server env** (`PAYNET_USERNAME` /
+`PAYNET_PASSWORD`), never an image, a commit or a doc. Rotating it = change the secret, restart the pod.
+*(Were it ever offered, §3.6's success answer is `"result": "success"` — a string, not an object.)*
 
 ## 4. Envelope
 
@@ -123,7 +132,7 @@ need asking.*
  "params":{"serviceId":1,"dateFrom":"2021-04-20 08:00:00","dateTo":"2021-04-30 08:00:00"}}
 // result: a list of transactions, each with its providerTrnId
 
-// ChangePassword
+// ChangePassword — NOT OFFERED by UbexGo (see §3): this request is answered 603
 {"jsonrpc":"2.0","method":"ChangePassword","id":12351,
  "params":{"newPassword":"newDifficultPassword"}}
 ```

@@ -5,6 +5,14 @@
 > verified against the real test3 database; what remains is **T-100** (proxy layer, not app code),
 > **`ChangePassword` persistence (step 6 — the only remaining Claude coding step in the card)**,
 > and Paynet's credentials. Resume it from this file, not from `PLAN.md`.
+>
+> ✅ **SUPERSEDED 2026-09-19 — the last code is done; read `docs/PLAN.md` (2026-09-19) for it.**
+> **Step 6 was resolved WITHOUT persistence:** the originals make `ChangePassword` **optional**, and
+> Paynet rotates on first connect only if we offer it — so, by the owner's decision, **we do not
+> offer it** (it answers 603; the password lives in env). **Every "THE PASSWORD MUST BE ROTATABLE" /
+> "locks us out" warning below is therefore history, not a to-do.** The same re-read found that a
+> bad login answered HTTP 200 where §2.2 requires **401** — fixed. **T-088 is now in *Parked*,
+> code-complete; what waits is T-100, Paynet's credentials, the deploy and one message to Paynet.**
 
 ---
 
