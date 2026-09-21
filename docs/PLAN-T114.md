@@ -276,9 +276,16 @@ re-measured: `tsc` 28 / 281, 284 tests.
 
 ### What is NOT done
 
-- **② the completeness rules** — `yaqin` requiring a QFY on both ends, and the per-scope MATCH
-  strip. Needs its own card. The owner has already decided the piece that blocks it:
-  **the QFY is REQUIRED on Tuman**, the rules module stands, the form tightens.
+- ✅ **② BUILT 2026-09-21 AS T-127 → `docs/PLAN.md`** (code-complete, not device-walked). Each
+  scope now demands the depth it matches at — a QFY on both ends for `tuman` / `yaqin`, one
+  province for `viloyat`, two different districts for `yaqin` — in the form (per field) AND on
+  the server (keyed 400s); the MATCH strip states the level under the route. `geoMatch.validateScope`
+  got its first reader, and the app's copy is held to it by `shared/scope-cases.json`.
+  ⚠️ **It also fixed a dead end this card's ① sat beside without seeing:** a district with no QFY
+  list could not be completed in ANY scope since 2026-09-03 (`GeoSheet` commits only at `endLevel`).
+  The sheet now offers *"Tuman bo'yicha davom etish"*.
+  ~~Needs its own card. The owner has already decided the piece that blocks it: **the QFY is
+  REQUIRED on Tuman**, the rules module stands, the form tightens.~~
 - ✅ **RESOLVED 2026-09-13 — the edit path now opens in the order's own scope.** The owner asked
   for it directly (*"on edit it should open based on how created"*), so **T-102d's scope half was
   built**: `match_scope` reached `PassengerOffer`'s model, the service accepts/validates/returns

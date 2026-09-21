@@ -714,6 +714,29 @@ export default {
     createButton: 'Create Ride Request',
     loading: 'Loading...',
     errorFromLocation: 'Please enter or select departure location',
+
+    // T-127 — the ride-type names are the menu's own ("Within district", "Within region",
+    // "Nearby districts"), so a message names what the passenger tapped.
+    scope_missing_from_adm2: 'From: select the district',
+    scope_missing_to_adm2: 'To: select the district',
+    scope_missing_from_adm3: 'From: select the settlement (QFY)',
+    scope_missing_to_adm3: 'To: select the settlement (QFY)',
+    scope_different_province:
+      '"Within region" needs both points in the same region',
+    scope_different_district:
+      '"Within district" needs both points in the same district',
+    scope_same_district:
+      '"Nearby districts" needs the two points in different districts',
+
+    // The MATCH strip — the level this order will be searched on.
+    scopeMatchAt_adm2: 'Matched at district level',
+    scopeMatchAt_adm3: 'Matched at settlement (QFY) level',
+
+    // When a district has no QFY list — the way out (owner decision ②, 2026-09-21).
+    settlementListEmpty: 'This district has no settlement (QFY) list',
+    settlementListEmptyAction: 'Continue with the district',
+    scopeMatchDistrictFallback:
+      'No QFY list in this district — matched at district level',
     errorToLocation: 'Please enter or select destination location',
     errorSeats: 'Seats needed must be between 1 and 8',
     errorPrice: 'Please enter a valid maximum price',

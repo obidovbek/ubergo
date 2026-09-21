@@ -1,0 +1,142 @@
+{
+  "_what": "T-127 — one case table for the ONE rule that decides whether an order reaches the depth its scope matches at.",
+  "_why": [
+    "The rule has two readers in two packages: the API's `utils/geoMatch.validateScope` (which refuses the write)",
+    "and the user app's `utils/scopeCompleteness.scopeProblems` (which stops the form before the round trip).",
+    "There is no shared package between them — the apps were deliberately split out of the monorepo — so the",
+    "rule is written twice, which is the exact shape that bit T-123 and T-116: two readers of one rule drifting",
+    "apart silently. This file is what holds them together. Both suites run every case below through their own",
+    "reader and must produce the same problems.",
+    "",
+    "It is READ AT TEST TIME ONLY. Nothing imports it at runtime, so neither app bundles anything from outside",
+    "its own tree and both stay standalone in the sense that matters. CI checks out the whole repo and only",
+    "changes `working-directory`, so a repo-root path resolves there exactly as it does locally.",
+    "",
+    "Readers: `api,admin,db/apps/api/src/utils/scopeGuard.test.ts` and",
+    "`user-app-standalone/scripts/check-scope-completeness.mjs`."
+  ],
+  "_geo": "Farg'ona viloyat(1): Farg'ona sh.(10) w/ QFY 100,101 · Marg'ilon(11) w/ QFY 110. Toshkent(2): Yunusobod(20) w/ QFY 200.",
+  "_shape": "from/to are [province_id, city_id, settlement_id]; `problems` is the complete set, order-insensitive.",
+
+  "cases": [
+    {
+      "name": "aro — two districts in different provinces is exactly what it is for",
+      "scope": "aro",
+      "from": [1, 10, null],
+      "to": [2, 20, null],
+      "problems": []
+    },
+    {
+      "name": "aro — a QFY is allowed but never required; it matches at the district either way",
+      "scope": "aro",
+      "from": [1, 10, 100],
+      "to": [2, 20, null],
+      "problems": []
+    },
+    {
+      "name": "aro — no district on the FROM side",
+      "scope": "aro",
+      "from": [1, null, null],
+      "to": [2, 20, null],
+      "problems": ["missing_from"]
+    },
+    {
+      "name": "aro — no district on the TO side",
+      "scope": "aro",
+      "from": [1, 10, null],
+      "to": [2, null, null],
+      "problems": ["missing_to"]
+    },
+    {
+      "name": "viloyat — two districts inside one province",
+      "scope": "viloyat",
+      "from": [1, 10, null],
+      "to": [1, 11, null],
+      "problems": []
+    },
+    {
+      "name": "viloyat — two provinces is the one thing it refuses",
+      "scope": "viloyat",
+      "from": [1, 10, null],
+      "to": [2, 20, null],
+      "problems": ["different_province"]
+    },
+    {
+      "name": "viloyat — an ABSENT province reads as a different one, deliberately",
+      "scope": "viloyat",
+      "from": [null, 10, null],
+      "to": [1, 11, null],
+      "problems": ["different_province"]
+    },
+    {
+      "name": "tuman — two QFYs inside one district",
+      "scope": "tuman",
+      "from": [1, 10, 100],
+      "to": [1, 10, 101],
+      "problems": []
+    },
+    {
+      "name": "🔴 tuman — the district alone is NOT enough, which is the whole card",
+      "scope": "tuman",
+      "from": [1, 10, null],
+      "to": [1, 10, null],
+      "problems": ["missing_from", "missing_to"]
+    },
+    {
+      "name": "tuman — one end named, the other not",
+      "scope": "tuman",
+      "from": [1, 10, 100],
+      "to": [1, 10, null],
+      "problems": ["missing_to"]
+    },
+    {
+      "name": "tuman — two QFYs in different districts",
+      "scope": "tuman",
+      "from": [1, 10, 100],
+      "to": [1, 11, 110],
+      "problems": ["different_district"]
+    },
+    {
+      "name": "yaqin — two QFYs in two different districts",
+      "scope": "yaqin",
+      "from": [1, 10, 100],
+      "to": [1, 11, 110],
+      "problems": []
+    },
+    {
+      "name": "🔴 yaqin — the SAME district is a tuman order, not a nearby one",
+      "scope": "yaqin",
+      "from": [1, 10, 100],
+      "to": [1, 10, 101],
+      "problems": ["same_district"]
+    },
+    {
+      "name": "🔴 yaqin does NOT demand the districts adjoin — geo_district_neighbors is empty until T-102f, and demanding it would refuse every yaqin order",
+      "scope": "yaqin",
+      "from": [1, 10, 100],
+      "to": [2, 20, 200],
+      "problems": []
+    },
+    {
+      "name": "yaqin — a missing QFY is reported even while the districts are fine",
+      "scope": "yaqin",
+      "from": [1, 10, 100],
+      "to": [2, 20, null],
+      "problems": ["missing_to"]
+    },
+    {
+      "name": "🔴 yaqin — the district-only order fails BOTH ways at once",
+      "scope": "yaqin",
+      "from": [1, 10, null],
+      "to": [1, 10, null],
+      "problems": ["missing_from", "missing_to", "same_district"]
+    },
+    {
+      "name": "a pre-T-102 order with no geo at all is reported, not silently unmatchable",
+      "scope": "aro",
+      "from": [null, null, null],
+      "to": [null, null, null],
+      "problems": ["missing_from", "missing_to"]
+    }
+  ]
+}

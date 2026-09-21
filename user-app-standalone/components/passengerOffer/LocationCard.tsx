@@ -61,6 +61,12 @@ export interface LocationValue {
    */
   neighborhood: GeoOption | null;
   landmark: string;
+  /**
+   * T-127 — this endpoint's district offers NO QFY list, so the passenger was let through at
+   * the district (owner decision ②). Distinct from `settlement: null`, which only means "not
+   * chosen": one is a fact about the data, the other is an unfinished form.
+   */
+  settlementUnavailable?: boolean;
 }
 
 export const emptyLocation: LocationValue = {
@@ -69,6 +75,7 @@ export const emptyLocation: LocationValue = {
   settlement: null,
   neighborhood: null,
   landmark: "",
+  settlementUnavailable: false,
 };
 
 /**
@@ -144,12 +151,19 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       settlement: value.settlement ?? undefined,
     }) as GeoPath;
 
-  const handleDone = (path: GeoPath) => {
+  const handleDone = (path: GeoPath, meta?: { unavailable: boolean }) => {
     onChange({
       ...value,
       province: path.province ?? null,
       cityDistrict: path.district ?? null,
       settlement: path.settlement ?? null,
+      /*
+       * T-127 — "this district has no QFY list" is a FACT about the district, not a choice, so
+       * it is recorded only when the sheet says so and cleared on every ordinary pick. Leaving
+       * it set after a re-pick would let one empty district excuse a later endpoint that simply
+       * was not filled in.
+       */
+      settlementUnavailable: meta?.unavailable === true,
       // Re-picking the location retires any legacy mahalla: the address the passenger
       // just chose is the address, and keeping the old one would append a mahalla from
       // a district they may no longer be in.
@@ -244,6 +258,13 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         initialPath={mergeScopeRoot(scopeRoot, toPath())}
         onDone={handleDone}
         onClose={() => setSheetOpen(false)}
+        /*
+         * T-127 — the dead-end escape. `endLevel` here is the QFY, and a `Tuman ichi` sheet
+         * OPENS there with the district pinned above it, so an empty QFY list would otherwise
+         * leave the passenger with no way to complete the endpoint at all.
+         */
+        emptyEndLevelLabel={t("passengerOffers.settlementListEmpty")}
+        emptyEndLevelAction={t("passengerOffers.settlementListEmptyAction")}
       />
     </View>
   );

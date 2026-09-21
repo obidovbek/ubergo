@@ -194,6 +194,14 @@ export interface CreatePassengerOfferData {
   is_urgent?: boolean;
   /** T-102d — the scope the home carousel chose. Omitted only by a pre-T-102d client. */
   match_scope?: OrderScope | null;
+  /**
+   * 🔴 T-127 — REQUEST-ONLY, AND DELIBERATELY NOT A COLUMN. "This endpoint's district has no
+   * QFY list", which only the client can know: it opened the picker at the QFY level and the
+   * server returned nothing. It relaxes the QFY requirement for that side alone; the order is
+   * then matched at the district, and nothing about the claim is stored.
+   */
+  from_settlement_unavailable?: boolean;
+  to_settlement_unavailable?: boolean;
   /** Omit it and the API derives it from seat_counts / salon_scope. */
   seats_needed?: number;
   /** The new form collects no price — only the special order has prices. */

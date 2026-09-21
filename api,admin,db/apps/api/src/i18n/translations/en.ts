@@ -249,6 +249,21 @@ export default {
     activeLimitReachedPassenger:
       'Limit reached — finish or cancel an order before creating a new one.',
     startAtTooSoon: 'Departure must be at least {minutes} minutes from now',
+
+    // T-127 — the ride-type names are the app's own ("Within district", "Within region",
+    // "Nearby districts"), so the sentence names what the passenger tapped.
+    scope_missing_from_adm2: 'Select the departure district',
+    scope_missing_to_adm2: 'Select the destination district',
+    scope_missing_from_adm3:
+      'This ride type needs the departure settlement (QFY)',
+    scope_missing_to_adm3:
+      'This ride type needs the destination settlement (QFY)',
+    scope_different_province:
+      '"Within region" needs both points in the same region',
+    scope_different_district:
+      '"Within district" needs both points in the same district',
+    scope_same_district:
+      '"Nearby districts" needs the two points in different districts',
     notFound: 'Offer not found',
     notAvailable: 'This offer is not available',
     alreadyStarted: 'This offer has already started',

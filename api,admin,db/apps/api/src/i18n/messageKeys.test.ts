@@ -20,6 +20,8 @@ import { fileURLToPath } from 'node:url';
 
 import { t } from './translator.js';
 import type { Language } from './types.js';
+import { ORDER_SCOPES } from '../utils/geoMatch.js';
+import { SCOPE_PROBLEM_ORDER, scopeMessageKey } from '../utils/scopeGuard.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = join(here, '..');
@@ -91,6 +93,54 @@ describe('AppError messageKeys', () => {
       assert.deepEqual(unresolved, [], `unresolved in ${language}: ${unresolved.join(', ')}`);
     });
   }
+
+  /*
+   * 🔴 T-127 — THE SCAN ABOVE CANNOT SEE A COMPUTED KEY, AND THIS IS THE FIRST ONE.
+   *
+   * `collectKeys` matches `messageKey: '<literal>'`. The scope guard builds its key from the
+   * problem and the scope (`offers.scope_missing_from_adm3`), so the throw site reads
+   * `messageKey: verdict.messageKey` and matches nothing — every check in this file would pass
+   * while a whole family of messages was missing from ru and uz, showing English to exactly the
+   * users they were written for. That is the failure this file exists to prevent, so the family
+   * is enumerated and resolved here instead.
+   *
+   * ⚠️ If another computed key appears, it needs a block like this one. There is no way to scan
+   * for what is not written down.
+   */
+  describe('computed keys (invisible to the scan)', () => {
+    // ⚠️ The API's `ORDER_SCOPES` is a list of STRINGS (the user app's is a list of objects with
+    // `.key` — the same name, two shapes). `s.key` here was `undefined`, which `matchLevelFor`
+    // answered with 'adm2', so every computed key came out adm2 and the adm3 half of this family
+    // was never checked at all. The suite stayed green; `tsc` is what caught it.
+    const computed = SCOPE_PROBLEM_ORDER.flatMap((problem) =>
+      ORDER_SCOPES.map((scope) => scopeMessageKey(problem, scope))
+    );
+
+    it('the scope guard can produce keys at all — including both levels', () => {
+      assert.ok(computed.length >= 20, `expected a key per problem × scope, got ${computed.length}`);
+      assert.ok(computed.some((k) => k.endsWith('_adm3')), 'no adm3 key was produced');
+      assert.ok(computed.some((k) => k.endsWith('_adm2')), 'no adm2 key was produced');
+    });
+
+    for (const language of LOCALES) {
+      it(`every scope-guard key resolves in ${language}`, () => {
+        const unresolved = [...new Set(computed)].filter((key) => {
+          const value = t(key, language);
+          return value === key || value.trim() === '';
+        });
+        assert.deepEqual(unresolved, [], `unresolved in ${language}: ${unresolved.join(', ')}`);
+      });
+    }
+
+    it('and carries no placeholder — the level is in the key, not a parameter', () => {
+      // The throw site passes no `messageParams`, so a `{…}` in any of these would reach the
+      // passenger literally.
+      const withPlaceholders = [...new Set(computed)].flatMap((key) =>
+        LOCALES.filter((l) => /\{\w+\}/.test(t(key, l))).map((l) => `${key} (${l})`)
+      );
+      assert.deepEqual(withPlaceholders, []);
+    });
+  });
 
   it('a parameterised key actually interpolates rather than printing its placeholder', () => {
     const rendered = t('offers.startAtTooSoon', 'uz', { minutes: 30 });

@@ -760,6 +760,33 @@ export default {
     createButton: "Safar so'rov yaratish",
     loading: "Yuklanmoqda...",
     errorFromLocation: "Qayerdan joylashuvni kiriting yoki tanlang",
+
+    /*
+     * T-127 — har bir yo'nalish turi o'ziga mos chuqurlikni talab qiladi.
+     * ⚠️ Yo'nalish turlarining nomlari MENYUDAGI nomlar bilan bir xil bo'lishi shart
+     * ("Tuman ichi", "Viloyat ichi", "Yaqin hududlar") — yo'lovchi tugmada bosgan so'zni
+     * xato matnida ham ko'rishi kerak. QFY so'zi ham ilovaning o'z so'zi.
+     */
+    scope_missing_from_adm2: "Qayerdan: tumanni tanlang",
+    scope_missing_to_adm2: "Qayerga: tumanni tanlang",
+    scope_missing_from_adm3: "Qayerdan: mavze / QFYni tanlang",
+    scope_missing_to_adm3: "Qayerga: mavze / QFYni tanlang",
+    scope_different_province:
+      "«Viloyat ichi» uchun ikkala nuqta bitta viloyatda bo'lishi kerak",
+    scope_different_district:
+      "«Tuman ichi» uchun ikkala nuqta bitta tumanda bo'lishi kerak",
+    scope_same_district:
+      "«Yaqin hududlar» uchun nuqtalar ikki xil tumanda bo'lishi kerak",
+
+    /* MATCH chizig'i — bu buyurtma qaysi daraja bo'yicha qidirilishi. */
+    scopeMatchAt_adm2: "Tuman darajasida qidiriladi",
+    scopeMatchAt_adm3: "Mavze / QFY darajasida qidiriladi",
+
+    /* Tumanda QFY ro'yxati bo'lmasa — chiqish yo'li (egasi qarori ②, 2026-09-21). */
+    settlementListEmpty: "Bu tumanda mavze / QFY ro'yxati yo'q",
+    settlementListEmptyAction: "Tuman bo'yicha davom etish",
+    scopeMatchDistrictFallback:
+      "Bu tumanda QFY ro'yxati yo'q — tuman bo'yicha qidiriladi",
     errorToLocation: "Qayerga joylashuvni kiriting yoki tanlang",
     errorSeats: "Kerakli o'rinlar 1 dan 8 gacha bo'lishi kerak",
     errorPrice: "Iltimos, to'g'ri maksimal narx kiriting",

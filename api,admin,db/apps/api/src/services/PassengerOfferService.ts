@@ -29,6 +29,7 @@ import type {
   PassengerOfferVehicleType,
 } from '../database/models/PassengerOffer.js';
 import { ORDER_SCOPES, isOrderScope } from '../utils/geoMatch.js';
+import { scopeVerdict } from '../utils/scopeGuard.js';
 import {
   MAX_ACTIVE_OFFERS,
   PASSENGER_ACTIVE_STATUSES,
@@ -701,6 +702,12 @@ export class PassengerOfferService {
       fields.special_order = this.parseSpecialOrder(body.special_order);
 
     this.validateOfferData(fields, current);
+    /*
+     * ⚠️ The raw body goes in beside the whitelisted fields: `*_settlement_unavailable` is a
+     * request-only CLAIM, not a column, so `fields` (which is what gets written) deliberately
+     * never carries it. See `scopeGuard.relaxUnavailable`.
+     */
+    this.assertScopeSatisfied(fields, current, body);
 
     return fields;
   }
@@ -834,6 +841,72 @@ export class PassengerOfferService {
         400
       );
     }
+  }
+
+  /**
+   * 🔴 T-127 — THE ORDER MUST REACH THE DEPTH ITS SCOPE MATCHES AT.
+   *
+   * `geoMatch.validateScope` has held this rule since 2026-09-12 with **zero callers**: a
+   * `tuman` order matches at the QFY (T-102i built that), while the form only ever demanded a
+   * province and a district. So the app could post an order the matcher cannot serve, and the
+   * adm3 branch quietly fell back to the district — a precision the passenger asked for and
+   * silently did not get. This is that rule's first reader on the write side.
+   *
+   * ⚠️ **The rule is not re-decided here.** The four scopes' demands live in `validateScope`;
+   * this method only decides WHEN to apply it and turns each problem into a keyed 400.
+   *
+   * 🔴 WHEN, on an update, is decision ① (owner, 2026-09-21 — option A). Orders created between
+   * 2026-09-13 and today can legitimately be `tuman` with no QFY, because nothing asked for one.
+   * Judging every PATCH would make those rows **uneditable** — a passenger changing only the
+   * price would be held hostage by geo they never touched. So the rule applies only when the
+   * patch actually CHANGES the route or the scope, by value:
+   *   · change the price on a broken old order → allowed, nothing about the route was claimed
+   *   · change the route, or the scope → the result must be valid
+   * This is the same shape as the payment rule above (*"only enforced when the caller actually
+   * touched payment"*), and it closes the hole a "don't report pre-existing problems" rule would
+   * leave: moving an order to `tuman` without ever naming a QFY IS a change of scope, so it is
+   * refused rather than inherited.
+   *
+   * ⚠️ A row with NO scope (before T-102d) claims nothing and is left alone — inferring one from
+   * its geo was rejected as a guess in T-114, and that has not changed.
+   */
+  private static assertScopeSatisfied(
+    fields: PassengerOfferWritableFields,
+    current: PassengerOffer | undefined,
+    body: Record<string, unknown>
+  ) {
+    /*
+     * ⚠️ `current` is passed as the STORED row, ids and all, rather than normalised here: its
+     * BIGINT columns arrive from pg as strings, and `scopeVerdict` is the one place that knows
+     * it. Converting on the way in would move that knowledge back into the untestable half.
+     */
+    const verdict = scopeVerdict(
+      {
+        ...(fields as Record<string, unknown>),
+        from_settlement_unavailable: body.from_settlement_unavailable === true,
+        to_settlement_unavailable: body.to_settlement_unavailable === true
+      },
+      current
+        ? (current.get({ plain: true }) as unknown as Record<string, unknown>)
+        : null
+    );
+    if (!verdict) return;
+
+    /*
+     * One 400, named by the problem `scopeVerdict` picked; the full list travels in
+     * `data.problems` for a client that wants to mark more than one field. `messageKey` keeps
+     * this off T-116's English-4xx ratchet — the ceiling stays 107.
+     */
+    throw new AppError(
+      `Order does not satisfy its scope: ${verdict.problems.join(', ')}`,
+      400,
+      {
+        code: 'SCOPE_INCOMPLETE',
+        messageKey: verdict.messageKey,
+        problems: verdict.problems,
+        scope: verdict.scope
+      }
+    );
   }
 
   /**

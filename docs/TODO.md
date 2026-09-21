@@ -25,13 +25,17 @@
 - [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
   scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
   `docs/PLAN-T102.md` §9.
-  ✅ **2026-09-19 — T-102i DONE (owner: option A, "for your order") → `docs/PLAN.md`.** After a
+  ✅ **2026-09-19 — T-102i DONE (owner: option A, "for your order") → `docs/PLAN-T102i.md`.** After a
   passenger creates or edits an order, the search matches THAT order at its scope's level — a *Tuman
   ichi* / *Yaqin* side at the QFY; a driver who named only the district is let through and the card
   says so. One rule (`geoMatch.placeHit`), SQL derived from it, a parity test between them; a BIGINT-
   as-string trap that would have mislabelled every result caught before it ran. API 391 · user 278.
   🛑 **Left in T-102:** T-102f (admin neighbours) · T-102h · the backfill RUN (the owner's). Needs the
   API deploy + a user-app rebuild; `CHECKLIST.md` §5. **T-128** = the driver side, still by text.
+  ✅ **2026-09-21 — the WRITE side landed as T-127:** an order must now reach the depth its scope
+  matches at, so T-102i's adm3 branch finally receives orders that name a QFY. `validateScope` —
+  written for this card on 2026-09-12 — has its first reader. ⚠️ *Yaqin* still checks only that
+  the two districts DIFFER, not that they adjoin: that waits on T-102f's neighbours table.
   🟢 **2026-09-14 — T-102c IS CLOSED (1 · 2 · 3).** Sub-step 3, the driver naming a QFY, is
   `docs/PLAN-T102c3.md`: **a client-only step — the API had been finished for it since 09-13.**
   `GeoSheet` gained a second multi-select level and a confirm that ADVANCES instead of finishing;
@@ -74,282 +78,6 @@
   correct behaviour, but the screen needs a real empty state saying so.
   🛑 **T-101 step 8 must not present the scopes as working until this lands.**
 
-- [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
-  with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
-  converts pages one by one, user app first** → `docs/PLAN-T101.md`.
-  ✅ **PLAN APPROVED 2026-08-30. Phase 1 (foundation) complete. Committed through `c005785`.**
-  🟢 **2026-09-11 — STEP 16 (`DriverElon`, the driver's offer wizard) IS CLOSED: 16a-16g.** The
-  4-step wizard is ONE scrolling form with four sheets; the edit path restores all 34 fields (a real
-  silent-blanking bug was found and fixed in 16e); 74 dead style blocks went in 16f. **Steps 13-15
-  (user auth values-only, the strays, `DriverMenu`) were also done 09-03 → 09-05 and never noted on
-  this card.** New checker `check-offer-i18n.mjs` found `common.delete` missing from every locale.
-  Unbacked artboard features boarded as **T-106 · T-107**; **T-108** is the locale gap that blinds
-  `tsc`. ⚠️ **Admin `tsc` baseline corrected 0 → 6** (the 0 measured nothing; see `PLAN.md`).
-  🛑 **Nothing from step 8e onward has run on a device.** Next: step 17 (`DriverQidiruv`) —
-  **scoped the same day → `docs/PLAN-T101-step17.md`; owner accepted all seven recommendations;
-  17a (the pure rules + a 59-assertion checker, red on 9 mutations) and 17b (`PanelTabs` +
-  `SortChips`, `paidTint` token), 17c (`PassengerOrderCard`, 21/21 contrast) and 17d (**the merged
-  `PassengerOrdersScreen`**, 27 keys × 3 locales) are DONE.** The card was wrong three ways (a
-  merge, a sheet, and a screen with no artboard); step 18 shrinks to `DriverMyOrder` as a result.
-  🔴 17b found `SegmentedModes` drawing 24px pills where step 9 measured 12, in both apps —
-  **fixed in 17d in both** (the user app's order list changes shape as a result). **17e (the
-  detail-and-offer sheet: accept, counter-offer, cancel, T-054 phone gate), 17f (the result
-  dialog, copy corrected) and **17g (routes — the new screen is now REACHABLE from the drawer,
-  the home screen and pushes; four old files are orphans on T-105) and 17h (`OffersListScreen` on
-  the shared chrome, values only; `StatusFilterTabs` orphaned)** are DONE.**
-  ✅ **STEP 17 CLOSED 2026-09-11 (17a-17i).** Unbacked artboard features → **T-109**.
-  ✅ **STEP 18 CLOSED 2026-09-12 (18a-18f), → `docs/PLAN-T101-step18.md`.** `MyRidesScreen` merges
-  `OffersListScreen` + `OfferPassengersScreen` into the driver's rides in three DERIVED phases,
-  each card expanding to its passengers; the artboard's nine-reason reject sheet is real backend.
-  🔴 **The step-18 card was wrong the same way 16 and 17 were** — `DriverMyOrder` draws the
-  driver's OWN offers, not "accepted rides", so its "third tab" question dissolved and **17h's
-  "no artboard draws `OffersList`" was wrong.** Unbacked features → **T-110**; 5 files → T-105.
-  ✅ **STEP 14b CLOSED 2026-09-12 (14b-1 to 14b-6), → `docs/PLAN-T101-step14b.md`.** The USER
-  app's search screen — **the owner reported it did not look like `UserQidiruv`, and they were
-  right**: step 7 had swapped colours only and been ticked with a title that read as a rebuild.
-  Now rebuilt: two modes (search + the drivers who bid on your own request), the shared chrome,
-  the result card, and **the ★ driver rating, used for the first time anywhere in either app.**
-  🔴 **FIVE MEASUREMENT CORRECTIONS came out of it, and two of the wrong claims were my own:**
-  rating, colour swatch and fuel type all EXIST where cards said they did not; review comments
-  do NOT where I said they did; and the front seat has three states where I modelled two.
-  → **T-112** boarded; **T-109 ②** and **T-106** corrected.
-  ⚠️ **14c** (absorbing the 1 456-line booking form into the sheet) is deferred until this has
-  been walked on a device.
-
-  **Steps left in T-101: 19-22, then 23-26 — plus 2b, still unchecked.**
-  🟢 **2b IS VERIFIED DONE EXCEPT THE DEVICE BUILD** (2026-09-12): both native deps are
-  installed in both apps at Expo-54 versions and **both were proven to autolink**, via two
-  different resolvers. **`expo prebuild` is NOT needed and must not be run** — the `android/`
-  folders are gitignored generated artifacts and autolinking re-resolves every build.
-  **What is left is `npm run android` on a real device, once per app — owner-only.**
-  🛑 **STEPS 15-18 AND 14b HAVE NEVER BEEN ON A PHONE — THAT IS THE BUSIEST SCREEN IN BOTH APPS.**
-  This is now the gate before step 19, and **2b (native install + prebuild) blocks the walk.**
-  Walk, in order: the `Buyurtmalarim` tab → three phases, a card expands to its passengers,
-  confirm one and watch the ride move phase, reject one with a reason, cancel/archive/publish;
-  then the drawer → "Kelgan buyurtmalar" / "Mening buyurtmalarim" (step 17); a card → the sheet;
-  an offer → the result dialog → the sent mode; a push about a bid → the sheet by id; a push
-  about a join request → the right ride's card, in the right phase.
-
-  🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
-  Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
-  must not be "fixed"** — `FACEBOOK_BRAND_BLUE`, `PLAY_STORE_BLACK`, `APP_STORE_BLUE`,
-  `VEHICLE_SWATCH_FALLBACK` (third-party brand colours and one vehicle-paint fallback).
-  `check-design-tokens.mjs` holds both ceilings at the floor and **was re-proven able to go red at
-  every ceiling.** Baselines: user `tsc` 6 / lint 216 · driver `tsc` 28 / lint 280 — both lint
-  figures *below* their starting baselines, never rebaselined upward.
-
-  🟢 **ALSO DELIVERED:** both splash screens redesigned light · `palettes/dark.ts` deleted in both
-  apps (**goal 4 genuinely met**) · six measured gender/seat tokens added to both palettes · the
-  three supporting ink tiers darkened so they pass AA at the sizes the artboards actually use.
-  **Contrast failures across both apps: 219 → 2, and both survivors are verified decorative.**
-
-  🛑 **TOKENIZED IS NOT REBUILT — the layouts are still the pre-T-101 layouts** and almost no screen
-  matches its artboard. Steps 8-22 each carry a note on what was and was not done. *The owner had to
-  catch this from a screenshot on 2026-08-30; the colour count must not be read as more than it is.*
-  🛑 **ALMOST NOTHING HAS RUN ON A DEVICE.** Biggest unverified surface: the ink-ladder change
-  (**every screen in both apps**) and the two structurally-rebuilt splash screens. Also still
-  unwalked: `SearchPassengerOffers`, whose 3 location buttons per direction became **1**.
-  📋 **Step 23 (delete the compat aliases) measured at ~370 call sites → wants its own card.**
-  🛑 **T-102 and T-103 remain open** and gate the search screens looking right.
-
-  🟢 **2026-09-01 — THE VISIBLE HALF HAS STARTED: step 8 is the first rebuilt screen.**
-  `CreatePassengerOfferScreen` → `UserBuyurtma.dc.html`: the shared `TopBar` replaces its
-  hand-rolled header, payment and car class became `Chip` rows (**`Chip`'s first call sites**),
-  section labels became the artboards' mono eyebrow. **Owner: the four `UserBuyurtma*` artboards
-  are ONE screen with a mode** — measured, they differ by 22-78 lines out of ~138 KB.
-  **Logic untouched** (T-031/T-040/T-069/OR-012 all intact, verified mechanically). Three findings
-  that only measuring produced: **the gradient header is NOT universal** (form boards are flat —
-  affects step 17), **a double safe-area inset** (safe-area-context pads on both platforms, RN's
-  own is a no-op on Android), and **the artboard's payment chips are toggles, not a radio group** —
-  mapping the rendering would have silently reverted T-031.
-  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
-
-  🔴 **2026-09-01 (2) — THE OWNER RAN IT ON A PHONE: "does not look like the design". CORRECT.**
-  Step 8 changed the top bar, two button rows and the section labels — **~15% of that screen**. The
-  ~1 600 lines of body components were untouched, so it still looked like the old form.
-  *"Step 8 done" and "the order screen is done" are different claims; only the first was true.*
-  ✅ **STEP 8b: the from/to card rebuilt** — 8 stacked dropdowns → 2 tappable rows in one card,
-  picker opens as a sheet. **Data contract untouched** (`LocationValue` / `buildLocationText`
-  unchanged), so validation and submission never moved; the geo-loading effects and `GeoSelectModal`
-  are reused as-is.
-  🔴 **The rewrite silently dropped 4 behaviours — all caught by reading the diff, none by any
-  baseline:** the "district has no settlements/mahallas" guards, both clear (✕) buttons,
-  `maxLength={255}`, and the `export default`. **`tsc`, lint and the ratchet stayed green throughout.**
-  ❓ **OWNER QUESTION: does the mahalla survive the redesign?** The artboard has no step for it; the
-  code does, and it is the fragile field (no id column — T-029). Kept for now.
-  ✅ **2026-09-01 (3) — STEP 8c: the rest of the screen, and the owner found the real fix.**
-  *"On passenger search we create country/city step-by-step selection"* — **correct: `GeoSheet`
-  already existed**, already the artboards' picker, already used by search. My 8b row was the
-  **eighth** hand-rolled copy of a cascade built beside the component made to end them.
-  🔴 **MAHALLA REMOVED**, decided on the design's own logic — four sources agreed: the artboard
-  never mentions it, `GeoSheet` calls it "a sibling, not a depth", it has **no id column (T-029)** so
-  editing an order already dropped it, and nothing can match on it. **It was the only thing blocking
-  `GeoSheet` reuse.** The stored field is KEPT (deprecated, always null) so old orders' saved
-  addresses are not rewritten.
-  ✅ **Route and time are two cards now** (times had been interleaved between the two locations);
-  **`TimeWindowCard`** got the eyebrow + "Hoziroq" chip and lost a blue tint that is nowhere in the
-  design; **seats are tappable** (the +/− stepper stays — it is the only control that works when a
-  row is full); **every heading is the artboard eyebrow**, including one that was RED.
-  **All six baselines unchanged.** 16 i18n keys × 3 locales verified, checker proven able to fail.
-  📋 **`GeoSelectModal` now has ZERO call sites** — not deleted (rule 4). Small cleanup card.
-  🛑 **NOT SEEN ON A DEVICE, and this round is mostly INTERACTION change** — the sheet picker,
-  tapping seats, the chip. Needs a real walk.
-  ✅ **2026-09-01 (4) — STEP 8d: `SpecialOrderPanel`. THE ORDER SCREEN IS NOW FULLY CONVERTED.**
-  The design draws that whole block **purple**; the code had **four accent families in one card**
-  (green border on mint, blue inputs, amber waiting field, a RED notice). **`palette.paid` had
-  existed since step 1b and nothing consumed it** — the colour audit found the value, only building
-  the screen revealed the gap. One new measured token: `paidBorder`, added to both palettes.
-  Money reads in mono now; contrast measured at 9.04:1 / 8.08:1.
-  🔴 **I truncated a file's `export default` for the SECOND time** — same cause both times
-  (replacing a trailing stylesheet by slicing to end-of-file). Caught by the deletion review, then
-  every edited file's last line was checked. *A slip repeated is a method problem, not a slip.*
-  **All six baselines unchanged.**
-
-  🟢 **MAHALLA IS NOT DROPPED FROM THE DATABASE** (owner asked, 2026-09-01). It could not have
-  been — T-101 touched no model, migration or endpoint. The table, the model, the endpoint, the
-  driver-side `address_neighborhood_id` and every stored order address are intact; only the
-  passenger ORDER FORM stopped offering it. **→ T-104** records the reasoning and the one-component
-  path back. **→ T-105**: `GeoSelectModal` now has zero call sites (not deleted — rule 4).
-
-  🛑 **NOT SEEN ON A DEVICE, and steps 8b–8d changed INTERACTION, not just paint** — the sheet
-  picker, tapping seats, the chip, the special-order flow. A screenshot will not settle these.
-
-  ✅ **2026-09-01 (5) — STEP 6b: the home screen's empty space, from the owner's device run.**
-  The artboard fills that area with an active-trip banner, recent routes and a stats row — **all
-  drawn with invented data**, which is why step 6 shipped none. 🟢 **Re-checked: two of the three
-  can be REAL** (`getMyPassengerOffers` exists; `driver_found` = a driver is confirmed). Both now
-  ship and **both render nothing when the user has no orders**. Stats row stays out until the
-  wallet (step 19) — owner's call.
-  🔴 **Four first-pass errors, none caught by a baseline:** banner position (it sits BELOW the
-  carousels, measured) · **wrong navigation target** (`OfferDetails` is a DRIVER's offer; a
-  passenger's own order belongs to `OfferDrivers`) · **`text.onDark` equals `ground`**, so the
-  supporting line would have rendered identically to the headline (new measured token
-  `onDarkMuted`, 8.76:1) · **step 6 had already added the i18n keys** and `tsc` caught the
-  duplicates.
-  ⚠️ **The route chips open the order form but do NOT pre-fill the route** — that needs geo ids
-  and `from_text` is a display string. Half-wiring it would look like a feature and behave like a
-  bug. → own card if wanted.
-  **All six baselines unchanged.** 🛑 **Not seen on a device.**
-
-  🔴 **2026-09-01 (7) — STEP 8f: THE OWNER QUESTIONED THE DESIGN'S LOGIC AND WAS RIGHT.**
-  *"i dont see correct logic"* — four defects in the time model, three invisible while the rules
-  sat inline in the form:
-  ① **"Hoziroq" both WAS and WAS NOT allowed** (a 31-min minimum plus a toggle that skipped it).
-  → Owner: Hoziroq means "I am ready now"; the minimum is a SCHEDULED-order rule. Exemption was
-  right, just undocumented.
-  ② "Arrival time" actually meant "arrive by" — relabelled. ⚠️ `arrive_from` is still never sent.
-  🔴 ③ **"Leave 08:00–11:00, arrive by 09:00" was ACCEPTED** — arrival was compared against the
-  window's START. Now against its END.
-  ④ Departure/arrival had independent dates ("leave 5 Sept, arrive 3 Sept" was expressible).
-  ✅ Rules extracted to **`utils/rideTime.ts`** (pure) + **`scripts/check-ride-time.mjs`**, 8 cases,
-  **importing the real module** and **proven able to fail against the real source**.
-  ⚠️ **No test runner in the user app** — this wants to be a `*.test.ts`; needs owner approval.
-  **All six baselines unchanged** + the new check at 8/8. 🛑 **Not seen on a device.**
-
-  ✅ **2026-09-01 (6) — STEP 8e: the date/time picker. THREE OWNER REPORTS, ONE ROOT CAUSE.**
-  *"do not look like design"* + *"calender always in center"* + *"should appear from bottom like
-  county/city"* — **all three were the same defect**: the wheels used the DIALOG shell (`AppModal`,
-  centred) where the design specifies the SHEET shell. Fixing the shell fixed all three.
-  ✅ **`BottomSheet` extracted from `GeoSheet`** and `GeoSheet` refactored onto it, so the two
-  pickers cannot drift. 🔴 **The real reason to share it: its safe-area padding is a device bug
-  already fixed once** (nav bar over the sheet, S24 Ultra) — a copied second sheet would have
-  re-introduced it, exactly as the geo cascade was re-implemented 7 times before `GeoSheet`.
-  ✅ **`TimeSheet`**: 4 date cards + quarter-hour chips, per the artboard. **The T-069 time floors
-  and the commit-on-confirm contract both survive.**
-  ⚠️ **The artboard's DRAGGABLE 15-minute strip is deliberately not built** — owner chose chips;
-  same data model, so it can be swapped in later without touching the form.
-  ⚠️ `GeoSheet`'s title is now LEFT-aligned (it was centred; the artboard is left).
-  🔴 **I used `monthsShort` before checking it existed — second time this week.** Added
-  `weekdaysShort`/`monthsShort` to all 3 locales; **the i18n checker now asserts list LENGTH too**
-  (a short list renders blank cards silently), proven able to fail.
-  **All six baselines unchanged.** 🛑 **Not seen on a device.**
-
-  📓 **The full narrative — every measurement, every mistake — is in `docs/JOURNAL.md` 2026-08-31
-  and 2026-09-01.**
-  ✅ **OWNER DECISIONS 2026-08-30 (asked and answered before the plan was written):**
-  **① dark mode is DROPPED** (the 33 artboards have no dark variant) · **② scope is user + driver
-  only, admin maybe later — "do nothing for new roles, think like there is no other new roles"**
-  (so *usta*, *yuk*, *texnika* in the design docs are OUT) · **③ user app converts first** ·
-  **④ fonts ship as bundled `.ttf` in `assets/`, NO new dependency** (`expo-font` is already there) ·
-  **⑤ BOTH NEW NATIVE DEPENDENCIES APPROVED — `expo-linear-gradient` + `react-native-svg`, in both
-  apps.** Rule 4 is satisfied for this card; **anything further still needs asking.**
-  🛑 **CONSEQUENCE OF ⑤ — THE USER APP'S REBUILD IS NOW NATIVE TOO.** It was going to be a JS-only
-  rebuild (T-077 · T-083 · T-084); both approved packages are native modules, so the user app needs
-  `npx expo prebuild` + a full `npm run android` as well. **Install with `npx expo install`, not
-  `npm install`, so versions match Expo 54.** A missing native module surfaces as a *bundling*
-  error, which reads like a code mistake and sends you looking in the wrong place.
-  🔴 **THE REAL OBSTACLE IS NOT THE PALETTE — IT IS 1 652 HARDCODED HEX LITERALS.** Measured
-  2026-08-30: **user 789 · driver 863**, across **154 distinct values**, mostly raw Tailwind defaults
-  (`#10B981` x93, `#111827` x89, `#6B7280` x59). **`themes/` is imported by 25 files but its palette
-  (`primary #000000`, `secondary #00D9A5`) matches almost nothing on screen** — the real design
-  system is the literals, not the theme. **Repainting pages without fixing this just re-hardcodes
-  new literals**, which is why the foundation comes first.
-  🔴 **THE TAB BAR IS NEW NAVIGATION, NOT A REPAINT.** `navigation/MainNavigator.tsx` is a **pure
-  native stack — there is no bottom tab bar today**, and every artboard has one (5 tabs) plus a
-  persistent top bar (hamburger, bell+badge, avatar). ✅ **`@react-navigation/bottom-tabs@^7.4.0`
-  is ALREADY a dependency in both apps and unused** — so no new dependency, rule 4 clear.
-  🔴 **THE DESIGN DOC CONTRADICTS THE ARTBOARDS ON THE DRIVER ACCENT — TRUST THE ARTBOARDS.**
-  `htmlDesign/docs/00-UMUMIY-loyiha.md` says blue `#0049FF` is the Driver colour. **Measured across
-  the 14 `Driver*.dc.html` files: green `#05BB42` appears 224 times, blue 30.** Green is primary in
-  **both** apps; blue is an occasional secondary. *Building to the doc would have made the whole
-  driver app the wrong colour.*
-  ⚠️ **`htmlDesign/uploads/Chek_28082026/` is NOT just old copies**, though the design doc calls it
-  a source of confusion. It holds **5 artboards the root does not** (`DriverOrder`, `UserMainNeW`,
-  `UserTexnika`, `Yuk1`, `Yuk2`); the root holds 4 the uploads folder lacks (`DriverDaromad`,
-  `DriverProfil`, `DriverQidiruv`, `UserMenuNeW`). **Neither set is complete.** Of the 5 extras only
-  `DriverOrder` is in scope — the rest are the dropped roles.
-  ⚠️ **Three screens the design docs describe exist as NO FILE anywhere:** `UserUstaBuyurtma`,
-  `YukMashinalarElon`, `YukEgalariSorov`. All three are dropped roles, so all three are out of scope.
-  ⚠️ **Neither app has a single font file** (`find` for `.ttf`/`.otf` → nothing). Manrope's 800/900
-  weights are load-bearing in every artboard.
-  ✅ **Dropping dark mode is mostly deleting:** `MainLayout`/`ScreenLayout` already call
-  `createTheme('light')` at module scope.
-  🛑 **`themes/modal` is a FIGMA-ERA language** (cream `#FDF6E3`, 2px black border, red heading) from
-  T-036, and the new design replaces it outright — but it is live in `AppModal`/`ModalList`/
-  `ConfirmDialog` in **both** apps. Changing it changes every modal at once.
-  ⚠️ **Both apps' rebuilds were ALREADY outstanding before this card** (user: T-077, T-083, T-084;
-  driver: T-078, T-079/T-080, T-061, **native**). This card does not add a rebuild — it rides them.
-  ⚠️ **Per `ubexgo-app-conventions`: tokens are DUPLICATED per app, not extracted to a package.**
-  An earlier centralisation attempt was the wrong call. Edit both copies together, verify `diff -q`.
-
-  🟢 **2026-09-03 — STEPS 9-12 DONE IN ONE SESSION. FOUR MORE SCREENS, AND FOUR CARDS WHOSE
-  PREMISE WAS WRONG UNTIL MEASURED.**
-  **Step 9 — the merged order list.** `MyBookings` + `MyPassengerOffers` → ONE `MyOrdersScreen`.
-  The artboard's three modes (`Jarayonda`/`Faol`/`Tarix`) are **lifecycle stages, not statuses**,
-  and they cut ACROSS both screens — which is why two ~1 000-line screens that disagreed with each
-  other about their own tabs became one. Rules extracted to `utils/orderLifecycle.ts` + 18 cases.
-  🔴 **Two contrast defects came over with the code:** `driver_found` used `brand` on `successTint`
-  and its comment **claimed 6.96:1** — but `brand` is the bright `#05BB42`, so it really measured
-  **2.24:1**. *The comment had measured a different token than the code used.* Also `cancelled`
-  used a FILL as ink (4.20:1). Both fixed; all 20 pairs pass AA.
-  **Step 10 — `OfferDrivers` rebuilt, `OfferDetails` converted** (1 456 lines, 47+/79-, no booking
-  logic in the diff). 🔴 **The card's premise was wrong:** the artboard's "detail state" is a
-  read-only SHEET over the order list; `OfferDetails` is a *join form* reached from search.
-  Recorded, not papered over. **34 `fontWeight` literals → `font()` — the Android font trap.**
-  **Step 11 — the drawer, which never existed.** 🔴 **`TopBar`'s hamburger had been wired to the
-  wrong thing since step 3**: it opened the PROFILE on the home screen (what the avatar already
-  did) and navigated Home on the orders tab. `NavDrawer` now exists; **6 of its 10 entries have no
-  screen and render dimmed** — the artboard's own `navGo()` handles exactly one of ten.
-  **Step 12 — `ProfileScreen` rebuilt, `EditProfile` converted** (31+/60-, no save/validation line).
-  **The six coloured tint/dot pairs are deleted**, as the card predicted — 🔴 **and they encoded
-  nothing**: `bell`/`help` shared an amber pair, `edit`/`card` a blue one. Five colours, six rows.
-  🔴 **A COLOUR CLASS THE TOKEN RATCHET CANNOT SEE.** Fills built at RUNTIME as `colour + '20'`
-  carry no literal, so `check-design-tokens.mjs` read those screens as clean at 0. Five found in
-  `NotificationsScreen`, then **the class was swept across BOTH apps** (`palette\.[a-zA-Z.]* *\+
-  *['"]`) — two more in `NetworkStatus.tsx`. **Both apps are clean of it now.**
-  ✅ **Checkers: 18 lifecycle cases · 69 i18n keys × 3 locales · 8 ride-time. Every one proven able
-  to go red.** 🔴 **The i18n checker was twice the bug it exists to catch** — v1 skipped keys
-  reaching `t()` via a ternary and stayed GREEN on a deliberate break; v2's generalised regex had
-  an unescaped dot that would match `drawerXopen`.
-  📋 **T-105 has grown:** both old order screens are orphaned (**2 of the user app's 6 baseline
-  `tsc` errors live inside one of them**), `menu-items/index.ts` is dead with zero importers, and
-  `MenuButton` is down to 2 real call sites.
-  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
-  🛑 **NOTHING FROM STEPS 6b, 8e, 8f, 9, 10, 11 OR 12 HAS BEEN SEEN ON A DEVICE.** The queue is now
-  six steps deep and includes brand-new interaction surface (the drawer) and a converted booking
-  form. **Step 13 is the auth flow — the OR-003 SMS-Retriever hash and the T-061/T-063 validators
-  live there, and no baseline can see an autofill break.** A device pass belongs before it.
-
 > 🤝 **START HERE: `docs/HANDOFF-2026-09-12.md`.** Written at the owner's request and complete
 > on its own — state, the three blockers, the nine card corrections made that day, the two
 > structural gaps, exact uncommitted files, and the traps this project keeps hitting.
@@ -375,11 +103,46 @@
 > apps. ❌ No migration in any of the eight. ⚠️ **T-046 still needs its own migration**, between the
 > deploy and the rebuilds.
 
+- [ ] T-127 (P1) 📍 **T-114 ② — PER-SCOPE COMPLETENESS: each order scope demands the geo depth it
+  matches at, and the form shows it (the MATCH strip).** Split out of T-114 by the owner (2026-09-13,
+  *"SCOPE NOW = ① ONLY"*); `PLAN-T114.md` §8 said *"needs its own card"* — boarded 2026-09-19.
+  ✅ **Owner decided the blocking piece 2026-09-13: the QFY is REQUIRED on *Tuman ichi*** — the rules
+  module (`validateScope`, matching at adm3) stands and the form tightens beyond the artboard.
+  `yaqin` requires a QFY on both ends. ⚠️ **Half-overlaps T-102i** (the read side) — do it after, or
+  with it: completeness only matters once something matches at adm3.
+  ✅ **2026-09-21 — BUILT, steps 0-5, NOT COMMITTED → `docs/PLAN.md`.** Each scope now demands the
+  depth it matches at — in the form (per field, plus a MATCH strip naming the level) and on the
+  server (7 keyed 400s × uz/ru/en). `geoMatch.validateScope` got its first reader; the app's copy is
+  held to it by **`shared/scope-cases.json`**, 17 cases both suites execute. A district with **no QFY
+  list** gets a way out (owner decision ②) — a request-only claim, never stored.
+  🔴 **Two traps caught: BIGINT-as-string AGAIN** (this time it would have refused *correct* orders),
+  and **a dead end live since 2026-09-03** — a district with no QFY list could not be completed in
+  ANY scope, because `GeoSheet` commits only at its deepest level. The card's own step 1 had
+  wrongly called that "survivable"; corrected.
+  **API 391 → 442 · user 278 → 285 + 13 checkers**; every baseline held; driver untouched.
+  ✅ **Open question ⑥ answered "keep strict"** (the app asks for the QFY on any save of an incomplete
+  order; the server stays lenient on untouched routes). **Committed.**
+  ⏸️ **PARKED 2026-09-21** — no Claude work left. Owner: API deploy + user-app rebuild, then
+  `CHECKLIST.md` §3 (six T-127 walks).
+  🟢 **MOVED *Next* → *Now* 2026-09-21, plan written and awaiting approval → `docs/PLAN.md`.**
+  **Owner decided ① the same day: the server refuses on create, and on update only when the row
+  would STILL be incomplete** — so an order made 09-13…09-21 as `tuman` with no QFY stays editable.
+  🔴 **Measured 2026-09-21: `geoMatch.validateScope` STILL HAS ZERO CALLERS** — it appears only in
+  itself and its test. The form demands province + district for all four scopes
+  (`CreatePassengerOfferScreen.tsx:566`), and the API checks the scope's SPELLING, never its
+  content (`PassengerOfferService.ts:517`). **Third rule module in this subsystem found written,
+  tested and unapplied** (after `placeHit`'s half and the T-116 error readers).
+  ⚠️ **`yaqin` will demand two DIFFERENT districts, not two NEIGHBOURING ones** — `geo_district_
+  neighbors` is empty until **T-102f**, and real adjacency would refuse every `yaqin` order today.
+  ⚠️ **A new server 400 must be KEYED** — T-116's English-4xx ceiling is 107 and may only fall.
+
 - [ ] T-114 (P1) 📍 **[OWNER device test 2026-09-13] THE FOUR ORDER SCOPES DRAW ONE IDENTICAL
   FROM/TO BLOCK — the artboards draw four different ones.** → **`docs/PLAN-T114.md`**.
   ⏸️ **PARKED 2026-09-19:** sub-step ① — the whole scope the owner set (*"SCOPE NOW = ① ONLY"*) — is
   built and committed (`a17e78e`); **only the device walk waits** (`PLAN-T114.md` §8, item 2 first).
   It sat in *Next* since 2026-09-14 as if unstarted. **② is now its own card, T-127.**
+  ✅ **② BUILT 2026-09-21 as T-127** (not yet committed; `PLAN-T114.md` §8 updated). Its escape for
+  a district with no QFY list also clears a dead end that sat beside ① unseen since 2026-09-03.
   ✅ **SUB-STEP ① CODE-COMPLETE 2026-09-13, all 9 steps — NOT DEVICE-TESTED.** The scope now
   drives the root card and the picker depth through one table (`ORDER_SCOPE_GEO`).
   **`check-order-scope-geo.mjs` is new: 50 assertions, red on all 9 mutations.**
@@ -1392,13 +1155,285 @@ masofalar'`). **2 of the 6 were on
 
 ## 📋 Next (ready to start)
 
-- [ ] T-127 (P2) 📍 **T-114 ② — PER-SCOPE COMPLETENESS: each order scope demands the geo depth it
-  matches at, and the form shows it (the MATCH strip).** Split out of T-114 by the owner (2026-09-13,
-  *"SCOPE NOW = ① ONLY"*); `PLAN-T114.md` §8 said *"needs its own card"* — boarded 2026-09-19.
-  ✅ **Owner decided the blocking piece 2026-09-13: the QFY is REQUIRED on *Tuman ichi*** — the rules
-  module (`validateScope`, matching at adm3) stands and the form tightens beyond the artboard.
-  `yaqin` requires a QFY on both ends. ⚠️ **Half-overlaps T-102i** (the read side) — do it after, or
-  with it: completeness only matters once something matches at adm3.
+- [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
+  with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then
+  converts pages one by one, user app first** → `docs/PLAN-T101.md`.
+  ✅ **PLAN APPROVED 2026-08-30. Phase 1 (foundation) complete. Committed through `c005785`.**
+  🟢 **2026-09-11 — STEP 16 (`DriverElon`, the driver's offer wizard) IS CLOSED: 16a-16g.** The
+  4-step wizard is ONE scrolling form with four sheets; the edit path restores all 34 fields (a real
+  silent-blanking bug was found and fixed in 16e); 74 dead style blocks went in 16f. **Steps 13-15
+  (user auth values-only, the strays, `DriverMenu`) were also done 09-03 → 09-05 and never noted on
+  this card.** New checker `check-offer-i18n.mjs` found `common.delete` missing from every locale.
+  Unbacked artboard features boarded as **T-106 · T-107**; **T-108** is the locale gap that blinds
+  `tsc`. ⚠️ **Admin `tsc` baseline corrected 0 → 6** (the 0 measured nothing; see `PLAN.md`).
+  🛑 **Nothing from step 8e onward has run on a device.** Next: step 17 (`DriverQidiruv`) —
+  **scoped the same day → `docs/PLAN-T101-step17.md`; owner accepted all seven recommendations;
+  17a (the pure rules + a 59-assertion checker, red on 9 mutations) and 17b (`PanelTabs` +
+  `SortChips`, `paidTint` token), 17c (`PassengerOrderCard`, 21/21 contrast) and 17d (**the merged
+  `PassengerOrdersScreen`**, 27 keys × 3 locales) are DONE.** The card was wrong three ways (a
+  merge, a sheet, and a screen with no artboard); step 18 shrinks to `DriverMyOrder` as a result.
+  🔴 17b found `SegmentedModes` drawing 24px pills where step 9 measured 12, in both apps —
+  **fixed in 17d in both** (the user app's order list changes shape as a result). **17e (the
+  detail-and-offer sheet: accept, counter-offer, cancel, T-054 phone gate), 17f (the result
+  dialog, copy corrected) and **17g (routes — the new screen is now REACHABLE from the drawer,
+  the home screen and pushes; four old files are orphans on T-105) and 17h (`OffersListScreen` on
+  the shared chrome, values only; `StatusFilterTabs` orphaned)** are DONE.**
+  ✅ **STEP 17 CLOSED 2026-09-11 (17a-17i).** Unbacked artboard features → **T-109**.
+  ✅ **STEP 18 CLOSED 2026-09-12 (18a-18f), → `docs/PLAN-T101-step18.md`.** `MyRidesScreen` merges
+  `OffersListScreen` + `OfferPassengersScreen` into the driver's rides in three DERIVED phases,
+  each card expanding to its passengers; the artboard's nine-reason reject sheet is real backend.
+  🔴 **The step-18 card was wrong the same way 16 and 17 were** — `DriverMyOrder` draws the
+  driver's OWN offers, not "accepted rides", so its "third tab" question dissolved and **17h's
+  "no artboard draws `OffersList`" was wrong.** Unbacked features → **T-110**; 5 files → T-105.
+  ✅ **STEP 14b CLOSED 2026-09-12 (14b-1 to 14b-6), → `docs/PLAN-T101-step14b.md`.** The USER
+  app's search screen — **the owner reported it did not look like `UserQidiruv`, and they were
+  right**: step 7 had swapped colours only and been ticked with a title that read as a rebuild.
+  Now rebuilt: two modes (search + the drivers who bid on your own request), the shared chrome,
+  the result card, and **the ★ driver rating, used for the first time anywhere in either app.**
+  🔴 **FIVE MEASUREMENT CORRECTIONS came out of it, and two of the wrong claims were my own:**
+  rating, colour swatch and fuel type all EXIST where cards said they did not; review comments
+  do NOT where I said they did; and the front seat has three states where I modelled two.
+  → **T-112** boarded; **T-109 ②** and **T-106** corrected.
+  ⚠️ **14c** (absorbing the 1 456-line booking form into the sheet) is deferred until this has
+  been walked on a device.
+
+  **Steps left in T-101: 19-22, then 23-26 — plus 2b, still unchecked.**
+  🟢 **2b IS VERIFIED DONE EXCEPT THE DEVICE BUILD** (2026-09-12): both native deps are
+  installed in both apps at Expo-54 versions and **both were proven to autolink**, via two
+  different resolvers. **`expo prebuild` is NOT needed and must not be run** — the `android/`
+  folders are gitignored generated artifacts and autolinking re-resolves every build.
+  **What is left is `npm run android` on a real device, once per app — owner-only.**
+  🛑 **STEPS 15-18 AND 14b HAVE NEVER BEEN ON A PHONE — THAT IS THE BUSIEST SCREEN IN BOTH APPS.**
+  This is now the gate before step 19, and **2b (native install + prebuild) blocks the walk.**
+  Walk, in order: the `Buyurtmalarim` tab → three phases, a card expands to its passengers,
+  confirm one and watch the ride move phase, reject one with a reason, cancel/archive/publish;
+  then the drawer → "Kelgan buyurtmalar" / "Mening buyurtmalarim" (step 17); a card → the sheet;
+  an offer → the result dialog → the sent mode; a push about a bid → the sheet by id; a push
+  about a join request → the right ride's card, in the right phase.
+
+  🟢 **THE COLOUR HALF IS DONE (2026-08-31): user 839 → 1 · driver 964 → 3. 1 803 literals removed.**
+  Every screen in both apps reads its colours from `themes/`. The **4 remaining are deliberate and
+  must not be "fixed"** — `FACEBOOK_BRAND_BLUE`, `PLAY_STORE_BLACK`, `APP_STORE_BLUE`,
+  `VEHICLE_SWATCH_FALLBACK` (third-party brand colours and one vehicle-paint fallback).
+  `check-design-tokens.mjs` holds both ceilings at the floor and **was re-proven able to go red at
+  every ceiling.** Baselines: user `tsc` 6 / lint 216 · driver `tsc` 28 / lint 280 — both lint
+  figures *below* their starting baselines, never rebaselined upward.
+
+  🟢 **ALSO DELIVERED:** both splash screens redesigned light · `palettes/dark.ts` deleted in both
+  apps (**goal 4 genuinely met**) · six measured gender/seat tokens added to both palettes · the
+  three supporting ink tiers darkened so they pass AA at the sizes the artboards actually use.
+  **Contrast failures across both apps: 219 → 2, and both survivors are verified decorative.**
+
+  🛑 **TOKENIZED IS NOT REBUILT — the layouts are still the pre-T-101 layouts** and almost no screen
+  matches its artboard. Steps 8-22 each carry a note on what was and was not done. *The owner had to
+  catch this from a screenshot on 2026-08-30; the colour count must not be read as more than it is.*
+  🛑 **ALMOST NOTHING HAS RUN ON A DEVICE.** Biggest unverified surface: the ink-ladder change
+  (**every screen in both apps**) and the two structurally-rebuilt splash screens. Also still
+  unwalked: `SearchPassengerOffers`, whose 3 location buttons per direction became **1**.
+  📋 **Step 23 (delete the compat aliases) measured at ~370 call sites → wants its own card.**
+  🛑 **T-102 and T-103 remain open** and gate the search screens looking right.
+
+  🟢 **2026-09-01 — THE VISIBLE HALF HAS STARTED: step 8 is the first rebuilt screen.**
+  `CreatePassengerOfferScreen` → `UserBuyurtma.dc.html`: the shared `TopBar` replaces its
+  hand-rolled header, payment and car class became `Chip` rows (**`Chip`'s first call sites**),
+  section labels became the artboards' mono eyebrow. **Owner: the four `UserBuyurtma*` artboards
+  are ONE screen with a mode** — measured, they differ by 22-78 lines out of ~138 KB.
+  **Logic untouched** (T-031/T-040/T-069/OR-012 all intact, verified mechanically). Three findings
+  that only measuring produced: **the gradient header is NOT universal** (form boards are flat —
+  affects step 17), **a double safe-area inset** (safe-area-context pads on both platforms, RN's
+  own is a no-op on Android), and **the artboard's payment chips are toggles, not a radio group** —
+  mapping the rendering would have silently reverted T-031.
+  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
+
+  🔴 **2026-09-01 (2) — THE OWNER RAN IT ON A PHONE: "does not look like the design". CORRECT.**
+  Step 8 changed the top bar, two button rows and the section labels — **~15% of that screen**. The
+  ~1 600 lines of body components were untouched, so it still looked like the old form.
+  *"Step 8 done" and "the order screen is done" are different claims; only the first was true.*
+  ✅ **STEP 8b: the from/to card rebuilt** — 8 stacked dropdowns → 2 tappable rows in one card,
+  picker opens as a sheet. **Data contract untouched** (`LocationValue` / `buildLocationText`
+  unchanged), so validation and submission never moved; the geo-loading effects and `GeoSelectModal`
+  are reused as-is.
+  🔴 **The rewrite silently dropped 4 behaviours — all caught by reading the diff, none by any
+  baseline:** the "district has no settlements/mahallas" guards, both clear (✕) buttons,
+  `maxLength={255}`, and the `export default`. **`tsc`, lint and the ratchet stayed green throughout.**
+  ❓ **OWNER QUESTION: does the mahalla survive the redesign?** The artboard has no step for it; the
+  code does, and it is the fragile field (no id column — T-029). Kept for now.
+  ✅ **2026-09-01 (3) — STEP 8c: the rest of the screen, and the owner found the real fix.**
+  *"On passenger search we create country/city step-by-step selection"* — **correct: `GeoSheet`
+  already existed**, already the artboards' picker, already used by search. My 8b row was the
+  **eighth** hand-rolled copy of a cascade built beside the component made to end them.
+  🔴 **MAHALLA REMOVED**, decided on the design's own logic — four sources agreed: the artboard
+  never mentions it, `GeoSheet` calls it "a sibling, not a depth", it has **no id column (T-029)** so
+  editing an order already dropped it, and nothing can match on it. **It was the only thing blocking
+  `GeoSheet` reuse.** The stored field is KEPT (deprecated, always null) so old orders' saved
+  addresses are not rewritten.
+  ✅ **Route and time are two cards now** (times had been interleaved between the two locations);
+  **`TimeWindowCard`** got the eyebrow + "Hoziroq" chip and lost a blue tint that is nowhere in the
+  design; **seats are tappable** (the +/− stepper stays — it is the only control that works when a
+  row is full); **every heading is the artboard eyebrow**, including one that was RED.
+  **All six baselines unchanged.** 16 i18n keys × 3 locales verified, checker proven able to fail.
+  📋 **`GeoSelectModal` now has ZERO call sites** — not deleted (rule 4). Small cleanup card.
+  🛑 **NOT SEEN ON A DEVICE, and this round is mostly INTERACTION change** — the sheet picker,
+  tapping seats, the chip. Needs a real walk.
+  ✅ **2026-09-01 (4) — STEP 8d: `SpecialOrderPanel`. THE ORDER SCREEN IS NOW FULLY CONVERTED.**
+  The design draws that whole block **purple**; the code had **four accent families in one card**
+  (green border on mint, blue inputs, amber waiting field, a RED notice). **`palette.paid` had
+  existed since step 1b and nothing consumed it** — the colour audit found the value, only building
+  the screen revealed the gap. One new measured token: `paidBorder`, added to both palettes.
+  Money reads in mono now; contrast measured at 9.04:1 / 8.08:1.
+  🔴 **I truncated a file's `export default` for the SECOND time** — same cause both times
+  (replacing a trailing stylesheet by slicing to end-of-file). Caught by the deletion review, then
+  every edited file's last line was checked. *A slip repeated is a method problem, not a slip.*
+  **All six baselines unchanged.**
+
+  🟢 **MAHALLA IS NOT DROPPED FROM THE DATABASE** (owner asked, 2026-09-01). It could not have
+  been — T-101 touched no model, migration or endpoint. The table, the model, the endpoint, the
+  driver-side `address_neighborhood_id` and every stored order address are intact; only the
+  passenger ORDER FORM stopped offering it. **→ T-104** records the reasoning and the one-component
+  path back. **→ T-105**: `GeoSelectModal` now has zero call sites (not deleted — rule 4).
+
+  🛑 **NOT SEEN ON A DEVICE, and steps 8b–8d changed INTERACTION, not just paint** — the sheet
+  picker, tapping seats, the chip, the special-order flow. A screenshot will not settle these.
+
+  ✅ **2026-09-01 (5) — STEP 6b: the home screen's empty space, from the owner's device run.**
+  The artboard fills that area with an active-trip banner, recent routes and a stats row — **all
+  drawn with invented data**, which is why step 6 shipped none. 🟢 **Re-checked: two of the three
+  can be REAL** (`getMyPassengerOffers` exists; `driver_found` = a driver is confirmed). Both now
+  ship and **both render nothing when the user has no orders**. Stats row stays out until the
+  wallet (step 19) — owner's call.
+  🔴 **Four first-pass errors, none caught by a baseline:** banner position (it sits BELOW the
+  carousels, measured) · **wrong navigation target** (`OfferDetails` is a DRIVER's offer; a
+  passenger's own order belongs to `OfferDrivers`) · **`text.onDark` equals `ground`**, so the
+  supporting line would have rendered identically to the headline (new measured token
+  `onDarkMuted`, 8.76:1) · **step 6 had already added the i18n keys** and `tsc` caught the
+  duplicates.
+  ⚠️ **The route chips open the order form but do NOT pre-fill the route** — that needs geo ids
+  and `from_text` is a display string. Half-wiring it would look like a feature and behave like a
+  bug. → own card if wanted.
+  **All six baselines unchanged.** 🛑 **Not seen on a device.**
+
+  🔴 **2026-09-01 (7) — STEP 8f: THE OWNER QUESTIONED THE DESIGN'S LOGIC AND WAS RIGHT.**
+  *"i dont see correct logic"* — four defects in the time model, three invisible while the rules
+  sat inline in the form:
+  ① **"Hoziroq" both WAS and WAS NOT allowed** (a 31-min minimum plus a toggle that skipped it).
+  → Owner: Hoziroq means "I am ready now"; the minimum is a SCHEDULED-order rule. Exemption was
+  right, just undocumented.
+  ② "Arrival time" actually meant "arrive by" — relabelled. ⚠️ `arrive_from` is still never sent.
+  🔴 ③ **"Leave 08:00–11:00, arrive by 09:00" was ACCEPTED** — arrival was compared against the
+  window's START. Now against its END.
+  ④ Departure/arrival had independent dates ("leave 5 Sept, arrive 3 Sept" was expressible).
+  ✅ Rules extracted to **`utils/rideTime.ts`** (pure) + **`scripts/check-ride-time.mjs`**, 8 cases,
+  **importing the real module** and **proven able to fail against the real source**.
+  ⚠️ **No test runner in the user app** — this wants to be a `*.test.ts`; needs owner approval.
+  **All six baselines unchanged** + the new check at 8/8. 🛑 **Not seen on a device.**
+
+  ✅ **2026-09-01 (6) — STEP 8e: the date/time picker. THREE OWNER REPORTS, ONE ROOT CAUSE.**
+  *"do not look like design"* + *"calender always in center"* + *"should appear from bottom like
+  county/city"* — **all three were the same defect**: the wheels used the DIALOG shell (`AppModal`,
+  centred) where the design specifies the SHEET shell. Fixing the shell fixed all three.
+  ✅ **`BottomSheet` extracted from `GeoSheet`** and `GeoSheet` refactored onto it, so the two
+  pickers cannot drift. 🔴 **The real reason to share it: its safe-area padding is a device bug
+  already fixed once** (nav bar over the sheet, S24 Ultra) — a copied second sheet would have
+  re-introduced it, exactly as the geo cascade was re-implemented 7 times before `GeoSheet`.
+  ✅ **`TimeSheet`**: 4 date cards + quarter-hour chips, per the artboard. **The T-069 time floors
+  and the commit-on-confirm contract both survive.**
+  ⚠️ **The artboard's DRAGGABLE 15-minute strip is deliberately not built** — owner chose chips;
+  same data model, so it can be swapped in later without touching the form.
+  ⚠️ `GeoSheet`'s title is now LEFT-aligned (it was centred; the artboard is left).
+  🔴 **I used `monthsShort` before checking it existed — second time this week.** Added
+  `weekdaysShort`/`monthsShort` to all 3 locales; **the i18n checker now asserts list LENGTH too**
+  (a short list renders blank cards silently), proven able to fail.
+  **All six baselines unchanged.** 🛑 **Not seen on a device.**
+
+  📓 **The full narrative — every measurement, every mistake — is in `docs/JOURNAL.md` 2026-08-31
+  and 2026-09-01.**
+  ✅ **OWNER DECISIONS 2026-08-30 (asked and answered before the plan was written):**
+  **① dark mode is DROPPED** (the 33 artboards have no dark variant) · **② scope is user + driver
+  only, admin maybe later — "do nothing for new roles, think like there is no other new roles"**
+  (so *usta*, *yuk*, *texnika* in the design docs are OUT) · **③ user app converts first** ·
+  **④ fonts ship as bundled `.ttf` in `assets/`, NO new dependency** (`expo-font` is already there) ·
+  **⑤ BOTH NEW NATIVE DEPENDENCIES APPROVED — `expo-linear-gradient` + `react-native-svg`, in both
+  apps.** Rule 4 is satisfied for this card; **anything further still needs asking.**
+  🛑 **CONSEQUENCE OF ⑤ — THE USER APP'S REBUILD IS NOW NATIVE TOO.** It was going to be a JS-only
+  rebuild (T-077 · T-083 · T-084); both approved packages are native modules, so the user app needs
+  `npx expo prebuild` + a full `npm run android` as well. **Install with `npx expo install`, not
+  `npm install`, so versions match Expo 54.** A missing native module surfaces as a *bundling*
+  error, which reads like a code mistake and sends you looking in the wrong place.
+  🔴 **THE REAL OBSTACLE IS NOT THE PALETTE — IT IS 1 652 HARDCODED HEX LITERALS.** Measured
+  2026-08-30: **user 789 · driver 863**, across **154 distinct values**, mostly raw Tailwind defaults
+  (`#10B981` x93, `#111827` x89, `#6B7280` x59). **`themes/` is imported by 25 files but its palette
+  (`primary #000000`, `secondary #00D9A5`) matches almost nothing on screen** — the real design
+  system is the literals, not the theme. **Repainting pages without fixing this just re-hardcodes
+  new literals**, which is why the foundation comes first.
+  🔴 **THE TAB BAR IS NEW NAVIGATION, NOT A REPAINT.** `navigation/MainNavigator.tsx` is a **pure
+  native stack — there is no bottom tab bar today**, and every artboard has one (5 tabs) plus a
+  persistent top bar (hamburger, bell+badge, avatar). ✅ **`@react-navigation/bottom-tabs@^7.4.0`
+  is ALREADY a dependency in both apps and unused** — so no new dependency, rule 4 clear.
+  🔴 **THE DESIGN DOC CONTRADICTS THE ARTBOARDS ON THE DRIVER ACCENT — TRUST THE ARTBOARDS.**
+  `htmlDesign/docs/00-UMUMIY-loyiha.md` says blue `#0049FF` is the Driver colour. **Measured across
+  the 14 `Driver*.dc.html` files: green `#05BB42` appears 224 times, blue 30.** Green is primary in
+  **both** apps; blue is an occasional secondary. *Building to the doc would have made the whole
+  driver app the wrong colour.*
+  ⚠️ **`htmlDesign/uploads/Chek_28082026/` is NOT just old copies**, though the design doc calls it
+  a source of confusion. It holds **5 artboards the root does not** (`DriverOrder`, `UserMainNeW`,
+  `UserTexnika`, `Yuk1`, `Yuk2`); the root holds 4 the uploads folder lacks (`DriverDaromad`,
+  `DriverProfil`, `DriverQidiruv`, `UserMenuNeW`). **Neither set is complete.** Of the 5 extras only
+  `DriverOrder` is in scope — the rest are the dropped roles.
+  ⚠️ **Three screens the design docs describe exist as NO FILE anywhere:** `UserUstaBuyurtma`,
+  `YukMashinalarElon`, `YukEgalariSorov`. All three are dropped roles, so all three are out of scope.
+  ⚠️ **Neither app has a single font file** (`find` for `.ttf`/`.otf` → nothing). Manrope's 800/900
+  weights are load-bearing in every artboard.
+  ✅ **Dropping dark mode is mostly deleting:** `MainLayout`/`ScreenLayout` already call
+  `createTheme('light')` at module scope.
+  🛑 **`themes/modal` is a FIGMA-ERA language** (cream `#FDF6E3`, 2px black border, red heading) from
+  T-036, and the new design replaces it outright — but it is live in `AppModal`/`ModalList`/
+  `ConfirmDialog` in **both** apps. Changing it changes every modal at once.
+  ⚠️ **Both apps' rebuilds were ALREADY outstanding before this card** (user: T-077, T-083, T-084;
+  driver: T-078, T-079/T-080, T-061, **native**). This card does not add a rebuild — it rides them.
+  ⚠️ **Per `ubexgo-app-conventions`: tokens are DUPLICATED per app, not extracted to a package.**
+  An earlier centralisation attempt was the wrong call. Edit both copies together, verify `diff -q`.
+
+  🟢 **2026-09-03 — STEPS 9-12 DONE IN ONE SESSION. FOUR MORE SCREENS, AND FOUR CARDS WHOSE
+  PREMISE WAS WRONG UNTIL MEASURED.**
+  **Step 9 — the merged order list.** `MyBookings` + `MyPassengerOffers` → ONE `MyOrdersScreen`.
+  The artboard's three modes (`Jarayonda`/`Faol`/`Tarix`) are **lifecycle stages, not statuses**,
+  and they cut ACROSS both screens — which is why two ~1 000-line screens that disagreed with each
+  other about their own tabs became one. Rules extracted to `utils/orderLifecycle.ts` + 18 cases.
+  🔴 **Two contrast defects came over with the code:** `driver_found` used `brand` on `successTint`
+  and its comment **claimed 6.96:1** — but `brand` is the bright `#05BB42`, so it really measured
+  **2.24:1**. *The comment had measured a different token than the code used.* Also `cancelled`
+  used a FILL as ink (4.20:1). Both fixed; all 20 pairs pass AA.
+  **Step 10 — `OfferDrivers` rebuilt, `OfferDetails` converted** (1 456 lines, 47+/79-, no booking
+  logic in the diff). 🔴 **The card's premise was wrong:** the artboard's "detail state" is a
+  read-only SHEET over the order list; `OfferDetails` is a *join form* reached from search.
+  Recorded, not papered over. **34 `fontWeight` literals → `font()` — the Android font trap.**
+  **Step 11 — the drawer, which never existed.** 🔴 **`TopBar`'s hamburger had been wired to the
+  wrong thing since step 3**: it opened the PROFILE on the home screen (what the avatar already
+  did) and navigated Home on the orders tab. `NavDrawer` now exists; **6 of its 10 entries have no
+  screen and render dimmed** — the artboard's own `navGo()` handles exactly one of ten.
+  **Step 12 — `ProfileScreen` rebuilt, `EditProfile` converted** (31+/60-, no save/validation line).
+  **The six coloured tint/dot pairs are deleted**, as the card predicted — 🔴 **and they encoded
+  nothing**: `bell`/`help` shared an amber pair, `edit`/`card` a blue one. Five colours, six rows.
+  🔴 **A COLOUR CLASS THE TOKEN RATCHET CANNOT SEE.** Fills built at RUNTIME as `colour + '20'`
+  carry no literal, so `check-design-tokens.mjs` read those screens as clean at 0. Five found in
+  `NotificationsScreen`, then **the class was swept across BOTH apps** (`palette\.[a-zA-Z.]* *\+
+  *['"]`) — two more in `NetworkStatus.tsx`. **Both apps are clean of it now.**
+  ✅ **Checkers: 18 lifecycle cases · 69 i18n keys × 3 locales · 8 ride-time. Every one proven able
+  to go red.** 🔴 **The i18n checker was twice the bug it exists to catch** — v1 skipped keys
+  reaching `t()` via a ternary and stayed GREEN on a deliberate break; v2's generalised regex had
+  an unescaped dot that would match `drawerXopen`.
+  📋 **T-105 has grown:** both old order screens are orphaned (**2 of the user app's 6 baseline
+  `tsc` errors live inside one of them**), `menu-items/index.ts` is dead with zero importers, and
+  `MenuButton` is down to 2 real call sites.
+  **All six baselines unchanged: user 6/216/1 · driver 28/280/3.**
+  🛑 **NOTHING FROM STEPS 6b, 8e, 8f, 9, 10, 11 OR 12 HAS BEEN SEEN ON A DEVICE.** The queue is now
+  six steps deep and includes brand-new interaction surface (the drawer) and a converted booking
+  form. **Step 13 is the auth flow — the OR-003 SMS-Retriever hash and the T-061/T-063 validators
+  live there, and no baseline can see an autofill break.** A device pass belongs before it.
+  ⏸️ **MOVED *Now* → *Next* 2026-09-21** to make room for **T-127** (owner's call). **Nothing was
+  lost and nothing was in flight:** resume from `docs/PLAN-T101.md` — steps 19-26, plus 2b.
+  ⚠️ Step 19 (the driver income screen) is still blocked by *"a driver is never paid through the
+  system"* — see the handoff note at the end of *Now*.
 
 - [ ] T-128 (P2) 📍 **DRIVERS FIND PASSENGER ORDERS BY TYPED TEXT ONLY — the ids are never read.**
   Found 2026-09-19 while measuring T-102i. `PassengerOfferService.getPublicOffers` (what the driver

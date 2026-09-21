@@ -70,8 +70,31 @@ interface GeoSheetProps {
   /** Pre-chosen ancestors, e.g. the region fixed by a "Viloyat ichi" scope. */
   initialPath?: GeoPath;
   title: string;
-  onDone: (path: GeoPath) => void;
+  /**
+   * ⚠️ `unavailable` says the path stops short because the deepest level had NOTHING to offer,
+   * not because the passenger stopped early. Existing callers ignore the second argument and
+   * behave exactly as before.
+   */
+  onDone: (path: GeoPath, meta?: { unavailable: boolean }) => void;
   onClose: () => void;
+  /**
+   * 🔴 T-127 (owner decision ②) — THE WAY OUT OF A DEAD END.
+   *
+   * When the sheet OPENS at its deepest level (`tuman` opens straight at the QFY, the level
+   * above it pinned by the scope root card) and that level's list comes back **empty**, there
+   * is nothing to pick, Back is blocked by the pin, and the only exit is closing the sheet.
+   * That was survivable while the QFY was optional; once T-127 requires it, such a district
+   * becomes **unorderable** and the passenger gets "the app won't let me order" with no clue.
+   *
+   * Given both of these, the empty state offers a row that finishes the path one level up.
+   * The caller learns it was taken — `unavailable: true` — because "the list was empty" and
+   * "the passenger did not bother" must not look the same to the rule that follows.
+   *
+   * ⚠️ Shown only for a genuinely empty list, never for a search that found nothing: a query
+   * that matches none of a populated list says nothing about the district.
+   */
+  emptyEndLevelLabel?: string;
+  emptyEndLevelAction?: string;
 }
 
 export const GeoSheet: React.FC<GeoSheetProps> = ({
@@ -82,6 +105,8 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
   title,
   onDone,
   onClose,
+  emptyEndLevelLabel,
+  emptyEndLevelAction,
 }) => {
   const insets = useSafeAreaInsets();
   const [level, setLevel] = useState<GeoLevel>(startLevel);
@@ -218,9 +243,26 @@ export const GeoSheet: React.FC<GeoSheetProps> = ({
           ]}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <Text style={styles.empty}>
-              {query ? "Topilmadi" : "Ro'yxat bo'sh"}
-            </Text>
+            /*
+             * T-127 — the dead-end escape. Only when the list is genuinely empty (no query),
+             * at the deepest level the sheet offers, and the caller supplied the wording.
+             * Otherwise this is the plain empty text it has always been.
+             */
+            !query && level === endLevel && emptyEndLevelLabel ? (
+              <View style={styles.state}>
+                <Text style={styles.empty}>{emptyEndLevelLabel}</Text>
+                <Pressable
+                  onPress={() => onDone(path, { unavailable: true })}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.retry}>{emptyEndLevelAction}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.empty}>
+                {query ? "Topilmadi" : "Ro'yxat bo'sh"}
+              </Text>
+            )
           }
           renderItem={({ item }) => {
             const selected = path[level]?.id === item.id;

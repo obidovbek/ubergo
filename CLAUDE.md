@@ -28,15 +28,21 @@
 - **Tests (T-010 for the API; T-118 then T-121 for the apps, 2026-09-18):** **three of the four
   projects have `npm test`, and it is always ONE command.** Tests live next to the code as
   `*.test.ts(x)`.
-  - **API** — `node:test` + `tsx`, no test dependency. 391 tests (2026-09-19), including T-116's
+  - **API** — `node:test` + `tsx`, no test dependency. 442 tests (2026-09-21), including T-116's
     `i18n/unkeyedErrors.test.ts` — a ratchet: English 4xx errors may only get fewer — and T-102i's
     parity test holding `geoMatch`'s rule and the SQL built from it together.
+    ⚠️ `messageKeys.test.ts` finds keys by scanning for `messageKey: '<literal>'` — a **computed**
+    key is invisible to it and needs its own block there (T-127 added the first).
     ⚠️ Only DB-free modules are covered (`utils/`): services import Sequelize models, so testing
     them needs the pure logic pulled out of the class first. That is still T-010.
   - **User app / driver app** — `jest && node scripts/run-checks.mjs`: Jest (`jest-expo`,
-    `@testing-library/react-native`, explicit `@jest/globals` imports) and then all 12
-    `scripts/check-*.mjs` checkers per app. **278 + 295 tests**, 24 checkers, ≈1½ min each
-    (2026-09-19; T-116 added `check-raw-error-toasts.mjs` — no toast may show a raw `.message`).
+    `@testing-library/react-native`, explicit `@jest/globals` imports) and then every
+    `scripts/check-*.mjs` checker (auto-discovered). **285 + 295 tests**, 13 + 12 checkers,
+    ≈1½ min each (2026-09-21; T-116 added `check-raw-error-toasts.mjs` — no toast may show a raw
+    `.message`; T-127 added `check-scope-completeness.mjs`).
+  - **`shared/`** (T-127) — test-time fixtures read by MORE than one project, e.g.
+    `shared/scope-cases.json`, which the API suite and the user-app checker both execute so the
+    two copies of one rule cannot drift. **Never imported at runtime** — the apps stay standalone.
     Screens are covered by T-118, `utils/` by T-121; **every test file has been proven able to go
     red** by mutating the code and reverting — that is the bar for a new one.
     The render harness is `test/render.tsx` + `test/setup.ts`, **duplicated per app on purpose**
@@ -106,6 +112,10 @@ If the developer types the words WITHOUT the slash ("start day", "end day"), fol
   Always query tokens filtered by both `app` and `is_active`.
 - **The original full spec (TT, in Uzbek)** lives in `api,admin,db/README.md`. It says "NestJS/monorepo";
   the real build is **Express + standalone apps** — trust the code, not the spec.
+- **BIGINT columns come back from `pg` as STRINGS** (no `setTypeParser` override), while the models
+  declare them `number` — so `tsc` sees nothing. Every geo id is BIGINT. Comparing a stored id with
+  a client's with `===` silently fails: T-102i mislabelled every result, T-127 nearly refused
+  correct orders. Normalise in a pure `utils/` function and test it with string ids.
 
 ## 6. Definition of Done (every task)
 

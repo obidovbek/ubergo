@@ -263,6 +263,26 @@ export default {
     activeLimitReachedPassenger:
       "Limit to'ldi — yangi buyurtma berish uchun mavjudini yakunlang yoki bekor qiling.",
     startAtTooSoon: "Jo'nash vaqti kamida {minutes} daqiqadan keyin bo'lishi kerak",
+
+    /*
+     * T-127 — buyurtma o'z turiga mos chuqurlikda bo'lishi shart.
+     *
+     * ⚠️ Yo'nalish turlarining nomlari ILOVADAGI nomlar bilan bir xil ("Tuman ichi",
+     * "Viloyat ichi", "Yaqin hududlar") — yo'lovchi tugmada ko'rgan so'zni xato matnida
+     * ham ko'rishi kerak. QFY so'zi ham ilovaning o'z so'zi ("Mavze / QFY tanlang").
+     */
+    scope_missing_from_adm2: "Jo'nash nuqtasi uchun tumanni tanlang",
+    scope_missing_to_adm2: 'Borish nuqtasi uchun tumanni tanlang',
+    scope_missing_from_adm3:
+      "Bu yo'nalish turi uchun jo'nash nuqtasining mavze / QFYsini tanlang",
+    scope_missing_to_adm3:
+      "Bu yo'nalish turi uchun borish nuqtasining mavze / QFYsini tanlang",
+    scope_different_province:
+      "«Viloyat ichi» uchun ikkala nuqta ham bitta viloyatda bo'lishi kerak",
+    scope_different_district:
+      "«Tuman ichi» uchun ikkala nuqta ham bitta tumanda bo'lishi kerak",
+    scope_same_district:
+      "«Yaqin hududlar» uchun nuqtalar ikki xil tumanda bo'lishi kerak",
     notFound: 'E\'lon topilmadi',
     notAvailable: 'Bu e\'lon mavjud emas',
     alreadyStarted: 'Bu e\'lon allaqachon boshlangan',

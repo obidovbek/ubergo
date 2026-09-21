@@ -5,6 +5,37 @@
 
 ---
 
+## 2026-09-21 — T-127: each ride type demands the depth it searches on
+
+- **Board:** T-101 → *Next* (owner's call; nothing in flight), T-127 → *Now*. T-102i's plan moved to
+  `PLAN-T102i.md`; its resume point still said "NOT COMMITTED" two days after `a06614c` — corrected.
+- **What it does:** *Tuman ichi* / *Yaqin* now need a QFY on both ends, *Viloyat ichi* one province,
+  *Yaqin* two different districts — in the form (per field, plus a grey line naming the search
+  level) and on the server (7 keyed messages × uz/ru/en). `geoMatch.validateScope`, written 09-12
+  and never called, has its first reader. The app's copy is held to it by **`shared/scope-cases.json`**
+  — 17 cases both suites run; the repo's first shared top-level file.
+- **Owner decisions:** ① the server refuses an edit only when the route or ride type actually moved;
+  ② a district with no QFY list gets a way out in the picker (chosen as safe either way).
+- 🔴 **BIGINT-as-string, a second time** — and this time it would have *refused correct orders*. Added
+  to `CLAUDE.md` §5 as a gotcha; it has now bitten two cards running.
+- 🔴 **A test that proved nothing:** the BIGINT mutation stayed green because the test's patch carried
+  the whole form, so the bad comparison never happened. Rewritten; the prove-red rule earned its keep.
+- 🔴 **`tsc` caught what the green suite hid:** the API's `ORDER_SCOPES` is strings, the app's is
+  objects; `s.key` was `undefined`, and half a message family went unchecked.
+- 🔴 **My own step-1 claim was false** — I said a district with no QFYs was "survivable today". It
+  wasn't: `GeoSheet` only commits at its deepest level, so such a district has been **unorderable in
+  all four ride types since 2026-09-03**. The escape fixes all four; pinned by a test for *aro* too.
+- **Verification:** 14 mutations, all red; API **442**, user **285 + 13**, `tsc` 281 / 3, lint 0 / 230
+  · 208; driver untouched. Self-inflicted and repaired: a PowerShell restore put a BOM in `ru.ts`,
+  and my checker left cache files behind.
+- **Plan ⑥, raised at close and answered "keep strict":** the app asks for the QFY even on a
+  seats-only edit of an old order, where the server would not. It matched the written plan but not
+  my plain-language summary — raised rather than left for the owner to find.
+- **Committed; T-127 → *Parked*** (API deploy + user-app rebuild, `CHECKLIST.md` §3).
+- **Next:** the owner's pick — T-128 (the driver side, by ids) follows most naturally.
+
+---
+
 ## 2026-09-19 (4) — T-116 committed; T-114 parked; T-102i: a passenger's village finally counts
 
 - **T-116 committed as `cba0be1`.** **T-114 turned out to be code-complete** (① built 2026-09-13,

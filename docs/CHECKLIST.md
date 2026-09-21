@@ -89,8 +89,11 @@
       message under the card. _(Before today it showed an empty list with no
       explanation, and sometimes crashed.)_
 - [ ] ⚪ Pick region → the city/district list appears.
-- [ ] ⚪ Pick a city that has small villages → a third list appears.
-      Pick a city that has none → no third list. Both are normal.
+- [ ] ⚪ Pick a city that has small villages (QFY) → a third list appears.
+- [ ] 🔴 **T-127 — pick a city that has NO villages** → the list says *"Bu tumanda mavze / QFY
+      ro'yxati yo'q"* with a button **"Tuman bo'yicha davom etish"**. Tap it → the card fills in
+      with the district. _(Until this fix there was no button and closing the list saved nothing,
+      so such a district could not be ordered from at all — in any of the four ride types.)_
 - [ ] ⚪ Type a landmark ("mo'ljal") → it shows in the grey summary line below.
 - [ ] ⚪ Same for the "where to" card.
 - [ ] ⚪ Turn on ⚡ "hoziroq" → the time pickers disappear.
@@ -130,6 +133,27 @@
 - [ ] 🔴 Create **21 orders quickly** → the 21st says "too many requests".
       Then create one from the **other account** → it must work.
       _(Before today, 20 orders from anyone blocked the whole platform.)_
+- [ ] 🔴 **T-127 — each ride type asks for what it searches on.** Needs the API deploy AND a
+      user-app rebuild. Open the order form from each of the four home tiles and read the small
+      grey line under the from/to card:
+      - *Viloyatlar aro* and *Viloyat ichi* → *"Tuman darajasida qidiriladi"*.
+      - *Tuman ichi* and *Yaqin hududlar* → *"Mavze / QFY darajasida qidiriladi"*.
+- [ ] 🔴 **T-127 — *Yaqin hududlar* with the SAME district on both ends** → it refuses, and
+      **both** cards turn red with *"«Yaqin hududlar» uchun nuqtalar ikki xil tumanda bo'lishi
+      kerak"*. Two districts in **different provinces** must be accepted — that is allowed.
+- [ ] 🔴 **T-127 — *Viloyat ichi* is locked to one province by its top card**, so you should not be
+      able to break it from the form. If you somehow can, that is a bug worth reporting.
+- [ ] 🔴 **T-127 — edit an OLD *Tuman ichi* order** (one made 13–21 September, before this fix, so
+      it has no QFY). Change **only the seats** and tap **Saqlash** → the app refuses and asks for
+      the **QFY** on each card (*"Qayerdan: mavze / QFYni tanlang"*). Pick the QFYs → it saves.
+      _The app asks even though only the seats changed — **on purpose** (owner, 2026-09-21): the
+      order asked for QFY precision it could never get, and fixing it is one tap per end._
+- [ ] 🔴 **T-127 — the no-village way out, then the search.** Order *Tuman ichi* from a district
+      with no villages, using "Tuman bo'yicha davom etish" → the grey line changes to *"Bu tumanda
+      QFY ro'yxati yo'q — tuman bo'yicha qidiriladi"*, the order posts, and the search after it
+      shows drivers for that **district** (see §5).
+- [ ] ⚪ **T-127 — the language.** Switch the app to Russian and repeat one refusal → the message is
+      Russian and names the ride type as the menu does (*«Ближние районы»*).
 
 ---
 

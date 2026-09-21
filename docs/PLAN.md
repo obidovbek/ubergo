@@ -4,224 +4,427 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> 📦 **T-116 → `docs/PLAN-T116.md`** (DONE, `cba0be1`; needs the API deploy + both rebuilds).
-> 📦 **T-088 → `PLAN-T088-finish.md`** (DONE, `db8e17d`, *Parked*: the owner's four actions) ·
-> **T-122 → `PLAN-T122.md`** · **T-123 → `PLAN-T123.md`** · **T-121 / T-118** → their files.
-> 📦 **T-102 → `docs/PLAN-T102.md`** — the parent of this step; its §9 is the whole card's resume
-> point. **This file is T-102i only.** · **T-114 → `PLAN-T114.md`** (① done, *Parked*; ② = T-127).
-> 📦 **T-101 → `PLAN-T101.md`** (steps 2b, 19-26 open).
+> 📦 **T-102i → `docs/PLAN-T102i.md`** (DONE, `a06614c`; the read side this card is the write side of).
+> 📦 **T-114 → `PLAN-T114.md`** — ① done and *Parked*; **② IS THIS CARD.** Its §8 lists ①'s device walk.
+> 📦 **T-102 → `docs/PLAN-T102.md`** (§9 = the parent's resume point) · **T-101 → `PLAN-T101.md`**
+> (steps 2b, 19-26 open) · **T-116 → `PLAN-T116.md`** · **T-088 → `PLAN-T088-finish.md`** ·
+> **T-122 / T-123 / T-121 / T-118** → their own files.
 
 ---
 
-## 🔴 BOARD STATE 2026-09-19 — read before starting anything
+## 🔴 BOARD STATE 2026-09-21 — read before starting anything
 
 **`tsc` BASELINES: API 281 · admin 6 (`tsc -b`) · user 3 · driver 19.** Lint 0 errors everywhere;
 **warnings API 230 · user 208 · driver 275.** Colour ceilings user 1 · driver 3. **Never raise one.**
-**Suites:** **API 363** · **user 273 + 12 checkers** · **driver 295 + 12 checkers**.
-**Board:** `node scripts/check-board.mjs` → ✓; *Now* = **T-102 · T-101**.
-🛑 **The device backlog is long:** T-102c 1-3, T-102e (the passenger's main search, SQL-verified
-only), T-114 ①, T-115, T-116, T-123, T-088's 401 — none walked on a phone. This step adds to it.
+**Suites:** **API 391** · **user 278 + 12 checkers** · **driver 295 + 12 checkers**.
+**Ratchets that this card can trip:** the API's `i18n/unkeyedErrors.test.ts` (**CEILING 107** English
+4xx `AppError`s — a new English 400 RAISES it and goes red) and each app's `check-raw-error-toasts.mjs`.
+**Board:** `node scripts/check-board.mjs` → ✓ before starting; *Now* = **T-127 · T-102** (see step 0).
+🛑 **The device backlog is long and this card adds to it:** T-102c 1-3, T-102e, T-102i, T-114 ①,
+T-115, T-116, T-123, T-088's 401 — **none walked on a phone, and the API is not deployed.**
 
 ---
 
 ## Task
 
-- **ID / name:** T-102i — **the read side: make a passenger's QFY (village) count.**
-- **Why now:** owner said *"next"*; T-114 turned out to be code-complete (→ *Parked*), so T-102 is the
-  top of the queue, and T-102i is the step its own resume point calls *"the one that matters"*.
-- **What is wrong today, in one line:** a passenger ordering *Tuman ichi* or *Yaqin* picks a QFY, a
-  driver since T-102c-3 can name QFYs too — and **nothing anywhere compares them.**
+- **ID / name:** T-127 — **per-scope completeness: each order scope demands the geo depth it
+  matches at, and the form says so.**
+- **Why now:** owner picked it (2026-09-21). It is the **write side of T-102i**, which shipped the
+  read side two days ago: the server now matches a `tuman` / `yaqin` order **at the QFY** — but
+  nothing anywhere requires the passenger to give one, so the order matches at a level it may not
+  have reached. The blocking decision was already taken by the owner on 2026-09-13.
+- **What is wrong today, in one line:** **the form accepts an order the matcher cannot serve** —
+  `Tuman ichi` with no QFY, or with its two endpoints in different districts.
 
-### 🔴 What is true today (measured 2026-09-19)
+### 🔴 What is true today (measured 2026-09-21, read from the code)
 
-1. **The matching half of `utils/geoMatch.ts` has zero callers.** `matchesOrder`, `matchPrecision`,
-   `directionHit`, `matchLevelFor`, `validateScope`, `hasMatchableIds`, `neighborsFirst` are tested
-   and unused; the API imports only `validateOfferPlaces` and `isOrderScope`. The rules exist; nothing
-   applies them.
-2. **`DriverOfferService.getPublicOffers` matches at province/district** through `driver_offer_places`
-   (T-102e), per-offer text fallback for offers with no place rows. **`utils/offerGeoQuery.ts` already
-   knows the `settlement` column** — but no caller sends a settlement, and the loose rule
-   (`LOOSE_PARENT_MATCH`: a driver who named only the district matches a village-level order in it)
-   is not expressed in SQL.
-3. **The only client is the passenger's search tab**, and it picks **province + district only — no
-   QFY, no scope.** After creating an order, the passenger lands there with the order's route handed
-   over through `utils/lastSearch.ts` — **province and district only: the QFY and the scope are
-   dropped at that handoff.**
-4. **Most offers have no place rows yet** — T-102g's backfill is written, not run. Until it runs,
-   village-level matching can only find offers created since T-102c (2026-09-13/14).
-5. **Drivers browsing passenger orders** (`PassengerOfferService.getPublicOffers`) match by **typed
-   text only** — no ids at all. A different surface → boarded as **T-128**, not this step.
+1. **`geoMatch.validateScope` has ZERO callers.** Grepped across the whole API: `validateScope`,
+   `isScopeValid` and `ScopeProblem` appear only in `geoMatch.ts` and `geoMatch.test.ts`. The rule
+   is written, tested (9 assertions) and applied nowhere — the same state `placeHit`'s half was in
+   before T-102i gave it readers. **It already encodes exactly the owner's table:**
+   `missing_from` / `missing_to` at `matchLevelFor(scope)` · `different_province` (viloyat) ·
+   `different_district` (tuman) · `same_district` (yaqin).
+2. **The form demands province + district and nothing else, for all four scopes.**
+   `CreatePassengerOfferScreen.tsx:566-571` — *"Province + city/district are required; settlement
+   and landmark are not"*. So `Tuman ichi` submits with no QFY, and `T-102i`'s adm3 branch then
+   silently falls back to the district for that side.
+3. **The API validates the scope's SPELLING and not its content.** `PassengerOfferService`
+   (`:517-528`) refuses a `match_scope` that is not one of the four — deliberately, so a typo cannot
+   become NULL — and never looks at whether the geo ids satisfy it. The 8 geo id columns are parsed
+   (`:480-485`) with no cross-field rule at all.
+4. **So the contradiction T-114 recorded is still live**, word for word: *"the Tuman board accepts
+   an endpoint with NO QFY, but `validateScope(order,'tuman')` matches at adm3 and refuses it."*
+5. **`yaqin` and `aro` are still identical in the form** (`ORDER_SCOPE_GEO`: both `rootLevel: null`,
+   `startLevel: 'province'`). `orderScope.ts:72` says so out loud and says **the ONLY difference is
+   completeness — this card.**
+6. **Three entry points navigate to the form with no scope at all** (`MyOrdersScreen:729`,
+   `MyPassengerOffersScreen:589` and `:629`) → they fall back to `aro`, whose demands are exactly
+   what the form already enforces. **Unchanged by this card**, but it means the strictest scopes are
+   reachable only from the home carousel.
+7. **Old orders:** `match_scope` is NULL before 2026-09-13 and those open as `aro`. Orders made
+   between 2026-09-13 and today **can carry `tuman` with no QFY** — they are exactly what a new
+   server-side rule would lock out of editing. **Risk 1 below; it decides step 2's shape.**
+8. **The driver app is not involved.** A driver states a place SET, validated by a different rule
+   (`validateOfferPlaces`, which *does* have a caller: `DriverOfferService:548`).
 
-### ❓ Decision ① — where should the village count?
+### ✅ Decision ① — how hard does the server refuse? **ANSWERED 2026-09-21: A**
 
-- **A — "offers for MY order" (recommended).** When the passenger arrives from an order (right after
-  creating it, as today), the search shows the offers that match **that order at its scope's
-  level**: village for *Tuman ichi* / *Yaqin*, district for *Viloyat ichi* / *Viloyatlar aro* — with
-  a small label on an offer that matched only because its driver named the district, not the village
-  (the promise `LOOSE_PARENT_MATCH` makes). A chip names the order being matched and clears back to
-  plain browsing. **The plain search stays as it is.** *Why:* it is exactly what the four scopes
-  promise (an order matches at its own level), it reuses the handoff that already exists, and the
-  rules module becomes the one source for both the SQL and the label.
-- **B — a village level in the search tab for everyone.** A third level in the search's picker. More
-  UI, and it has no idea of a scope — *Viloyat ichi* and *Tuman ichi* would search the same way.
-- **C — both.** A, then B later if browsing by village is wanted.
+- **A — refuse on create, and on update only when the order would still be incomplete
+  (recommended). ← the owner's choice.** The client stops it first; the server is the backstop. An order made before this
+  card that is already incomplete **can still be edited** — the rule is applied to the merged row,
+  so the passenger fixing the route fixes the order, and a passenger only changing the price is not
+  held hostage by geo they cannot see. *Why:* nothing is un-editable, and the rule still cannot be
+  bypassed by a client that skips the form.
+- **B — refuse on create and on every update, no exception.** Simpler sentence, but an order created
+  on 2026-09-14 as `tuman` with no QFY becomes **uneditable** until the passenger re-picks the
+  route — including when they only wanted to change the seat count.
+- **C — client only, server unchanged.** Cheapest, and it leaves the contradiction in place for any
+  caller that is not this form. **Not recommended** — it is what "the rules exist and nothing
+  applies them" already cost us twice (T-102i, T-116).
+
+### ✅ Decision ② — what happens when a district has NO QFYs? **ANSWERED 2026-09-21: A**
+
+**The question for the owner, in one line: do all districts in `geo_settlements` have QFY rows, or
+are there districts with none?** (Two minutes in the admin panel; I cannot reach the DB.)
+
+- **A — the sheet offers a way out, always (recommended). ← the owner's choice**, taken without
+  checking the data first *because it is correct either way*: if no district is empty the row never
+  renders, and if one is, nobody is trapped. When the QFY list comes back empty, the
+  sheet shows one row: *"Bu tumanda QFY ro'yxati yo'q — tuman bo'yicha davom etish"*, which
+  completes the endpoint at the district. The form accepts it and **the strip says that side will
+  match at the district, not the QFY.** *Why:* it is correct whichever way the data turns out, the
+  passenger is never trapped, and T-102i's loose rule already serves such an order sensibly.
+  Costs one sheet change and one more string.
+- **B — nothing special; require the QFY unconditionally.** Right **only if** every district really
+  has QFYs. If even a handful do not, those districts silently become unorderable for two of the
+  four ride types, and it will present as *"the app won't let me order"* with no clue why.
+- **C — fix the DATA instead** (populate the missing QFYs), then B. The cleanest end state, but it
+  is an owner data job of unknown size and it blocks this card until it is done.
 
 ### Goal (definition of "done", for A)
 
-1. **The server matches an order at its scope's level**: `getPublicOffers` accepts
-   `from_/to_settlement_id` and `scope`; at adm3 it takes an offer whose place names **that QFY**, or
-   (loose rule) **names that district and no QFY**; at adm2 behaviour is unchanged. The old per-offer
-   text fallback stays for offers with no place rows.
-2. **Each returned offer says how it matched** — `match_precision: 'exact' | 'district'` — and the
-   card shows the `district` case in words.
-3. **One rule, two readers, pinned together:** the SQL builder and `geoMatch.directionHit` must agree —
-   a parity test runs the same fixtures through both.
-4. **The handoff keeps the QFY and the scope**, and the search screen sends them when it is matching
-   an order; clearing the chip returns to today's search exactly.
+1. **The form demands what the scope matches at.** `Tuman ichi` and `Yaqin` require a **QFY on both
+   ends**; `Viloyat ichi` requires **both endpoints in the chosen province**; `Yaqin` requires **two
+   DIFFERENT districts**; `Viloyatlar aro` is unchanged. Each failure marks **its own field** and
+   says what is missing in the passenger's language.
+2. **The MATCH strip:** one line on the form, under the route block, that states in words what this
+   scope will match on — *"Tuman ichi: QFY darajasida qidiriladi"* — and turns into the reason when
+   something is missing. It is the only place the passenger can learn why the form refuses.
+3. **The server refuses the same order** (decision ① A), with a **keyed** message per problem —
+   `messageKey` at the throw site, **the 107 ceiling must not rise**.
+4. **One rule, two readers, pinned together** — the app's copy and `geoMatch.validateScope` run the
+   **same case table**, as T-102i's parity test does for `placeHit` ⇔ `adm3Clauses`.
 5. **Every new test proven red; all baselines held** (API 281 / 0·230 · user 3 / 0·208 · driver
    untouched); uz · ru · en for every new string.
 
 ### Explicitly OUT of scope
 
-- 🛑 **T-128** (drivers finding orders by ids, not text) · **T-127** (forms demanding the QFY a scope
-  needs) · **T-102f** (the neighbours admin screen) · **running T-102g's backfill** (the owner's).
-- 🛑 A village level in the plain search (option B) unless chosen.
-- 🛑 Any migration — the columns exist (`driver_offer_places.settlement_id`, `PassengerOffer`'s 8 geo
-  ids, `match_scope`).
+- 🛑 **Adjacency.** `yaqin` will demand *two different districts*, **not two NEIGHBOURING ones** —
+  `geo_district_neighbors` is unpopulated and its admin screen is **T-102f**. Demanding real
+  adjacency now would refuse every `yaqin` order on the planet.
+- 🛑 **T-128** (the driver side, still by text) · **T-102f / T-102h** · **running the backfill**.
+- 🛑 **The `aro` / `yaqin` picker difference** — they stay identical in `ORDER_SCOPE_GEO`; T-114 ①
+  measured that and it is correct. This card separates them by COMPLETENESS only.
+- 🛑 **Any migration.** Every column exists. ❌ No dependency, no `infra/**`.
+- 🛑 **Backfilling a scope onto pre-2026-09-13 orders** — inferring one from stored geo is a guess
+  (T-114 settled this).
 
 ## Approach
 
-- **The rule stays in `geoMatch.ts`; SQL is derived from it, not re-decided.** The adm3 condition is
-  built in `offerGeoQuery.ts` from `matchLevelFor` and `LOOSE_PARENT_MATCH`, and a **parity test**
-  feeds fixture place-sets to both the SQL builder's logic and `directionHit` — the T-123 / T-116
-  lesson (two readers of one rule drift) applied up front.
-- **Precision in SQL, per offer:** `CASE WHEN EXISTS (exact place) … THEN 'exact' ELSE 'district'`,
-  per direction, combined as `matchPrecision` does. No second query.
-- **App: the handoff grows two optional fields** (settlement ids, scope) in `lastSearch.ts`, with the
-  revision mechanism T-114 built so an old stored route still reads. `check-last-search.mjs` extended.
-- **Prove red on every change**, predictions first; revert from a scratchpad golden copy.
-- ⚠️ **No test here touches Postgres** (CLAUDE.md). The SQL is shape- and injection-tested; whether a
-  real search returns the right rows is a **device check against test3**, and it is listed as such.
+- **The API's `validateScope` is the rule; nothing re-decides it.** The service calls it — the
+  module gets its first reader, exactly as T-102i did for `placeHit`.
+- **The app needs its own copy** (two standalone apps, no shared package — CLAUDE.md), so the
+  drift risk is the T-123 / T-116 class. Mitigation, up front rather than discovered: a **shared
+  case table** — one list of `(from, to, scope) → problems[]` fixtures written once and run by
+  **both** the API test and the app checker, so a rule that changes on one side goes red on the
+  other. If the two cannot share a file cleanly, the fallback is the same table duplicated with a
+  checker asserting the two copies are identical — decided by measurement in step 1, not now.
+- **The strip renders from the rule's output, not from a second `if`** — the same problem list that
+  blocks submit writes the sentence.
+- **Per-field errors reuse the form's existing `errors` map** (`from_text` / `to_text`), so the
+  inline marking and the toast both work with no new plumbing.
+- **Prove red on every change**, predictions written before running; revert from a scratchpad
+  golden copy.
+- ⚠️ **No test here touches Postgres.** Whether a real `tuman` order now refuses on a phone is a
+  **device check**, and it is listed as one.
 
 ## Steps
 
-- [x] **0. Owner approval (rule 3) and decision ①.** ✅ *"ok"*, 2026-09-19 — **option A**: "offers for
-  MY order", matched at the order's scope level, a `district` match labelled; the plain search unchanged.
-- [x] **1. Measure, read-only.** ✅ **DONE 2026-09-19.** Baselines unchanged since T-116's close
-  (API 281 / 0·230 / 363 · user 3 / 0·208 / 273 + 12). What the reading settled:
-  - **The only entry is the create hand-off** (`CreatePassengerOfferScreen:811` + `:863`); "my
-    orders" never opens the search. **It travels by TWO channels, and both are needed:** navigation
-    params (a fresh mount reads them once, in `initialize()`) and the stored route + revision
-    (`bumpLastSearchRoute` — the ONLY way to reach the tab when it is already mounted, since
-    `initialize()` is mount-only). So the order travels both ways: `SearchOffersParams.order` and an
-    **optional `order` field on the stored route — additive, no key renamed** (`lastSearch.ts` warns a
-    rename orphans every save). The screen's own saves keep writing the 2026-08 shape, so the "for
-    my order" mode is transient by design: it arrives with an order, not with an app restart.
-  - **The label is decided by the rule module itself, not by SQL:** `getPublicOffers` already runs
-    one grouped query per concern (ratings, seats taken); one more for the returned offers' place
-    rows lets `geoMatch`'s own `directionHit` label each offer. **The SQL filter is built from
-    structured clauses derived from the same rule, and a parity test runs fixture rows through both.**
-  - **Per direction, not per order:** until T-127 makes the forms demand it, an order can carry a
-    QFY on one end only — that side matches at adm3, the other at adm2 exactly as today.
-  - **Old offers (no place rows) keep the text fallback, on the DISTRICT's name** — a QFY name is
-    rarely in free text — and are labelled `district`: they never named a village.
-  - The offer card is `components/search/OfferResultCard.tsx`; no test exists for the search screen.
-  - Backfill counts: the owner's to run (`npm run backfill:places` writes nothing).
-- [x] **2. Server — the adm3 condition and the precision.** ✅ **DONE 2026-09-19.**
-  `geoMatch`: **`placeHit`** — the rule for ONE place row; `directionHit` is now "the best
-  `placeHit` over the rows" (a pure refactor: the 46 existing tests passed unchanged before anything
-  else was added) — and **`offerMatchPrecision`**, the label, never over-promising (an offer with no
-  rows is `district`). `offerGeoQuery`: **`adm3Clauses`** (the rule's two branches as DATA),
-  `clauseExistsSql` (columns whitelisted, ids checked, an empty clause refused), `settlementMatchSql`
-  (text fallback on the DISTRICT's name, guarded by "no place rows", as at adm2), and
-  **`groupPlaceRows`**. `getPublicOffers` takes `from/to_settlement_id` + `scope`; a side matches at
-  the QFY only when its scope is adm3 AND the order named a QFY; results carry `match_precision`
-  only when some side did. Controller parses the three params; the service refuses unsafe ones.
-  🔴 **A silent trap caught by reading the model before running anything:** `driver_offer_places`'
-  `offer_id` and geo columns are **BIGINT**, which `pg` returns as **strings** in raw rows, while
-  `DriverOffer.id` is INTEGER. Unconverted, no offer would find its rows and no QFY would ever be
-  `===` — **every result labelled `district`, nothing failing.** Converted in `groupPlaceRows`, pulled
-  out of the service so a test can feed it string ids exactly as pg returns them.
-  **Tests +28 (API 363 → 391)** — including **the parity test**: 7 fixture rows through both
-  `adm3Clauses` and `placeHit`, plus a guard that the fixtures produce both answers.
-  **Prove red — 6 mutations:** ⓐ the loose clause's `IS NULL` dropped → **3** ✓ · ⓑ the same guard
-  dropped from `placeHit` → **predicted 4, got 5** — an older test (*"compares the level it is given"*)
-  also rests on it · ⓒ offer id left a string → **3** ✓ · ⓓ geo ids left strings → **1** ✓ ·
-  ⓔ text fallback unguarded → **1** ✓ · ⓕ a row-less offer labelled exact → **1** ✓.
-  ⚠️ My first test run was red for my own reason — the new test used `groupPlaceRows` without
-  importing it (3 red, `tsc` 284). The `PublicOfferController(123)` error in that run was a
-  **pre-existing** baseline error moved 15 lines down by my edit — checked against the golden copy.
-  **After:** `tsc` 281 · lint 0 / 230 · `npm test` **391/391**.
-- [x] **3. App — carry the order and say how it matched.** ✅ **DONE 2026-09-19.** The order form
-  hands over `fromSettlement` / `toSettlement` / `scope` on BOTH channels (navigation params and
-  the bumped stored route — additive fields, nothing renamed). The search screen keeps an
-  `orderScope`; the QFYs ride on its `GeoPath`s, so `RouteSummary` names them with no new display
-  code (`routeText` already printed `settlement`). In that mode it sends `scope` + both QFY ids; a
-  chip — *"Buyurtmangiz bo'yicha · Tuman ichi"*, the home carousel's own scope names — clears back
-  to the plain search (scope AND QFYs dropped, so the summary claims no village). **Any manual route
-  change or swap ends the mode.** The card shows *"Haydovchi faqat tumanni ko'rsatgan, QFYni emas"*
-  on a `district` match. 3 strings × uz/ru/en, worded as the app already words QFY (*Mavze / QFY ·
-  массив / СГМ · settlement*). `types/orderScope.ts`' header (*"the search still ignores it"*) updated.
-  **Tests:** `SearchOffersScreen.test.tsx` **new, 4** (the screen had none); `CreatePassengerOffer`
-  **+1** (the stored route carries both QFYs and the scope). **Prove red — 5 mutations, all predicted
-  exactly:** ⓖ order fields never sent → 1 · ⓗ hand-off scope ignored → 2 · ⓘ clearing keeps the
-  scope → 1 · ⓙ the note on every labelled offer → 1 · ⓚ the stored route stripped → 1.
-- [x] **4. Measure.** ✅ **DONE 2026-09-19 — every number predicted:** API `tsc` 281 · lint 0/230 ·
-  **391** (363 + 28) · user `tsc` 3 · lint 0/208 · **278** Jest (273 + 5) + **12** checkers · driver app
-  **untouched** (no file in `git status`).
-- [x] **5. Close.** ✅ **DONE 2026-09-19.** T-102's card and `PLAN-T102.md` §6/§9 (T-102i ✓; the design
-  question answered: order↔offer via the search). `ARCHITECTURE.md` gains a **Place matching** row.
-  `CHECKLIST.md` §5: two drivers (one naming the QFY, one only the district), a *Tuman ichi* order,
-  the chip, the label, clearing, a manual change, and *Viloyatlar aro* unchanged. `CLAUDE.md` and
-  `ARCHITECTURE.md` test counts (391 · 278 + 295). Journal written. Commit proposed.
-  ⚠️ **Needs the API deploy + a user-app rebuild.**
+- [x] **0a. Board.** ✅ **DONE 2026-09-21.** Owner moved **T-101 → *Next*** (no work in flight; its
+  resume point is safe in `PLAN-T101.md`), keeping T-102 beside this card because T-127 sits on its
+  rules, its deploy and its device walk. **T-127 *Next* → *Now*, P2 → P1.** One card, one copy —
+  both were MOVED, and each carries a dated line saying where it went and why.
+  `node scripts/check-board.mjs` → ✓ (129 cards, 2 in *Now*). The T-102 card's pointer was
+  repointed to `docs/PLAN-T102i.md`, and that file's resume point — which still read **"NOT
+  COMMITTED"** two days after `a06614c` landed — was corrected.
+- [x] **0b. Owner approval of this plan (rule 3).** ✅ **APPROVED 2026-09-21** ("ok", after the plan
+  was restated in plain language). **Decision ①: option A** — the server refuses on create, and on
+  update only when the row would STILL be incomplete. The owner also accepted the two warnings:
+  the app will start refusing what it used to accept (they read the new sentences before ship), and
+  `yaqin` checks *different* districts, not *adjoining* ones, until T-102f.
+- [x] **1. Measure, read-only.** ✅ **DONE 2026-09-21.** Four questions answered, and a fifth found.
+  - **The case table, read out of `validateScope` (not invented):**
 
-## Files to touch (A)
+    | scope | level | from / to each need | cross-field rule | problem |
+    |---|---|---|---|---|
+    | `aro` | adm2 | `city_id` | — | — |
+    | `viloyat` | adm2 | `city_id` | same province | `different_province` |
+    | `tuman` | adm3 | `settlement_id` | same district | `different_district` |
+    | `yaqin` | adm3 | `settlement_id` | districts must DIFFER | `same_district` |
 
-**API:** `utils/offerGeoQuery.ts` (+ test) · `services/DriverOfferService.ts` (`getPublicOffers`) ·
-`controllers/PublicOfferController.ts` (params) · `utils/geoMatch.ts` only if a helper is needed for
-parity (its rules do not change)
-**User app:** `utils/lastSearch.ts` · `screens/SearchOffersScreen.tsx` · the offer card component ·
-`screens/CreatePassengerOfferScreen.tsx` (the handoff) · `api/offers.ts` (types) · translations ×3 ·
-their tests · `scripts/check-last-search.mjs` / `check-offer-search.mjs`
-**Docs:** PLAN · PLAN-T102 · TODO · JOURNAL · CHECKLIST
-**NOT touched:** the driver app, migrations, dependencies, `infra/**`.
+    Plus `missing_from` / `missing_to` at the scope's own level. ⚠️ Two naming traps to carry into
+    the app's copy: `different_province` also fires when a province is **absent** (`a == null ||
+    b == null || a !== b`), and `same_district` fires **only when both districts are present** — so
+    a half-filled `yaqin` order reports `missing_*`, never `same_district`.
+  - **The shared case table WORKS, as JSON, with no bundler involved.** The app's checkers already
+    run `esbuild --platform=neutral` over app `.ts` (`check-order-scope-geo.mjs:28-41`) — but the
+    fixture needs no bundling at all: both sides are Node, so both `JSON.parse(readFileSync(...))`.
+    CI checks out the whole repo and only changes `working-directory`, so a repo-root path resolves
+    in CI exactly as locally. **Test-time only — no runtime import crosses a package**, so the apps
+    stay standalone in the sense that matters (nothing foreign is bundled into the shipped app).
+  - **The strip's place is settled by the layout:** between the `routeCard` and the `timeCard`
+    (`CreatePassengerOfferScreen.tsx:1016`), directly under the block it describes. Per-field errors
+    already have their plumbing — both `LocationCard`s take `error={errors.from_text|to_text}`.
+  - **A keyed 400 does not touch the ratchet.** `unkeyedErrors.test.ts:113` counts a site as `keyed`
+    when any argument after the status matches `/messageKey\s*:/`, so
+    `new AppError('…', 400, { messageKey: 'offers.…' })` leaves the ceiling at 107. The existing
+    pattern to copy is `PassengerOfferService.ts:947`.
+  - 🔴 **THE FIFTH THING, WHICH NOBODY WROTE DOWN — demanding a QFY can create a DEAD END.**
+    `GeoSheet` opens at `settlement` for `tuman`; if that district has no settlement rows it renders
+    `ListEmptyComponent` → *"Ro'yxat bo'sh"* (`GeoSheet.tsx:220`) and offers **no way forward** —
+    only Back (blocked: the root card pinned the district) and Close. ~~Today that is survivable
+    because the QFY is optional: the passenger closes the sheet and submits the district alone.~~
+    🔴 **CORRECTED IN STEP 5 — THAT SENTENCE WAS FALSE, AND I TOLD THE OWNER IT.** `GeoSheet`
+    commits an endpoint in exactly two places — `pick` at `endLevel` (`:172`) and the escape this
+    card added (`:255`) — and **closing it saves nothing**. So since **2026-09-03**, when
+    `LocationCard` moved onto `GeoSheet` with `endLevel="settlement"`, a district with no QFY list
+    has been **unorderable in ALL FOUR scopes**, not merely at risk of becoming so. The escape fixes
+    all four (`LocationCard` passes it whatever the scope); a test now pins it for `aro` too. I
+    reasoned about the sheet instead of reading its commit paths — the exact thing step 1 was for. The form's own comment claims this is common: *"many
+    districts have no settlements at all"* (`:565`). **I cannot measure the truth of that from
+    here — it is a DB question** → decision ② below. ⚠️ Also noted, not fixed: that empty-state
+    string is hardcoded Uzbek (the T-126 class, in the user app).
+- [x] **2. Server — `validateScope` gets its first caller.** ✅ **DONE 2026-09-21.**
+  **`utils/scopeGuard.ts` (new, pure)** — `scopeVerdict(patch, stored)` answers "refuse, and with
+  which sentence"; `PassengerOfferService.assertScopeSatisfied` is now ten lines that throw what it
+  returns, called from `buildOfferFields` beside `validateOfferData`. **The scope rules themselves
+  were not touched** — `geoMatch.validateScope` is unchanged and finally has a reader.
+  ⚠️ **It had to be a `utils/` module, not a private method:** services import Sequelize models and
+  this suite covers DB-free code only, so logic left in the service is untestable (the T-102i
+  precedent, `groupPlaceRows`). **7 keyed strings × uz/ru/en**, worded with the app's own names
+  (*«В районе» · «Tuman ichi» · Mavze / QFY · массив / СГМ*); ratchet **unmoved at 107**.
+  🔴 **THE BIGINT TRAP, A SECOND TIME — and this one refuses a CORRECT order.** Every geo id on
+  `passenger_offers` is **BIGINT**, which `pg` returns as a **string** (no `setTypeParser` in this
+  project), while `parseId` makes the patch's ids numbers. `validateScope` compares with `!==`, so
+  `10 !== '10'` would tell a passenger editing a valid *Tuman ichi* order that its two endpoints
+  are in different districts. The model's types say `number | null`, so `tsc` sees nothing.
+  Normalised in `toGeoId`, in the pure module, fed strings by every update test.
+  **Tests +28 (391 → 419)** — `scopeGuard.test.ts` (22) and a **computed-key block in
+  `messageKeys.test.ts`** (6).
+  🔴 **That block exists because I made a hole and noticed it:** T-116's key checker scans for
+  `messageKey: '<literal>'`, and this card's key is **computed** — so the whole family was invisible
+  to it and could have gone missing from ru/uz with every test green.
+  **Prove red — 7 mutations, 5 exact, and TWO THAT TAUGHT SOMETHING:**
+  ⓑ change-by-presence → 1 ✓ · ⓒ the untouched-route exemption dropped → 1 ✓ · ⓓ `match_scope` not
+  scope-sensitive → 1 ✓ · ⓔ the level dropped from the key → 10 ✓ · ⓕ one ru key renamed → 1 ✓ ·
+  ⓖ problem order reshuffled → 1 ✓.
+  🔴 **ⓐ — the BIGINT mutation — came back GREEN, proving my headline test tested nothing.** The
+  patch in it carried the *whole* form, so both sides were numbers and the mixed comparison never
+  happened. Rewritten to the shape that actually triggers it (**one side edited, the other read
+  from the stored row**) → now 2 red. *The test asserted the right outcome and never built the
+  condition; only the mutation could show that.*
+  🔴 **And `tsc` caught what the green suite hid** (the `ubexgo-verification-habits` lesson, exactly
+  as written): the API's `ORDER_SCOPES` is a list of **strings** while the user app's is a list of
+  **objects with `.key`** — same name, two shapes. My `s.key` was `undefined`, `matchLevelFor`
+  answered `'adm2'`, so **every computed key came out adm2 and the adm3 half was never checked**.
+  Suite green, `tsc` 282. Fixed, and the block now asserts both levels appear.
+  ⚠️ **Also self-inflicted and repaired:** a PowerShell `Set-Content -Encoding utf8` restore added a
+  **BOM and rewrote every line ending** in `ru.ts` (569-line diff for 7 keys). Restored from git and
+  re-applied with the editor — the three locale diffs are now **+15 / +15 / +20, zero deletions**.
+  **After:** `tsc` **281** · lint **0 / 230** · `npm test` **419/419**.
+- [x] **3. App — the rule, the form, the strip.** ✅ **DONE 2026-09-21.**
+  **`utils/scopeCompleteness.ts`** (pure, no react-native — the `scopeRoot.ts` precedent), deriving
+  the level from `ORDER_SCOPES` rather than re-listing it; `validateForm` marks **per field**
+  (relational problems mark BOTH — neither endpoint is wrong alone); the **MATCH strip** renders
+  under the route. **10 strings × uz/ru/en**, scopes named as the MENU names them.
+  ✅ **The shared case table is real:** `shared/scope-cases.json`, **17 cases**, executed by
+  **both** `check-scope-completeness.mjs` and the API's `scopeGuard.test.ts` — change a branch on
+  either side and the other goes red. Test-time only; nothing crosses a package at runtime.
+  ✅ **Decision ② built:** `GeoSheet` offers a way out when the deepest level's list is genuinely
+  empty (never for a search that found nothing), `LocationValue` records `settlementUnavailable`,
+  and the claim rides to the server as `from_/to_settlement_unavailable` — **a request-only claim,
+  not a column** (`scopeGuard.relaxUnavailable`). It relaxes ONLY `missing_*` at adm3 and only for
+  the side that made it: never a contradiction, never a missing district.
+  🔴 **What step 1 could not see, and only writing the tests revealed: the create path CANNOT
+  express an incomplete endpoint.** `GeoSheet` commits only on reaching `endLevel`, so an endpoint
+  either arrives complete or is never set. The client-side rule therefore guards **the EDIT path**
+  — an order created 2026-09-13…09-21 with no QFY — and the empty-list case. Written down in the
+  test file so the next reader does not "fix" an untested create-path branch that cannot happen.
+  **Tests +6 (278 → 284)** · **checker 119 assertions** (13 checkers now).
+  **Prove red — 6 mutations, ALL red, 3 counts off:** ⓗ escape never relaxes → jest 1 (predicted 2
+  — "offers a way out" never submits) + checker RED · ⓘ strip never admits the shallower match →
+  1 + RED ✓ · ⓙ every scope at adm2 → jest 3 (predicted 2 — it also breaks the edit-path refusal)
+  + RED · ⓚ picker stops reporting WHY → 2 ✓ · ⓛ escape row never rendered → jest 2 (predicted 3 —
+  the "populated district" case asserts absence, so it survives) · ⓜ form drops the rule → 1 ✓.
+  ⚠️ **Two test-authoring traps cost real time and are written into the test file:** a completed
+  endpoint renders its province on its own line, and **RNTL matches a button by its TEXT as well as
+  its label**, so "press Fargona viloyati" was ambiguous between the finished card and the open
+  sheet — and each `LocationCard` keeps its own `GeoSheet` MOUNTED when closed, so stale rows stay
+  in the tree. Both surfaced as *"Unable to find Rishton"* several steps later. Resolved by giving
+  the two endpoints different provinces, which is also the owner's own `yaqin` example.
+  **After:** user `tsc` **3** · lint **0 / 208** · **284** Jest + **13** checkers · API **442** ·
+  API `tsc` **281** · **driver app untouched**.
+- [x] **4. Measure.** ✅ **DONE 2026-09-21 — every number predicted, every number exact.**
+  API `tsc` 281 · lint 0/230 · 442 · ceiling 107 ✓ · user `tsc` 3 · lint 0/208 · 284 · 13 checkers ·
+  colour 1 ✓ · driver **0 files changed**, `tsc` 19 · lint 0/275 · 295 + 12 ✓.
+  ⚠️ **One defect of my own, found by re-reading rather than by any check:**
+  `check-scope-completeness.mjs` bundled the three locales separately and **never deleted them**
+  (`node_modules/.cache/scope-{uz,ru,en}.mjs`), while every sibling checker removes its bundles.
+  Harmless (gitignored) but the odd one out — rewritten to the house idiom (one bundle of
+  `translations/index.ts`, removed at once, as `check-order-scope-geo.mjs:243` does). **Re-proven
+  after the change:** still 119 assertions, nothing left in the cache, and **red (2) with
+  `scopeMatchAt_adm3` renamed in ru** — both QFY-level scopes share that line. Restored with
+  `File.WriteAllText` this time; `ru.ts` stayed at exactly +23 / −0.
+  **Predicted 2026-09-21, written before running:** API `tsc` **281** · lint **0 / 230** · **442** ·
+  English-4xx ceiling **107** (every new throw is keyed) · user `tsc` **3** · lint **0 / 208** ·
+  Jest **284** · **13** checkers · colour ceiling **1** (the strip uses a token) · driver: **no file
+  in `git status`**, `tsc` **19** · lint **0 / 275** · **295 + 12** — unchanged because nothing in
+  it was touched and `shared/` has no driver-app reader.
+- [x] **5. Close.** ✅ **DONE 2026-09-21 — except the commit, which waits on open question ⑥.**
+  `PLAN-T114.md` §8 (② built) · T-127's card (stays in *Now* until ⑥ is answered — it could still
+  mean code) · T-114's and T-102's cards · `CHECKLIST.md` §3 (a stale line rewritten + 6 walks) ·
+  `CLAUDE.md` (counts; the computed-key blind spot; **`shared/`**; **BIGINT as a §5 gotcha** — two
+  cards running) · `ARCHITECTURE.md` (Place-matching row, Tests row, the folder map gains `shared/`)
+  · JOURNAL.
+  🔴 **Closing found two things, and one of them was my own mistake:**
+  ① **Step 1's "survivable today" was false** — reading `GeoSheet`'s commit paths (not reasoning
+  about them) showed a district with no QFY list has been **unorderable in all four scopes since
+  2026-09-03**. The escape already fixed all four; **a test now pins it for `aro`** (15 screen tests;
+  mutation ⓛ now **3** red, predicted 3). User Jest **284 → 285**; `tsc` 3, lint 0/208.
+  ② **The app is stricter than decision ① on an edit** → open question ⑥ below.
+
+## Files to touch
+
+**API:** `services/PassengerOfferService.ts` (the caller) · `utils/geoMatch.ts` **only if** the
+shared fixture needs an export (its rules do not change) · their tests
+**User app:** `utils/scopeCompleteness.ts` (new + test) · `screens/CreatePassengerOfferScreen.tsx`
+(validate + the strip) · `types/orderScope.ts` (the header's "still not wired" note) ·
+`translations/{uz,ru,en}.ts` · `scripts/check-scope-completeness.mjs` (new) + `run-checks.mjs`
+**Docs:** PLAN · PLAN-T114 · TODO · JOURNAL · CHECKLIST
+**NOT touched:** 🛑 the driver app · the admin panel · migrations · dependencies · `infra/**`.
 
 ## Risks / open questions
 
-1. ⚠️ **Few offers will match by village at first** — most have no place rows until the backfill
-   runs, and QFY-naming drivers only exist since 2026-09-14. The loose rule softens this; an empty
-   result for a village order is expected early, and the screen must say "no offers yet" plainly.
-2. ⚠️ **The `district` label is a promise to the passenger** — its wording is the owner's to read.
-3. ⚠️ **SQL-verified, not DB-verified** — same as T-102e. The device check is not optional.
-4. ⚠️ **Old orders** (before 2026-09-13) have no scope → they match at adm2, exactly as today.
-5. 🛑 **The device backlog** (see board state). New matching on top of unwalked matching makes a
-   wrong result harder to place; walking T-102e first would tell us the base is sound.
+1. ⚠️ **Orders created 2026-09-13 → today can be `tuman` with no QFY** — decision ① is what keeps
+   them editable. Whichever way the owner answers, step 2 must have a test for that exact row.
+2. ⚠️ **This makes the form STRICTER, which is a real refusal a passenger will meet.** If the strip's
+   wording is not clear, the report will be *"the app won't let me order"*. **The three new sentences
+   are the owner's to read** (Risk 2 of T-102i, same shape).
+3. ⚠️ **`yaqin` demands different districts but cannot check adjacency** — so it will accept two
+   districts at opposite ends of the country until T-102f populates the table. Stated, not hidden.
+4. 🔴 **Two readers of one rule, in two languages** — the exact class that bit T-123 and T-116. The
+   shared case table is the mitigation; if step 1 finds it cannot be shared, that is worth saying
+   out loud rather than quietly duplicating.
+5. 🛑 **The device backlog.** This is the fourth unwalked card in the same subsystem. A refusal that
+   fires wrongly on a phone will be hard to attribute between T-102e, T-102i and this.
+6. ✅ **ANSWERED 2026-09-21: KEEP STRICT** — the owner said *"commit"* to the message proposed for
+   the strict path. The app keeps asking for the QFY on any save of an incomplete order; the server
+   stays lenient on untouched routes. Pinned by the edit-path test.
+   ~~❓ **OPEN, FOUND IN STEP 5 — THE APP IS STRICTER THAN DECISION ① ON AN EDIT.**~~ Decision ① was
+   put as *"a passenger changing only the price is not held hostage"*, and the **server** honours
+   it (`scopeVerdict` skips an update that did not move the route or scope). **The app does not:**
+   `validateForm` applies the rule on every save, so editing an old *Tuman ichi* order with no QFY
+   and changing only the seats **asks for the QFY first**. That matches this plan's written Goal 1
+   (*"the form demands what the scope matches at"*) — which the owner approved — but NOT the plain-
+   language summary I gave (*"strict on new orders, lenient on old ones"*). I should have said it.
+   - **Keep the app strict (my recommendation).** Nobody can be stuck: a `tuman` sheet opens AT the
+     QFY (one tap per end), and a district with no list has the escape. It also cleans up the week
+     of orders that asked for QFY precision and could never get it. A client stricter than its
+     server is the ordinary shape.
+   - **Or mirror the server** — skip the rule in edit mode when the loaded route and scope are
+     unchanged (`sameGeo` already exists in the screen). ~10 lines + a test.
+   **Needs the owner's answer before commit.** The edit-path test pins today's (strict) behaviour.
 
 ## Session notes
 
-### 2026-09-19 — planned, approved (option A) and finished, steps 0-5
+### 2026-09-21 — planned, approved, steps 0-3 built
 
-- **The rules existed and nothing used them.** `geoMatch`'s whole matching half had been tested and
-  idle since 2026-09-12. This step gave it its first readers — the SQL filter (derived from it) and
-  the result label (decided by it) — instead of writing the rule a second time in SQL.
-- 🔴 **The trap no test in this project could have seen, caught by reading the model:** BIGINT comes
-  back from `pg` as a string. Every label would have been `district`, nothing failing. It is now in a
-  pure function a test feeds string ids — the only way a DB-free suite can pin it.
-- **Two readers held together from the start** (`placeHit` ⇔ `adm3Clauses`, a parity test) — the
-  T-123 / T-116 lesson applied up front instead of discovered.
-- **Predictions: 16 mutations, 15 exact, 1 under** (ⓑ: an older test also rests on the guard).
-- ⚠️ **SQL-verified, not DB-verified**, like T-102e before it. The device check (`CHECKLIST.md` §5) is
-  the proof; so is walking T-102e itself, which this sits on.
+- **The write side of T-102i.** `geoMatch.validateScope` had held the whole rule, tested, with
+  **zero callers** since 2026-09-12 — the third rule module in this subsystem found written and
+  unapplied. It now has two readers, held together by one case table both suites execute.
+- 🔴 **The BIGINT trap, a second time — and worse than the first.** T-102i's version mislabelled
+  results; this one would have **refused correct orders**, telling a passenger editing a valid
+  *Tuman ichi* order that its endpoints are in different districts. Same root cause (pg returns
+  BIGINT as a string, the model's types say `number`), same fix shape (a pure function fed strings
+  exactly as pg sends them).
+- 🔴 **A test that asserted the right outcome and never built the condition.** The BIGINT mutation
+  came back GREEN. The patch in the test carried the whole form, so both sides were numbers and
+  the mixed comparison never happened. *Only the mutation could show that* — this is the entire
+  argument for the prove-red rule.
+- 🔴 **`tsc` caught what the green suite hid**, exactly as `ubexgo-verification-habits` says: the
+  API's `ORDER_SCOPES` is strings, the app's is objects. `s.key` was `undefined`, every computed
+  key came out `adm2`, and the adm3 half of a whole message family went unchecked.
+- 🔴 **I opened a hole in T-116's guard and had to close it:** its key checker scans for
+  `messageKey: '<literal>'`, and this card's key is **computed** — the first one in the codebase.
+- **Two owner decisions, both taken before code:** ① the server refuses on create and on update
+  only when the route or scope actually moved (nothing becomes uneditable); ② the picker offers a
+  way out when a district has no QFY list — chosen without checking the data *because it is
+  correct either way*.
+- ⚠️ **Self-inflicted and repaired:** a PowerShell `Set-Content -Encoding utf8` restore added a BOM
+  and rewrote every line ending in `ru.ts`. `ubexgo-verification-habits` already warns about this
+  class; it applies to PowerShell restores too, not just the Bash tool.
+- **Step 4:** 15 predictions across three projects, 15 exact. Re-reading my own checker found it
+  leaving three bundles in the cache where every sibling cleans up — fixed to the house idiom and
+  re-proven red.
+- **Step 5:** writing the phone checklist forced two corrections — step 1's "survivable" claim
+  (false: the dead end predates this card and hit every scope) and an unstated gap between the
+  app and decision ① (open question ⑥). *A checklist written for a person is a stricter reader
+  than a plan written for myself.*
 
 ## Resume point
 
-> **Updated 2026-09-19. T-102i IS COMPLETE — steps 0-5. NOT COMMITTED** — the commit is proposed.
-> **What changed:** after a passenger creates or edits an order, the search matches THAT order at
-> its scope's level (the QFY for *Tuman ichi* / *Yaqin*); a driver who named only the district is let
-> through and labelled; a chip names the order and clears back to the plain search, which is unchanged.
-> 🟢 **API `tsc` 281 · lint 0/230 · 391 · user 3 · 0/208 · 278 + 12 · driver untouched.** `check-board` ✓.
-> ⚠️ **Needs the API deploy + a user-app rebuild.** Then `CHECKLIST.md` §5.
-> **▶️ NEXT: the owner's pick.** In T-102: T-102f (admin neighbours) · T-102h · the backfill RUN (the
-> owner's). Or **T-127** (forms demand the QFY a scope needs — pairs with this) · **T-128** (the
-> driver side, by ids) · **T-126** (driver app hardcoded Uzbek).
+> **Updated 2026-09-21. T-127 IS COMPLETE — steps 0-5, ⑥ answered (keep strict), COMMITTED** as
+> *"T-127: each ride type demands the depth it searches on"* (`git log --grep T-127` — the hash is
+> not written here because this line is part of that commit). **T-127 → *Parked*.**
+> 🛑 **Nothing is left for Claude on this card.** The owner: deploy the API, rebuild the user app,
+> walk `CHECKLIST.md` §3 (six T-127 walks).
+> **▶️ NEXT: the owner's pick.** Natural follow-ons: **T-128** (drivers find orders by ids, not typed
+> text — the same rules with the roles swapped) · **T-102f** (the neighbours admin screen, which is
+> what would let *Yaqin* check that districts actually ADJOIN) · **T-126** (driver app hardcoded
+> Uzbek). `/new-task` moves this file to `docs/PLAN-T127.md` first.
+> 🟢 **API `tsc` 281 · lint 0/230 · 442** (391 + 51) · **user `tsc` 3 · lint 0/208 · 285 + 13
+> checkers** · **driver app untouched.** No migration, no dependency, `infra/**` untouched.
+> **What works now:** an order must reach the depth its ride type matches at — a QFY on both ends
+> for *Tuman ichi* / *Yaqin hududlar*, one province for *Viloyat ichi*, two different districts for
+> *Yaqin*; the form says which level it will be searched on and marks the offending field; a
+> district with **no QFY list** offers a way out and then says it is matched at the district; the
+> server refuses the same order in the passenger's language, and on an edit only when the route or
+> the ride type actually moved.
+> ⚠️ **Also fixed, and worth saying to anyone walking it:** a district with **no QFY list** has
+> been unorderable in ALL four ride types since 2026-09-03; the picker's new escape fixes that too.
+> 🛑 **Still device-unwalked, and this card adds to the queue** — `CHECKLIST.md` §3 (six T-127
+> walks) and §5. **Needs the API deploy + a user-app rebuild.**
+>
+> **--- history below, still true ---**
+> ✅ **0a** T-101 → *Next*, T-127 → *Now* (P1), `check-board` ✓. **0b** plan approved ("ok").
+> ✅ **① answered: A** — refuse on create; on update only when the row would still be incomplete.
+> ✅ **1 (measure) done** — the case table is read out of `validateScope`; the shared fixture works
+> as repo-root JSON (both sides are Node, test-time only, CI-safe); the strip goes between the route
+> card and the time card; a keyed 400 leaves the 107 ceiling alone.
+> 🛑 **▶️ BLOCKED ON DECISION ② — do not start step 3 without it.** Step 1 found that requiring a QFY
+> can make a district **unorderable**: `GeoSheet` opens at `settlement`, and a district with no
+> settlement rows renders *"Ro'yxat bo'sh"* with no way forward (Back is pinned by the root card).
+> Harmless today because the QFY is optional; a dead end the moment this card lands.
+> **The owner's question: do all districts have QFY rows?** Recommended regardless: **A** — the
+> sheet offers *"no QFY list here — continue with the district"*, and the strip says that side
+> matches at the district.
+> **Step 2 (server) is NOT blocked by ②** and can start as soon as the owner answers or defers it.
+> 🟢 Baselines to hold: **API `tsc` 281 · lint 0/230 · 391 · user 3 · 0/208 · 278 + 12 · driver
+> untouched.** ⚠️ English-4xx ceiling **107**, may only fall.
+> **What this card is:** the write side of T-102i. The server matches a `tuman` / `yaqin` order at
+> the QFY; nothing requires the passenger to give one. `geoMatch.validateScope` already holds the
+> whole rule and **has zero callers** — this card gives it two, and holds them together with one
+> shared case table.
+> 🟢 Baselines to hold: **API `tsc` 281 · lint 0/230 · 391 · user 3 · 0/208 · 278 + 12 · driver
+> untouched.** ⚠️ The API's English-4xx **ceiling is 107 and must not rise** — a new 400 here needs
+> a `messageKey`.

@@ -27,7 +27,11 @@ import {
   fetchGeoSettlements,
   type GeoOption,
 } from '../api/geo';
-import { createPassengerOffer } from '../api/passengerOffers';
+import {
+  createPassengerOffer,
+  getPassengerOfferById,
+  updatePassengerOffer,
+} from '../api/passengerOffers';
 import { renderScreen } from '../test/render';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -48,6 +52,9 @@ const QOQON: GeoOption = { id: 101, name: 'Qoqon' };
 const RISHTON: GeoOption = { id: 102, name: 'Rishton' };
 const YAYPAN: GeoOption = { id: 1001, name: 'Yaypan' };
 const CHIMYON: GeoOption = { id: 1002, name: 'Chimyon' };
+/** A second province, used only by the T-127 cases — see the note in their `beforeEach`. */
+const TOSHKENT: GeoOption = { id: 11, name: 'Toshkent viloyati' };
+const YUNUSOBOD: GeoOption = { id: 103, name: 'Yunusobod' };
 
 const T = uz.passengerOffers;
 
@@ -191,6 +198,157 @@ describe('CreatePassengerOfferScreen', () => {
         scope: 'aro',
       }),
     );
+  });
+
+  /*
+   * 🔴 T-127 — the order must reach the depth its scope matches at.
+   *
+   * ⚠️ WHAT IS *NOT* TESTED HERE, AND WHY. "Create a `Tuman ichi` order with no QFY" cannot be
+   * expressed through this form at all: `GeoSheet` commits only when it reaches `endLevel`, so
+   * an endpoint either arrives complete or is never set. The client-side rule therefore guards
+   * the EDIT path (an order created before this card, hydrated with no QFY) and the empty-list
+   * case below — the server guards the rest. The rule itself is pinned by
+   * `scripts/check-scope-completeness.mjs` against `shared/scope-cases.json`, the same table the
+   * API's suite runs.
+   */
+  it('T-127: the MATCH strip says which level this ride type is searched on', async () => {
+    await mount();
+    expect(screen.getByText(T.scopeMatchAt_adm2)).toBeOnTheScreen();
+    expect(screen.queryByText(T.scopeMatchAt_adm3)).not.toBeOnTheScreen();
+  });
+
+  it('T-127: a QFY-level ride type says so instead', async () => {
+    await renderScreen(<CreatePassengerOfferScreen />, { params: { scope: 'yaqin' } });
+    await waitFor(() => expect(fetchGeoCountries).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(T.scopeMatchAt_adm3)).toBeOnTheScreen();
+  });
+
+  it('🔴 T-127: editing a Tuman ichi order made before this card demands the QFY', async () => {
+    /*
+     * The ONE path on which the form can hold an endpoint that stops at the district: an order
+     * created 2026-09-13…2026-09-21, when `Tuman ichi` was offered and nothing asked for a QFY.
+     * It hydrates with `settlement_id: null`, and until this card the form would have saved it
+     * back unchanged — an order asking for QFY precision that can never be matched on one.
+     */
+    jest.mocked(getPassengerOfferById).mockResolvedValue({
+      id: 7,
+      status: 'published',
+      match_scope: 'tuman',
+      from_province_id: FARGONA.id,
+      from_city_id: QOQON.id,
+      from_settlement_id: null,
+      to_province_id: FARGONA.id,
+      to_city_id: QOQON.id,
+      to_settlement_id: null,
+    } as never);
+
+    await renderScreen(<CreatePassengerOfferScreen />, { params: { offerId: 7 } });
+    await waitFor(() => expect(getPassengerOfferById).toHaveBeenCalledTimes(1));
+    await screen.findByText(T.scopeMatchAt_adm3);
+
+    // ⚠️ The edit mode's button is `saveChanges`, not `submitOrder`.
+    fireEvent.press(screen.getByText(T.saveChanges));
+
+    expect(screen.getByText(T.scope_missing_from_adm3)).toBeOnTheScreen();
+    expect(screen.getByText(T.scope_missing_to_adm3)).toBeOnTheScreen();
+    expect(updatePassengerOffer).not.toHaveBeenCalled();
+  });
+
+  describe('🔴 T-127 — a district with no QFY list (owner decision ②)', () => {
+    beforeEach(() => {
+      // The district exists; it simply has no settlements. Without a way out, `Yaqin` and
+      // `Tuman ichi` would make it unorderable: the sheet opens at the QFY, Back is pinned,
+      // and the only exit would be closing it.
+      jest.mocked(fetchGeoSettlements).mockResolvedValue([]);
+      /*
+       * ⚠️ TWO provinces, one per endpoint, and it is not decoration. A completed endpoint
+       * renders its province on the row's second line, and RNTL matches a button by its TEXT
+       * as well as its label — so with both endpoints in one province, "press Fargona
+       * viloyati" is ambiguous between the finished FROM card and the open TO sheet, and the
+       * test fails several steps later as "Rishton is missing".
+       * A `Yaqin` order across a province border is also exactly the owner's own example:
+       * "agar boshqa viloyatdan aniq qaysidir boshqa viloyat qfy ga bormoqchi bo'lsa".
+       */
+      jest.mocked(fetchGeoProvinces).mockResolvedValue([FARGONA, TOSHKENT]);
+      jest
+        .mocked(fetchGeoCityDistricts)
+        .mockImplementation(async (provinceId) =>
+          provinceId === FARGONA.id ? [QOQON, RISHTON] : [YUNUSOBOD],
+        );
+    });
+
+    const mountYaqin = async () => {
+      await renderScreen(<CreatePassengerOfferScreen />, { params: { scope: 'yaqin' } });
+      await waitFor(() => expect(fetchGeoCountries).toHaveBeenCalledTimes(1));
+    };
+
+    it('offers a way out instead of an empty dead end', async () => {
+      await mountYaqin();
+      fireEvent.press(screen.getByRole('button', { name: T.fromLabel }));
+      fireEvent.press(await screen.findByText(FARGONA.name));
+      fireEvent.press(await screen.findByText(QOQON.name));
+
+      expect(await screen.findByText(T.settlementListEmpty)).toBeOnTheScreen();
+      fireEvent.press(screen.getByText(T.settlementListEmptyAction));
+
+      // The endpoint is complete at the district, and the strip stops promising QFY precision.
+      await waitFor(() => expect(screen.getByText(QOQON.name)).toBeOnTheScreen());
+      expect(screen.getByText(T.scopeMatchDistrictFallback)).toBeOnTheScreen();
+    });
+
+    it('tells the server it was the empty list, not an unfinished form', async () => {
+      await mountYaqin();
+      for (const [label, province, district] of [
+        [T.fromLabel, FARGONA, QOQON],
+        [T.toLabel, TOSHKENT, YUNUSOBOD],
+      ] as const) {
+        fireEvent.press(screen.getByRole('button', { name: label }));
+        fireEvent.press(await screen.findByText(province.name));
+        fireEvent.press(await screen.findByText(district.name));
+        fireEvent.press(await screen.findByText(T.settlementListEmptyAction));
+        await waitFor(() => expect(screen.getByText(district.name)).toBeOnTheScreen());
+      }
+      fireEvent.press(screen.getByText(T.salonWhole));
+      fireEvent.press(screen.getByText(T.paymentCash));
+      submit();
+
+      await waitFor(() => expect(createPassengerOffer).toHaveBeenCalledTimes(1));
+      const sent = jest.mocked(createPassengerOffer).mock.calls[0]![0];
+      // Without these the server refuses the order it just accepted from the picker.
+      expect(sent.from_settlement_unavailable).toBe(true);
+      expect(sent.to_settlement_unavailable).toBe(true);
+      expect(sent.from_settlement_id).toBeUndefined();
+    });
+
+    it('🔴 the dead end is gone for Viloyatlar aro too — it predates this card', async () => {
+      /*
+       * Found while closing T-127, and it corrects the card's own step 1: `GeoSheet` commits an
+       * endpoint ONLY on reaching `endLevel`, and closing it saves nothing. Since 2026-09-03
+       * (when `LocationCard` moved onto `GeoSheet` with `endLevel="settlement"`), a district
+       * with no QFY list could therefore not be completed in ANY of the four scopes — not "was
+       * fine because the QFY was optional". The escape fixes all four; this pins the plainest.
+       * `aro` matches at the district anyway, so the strip must NOT claim a fallback.
+       */
+      await mount(); // scope: 'aro'
+      fireEvent.press(screen.getByRole('button', { name: T.fromLabel }));
+      fireEvent.press(await screen.findByText(FARGONA.name));
+      fireEvent.press(await screen.findByText(QOQON.name));
+      fireEvent.press(await screen.findByText(T.settlementListEmptyAction));
+
+      await waitFor(() => expect(screen.getByText(QOQON.name)).toBeOnTheScreen());
+      expect(screen.getByText(T.scopeMatchAt_adm2)).toBeOnTheScreen();
+      expect(screen.queryByText(T.scopeMatchDistrictFallback)).not.toBeOnTheScreen();
+    });
+
+    it('a populated district is unaffected — no way out is offered', async () => {
+      jest.mocked(fetchGeoSettlements).mockResolvedValue([YAYPAN]);
+      await mountYaqin();
+      fireEvent.press(screen.getByRole('button', { name: T.fromLabel }));
+      fireEvent.press(await screen.findByText(FARGONA.name));
+      fireEvent.press(await screen.findByText(QOQON.name));
+      expect(await screen.findByText(YAYPAN.name)).toBeOnTheScreen();
+      expect(screen.queryByText(T.settlementListEmptyAction)).not.toBeOnTheScreen();
+    });
   });
 
   it('refuses a scheduled departure that slipped inside the 31-minute floor', async () => {

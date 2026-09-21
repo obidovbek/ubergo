@@ -78,6 +78,14 @@ import {
   isOrderScope,
 } from "../types/orderScope";
 import { ScopeRootCard } from "../components/passengerOffer/ScopeRootCard";
+import {
+  fieldsForProblem,
+  matchesShallower,
+  orderProblems,
+  scopeMatchKey,
+  scopeProblemKey,
+  type ScopeSide,
+} from "../utils/scopeCompleteness";
 import type { GeoPath } from "../components/geo/GeoSheet";
 import { scopeRootChanged } from "../utils/scopeRoot";
 import { bumpLastSearchRoute } from "../utils/lastSearch";
@@ -558,16 +566,52 @@ export const CreatePassengerOfferScreen: React.FC = () => {
     return combineDateTime(arriveDate ?? departDate, arriveUntil);
   };
 
+  /**
+   * T-127 — a `LocationValue` as the scope rule reads it: ids only, plus the one fact the
+   * picker learned (`settlementUnavailable`).
+   */
+  const scopeSideOf = (location: LocationValue): ScopeSide => ({
+    province_id: location.province?.id ?? null,
+    city_id: location.cityDistrict?.id ?? null,
+    settlement_id: location.settlement?.id ?? null,
+    settlementUnavailable: location.settlementUnavailable === true,
+  });
+
   const validateForm = (withSpecialOrder: boolean): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Province + city/district are required; settlement and landmark are not
-    // (many districts have no settlements at all).
+    // Province + city/district are required everywhere; how much DEEPER this order must go is
+    // decided by its scope, immediately below (T-127).
     if (!fromLocation.province || !fromLocation.cityDistrict) {
       newErrors.from_text = t("passengerOffers.errorFromLocation");
     }
     if (!toLocation.province || !toLocation.cityDistrict) {
       newErrors.to_text = t("passengerOffers.errorToLocation");
+    }
+
+    /*
+     * 🔴 T-127 — THE ORDER MUST REACH THE DEPTH ITS SCOPE MATCHES AT.
+     *
+     * `Tuman ichi` and `Yaqin hududlar` match at the QFY (T-102i built the server half), and
+     * until now this form demanded only a district for all four scopes — so a passenger could
+     * ask for QFY precision and silently be matched at the district instead. `Viloyat ichi`
+     * additionally requires one province, `Yaqin` two different districts.
+     *
+     * ⚠️ Only reported for endpoints that got as far as a district: a blank endpoint already
+     * has its own error above, and adding "select the QFY" beside "select the location" would
+     * be two messages for one empty field.
+     */
+    if (fromLocation.cityDistrict && toLocation.cityDistrict) {
+      for (const problem of orderProblems(
+        scopeSideOf(fromLocation),
+        scopeSideOf(toLocation),
+        scope,
+      )) {
+        for (const field of fieldsForProblem(problem)) {
+          // First problem per field wins — `SCOPE_PROBLEM_ORDER` decides which that is.
+          newErrors[field] ??= t(scopeProblemKey(problem, scope));
+        }
+      }
     }
 
     const startAtDate = getStartAtDate();
@@ -727,6 +771,15 @@ export const CreatePassengerOfferScreen: React.FC = () => {
          * used — which is the default, and is what it behaved as.
          */
         match_scope: scope,
+        /*
+         * T-127 — the claim, not a column: "this district has no QFY list", which only the
+         * client can know (it received the empty list). The server relaxes the QFY requirement
+         * for that side and stores nothing. See `utils/scopeGuard.relaxUnavailable`.
+         */
+        from_settlement_unavailable:
+          fromLocation.settlementUnavailable === true || undefined,
+        to_settlement_unavailable:
+          toLocation.settlementUnavailable === true || undefined,
         // seats_needed and max_price_per_seat are deliberately absent: the API
         // derives the seat count, and this form collects no price at all.
         // T-031 — the flags are the source of truth. The server keeps the
@@ -1014,6 +1067,26 @@ export const CreatePassengerOfferScreen: React.FC = () => {
                   scopeRoot={scopeRoot}
                 />
               </View>
+
+              {/*
+                🔴 T-127 — THE MATCH STRIP. One line under the route saying what this order
+                will actually be searched on, because the scope's promise is otherwise
+                invisible: all four ride types draw the same route block, and the only thing
+                separating `Tuman ichi` from `Viloyat ichi` is the depth it matches at.
+
+                It is also the only place a passenger can learn why the form refuses — and,
+                when a district turned out to have no QFY list, that this order will be matched
+                one level shallower than the ride type promises.
+              */}
+              <Text style={styles.matchStrip}>
+                {matchesShallower(
+                  scopeSideOf(fromLocation),
+                  scopeSideOf(toLocation),
+                  scope,
+                )
+                  ? t("passengerOffers.scopeMatchDistrictFallback")
+                  : t(scopeMatchKey(scope))}
+              </Text>
 
               <View style={styles.timeCard}>
                 <TimeWindowCard
@@ -1411,6 +1484,18 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.palette.borders.chrome,
     marginHorizontal: 12,
+  },
+  /**
+   * T-127 — the MATCH strip: a quiet caption under the route, not a card. It states a fact
+   * about how the order will be searched, so it must read as annotation rather than as another
+   * field the passenger has to deal with.
+   */
+  matchStrip: {
+    marginTop: -2,
+    marginHorizontal: 4,
+    fontSize: 12,
+    lineHeight: 16,
+    color: theme.palette.text.tertiary,
   },
   // T-101 step 8c — `cardTitle`/`cardTitleDanger` died with the last two headings.
   /**
