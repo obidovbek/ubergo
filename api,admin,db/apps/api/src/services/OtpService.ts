@@ -78,7 +78,7 @@ class OtpService {
       baseURL: config.ivr.apiUrl,
       timeout: 10000,
       headers: {
-        'Authorization': `Bearer ${config.ivr.apiKey}`,
+        Authorization: `Bearer ${config.ivr.apiKey}`,
       },
     });
 
@@ -124,20 +124,26 @@ class OtpService {
     if (config.eskiz.email && config.eskiz.password) {
       try {
         console.log('Authenticating with Eskiz using email/password...');
-        const response = await this.eskizClient.post<EskizAuthResponse>('/auth/login', {
-          email: config.eskiz.email,
-          password: config.eskiz.password,
-        });
+        const response = await this.eskizClient.post<EskizAuthResponse>(
+          '/auth/login',
+          {
+            email: config.eskiz.email,
+            password: config.eskiz.password,
+          }
+        );
         // 🔒 T-034: `response.data` carries the full Eskiz BEARER TOKEN.
         // Printing it handed anyone with log access our SMS account.
         this.eskizToken = response.data.data.token;
         // Token typically expires in 30 days, we'll refresh after 29 days
-        this.eskizTokenExpiry = Date.now() + (29 * 24 * 60 * 60 * 1000);
+        this.eskizTokenExpiry = Date.now() + 29 * 24 * 60 * 60 * 1000;
 
         console.log('Eskiz authentication successful');
         return this.eskizToken;
       } catch (error: any) {
-        console.error('Eskiz authentication failed:', error.response?.data || error.message);
+        console.error(
+          'Eskiz authentication failed:',
+          error.response?.data || error.message
+        );
         throw new Error('Failed to authenticate with SMS provider');
       }
     }
@@ -176,7 +182,10 @@ class OtpService {
     // Guard both limits: the retriever's delivery cap and the single-segment cap.
     const bytes = Buffer.byteLength(withHash, 'utf8');
     const chars = withHash.length;
-    if (bytes > SMS_RETRIEVER_MAX_BYTES || chars > SMS_UCS2_SINGLE_SEGMENT_CHARS) {
+    if (
+      bytes > SMS_RETRIEVER_MAX_BYTES ||
+      chars > SMS_UCS2_SINGLE_SEGMENT_CHARS
+    ) {
       console.warn(
         `OTP SMS with app hash is ${chars} chars / ${bytes} bytes (limits: ` +
           `${SMS_UCS2_SINGLE_SEGMENT_CHARS} chars, ${SMS_RETRIEVER_MAX_BYTES} bytes). ` +
@@ -207,33 +216,42 @@ class OtpService {
         },
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       // 🔒 T-034: response bodies from Eskiz can echo the message text, which
       // contains the code. Log only the outcome, below.
-      
+
       // Check for both 'success' and 'waiting' statuses as valid
-      const isSuccess = response.data.status === 'success' || response.data.status === 'waiting';
-      
+      const isSuccess =
+        response.data.status === 'success' ||
+        response.data.status === 'waiting';
+
       if (isSuccess) {
         console.log('SMS sent successfully');
       } else {
         // 🔒 T-034: `response.data` can echo the message text (with the code).
-        console.warn(`SMS send failed, status=${response.data?.status ?? 'unknown'}`);
+        console.warn(
+          `SMS send failed, status=${response.data?.status ?? 'unknown'}`
+        );
       }
 
       return isSuccess;
     } catch (error: any) {
-      console.error('Eskiz SMS send failed:', error.response?.data || error.message);
-      
+      console.error(
+        'Eskiz SMS send failed:',
+        error.response?.data || error.message
+      );
+
       // Provide more specific error messages
       if (error.response?.data?.message) {
-        throw new Error(`SMS yuborishda xatolik: ${error.response.data.message}`);
+        throw new Error(
+          `SMS yuborishda xatolik: ${error.response.data.message}`
+        );
       }
-      
+
       throw new Error('SMS yuborishda xatolik yuz berdi');
     }
   }
@@ -272,7 +290,10 @@ class OtpService {
    * The message is translated and `retryAfterSec` is real (measured from the newest
    * code), so the app can show and drive a countdown instead of a generic toast.
    */
-  private async checkRateLimit(phone: string, language: Language = DEFAULT_LANGUAGE): Promise<void> {
+  private async checkRateLimit(
+    phone: string,
+    language: Language = DEFAULT_LANGUAGE
+  ): Promise<void> {
     const now = Date.now();
 
     // Check: max 1 request per minute. Fetch the newest code rather than counting, so
@@ -340,15 +361,19 @@ class OtpService {
 
     // Generate OTP code
     const code = this.generateCode();
-
+    console.log('code', code);
     // Calculate expiry
-    const expiresAt = new Date(Date.now() + config.otp.expiryMinutes * 60 * 1000);
-    
+    const expiresAt = new Date(
+      Date.now() + config.otp.expiryMinutes * 60 * 1000
+    );
+
     // 🔒 T-034: this block used to print the OTP **code** in clear text, along
     // with the phone number and the full metadata. The owner's own `kubectl
     // logs` paste on 2026-08-08 contained a live code — anyone with log access
     // could sign in as any user. A log line is not a private place.
-    console.log(`sendOtp: channel=${channel} target=${maskPhone(phone)} expires=${expiresAt.toISOString()}`);
+    console.log(
+      `sendOtp: channel=${channel} target=${maskPhone(phone)} expires=${expiresAt.toISOString()}`
+    );
 
     // 🔒 T-034: retire any code still live for this phone before issuing a new
     // one, so exactly ONE code is valid at a time.
@@ -546,4 +571,3 @@ class OtpService {
 }
 
 export default new OtpService();
-
