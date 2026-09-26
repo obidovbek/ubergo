@@ -33,7 +33,11 @@ export default {
     url: "URL manzili noto'g'ri formatda",
     unique: "{field} allaqachon mavjud",
     notMatch: "{field} mos kelmadi",
-    invalidDate: "Sana noto'g'ri formatda",
+    // 🔴 T-129: this had NO {field}, so a refusal read "Sana noto'g'ri formatda"
+    // — and the licence page has NINE date fields. That is T-061's "it says the
+    // data is wrong but not which row" in a new place. Every other template here
+    // names its subject; this one now does too.
+    invalidDate: "{field} noto'g'ri formatda",
     pastDate: "Sana o'tmishda bo'lishi kerak",
     futureDate: "Sana kelajakda bo'lishi kerak",
     invalidChoice: "Noto'g'ri tanlov",
@@ -182,6 +186,9 @@ export default {
     owner_pinfl: 'Egasining JSHSHIR',
     
     // Taxi license fields
+    // T-129: `license_issue_date` had no entry, so its refusal named the raw
+    // column. Every DATEONLY field a driver route validates needs one.
+    license_issue_date: 'Litsenziya berilgan sana',
     license_registry_number: 'Litsenziya reyestr raqami',
     license_sheet_number: 'Litsenziya varaqasi raqami',
     license_sheet_valid_from: 'Amal qilish boshlanishi',

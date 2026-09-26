@@ -32,7 +32,8 @@ export default {
     url: "Invalid URL format",
     unique: "{field} already exists",
     notMatch: "{field} does not match",
-    invalidDate: "Invalid date format",
+    // T-129: see the note in uz.ts — the template named no field.
+    invalidDate: "{field} has an invalid date format",
     pastDate: "Date must be in the past",
     futureDate: "Date must be in the future",
     invalidChoice: "Invalid choice",
@@ -170,6 +171,8 @@ export default {
     owner_pinfl: "Owner's PINFL",
     
     // Taxi license fields
+    // T-129: see the note in uz.ts — this key was missing in all three locales.
+    license_issue_date: 'License Issue Date',
     license_registry_number: 'License Registry Number',
     license_sheet_number: 'License Sheet Number',
     license_sheet_valid_from: 'Valid From',

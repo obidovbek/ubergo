@@ -6,7 +6,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { getLanguageFromHeaders } from '../i18n/config.js';
 import { getValidationError, formatValidationErrors, type ValidationErrorDetail } from '../i18n/translator.js';
 import type { Language } from '../i18n/types.js';
-import { isValidEmail, isValidPhone } from '../utils/validation.js';
+import { isIsoDate, isValidEmail, isValidPhone } from '../utils/validation.js';
+import { readField } from '../utils/readField.js';
 import {
   IdentifierError,
   isIdentifierProvided,
@@ -50,7 +51,13 @@ export const validateRequest = (rules: ValidationRule[]) => {
     const errors: Array<{ field: string; type: string; params?: Record<string, any> }> = [];
 
     for (const rule of rules) {
-      const value = data[rule.field];
+      /*
+       * T-129: a rule may name a NESTED field (`license.license_number`) —
+       * `DriverLicenseScreen` posts its fields one level down, and the old
+       * top-level-only read made every licence save fail on a field the body
+       * did contain. A plain key still reads the top level exactly as before.
+       */
+      const value = readField(data, rule.field);
 
       switch (rule.type) {
         case 'required':
@@ -59,14 +66,20 @@ export const validateRequest = (rules: ValidationRule[]) => {
           }
           break;
 
+        /*
+         * `String(value)` because `readField` returns `unknown` where the old
+         * index read returned `any`. It is deliberately NOT a `typeof` guard:
+         * that would let `{ email: 12345 }` through, which the previous code
+         * refused. The matched set is unchanged.
+         */
         case 'email':
-          if (value && !isValidEmail(value)) {
+          if (value && !isValidEmail(String(value))) {
             errors.push({ field: rule.field, type: 'email' });
           }
           break;
 
         case 'phone':
-          if (value && !isValidPhone(value)) {
+          if (value && !isValidPhone(String(value))) {
             errors.push({ field: rule.field, type: 'phone' });
           }
           break;
@@ -113,8 +126,14 @@ export const validateRequest = (rules: ValidationRule[]) => {
           }
           break;
 
+        /*
+         * T-129: `YYYY-MM-DD` and nothing else. This used to be `Date.parse`,
+         * which reads `01.03.2015` as January 3rd — exactly how the ORM read it
+         * on the way into a DATEONLY column, so a swapped date passed both and
+         * was stored. `isIsoDate` also rejects a date the calendar has not got.
+         */
         case 'date':
-          if (value && isNaN(Date.parse(value))) {
+          if (value !== undefined && value !== null && value !== '' && !isIsoDate(value)) {
             errors.push({ field: rule.field, type: 'invalidDate' });
           }
           break;
@@ -187,16 +206,44 @@ export const passportValidation = validateRequest([
   { field: 'pinfl', type: 'required' },
   { field: 'pinfl', type: 'minLength', params: { min: 14 } },
   { field: 'pinfl', type: 'maxLength', params: { max: 14 } },
+  // T-129: every DATEONLY column this route writes. Format-only — an absent
+  // date is still absent, because the app requires none of the three.
+  { field: 'birth_date', type: 'date' },
+  { field: 'issue_date', type: 'date' },
+  { field: 'expiry_date', type: 'date' },
 ]);
 
+/*
+ * 🔴 T-129: the fields on THIS route are one level down — the screen posts
+ * `{ license: { … }, emergencyContacts: [ … ] }`. The rule used to say
+ * `license_number`, which the validator looked for at the top level and never
+ * found, so **every licence save was refused** with "Guvohnoma raqami majburiy
+ * maydon" — while the number was right there under `license`. That is the
+ * owner's "Ma'lumotlarni saqlashda xatolik" on the licence page.
+ *
+ * The apps already expect this shape back: `DriverLicenseScreen` strips the
+ * `license.` prefix when it maps `errors[]` onto its form fields, and
+ * `getFieldName` falls back to the leaf so the message still names the field.
+ */
 export const licenseValidation = validateRequest([
-  { field: 'license_number', type: 'required' },
+  { field: 'license.license_number', type: 'required' },
   /*
    * 🔴 The `minLength: 5` that used to be here is GONE. `DriverLicenseScreen`
    * requires the number but sets no minimum, so a 4-character entry passes the
    * app — and the server would then have refused it, which is the round trip
    * T-061 was raised to stop. If a minimum is wanted it belongs in both places.
    */
+  // T-129: the 9 DATEONLY columns on `driver_licenses`. `birth_date` is in the
+  // service's accepted shape though no screen sends it — a direct API call can.
+  { field: 'license.birth_date', type: 'date' },
+  { field: 'license.issue_date', type: 'date' },
+  { field: 'license.category_a', type: 'date' },
+  { field: 'license.category_b', type: 'date' },
+  { field: 'license.category_c', type: 'date' },
+  { field: 'license.category_d', type: 'date' },
+  { field: 'license.category_be', type: 'date' },
+  { field: 'license.category_ce', type: 'date' },
+  { field: 'license.category_de', type: 'date' },
 ]);
 
 export const vehicleValidation = validateRequest([
@@ -208,6 +255,12 @@ export const vehicleValidation = validateRequest([
 
 export const taxiLicenseValidation = validateRequest([
   { field: 'license_number', type: 'required' },
+  // T-129: the 3 DATEONLY columns on `driver_taxi_licenses`. This screen already
+  // sent ISO before the card (its own `convertDateToISO`) — the rule is the
+  // backstop for a direct API call, and the reason the app's helper is shared now.
+  { field: 'license_issue_date', type: 'date' },
+  { field: 'license_sheet_valid_from', type: 'date' },
+  { field: 'license_sheet_valid_until', type: 'date' },
 ]);
 
 /*

@@ -22,6 +22,27 @@
 
 ## 🔥 Now (working on it)
 
+- [ ] T-129 (P1) 🔴 **[OWNER 2026-09-24] DRIVER REGISTRATION DIES AT THE LICENCE PAGE WITH
+  "Ma'lumotlarni saqlashda xatolik" — the server's answer never reaches the screen, the licence
+  validator reads a field the app nests, and every date leaves the app as DD.MM.YYYY.**
+  → `docs/PLAN.md`. Owner: *"Haydovchilik guvohnomasi sahifasida Malumotlarni saqlashda hatolik
+  deb beryapti"*.
+  🔴 **Three layers, grounded 2026-09-24:** ① all **13** wrappers in `api/driver.ts` `throw new
+  Error(result.message)` — no status, no body — so `getFieldErrors` sees nothing and
+  `handleBackendError` treats every refusal as a dropped connection → the screen's default text.
+  **T-061's read path (2026-08-11) has never received a field error on any of the five screens.**
+  ② `licenseValidation` (T-063) reads `license_number` at the TOP level; the screen posts
+  `{ license: { license_number, … }, emergencyContacts }` → a deterministic 422 on every save once
+  that API is live. **T-063's "32/32" suite is not in the tree.** ③ personal-info, passport and
+  licence post dates as `DD.MM.YYYY`; Sequelize's `DATEONLY` feeds them to `moment()` with no
+  format — **measured with node: `15.03.2015` → "Invalid date" (500); `01.03.2015` → 2015-01-03,
+  day and month SWAPPED and saved.** 13 of the 16 DATEONLY columns on the driver models are fed
+  this way; only the taxi screen converts to ISO. Rows already saved may hold swapped dates.
+  **Fix the class:** one `ApiError` helper for all 13 wrappers; one pure `toIsoDate`/`fromIsoDate`
+  replacing four screen-local copies; `validateRequest` learns dotted paths; the server's `date`
+  rule accepts ONLY `YYYY-MM-DD`; a checker so bare wrappers cannot regrow. ⚠️ Needs an API deploy
+  AND a driver-app rebuild. ❌ No migration. **T-130** (name prefill + expired passport) follows.
+
 - [ ] T-102 (P1) 📍 **STRUCTURED GEO MATCHING FOR OFFERS — the card that makes T-101's four order
   scopes actually work.** Full analysis in `docs/PLAN-T101-SCOPES.md`; plan + resume point in
   `docs/PLAN-T102.md` §9.
@@ -110,7 +131,7 @@
   module (`validateScope`, matching at adm3) stands and the form tightens beyond the artboard.
   `yaqin` requires a QFY on both ends. ⚠️ **Half-overlaps T-102i** (the read side) — do it after, or
   with it: completeness only matters once something matches at adm3.
-  ✅ **2026-09-21 — BUILT, steps 0-5, NOT COMMITTED → `docs/PLAN.md`.** Each scope now demands the
+  ✅ **2026-09-21 — BUILT, steps 0-5, COMMITTED as `cdded9a` → `docs/PLAN-T127.md`.** Each scope now demands the
   depth it matches at — in the form (per field, plus a MATCH strip naming the level) and on the
   server (7 keyed 400s × uz/ru/en). `geoMatch.validateScope` got its first reader; the app's copy is
   held to it by **`shared/scope-cases.json`**, 17 cases both suites execute. A district with **no QFY
@@ -124,7 +145,7 @@
   order; the server stays lenient on untouched routes). **Committed.**
   ⏸️ **PARKED 2026-09-21** — no Claude work left. Owner: API deploy + user-app rebuild, then
   `CHECKLIST.md` §3 (six T-127 walks).
-  🟢 **MOVED *Next* → *Now* 2026-09-21, plan written and awaiting approval → `docs/PLAN.md`.**
+  🟢 **MOVED *Next* → *Now* 2026-09-21, plan written and awaiting approval → `docs/PLAN-T127.md`.**
   **Owner decided ① the same day: the server refuses on create, and on update only when the row
   would STILL be incomplete** — so an order made 09-13…09-21 as `tuman` with no QFY stays editable.
   🔴 **Measured 2026-09-21: `geoMatch.validateScope` STILL HAS ZERO CALLERS** — it appears only in
@@ -524,6 +545,10 @@
   the app too; it is not a validation fix and was not done here.
   **32/32 with the rule arrays EXTRACTED from the real source and EXECUTED against the exact
   payloads the screens send, 9 red.** `tsc` API **281 = baseline**.
+  🔴 **2026-09-24 — that suite is NOT in the tree** (nothing under the API references
+  `licenseValidation` but the validator, the route and a note), **and `licenseValidation` reads
+  `license_number` at the top level while `DriverLicenseScreen` nests it under `license`** — so
+  once deployed it refuses every licence save. → **T-129**.
   ⚠️ **Needs an API deploy** — the app itself is untouched, so no rebuild.
 
 - [ ] T-084 (P2) ✅ **DONE 2026-08-13, code-complete and untested. The passenger finally SEES what
@@ -642,6 +667,9 @@
   🔴 **The status code was the wrong question all along.** Rather than listing 400/409/422 in five
   screens, one shared **`getFieldErrors(error)`** asks *did the server name any fields?* — so a 400
   with no `errors[]` still falls through to `handleBackendError` and is not swallowed.
+  🔴 **2026-09-24 — that read path has never received anything:** every wrapper in `api/driver.ts`
+  throws a bare `Error` (no status, no body), so `getFieldErrors` has had nothing to read on any of
+  the five screens since this card shipped. → **T-129**.
   🔴 **Three defects this card did not go looking for:** `SequelizeValidationError` forwarded
   Sequelize's own **English** (*"Validation isEmail on email failed"*) to Uzbek drivers;
   `parseValidationErrors` read only the axios-shaped `.response`, so a correctly-built `ApiError`
@@ -1154,6 +1182,24 @@ masofalar'`). **2 of the 6 were on
   primary number and duplicates, with toasts. Awaiting owner device test.** → `docs/OWNER_REQUESTS.md`
 
 ## 📋 Next (ready to start)
+
+- [ ] T-131 (P1) 🔒 **The OTP code is printed in clear text again.** Commit `2d0a613` ("code sms",
+  2026-09-21) is a Prettier reformat of `OtpService.ts` plus ONE new line — `console.log('code',
+  code)` at `:364`, two lines above the T-034 comment explaining why exactly that line was removed
+  (the owner's own `kubectl logs` paste once contained a live code). One-line delete; **must land
+  before the next API deploy.** Owner confirmed 2026-09-24. Boarded by T-129's start-day.
+
+- [ ] T-130 (P2) 👤 **[OWNER 2026-09-24] A passenger who then registers as a driver starts with an
+  EMPTY name; an EXPIRED passport is accepted.** Owner: *"yo'lovchi ilovada qilgan ism familiya
+  chiqmayapti"* · *"amal qilish muddati tugagan bo'lsa xato berishi"* (reading confirmed by the
+  owner 2026-09-24: the passport's expiry date). ① `DriverService.getDriverProfile` returns only
+  the `driver_profiles` row and `DriverPersonalInfoScreen` fills the form only when one exists —
+  the passenger's name is on `users.first_name/last_name` (T-062's two-tables class, the name
+  instead of the email). ② `DriverPassportScreen:824` checks `expiry_date` only against
+  `issue_date`, never against today. Fix: the profile GET falls back to the `users` row for the
+  name (and gender / birth date when empty); the passport screen AND `passportValidation` refuse an
+  expiry in the past (keyed, all three languages). **After T-129** — it rides on the same wrappers
+  and the same date helper.
 
 - [ ] T-101 (P1) 🎨 🔥 **ACTIVE — THE NEW DESIGN SYSTEM. Owner drew 33 artboards in `htmlDesign/`
   with Claude Design (2026-08-29); this card rebuilds both apps' visual foundation on them, then

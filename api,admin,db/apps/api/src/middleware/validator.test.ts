@@ -14,9 +14,16 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
-import { profileIdentifiersValidation, ValidationError } from './validator.js';
+import {
+  licenseValidation,
+  passportValidation,
+  personalInfoValidation,
+  profileIdentifiersValidation,
+  taxiLicenseValidation,
+  ValidationError,
+} from './validator.js';
 
 type Body = Record<string, unknown>;
 
@@ -239,5 +246,262 @@ describe('profileIdentifiersValidation — the message a user actually sees', ()
     const detail = errorFor(run({ username: 'abc12' }, 'de'), 'username');
     const uz = errorFor(run({ username: 'abc12' }, 'uz'), 'username');
     assert.equal(detail.message, uz.message);
+  });
+});
+
+/*
+ * ── T-129: the driver-registration validators ──────────────────────────────
+ *
+ * Two defects the owner hit on a phone, both invisible to a type checker:
+ *   ① `licenseValidation` required `license_number` at the TOP level while
+ *      `DriverLicenseScreen` posts it under `license` — so every licence save
+ *      was refused for a field the body did contain.
+ *   ② the `date` rule was `Date.parse`, which reads `01.03.2015` as January 3rd
+ *      exactly as the ORM did — a swapped date passed the server and was stored.
+ *
+ * ⚠️ These assertions run the REAL exported middleware over the REAL payload
+ * shape the screens send, and they EVALUATE every message in all three locales.
+ * A rule naming a field the dictionary has not got shows the raw column instead,
+ * and only rendering the sentence catches that.
+ */
+
+type Middleware = (req: Request, res: Response, next: NextFunction) => void;
+
+/** Run any of the exported validators over a body. */
+function check(middleware: Middleware, body: Body, acceptLanguage?: string) {
+  const req = {
+    body,
+    params: {},
+    query: {},
+    headers: acceptLanguage ? { 'accept-language': acceptLanguage } : {},
+  } as unknown as Request;
+
+  let nexted = false;
+  try {
+    middleware(req, {} as unknown as Response, () => {
+      nexted = true;
+    });
+  } catch (error) {
+    assert.ok(error instanceof ValidationError, `expected a ValidationError, got ${error}`);
+    return { passed: false, errors: error.errors, status: error.statusCode };
+  }
+  return { passed: nexted, errors: [] as ValidationError['errors'], status: 200 };
+}
+
+/** The refusal for one field, or a failure naming what did come back. */
+function detailFor(result: ReturnType<typeof check>, field: string) {
+  assert.equal(result.passed, false, 'expected the request to be refused, but it passed');
+  const detail = result.errors.find((item) => item.field === field);
+  assert.ok(detail, `expected an error on ${field}, got ${JSON.stringify(result.errors)}`);
+  return detail;
+}
+
+/** Exactly what `DriverLicenseScreen` posts, once its dates are converted. */
+const LICENCE_BODY = {
+  license: {
+    license_number: 'AB1234567',
+    issue_date: '2015-03-15',
+    category_b: '2015-03-15',
+    category_be: '2018-07-01',
+  },
+  emergencyContacts: [
+    { phone_country_code: '+998', phone_number: '901234567', relationship: 'Otam' },
+  ],
+};
+
+/** What `DriverPassportScreen` posts (it drops empty strings before sending). */
+const PASSPORT_BODY = {
+  first_name: 'Bekzod',
+  last_name: 'Obidov',
+  gender: 'male',
+  birth_date: '1994-05-20',
+  id_card_number: 'AB1234567',
+  pinfl: '12345678901234',
+  issue_date: '2020-01-15',
+  expiry_date: '2030-01-15',
+};
+
+describe('T-129 ① licenseValidation reads the field where the screen puts it', () => {
+  it("accepts the screen's own nested payload — this is the save that used to fail", () => {
+    const result = check(licenseValidation, LICENCE_BODY);
+    assert.equal(result.passed, true, JSON.stringify(result.errors));
+  });
+
+  it('still refuses a licence with no number, and names it', () => {
+    const detail = detailFor(
+      check(licenseValidation, { license: {} }, 'uz'),
+      'license.license_number'
+    );
+    assert.equal(detail.type, 'required');
+    assert.equal(detail.message, 'Guvohnoma raqami majburiy maydon');
+  });
+
+  it('refuses a body that puts the number at the TOP level — that is not the contract', () => {
+    // The mirror of the old bug: whichever level the rule is read at, one of
+    // these two tests goes red if it is the wrong one.
+    assert.equal(check(licenseValidation, { license_number: 'AB1234567' }).passed, false);
+  });
+
+  it('names the field in every locale, never a translation key or a raw column', () => {
+    for (const [language, expected] of [
+      ['uz', 'Guvohnoma raqami'],
+      ['ru', 'Номер прав'],
+      ['en', 'License Number'],
+    ] as const) {
+      const message = detailFor(
+        check(licenseValidation, { license: {} }, language),
+        'license.license_number'
+      ).message;
+      assert.ok(message.includes(expected), `expected "${expected}" in "${message}" (${language})`);
+      assert.ok(!message.includes('fields.'), `a translation key leaked: "${message}"`);
+      assert.ok(!message.includes('license_number'), `the raw column leaked: "${message}"`);
+    }
+  });
+
+  it('reports the field with its full path, which is what the app maps onto its form', () => {
+    // `DriverLicenseScreen` strips the `license.` prefix. A bare leaf would work
+    // too, but the path says which object the field came from.
+    const detail = detailFor(check(licenseValidation, { license: {} }), 'license.license_number');
+    assert.equal(detail.field, 'license.license_number');
+  });
+});
+
+describe('T-129 ② a DATEONLY field accepts ISO only, on every driver route', () => {
+  it("accepts the screens' real payloads", () => {
+    assert.equal(check(passportValidation, PASSPORT_BODY).passed, true);
+    assert.equal(
+      check(personalInfoValidation, {
+        first_name: 'Bekzod',
+        last_name: 'Obidov',
+        gender: 'male',
+        birth_date: '1994-05-20',
+      }).passed,
+      true
+    );
+    assert.equal(
+      check(taxiLicenseValidation, {
+        license_number: 'TX-1',
+        license_issue_date: '2024-02-29',
+        license_sheet_valid_from: '2024-03-01',
+        license_sheet_valid_until: '2026-03-01',
+      }).passed,
+      true
+    );
+  });
+
+  /*
+   * 🔴 The exact two strings off the owner's phone. `15.03.2015` became
+   * "Invalid date" (a 500 behind a generic toast); `01.03.2015` became
+   * 2015-01-03 and was SAVED, day and month exchanged.
+   */
+  for (const bad of ['15.03.2015', '01.03.2015']) {
+    it(`refuses ${bad} — the display format the app used to post`, () => {
+      for (const field of ['birth_date', 'issue_date', 'expiry_date']) {
+        const result = check(passportValidation, { ...PASSPORT_BODY, [field]: bad });
+        assert.equal(detailFor(result, field).type, 'invalidDate');
+      }
+
+      const licence = { ...LICENCE_BODY, license: { ...LICENCE_BODY.license, category_b: bad } };
+      assert.equal(detailFor(check(licenseValidation, licence), 'license.category_b').type, 'invalidDate');
+
+      const personal = { first_name: 'B', last_name: 'O', gender: 'male', birth_date: bad };
+      assert.equal(detailFor(check(personalInfoValidation, personal), 'birth_date').type, 'invalidDate');
+
+      const taxi = { license_number: 'TX-1', license_sheet_valid_until: bad };
+      assert.equal(
+        detailFor(check(taxiLicenseValidation, taxi), 'license_sheet_valid_until').type,
+        'invalidDate'
+      );
+    });
+  }
+
+  it('refuses a date the calendar has not got, and an unpadded one', () => {
+    // moment rolls 2015-02-30 forward to March 2nd rather than refusing it, and
+    // `Date.parse('2015-3-5')` succeeds — both used to reach the column.
+    for (const bad of ['2015-02-30', '2015-3-5', '2015-13-01']) {
+      const result = check(passportValidation, { ...PASSPORT_BODY, issue_date: bad });
+      assert.equal(detailFor(result, 'issue_date').type, 'invalidDate', `${bad} should be refused`);
+    }
+  });
+
+  it('skips a date that is absent or empty — no screen requires one', () => {
+    const { birth_date: _b, issue_date: _i, expiry_date: _e, ...noDates } = PASSPORT_BODY;
+    assert.equal(check(passportValidation, noDates).passed, true);
+    assert.equal(check(passportValidation, { ...noDates, issue_date: '' }).passed, true);
+    assert.equal(check(licenseValidation, { license: { license_number: 'AB1' } }).passed, true);
+  });
+
+  it('every one of the 16 validated date fields renders a named message in all three locales', () => {
+    const licenceDateFields = [
+      'birth_date',
+      'issue_date',
+      'category_a',
+      'category_b',
+      'category_c',
+      'category_d',
+      'category_be',
+      'category_ce',
+      'category_de',
+    ];
+
+    const cases: Array<[Middleware, Body, string]> = [
+      [personalInfoValidation, { first_name: 'B', last_name: 'O', gender: 'male', birth_date: 'x' }, 'birth_date'],
+      [passportValidation, { ...PASSPORT_BODY, birth_date: 'x' }, 'birth_date'],
+      [passportValidation, { ...PASSPORT_BODY, issue_date: 'x' }, 'issue_date'],
+      [passportValidation, { ...PASSPORT_BODY, expiry_date: 'x' }, 'expiry_date'],
+      ...licenceDateFields.map(
+        (field) =>
+          [licenseValidation, { license: { license_number: 'AB1', [field]: 'x' } }, `license.${field}`] as
+            [Middleware, Body, string]
+      ),
+      [taxiLicenseValidation, { license_number: 'TX', license_issue_date: 'x' }, 'license_issue_date'],
+      [taxiLicenseValidation, { license_number: 'TX', license_sheet_valid_from: 'x' }, 'license_sheet_valid_from'],
+      [taxiLicenseValidation, { license_number: 'TX', license_sheet_valid_until: 'x' }, 'license_sheet_valid_until'],
+    ];
+
+    assert.equal(cases.length, 16, 'the driver routes validate 16 DATEONLY fields');
+
+    for (const [middleware, body, field] of cases) {
+      for (const language of ['uz', 'ru', 'en'] as const) {
+        const message = detailFor(check(middleware, body, language), field).message;
+        assert.ok(message.length > 0, `${field} (${language}) rendered nothing`);
+        assert.ok(!message.includes('fields.'), `${field} (${language}) leaked a key: "${message}"`);
+        assert.ok(!message.includes('validation.'), `${field} (${language}) leaked a key: "${message}"`);
+        /*
+         * 🔴 The assertion that earns its keep. Removing one `fields.*` entry
+         * left every check above happy, because `getFieldName` falls back to the
+         * column name — which is a plausible-looking word, not a visible key. No
+         * label in any of the three dictionaries contains a snake_case token, so
+         * one appearing here means the dictionary is missing that field.
+         */
+        assert.ok(
+          !/[a-z]+_[a-z]+/.test(message),
+          `${field} (${language}) shows the raw column instead of a label: "${message}"`
+        );
+      }
+    }
+  });
+
+  it('a date refusal NAMES which date — nine of them share the licence page', () => {
+    // Before T-129 every one of these read "Sana noto'g'ri formatda", so a
+    // driver with nine date fields was told only that one of them was wrong.
+    const issue = detailFor(check(passportValidation, { ...PASSPORT_BODY, issue_date: 'x' }, 'uz'), 'issue_date').message;
+    const expiry = detailFor(check(passportValidation, { ...PASSPORT_BODY, expiry_date: 'x' }, 'uz'), 'expiry_date').message;
+    assert.notEqual(issue, expiry);
+    assert.ok(issue.includes('Berilgan sana'), issue);
+    assert.ok(expiry.includes('Amal qilish muddati'), expiry);
+
+    const categoryB = detailFor(
+      check(licenseValidation, { license: { license_number: 'AB1', category_b: 'x' } }, 'uz'),
+      'license.category_b'
+    ).message;
+    assert.ok(categoryB.includes('Kategoriya B'), categoryB);
+  });
+
+  it('answers 422 with a per-field array — the shape the apps read', () => {
+    const result = check(passportValidation, { ...PASSPORT_BODY, issue_date: '15.03.2015' });
+    assert.equal(result.status, 422);
+    assert.equal(result.errors.length, 1);
+    assert.equal(detailFor(result, 'issue_date').field, 'issue_date');
   });
 });

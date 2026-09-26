@@ -40,6 +40,7 @@ import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
 import { useFieldScroll } from '../utils/formScroll';
 import { validateField, isValidDate } from '../utils/validation';
 import { updatePassport, getDriverProfile, fetchGeoCountries, fetchGeoProvinces, fetchGeoCityDistricts, uploadImage, type GeoOption } from '../api/driver';
+import { formatDisplayDate, fromIsoDate, parseDisplayDate } from '../utils/formDate';
 
 const theme = createTheme('light');
 
@@ -431,54 +432,17 @@ export const DriverPassportScreen: React.FC = () => {
     }
   };
 
-  const convertDateFormat = (dateString: string | null | undefined): string => {
-    if (!dateString) return '';
 
-    // If already in DD.MM.YYYY format, return as is
-    if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-      return dateString;
-    }
 
-    // If in YYYY-MM-DD format, convert to DD.MM.YYYY
-    const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      const year = isoMatch[1];
-      const month = isoMatch[2].padStart(2, '0');
-      const day = isoMatch[3].padStart(2, '0');
-      return `${day}.${month}.${year}`;
-    }
-
-    // Return as is if format is unknown
-    return dateString;
-  };
-
-  const formatDate = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
+  /*
+   * T-129: the PARSING is shared (`utils/formDate.ts`); the year ceiling is
+   * this screen’s own rule and stays here. Four copies of this function
+   * existed and had drifted on exactly that number.
+   */
   const parseDate = (dateString: string): Date | null => {
-    // Parse DD.MM.YYYY format
-    const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (!match) return null;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
-    const year = parseInt(match[3], 10);
-
-    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
-      return null;
-    }
-
-    const date = new Date(year, month, day);
-    // Validate the date (e.g., check for invalid dates like 31.02.2000)
-    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-      return null;
-    }
-
-    return date;
+    const date = parseDisplayDate(dateString);
+    if (!date) return null;
+    return date.getFullYear() > new Date().getFullYear() + 10 ? null : date;
   };
 
   const handleDateInputChange = (field: 'birth_date' | 'issue_date' | 'expiry_date', text: string) => {
@@ -526,7 +490,7 @@ export const DriverPassportScreen: React.FC = () => {
     }
 
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
-    const formattedDate = formatDate(tempDate);
+    const formattedDate = formatDisplayDate(tempDate);
     updateField(datePickerField, formattedDate);
     setShowDatePicker(false);
     setDatePickerField(null);
@@ -611,7 +575,7 @@ export const DriverPassportScreen: React.FC = () => {
           first_name: profile.profile.first_name || '',
           last_name: profile.profile.last_name || '',
           father_name: profile.profile.father_name || '',
-          birth_date: convertDateFormat(profile.profile.birth_date),
+          birth_date: fromIsoDate(profile.profile.birth_date),
         };
 
         setPersonalInfo(personalInfoData);
@@ -619,9 +583,9 @@ export const DriverPassportScreen: React.FC = () => {
         // Pre-fill form data with personal info as defaults
         const passportData = (profile.profile as any).passport || {};
 
-        const birthDateStr = convertDateFormat(passportData.birth_date) || personalInfoData.birth_date;
-        const issueDateStr = convertDateFormat(passportData.issue_date) || '';
-        const expiryDateStr = convertDateFormat(passportData.expiry_date) || '';
+        const birthDateStr = fromIsoDate(passportData.birth_date) || personalInfoData.birth_date;
+        const issueDateStr = fromIsoDate(passportData.issue_date) || '';
+        const expiryDateStr = fromIsoDate(passportData.expiry_date) || '';
 
         // Initialize selected dates
         const birthDate = birthDateStr ? parseDate(birthDateStr) : new Date(2000, 0, 1);

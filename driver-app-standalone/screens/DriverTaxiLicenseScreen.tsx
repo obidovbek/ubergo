@@ -40,6 +40,7 @@ import { useFieldScroll } from '../utils/formScroll';
 import { validateForm, validateField, type ValidationRule } from '../utils/validation';
 import { updateTaxiLicense, getDriverProfile, getDriverProfileStatus, uploadImage } from '../api/driver';
 import { notifyDriverProfileChanged } from '../utils/driverProfileEvents';
+import { formatDisplayDate, fromIsoDate, parseDisplayDate, toIsoDate } from '../utils/formDate';
 
 const theme = createTheme('light');
 
@@ -124,78 +125,19 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     fieldErrors[field] ? styles.labelError : undefined,
   ];
 
-  const convertDateFormat = (dateString: string | null | undefined): string => {
-    if (!dateString) return '';
 
-    // If already in DD.MM.YYYY format, return as is
-    if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-      return dateString;
-    }
 
-    // If in YYYY-MM-DD format, convert to DD.MM.YYYY
-    const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      const year = isoMatch[1];
-      const month = isoMatch[2].padStart(2, '0');
-      const day = isoMatch[3].padStart(2, '0');
-      return `${day}.${month}.${year}`;
-    }
-
-    // Return as is if format is unknown
-    return dateString;
-  };
-
-  const formatDate = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
+  /*
+   * T-129: the PARSING is shared (`utils/formDate.ts`); the year ceiling is
+   * this screen’s own rule and stays here. Four copies of this function
+   * existed and had drifted on exactly that number.
+   */
   const parseDate = (dateString: string): Date | null => {
-    // Parse DD.MM.YYYY format
-    const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (!match) return null;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
-    const year = parseInt(match[3], 10);
-
-    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
-      return null;
-    }
-
-    const date = new Date(year, month, day);
-    // Validate the date (e.g., check for invalid dates like 31.02.2000)
-    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-      return null;
-    }
-
-    return date;
+    const date = parseDisplayDate(dateString);
+    if (!date) return null;
+    return date.getFullYear() > new Date().getFullYear() + 10 ? null : date;
   };
 
-  const convertDateToISO = (dateString: string): string | null => {
-    if (!dateString || dateString.trim() === '') {
-      return null;
-    }
-
-    // If already in YYYY-MM-DD format, return as is
-    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return dateString;
-    }
-
-    // Convert DD.MM.YYYY to YYYY-MM-DD
-    const parsedDate = parseDate(dateString);
-    if (!parsedDate) {
-      return null; // Invalid date
-    }
-
-    const year = parsedDate.getFullYear();
-    const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-    const day = parsedDate.getDate().toString().padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  };
 
   const handleDateInputChange = (field: 'license_issue_date' | 'license_sheet_valid_from' | 'license_sheet_valid_until', text: string) => {
     // Remove all non-digits
@@ -255,7 +197,7 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     }
 
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
-    const formattedDate = formatDate(tempDate);
+    const formattedDate = formatDisplayDate(tempDate);
     updateField(datePickerField, formattedDate);
     setShowDatePicker(false);
     setDatePickerField(null);
@@ -360,9 +302,9 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
         return;
       }
 
-      const issueDateStr = convertDateFormat(taxiLicense.license_issue_date);
-      const validFromStr = convertDateFormat(taxiLicense.license_sheet_valid_from);
-      const validUntilStr = convertDateFormat(taxiLicense.license_sheet_valid_until);
+      const issueDateStr = fromIsoDate(taxiLicense.license_issue_date);
+      const validFromStr = fromIsoDate(taxiLicense.license_sheet_valid_from);
+      const validUntilStr = fromIsoDate(taxiLicense.license_sheet_valid_until);
 
       // Initialize selected dates - only set if date strings exist
       if (issueDateStr) {
@@ -859,15 +801,15 @@ export const DriverTaxiLicenseScreen: React.FC = () => {
     try {
       // Convert dates to YYYY-MM-DD format and validate them
       const licenseIssueDateISO = formData.license_issue_date
-        ? convertDateToISO(formData.license_issue_date)
+        ? toIsoDate(formData.license_issue_date)
         : null;
 
       const licenseSheetValidFromISO = formData.license_sheet_valid_from
-        ? convertDateToISO(formData.license_sheet_valid_from)
+        ? toIsoDate(formData.license_sheet_valid_from)
         : null;
 
       const licenseSheetValidUntilISO = formData.license_sheet_valid_until
-        ? convertDateToISO(formData.license_sheet_valid_until)
+        ? toIsoDate(formData.license_sheet_valid_until)
         : null;
 
       const cleanData: any = {

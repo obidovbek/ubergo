@@ -41,6 +41,7 @@ import { handleBackendError, getFieldErrors } from '../utils/errorHandler';
 import { useFieldScroll } from '../utils/formScroll';
 import { validateForm, validateField, isValidDate, type ValidationRule } from '../utils/validation';
 import { updateLicense, getDriverProfile, uploadImage, fetchCountries, type CountryOption } from '../api/driver';
+import { formatDisplayDate, fromIsoDate, parseDisplayDate } from '../utils/formDate';
 
 const theme = createTheme('light');
 
@@ -118,54 +119,17 @@ export const DriverLicenseScreen: React.FC = () => {
     }
   };
 
-  const convertDateFormat = (dateString: string | null | undefined): string => {
-    if (!dateString) return '';
 
-    // If already in DD.MM.YYYY format, return as is
-    if (dateString.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-      return dateString;
-    }
 
-    // If in YYYY-MM-DD format, convert to DD.MM.YYYY
-    const isoMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      const year = isoMatch[1];
-      const month = isoMatch[2].padStart(2, '0');
-      const day = isoMatch[3].padStart(2, '0');
-      return `${day}.${month}.${year}`;
-    }
-
-    // Return as is if format is unknown
-    return dateString;
-  };
-
-  const formatDate = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
+  /*
+   * T-129: the PARSING is shared (`utils/formDate.ts`); the year ceiling is
+   * this screen’s own rule and stays here. Four copies of this function
+   * existed and had drifted on exactly that number.
+   */
   const parseDate = (dateString: string): Date | null => {
-    // Parse DD.MM.YYYY format
-    const match = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (!match) return null;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
-    const year = parseInt(match[3], 10);
-
-    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > new Date().getFullYear() + 10) {
-      return null;
-    }
-
-    const date = new Date(year, month, day);
-    // Validate the date
-    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-      return null;
-    }
-
-    return date;
+    const date = parseDisplayDate(dateString);
+    if (!date) return null;
+    return date.getFullYear() > new Date().getFullYear() + 10 ? null : date;
   };
 
   const loadLicenseData = async () => {
@@ -178,21 +142,21 @@ export const DriverLicenseScreen: React.FC = () => {
           first_name: profile.profile.first_name || '',
           last_name: profile.profile.last_name || '',
           father_name: profile.profile.father_name || '',
-          birth_date: convertDateFormat(profile.profile.birth_date),
+          birth_date: fromIsoDate(profile.profile.birth_date),
         });
 
         // Load license data if exists
         const licenseDataFromApi = (profile.profile as any).license || {};
 
         // Initialize dates
-        const issueDateStr = convertDateFormat(licenseDataFromApi.issue_date);
+        const issueDateStr = fromIsoDate(licenseDataFromApi.issue_date);
         const issueDate = issueDateStr ? parseDate(issueDateStr) : new Date();
         if (issueDate) setSelectedDate(prev => ({ ...prev, issue_date: issueDate }));
 
         // Initialize category dates
         categories.forEach(category => {
           const fieldKey = `category_${category.toLowerCase()}`;
-          const dateStr = convertDateFormat(licenseDataFromApi[fieldKey]);
+          const dateStr = fromIsoDate(licenseDataFromApi[fieldKey]);
           if (dateStr) {
             const parsedDate = parseDate(dateStr);
             if (parsedDate) {
@@ -205,13 +169,13 @@ export const DriverLicenseScreen: React.FC = () => {
           ...prev,
           license_number: licenseDataFromApi.license_number || prev.license_number,
           issue_date: issueDateStr || prev.issue_date,
-          category_a: convertDateFormat(licenseDataFromApi.category_a) || prev.category_a,
-          category_b: convertDateFormat(licenseDataFromApi.category_b) || prev.category_b,
-          category_c: convertDateFormat(licenseDataFromApi.category_c) || prev.category_c,
-          category_d: convertDateFormat(licenseDataFromApi.category_d) || prev.category_d,
-          category_be: convertDateFormat(licenseDataFromApi.category_be) || prev.category_be,
-          category_ce: convertDateFormat(licenseDataFromApi.category_ce) || prev.category_ce,
-          category_de: convertDateFormat(licenseDataFromApi.category_de) || prev.category_de,
+          category_a: fromIsoDate(licenseDataFromApi.category_a) || prev.category_a,
+          category_b: fromIsoDate(licenseDataFromApi.category_b) || prev.category_b,
+          category_c: fromIsoDate(licenseDataFromApi.category_c) || prev.category_c,
+          category_d: fromIsoDate(licenseDataFromApi.category_d) || prev.category_d,
+          category_be: fromIsoDate(licenseDataFromApi.category_be) || prev.category_be,
+          category_ce: fromIsoDate(licenseDataFromApi.category_ce) || prev.category_ce,
+          category_de: fromIsoDate(licenseDataFromApi.category_de) || prev.category_de,
           license_front_url: licenseDataFromApi.license_front_url || prev.license_front_url,
           license_back_url: licenseDataFromApi.license_back_url || prev.license_back_url,
         }));
@@ -376,7 +340,7 @@ export const DriverLicenseScreen: React.FC = () => {
     }
 
     setSelectedDate(prev => ({ ...prev, [datePickerField]: tempDate }));
-    const formattedDate = formatDate(tempDate);
+    const formattedDate = formatDisplayDate(tempDate);
     updateLicenseField(datePickerField, formattedDate);
     setShowDatePicker(false);
     setDatePickerField(null);

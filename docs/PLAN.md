@@ -4,427 +4,281 @@
 > mark it `[x]` IMMEDIATELY. Keep **Resume point** always true — a brand-new
 > chat must be able to continue the work using ONLY this file.
 >
-> 📦 **T-102i → `docs/PLAN-T102i.md`** (DONE, `a06614c`; the read side this card is the write side of).
-> 📦 **T-114 → `PLAN-T114.md`** — ① done and *Parked*; **② IS THIS CARD.** Its §8 lists ①'s device walk.
-> 📦 **T-102 → `docs/PLAN-T102.md`** (§9 = the parent's resume point) · **T-101 → `PLAN-T101.md`**
-> (steps 2b, 19-26 open) · **T-116 → `PLAN-T116.md`** · **T-088 → `PLAN-T088-finish.md`** ·
+> 📦 **T-127 → `docs/PLAN-T127.md`** (DONE, `cdded9a`, *Parked*) · **T-102i → `PLAN-T102i.md`** ·
+> **T-114 → `PLAN-T114.md`** · **T-102 → `PLAN-T102.md`** (§9 = the parent's resume point) ·
+> **T-101 → `PLAN-T101.md`** · **T-116 → `PLAN-T116.md`** · **T-088 → `PLAN-T088-finish.md`** ·
 > **T-122 / T-123 / T-121 / T-118** → their own files.
 
 ---
 
-## 🔴 BOARD STATE 2026-09-21 — read before starting anything
+## 🔴 BOARD STATE 2026-09-24 — read before starting anything
 
 **`tsc` BASELINES: API 281 · admin 6 (`tsc -b`) · user 3 · driver 19.** Lint 0 errors everywhere;
 **warnings API 230 · user 208 · driver 275.** Colour ceilings user 1 · driver 3. **Never raise one.**
-**Suites:** **API 391** · **user 278 + 12 checkers** · **driver 295 + 12 checkers**.
-**Ratchets that this card can trip:** the API's `i18n/unkeyedErrors.test.ts` (**CEILING 107** English
-4xx `AppError`s — a new English 400 RAISES it and goes red) and each app's `check-raw-error-toasts.mjs`.
-**Board:** `node scripts/check-board.mjs` → ✓ before starting; *Now* = **T-127 · T-102** (see step 0).
+**Suites:** **API 442** · **user 285 + 13 checkers** · **driver 295 + 12 checkers** (2026-09-21;
+step 1 re-measures). **Ratchets this card can trip:** the API's `i18n/unkeyedErrors.test.ts`
+(**CEILING 107** English 4xx `AppError`s — a new English 400 RAISES it and goes red) and the driver
+app's `check-raw-error-toasts.mjs` (no toast may show a raw `.message`).
+**Board:** `node scripts/check-board.mjs` → ✓; *Now* = **T-129 · T-102**.
 🛑 **The device backlog is long and this card adds to it:** T-102c 1-3, T-102e, T-102i, T-114 ①,
-T-115, T-116, T-123, T-088's 401 — **none walked on a phone, and the API is not deployed.**
+T-115, T-116, T-123, T-127, T-088's 401 — **none walked on a phone, and the API is not deployed.**
+🔒 **T-131 (one-line delete of the OTP `console.log`) must ride the same API deploy.**
 
 ---
 
 ## Task
 
-- **ID / name:** T-127 — **per-scope completeness: each order scope demands the geo depth it
-  matches at, and the form says so.**
-- **Why now:** owner picked it (2026-09-21). It is the **write side of T-102i**, which shipped the
-  read side two days ago: the server now matches a `tuman` / `yaqin` order **at the QFY** — but
-  nothing anywhere requires the passenger to give one, so the order matches at a level it may not
-  have reached. The blocking decision was already taken by the owner on 2026-09-13.
-- **What is wrong today, in one line:** **the form accepts an order the matcher cannot serve** —
-  `Tuman ichi` with no QFY, or with its two endpoints in different districts.
+- **ID / name:** T-129 — **driver registration: the server's answers reach the screens, dates
+  travel as ISO.**
+- **Why now:** owner reported 2026-09-24 — *"Haydovchilik guvohnomasi sahifasida Malumotlarni
+  saqlashda hatolik deb beryapti"*. Registration is blocked at step 3 for every driver, and the
+  dates it did manage to save may be wrong.
+- **What is wrong today, in one line:** **the licence page refuses every save and cannot say why.**
 
-### 🔴 What is true today (measured 2026-09-21, read from the code)
+### 🔴 What is true today (measured 2026-09-24, read from the code and one node one-liner)
 
-1. **`geoMatch.validateScope` has ZERO callers.** Grepped across the whole API: `validateScope`,
-   `isScopeValid` and `ScopeProblem` appear only in `geoMatch.ts` and `geoMatch.test.ts`. The rule
-   is written, tested (9 assertions) and applied nowhere — the same state `placeHit`'s half was in
-   before T-102i gave it readers. **It already encodes exactly the owner's table:**
-   `missing_from` / `missing_to` at `matchLevelFor(scope)` · `different_province` (viloyat) ·
-   `different_district` (tuman) · `same_district` (yaqin).
-2. **The form demands province + district and nothing else, for all four scopes.**
-   `CreatePassengerOfferScreen.tsx:566-571` — *"Province + city/district are required; settlement
-   and landmark are not"*. So `Tuman ichi` submits with no QFY, and `T-102i`'s adm3 branch then
-   silently falls back to the district for that side.
-3. **The API validates the scope's SPELLING and not its content.** `PassengerOfferService`
-   (`:517-528`) refuses a `match_scope` that is not one of the four — deliberately, so a typo cannot
-   become NULL — and never looks at whether the geo ids satisfy it. The 8 geo id columns are parsed
-   (`:480-485`) with no cross-field rule at all.
-4. **So the contradiction T-114 recorded is still live**, word for word: *"the Tuman board accepts
-   an endpoint with NO QFY, but `validateScope(order,'tuman')` matches at adm3 and refuses it."*
-5. **`yaqin` and `aro` are still identical in the form** (`ORDER_SCOPE_GEO`: both `rootLevel: null`,
-   `startLevel: 'province'`). `orderScope.ts:72` says so out loud and says **the ONLY difference is
-   completeness — this card.**
-6. **Three entry points navigate to the form with no scope at all** (`MyOrdersScreen:729`,
-   `MyPassengerOffersScreen:589` and `:629`) → they fall back to `aro`, whose demands are exactly
-   what the form already enforces. **Unchanged by this card**, but it means the strictest scopes are
-   reachable only from the home carousel.
-7. **Old orders:** `match_scope` is NULL before 2026-09-13 and those open as `aro`. Orders made
-   between 2026-09-13 and today **can carry `tuman` with no QFY** — they are exactly what a new
-   server-side rule would lock out of editing. **Risk 1 below; it decides step 2's shape.**
-8. **The driver app is not involved.** A driver states a place SET, validated by a different rule
-   (`validateOfferPlaces`, which *does* have a caller: `DriverOfferService:548`).
-
-### ✅ Decision ① — how hard does the server refuse? **ANSWERED 2026-09-21: A**
-
-- **A — refuse on create, and on update only when the order would still be incomplete
-  (recommended). ← the owner's choice.** The client stops it first; the server is the backstop. An order made before this
-  card that is already incomplete **can still be edited** — the rule is applied to the merged row,
-  so the passenger fixing the route fixes the order, and a passenger only changing the price is not
-  held hostage by geo they cannot see. *Why:* nothing is un-editable, and the rule still cannot be
-  bypassed by a client that skips the form.
-- **B — refuse on create and on every update, no exception.** Simpler sentence, but an order created
-  on 2026-09-14 as `tuman` with no QFY becomes **uneditable** until the passenger re-picks the
-  route — including when they only wanted to change the seat count.
-- **C — client only, server unchanged.** Cheapest, and it leaves the contradiction in place for any
-  caller that is not this form. **Not recommended** — it is what "the rules exist and nothing
-  applies them" already cost us twice (T-102i, T-116).
-
-### ✅ Decision ② — what happens when a district has NO QFYs? **ANSWERED 2026-09-21: A**
-
-**The question for the owner, in one line: do all districts in `geo_settlements` have QFY rows, or
-are there districts with none?** (Two minutes in the admin panel; I cannot reach the DB.)
-
-- **A — the sheet offers a way out, always (recommended). ← the owner's choice**, taken without
-  checking the data first *because it is correct either way*: if no district is empty the row never
-  renders, and if one is, nobody is trapped. When the QFY list comes back empty, the
-  sheet shows one row: *"Bu tumanda QFY ro'yxati yo'q — tuman bo'yicha davom etish"*, which
-  completes the endpoint at the district. The form accepts it and **the strip says that side will
-  match at the district, not the QFY.** *Why:* it is correct whichever way the data turns out, the
-  passenger is never trapped, and T-102i's loose rule already serves such an order sensibly.
-  Costs one sheet change and one more string.
-- **B — nothing special; require the QFY unconditionally.** Right **only if** every district really
-  has QFYs. If even a handful do not, those districts silently become unorderable for two of the
-  four ride types, and it will present as *"the app won't let me order"* with no clue why.
-- **C — fix the DATA instead** (populate the missing QFYs), then B. The cleanest end state, but it
-  is an owner data job of unknown size and it blocks this card until it is done.
-
-### Goal (definition of "done", for A)
-
-1. **The form demands what the scope matches at.** `Tuman ichi` and `Yaqin` require a **QFY on both
-   ends**; `Viloyat ichi` requires **both endpoints in the chosen province**; `Yaqin` requires **two
-   DIFFERENT districts**; `Viloyatlar aro` is unchanged. Each failure marks **its own field** and
-   says what is missing in the passenger's language.
-2. **The MATCH strip:** one line on the form, under the route block, that states in words what this
-   scope will match on — *"Tuman ichi: QFY darajasida qidiriladi"* — and turns into the reason when
-   something is missing. It is the only place the passenger can learn why the form refuses.
-3. **The server refuses the same order** (decision ① A), with a **keyed** message per problem —
-   `messageKey` at the throw site, **the 107 ceiling must not rise**.
-4. **One rule, two readers, pinned together** — the app's copy and `geoMatch.validateScope` run the
-   **same case table**, as T-102i's parity test does for `placeHit` ⇔ `adm3Clauses`.
-5. **Every new test proven red; all baselines held** (API 281 / 0·230 · user 3 / 0·208 · driver
-   untouched); uz · ru · en for every new string.
-
-### Explicitly OUT of scope
-
-- 🛑 **Adjacency.** `yaqin` will demand *two different districts*, **not two NEIGHBOURING ones** —
-  `geo_district_neighbors` is unpopulated and its admin screen is **T-102f**. Demanding real
-  adjacency now would refuse every `yaqin` order on the planet.
-- 🛑 **T-128** (the driver side, still by text) · **T-102f / T-102h** · **running the backfill**.
-- 🛑 **The `aro` / `yaqin` picker difference** — they stay identical in `ORDER_SCOPE_GEO`; T-114 ①
-  measured that and it is correct. This card separates them by COMPLETENESS only.
-- 🛑 **Any migration.** Every column exists. ❌ No dependency, no `infra/**`.
-- 🛑 **Backfilling a scope onto pre-2026-09-13 orders** — inferring one from stored geo is a guess
-  (T-114 settled this).
+1. **The screen cannot see the answer.** All **13** wrappers in `driver-app-standalone/api/driver.ts`
+   do `throw new Error(result.message || …)` — no status, no body (`:123 :261 :613 :647 :681 :715`
+   and the seven geo/vehicle loaders). `getFieldErrors` reads `error.response.data.errors` → `null`;
+   `handleBackendError` sees `status === undefined`, treats it as a dropped connection and shows the
+   screen's `defaultMessage` — `driverLicense.errorUpdate` = *"Ma'lumotlarni saqlashda xatolik"*.
+   **T-061 (2026-08-11) rebuilt the screens to display the server's `errors[]`; nothing has ever
+   arrived.** `api/auth.ts` already does it right: `throw new ApiError(response.status, data, …)`.
+2. **The licence validator reads the wrong level.** `validateRequest` looks up `data[rule.field]`
+   (top level only, `validator.ts:52`); `licenseValidation` (T-063) requires `license_number`
+   (`:193`); `DriverLicenseScreen` posts `{ license: { license_number, issue_date, category_* },
+   emergencyContacts }` (`:668`). → **422 on every save**, message *"Guvohnoma raqami kiritilishi
+   shart"* — which layer 1 then hides. **T-063's card claims a 32-test suite; nothing in the API
+   references `licenseValidation` but the validator, the route and `VALIDATOR_EXPORTS_FIX.md`.**
+3. **Dates are ambiguous on the wire.** Personal-info (`birth_date`), passport (`birth_date`,
+   `issue_date`, `expiry_date`) and licence (`issue_date` + 7 `category_*`) post the display
+   format `DD.MM.YYYY` unchanged. The models are `DATEONLY`; Sequelize's `_sanitize` is
+   `moment(value).format('YYYY-MM-DD')` with **no format string**. Measured in the API's own
+   `node_modules`:
+   `15.03.2015 → "Invalid date"` (Postgres rejects → 500 → generic toast) ·
+   `01.03.2015 → 2015-01-03` (**day and month swapped, saved without a word**).
+   The server's `date` rule is `Date.parse` (`:117`): same behaviour, so it catches nothing the DB
+   would not. **13 of the 16 DATEONLY columns on the driver models are fed this way; only
+   `DriverTaxiLicenseScreen` converts to ISO** (`convertDateToISO`, `:177`, screen-local).
+4. Four screens carry their own copy of `convertDateFormat` (ISO → display); `utils/date.ts` has no
+   display → ISO helper. Emergency contacts are fine (only `driver_profile_id` is required).
+5. **None of the five registration screens has a test**, and `api/driver.ts` has none.
 
 ## Approach
 
-- **The API's `validateScope` is the rule; nothing re-decides it.** The service calls it — the
-  module gets its first reader, exactly as T-102i did for `placeHit`.
-- **The app needs its own copy** (two standalone apps, no shared package — CLAUDE.md), so the
-  drift risk is the T-123 / T-116 class. Mitigation, up front rather than discovered: a **shared
-  case table** — one list of `(from, to, scope) → problems[]` fixtures written once and run by
-  **both** the API test and the app checker, so a rule that changes on one side goes red on the
-  other. If the two cannot share a file cleanly, the fallback is the same table duplicated with a
-  checker asserting the two copies are identical — decided by measurement in step 1, not now.
-- **The strip renders from the rule's output, not from a second `if`** — the same problem list that
-  blocks submit writes the sentence.
-- **Per-field errors reuse the form's existing `errors` map** (`from_text` / `to_text`), so the
-  inline marking and the toast both work with no new plumbing.
-- **Prove red on every change**, predictions written before running; revert from a scratchpad
-  golden copy.
-- ⚠️ **No test here touches Postgres.** Whether a real `tuman` order now refuses on a phone is a
-  **device check**, and it is listed as one.
+**Fix the class, not the instance** (`ubexgo-fix-the-class-not-the-instance`): 13 wrappers, not
+one; all date-bearing screens, not the licence page; every DATEONLY field the driver routes accept,
+not `license_number`.
+
+- **Server, dates (strict):** the `date` rule accepts **only `YYYY-MM-DD`** — `01.03.2015` is
+  ambiguous and the server cannot know which was meant, so refusing beats guessing. Pure
+  `utils/isoDate.ts`, tested with the owner's kind of input. Rule added to **every** DATEONLY field
+  on the five driver routes (16 fields; keyed `validation.invalidDate` exists in uz/ru/en).
+- **Server, nesting:** `validateRequest` learns a dotted path (`license.license_number`) via a pure
+  `readField(data, path)`; the app already strips the `license.` prefix when it maps `errors[]`
+  back to its form (`DriverLicenseScreen:700`). ⚠️ `getFieldName` resolves `fields.<key>` — a
+  dotted key must resolve `fields.license_number`, or the message loses its subject (T-061's exact
+  bug). Step 1 checks this.
+- **App, dates:** one pure `utils/formDate.ts` — `toIsoDate('15.03.2015') → '2015-03-15' | null`,
+  `fromIsoDate('2015-03-15') → '15.03.2015'` — replaces four screen-local copies and the taxi
+  screen's helper; conversion happens **at the POST boundary**, in pure payload builders.
+- **App, wrappers:** one module-local `readJsonOrThrow(response, fallback)` in `api/driver.ts`
+  that throws `ApiError(response.status, body, fallback)` (the `auth.ts` idiom); all 13 use it. A
+  checker (`scripts/check-api-errors.mjs`) so a bare `throw new Error(result…` cannot return.
+- **Deploy order:** API first — the old app build is blocked at the licence today anyway, and the
+  strict date rule turns its silent swap into a keyed refusal. Then the driver-app rebuild.
 
 ## Steps
 
-- [x] **0a. Board.** ✅ **DONE 2026-09-21.** Owner moved **T-101 → *Next*** (no work in flight; its
-  resume point is safe in `PLAN-T101.md`), keeping T-102 beside this card because T-127 sits on its
-  rules, its deploy and its device walk. **T-127 *Next* → *Now*, P2 → P1.** One card, one copy —
-  both were MOVED, and each carries a dated line saying where it went and why.
-  `node scripts/check-board.mjs` → ✓ (129 cards, 2 in *Now*). The T-102 card's pointer was
-  repointed to `docs/PLAN-T102i.md`, and that file's resume point — which still read **"NOT
-  COMMITTED"** two days after `a06614c` landed — was corrected.
-- [x] **0b. Owner approval of this plan (rule 3).** ✅ **APPROVED 2026-09-21** ("ok", after the plan
-  was restated in plain language). **Decision ①: option A** — the server refuses on create, and on
-  update only when the row would STILL be incomplete. The owner also accepted the two warnings:
-  the app will start refusing what it used to accept (they read the new sentences before ship), and
-  `yaqin` checks *different* districts, not *adjoining* ones, until T-102f.
-- [x] **1. Measure, read-only.** ✅ **DONE 2026-09-21.** Four questions answered, and a fifth found.
-  - **The case table, read out of `validateScope` (not invented):**
-
-    | scope | level | from / to each need | cross-field rule | problem |
-    |---|---|---|---|---|
-    | `aro` | adm2 | `city_id` | — | — |
-    | `viloyat` | adm2 | `city_id` | same province | `different_province` |
-    | `tuman` | adm3 | `settlement_id` | same district | `different_district` |
-    | `yaqin` | adm3 | `settlement_id` | districts must DIFFER | `same_district` |
-
-    Plus `missing_from` / `missing_to` at the scope's own level. ⚠️ Two naming traps to carry into
-    the app's copy: `different_province` also fires when a province is **absent** (`a == null ||
-    b == null || a !== b`), and `same_district` fires **only when both districts are present** — so
-    a half-filled `yaqin` order reports `missing_*`, never `same_district`.
-  - **The shared case table WORKS, as JSON, with no bundler involved.** The app's checkers already
-    run `esbuild --platform=neutral` over app `.ts` (`check-order-scope-geo.mjs:28-41`) — but the
-    fixture needs no bundling at all: both sides are Node, so both `JSON.parse(readFileSync(...))`.
-    CI checks out the whole repo and only changes `working-directory`, so a repo-root path resolves
-    in CI exactly as locally. **Test-time only — no runtime import crosses a package**, so the apps
-    stay standalone in the sense that matters (nothing foreign is bundled into the shipped app).
-  - **The strip's place is settled by the layout:** between the `routeCard` and the `timeCard`
-    (`CreatePassengerOfferScreen.tsx:1016`), directly under the block it describes. Per-field errors
-    already have their plumbing — both `LocationCard`s take `error={errors.from_text|to_text}`.
-  - **A keyed 400 does not touch the ratchet.** `unkeyedErrors.test.ts:113` counts a site as `keyed`
-    when any argument after the status matches `/messageKey\s*:/`, so
-    `new AppError('…', 400, { messageKey: 'offers.…' })` leaves the ceiling at 107. The existing
-    pattern to copy is `PassengerOfferService.ts:947`.
-  - 🔴 **THE FIFTH THING, WHICH NOBODY WROTE DOWN — demanding a QFY can create a DEAD END.**
-    `GeoSheet` opens at `settlement` for `tuman`; if that district has no settlement rows it renders
-    `ListEmptyComponent` → *"Ro'yxat bo'sh"* (`GeoSheet.tsx:220`) and offers **no way forward** —
-    only Back (blocked: the root card pinned the district) and Close. ~~Today that is survivable
-    because the QFY is optional: the passenger closes the sheet and submits the district alone.~~
-    🔴 **CORRECTED IN STEP 5 — THAT SENTENCE WAS FALSE, AND I TOLD THE OWNER IT.** `GeoSheet`
-    commits an endpoint in exactly two places — `pick` at `endLevel` (`:172`) and the escape this
-    card added (`:255`) — and **closing it saves nothing**. So since **2026-09-03**, when
-    `LocationCard` moved onto `GeoSheet` with `endLevel="settlement"`, a district with no QFY list
-    has been **unorderable in ALL FOUR scopes**, not merely at risk of becoming so. The escape fixes
-    all four (`LocationCard` passes it whatever the scope); a test now pins it for `aro` too. I
-    reasoned about the sheet instead of reading its commit paths — the exact thing step 1 was for. The form's own comment claims this is common: *"many
-    districts have no settlements at all"* (`:565`). **I cannot measure the truth of that from
-    here — it is a DB question** → decision ② below. ⚠️ Also noted, not fixed: that empty-state
-    string is hardcoded Uzbek (the T-126 class, in the user app).
-- [x] **2. Server — `validateScope` gets its first caller.** ✅ **DONE 2026-09-21.**
-  **`utils/scopeGuard.ts` (new, pure)** — `scopeVerdict(patch, stored)` answers "refuse, and with
-  which sentence"; `PassengerOfferService.assertScopeSatisfied` is now ten lines that throw what it
-  returns, called from `buildOfferFields` beside `validateOfferData`. **The scope rules themselves
-  were not touched** — `geoMatch.validateScope` is unchanged and finally has a reader.
-  ⚠️ **It had to be a `utils/` module, not a private method:** services import Sequelize models and
-  this suite covers DB-free code only, so logic left in the service is untestable (the T-102i
-  precedent, `groupPlaceRows`). **7 keyed strings × uz/ru/en**, worded with the app's own names
-  (*«В районе» · «Tuman ichi» · Mavze / QFY · массив / СГМ*); ratchet **unmoved at 107**.
-  🔴 **THE BIGINT TRAP, A SECOND TIME — and this one refuses a CORRECT order.** Every geo id on
-  `passenger_offers` is **BIGINT**, which `pg` returns as a **string** (no `setTypeParser` in this
-  project), while `parseId` makes the patch's ids numbers. `validateScope` compares with `!==`, so
-  `10 !== '10'` would tell a passenger editing a valid *Tuman ichi* order that its two endpoints
-  are in different districts. The model's types say `number | null`, so `tsc` sees nothing.
-  Normalised in `toGeoId`, in the pure module, fed strings by every update test.
-  **Tests +28 (391 → 419)** — `scopeGuard.test.ts` (22) and a **computed-key block in
-  `messageKeys.test.ts`** (6).
-  🔴 **That block exists because I made a hole and noticed it:** T-116's key checker scans for
-  `messageKey: '<literal>'`, and this card's key is **computed** — so the whole family was invisible
-  to it and could have gone missing from ru/uz with every test green.
-  **Prove red — 7 mutations, 5 exact, and TWO THAT TAUGHT SOMETHING:**
-  ⓑ change-by-presence → 1 ✓ · ⓒ the untouched-route exemption dropped → 1 ✓ · ⓓ `match_scope` not
-  scope-sensitive → 1 ✓ · ⓔ the level dropped from the key → 10 ✓ · ⓕ one ru key renamed → 1 ✓ ·
-  ⓖ problem order reshuffled → 1 ✓.
-  🔴 **ⓐ — the BIGINT mutation — came back GREEN, proving my headline test tested nothing.** The
-  patch in it carried the *whole* form, so both sides were numbers and the mixed comparison never
-  happened. Rewritten to the shape that actually triggers it (**one side edited, the other read
-  from the stored row**) → now 2 red. *The test asserted the right outcome and never built the
-  condition; only the mutation could show that.*
-  🔴 **And `tsc` caught what the green suite hid** (the `ubexgo-verification-habits` lesson, exactly
-  as written): the API's `ORDER_SCOPES` is a list of **strings** while the user app's is a list of
-  **objects with `.key`** — same name, two shapes. My `s.key` was `undefined`, `matchLevelFor`
-  answered `'adm2'`, so **every computed key came out adm2 and the adm3 half was never checked**.
-  Suite green, `tsc` 282. Fixed, and the block now asserts both levels appear.
-  ⚠️ **Also self-inflicted and repaired:** a PowerShell `Set-Content -Encoding utf8` restore added a
-  **BOM and rewrote every line ending** in `ru.ts` (569-line diff for 7 keys). Restored from git and
-  re-applied with the editor — the three locale diffs are now **+15 / +15 / +20, zero deletions**.
-  **After:** `tsc` **281** · lint **0 / 230** · `npm test` **419/419**.
-- [x] **3. App — the rule, the form, the strip.** ✅ **DONE 2026-09-21.**
-  **`utils/scopeCompleteness.ts`** (pure, no react-native — the `scopeRoot.ts` precedent), deriving
-  the level from `ORDER_SCOPES` rather than re-listing it; `validateForm` marks **per field**
-  (relational problems mark BOTH — neither endpoint is wrong alone); the **MATCH strip** renders
-  under the route. **10 strings × uz/ru/en**, scopes named as the MENU names them.
-  ✅ **The shared case table is real:** `shared/scope-cases.json`, **17 cases**, executed by
-  **both** `check-scope-completeness.mjs` and the API's `scopeGuard.test.ts` — change a branch on
-  either side and the other goes red. Test-time only; nothing crosses a package at runtime.
-  ✅ **Decision ② built:** `GeoSheet` offers a way out when the deepest level's list is genuinely
-  empty (never for a search that found nothing), `LocationValue` records `settlementUnavailable`,
-  and the claim rides to the server as `from_/to_settlement_unavailable` — **a request-only claim,
-  not a column** (`scopeGuard.relaxUnavailable`). It relaxes ONLY `missing_*` at adm3 and only for
-  the side that made it: never a contradiction, never a missing district.
-  🔴 **What step 1 could not see, and only writing the tests revealed: the create path CANNOT
-  express an incomplete endpoint.** `GeoSheet` commits only on reaching `endLevel`, so an endpoint
-  either arrives complete or is never set. The client-side rule therefore guards **the EDIT path**
-  — an order created 2026-09-13…09-21 with no QFY — and the empty-list case. Written down in the
-  test file so the next reader does not "fix" an untested create-path branch that cannot happen.
-  **Tests +6 (278 → 284)** · **checker 119 assertions** (13 checkers now).
-  **Prove red — 6 mutations, ALL red, 3 counts off:** ⓗ escape never relaxes → jest 1 (predicted 2
-  — "offers a way out" never submits) + checker RED · ⓘ strip never admits the shallower match →
-  1 + RED ✓ · ⓙ every scope at adm2 → jest 3 (predicted 2 — it also breaks the edit-path refusal)
-  + RED · ⓚ picker stops reporting WHY → 2 ✓ · ⓛ escape row never rendered → jest 2 (predicted 3 —
-  the "populated district" case asserts absence, so it survives) · ⓜ form drops the rule → 1 ✓.
-  ⚠️ **Two test-authoring traps cost real time and are written into the test file:** a completed
-  endpoint renders its province on its own line, and **RNTL matches a button by its TEXT as well as
-  its label**, so "press Fargona viloyati" was ambiguous between the finished card and the open
-  sheet — and each `LocationCard` keeps its own `GeoSheet` MOUNTED when closed, so stale rows stay
-  in the tree. Both surfaced as *"Unable to find Rishton"* several steps later. Resolved by giving
-  the two endpoints different provinces, which is also the owner's own `yaqin` example.
-  **After:** user `tsc` **3** · lint **0 / 208** · **284** Jest + **13** checkers · API **442** ·
-  API `tsc` **281** · **driver app untouched**.
-- [x] **4. Measure.** ✅ **DONE 2026-09-21 — every number predicted, every number exact.**
-  API `tsc` 281 · lint 0/230 · 442 · ceiling 107 ✓ · user `tsc` 3 · lint 0/208 · 284 · 13 checkers ·
-  colour 1 ✓ · driver **0 files changed**, `tsc` 19 · lint 0/275 · 295 + 12 ✓.
-  ⚠️ **One defect of my own, found by re-reading rather than by any check:**
-  `check-scope-completeness.mjs` bundled the three locales separately and **never deleted them**
-  (`node_modules/.cache/scope-{uz,ru,en}.mjs`), while every sibling checker removes its bundles.
-  Harmless (gitignored) but the odd one out — rewritten to the house idiom (one bundle of
-  `translations/index.ts`, removed at once, as `check-order-scope-geo.mjs:243` does). **Re-proven
-  after the change:** still 119 assertions, nothing left in the cache, and **red (2) with
-  `scopeMatchAt_adm3` renamed in ru** — both QFY-level scopes share that line. Restored with
-  `File.WriteAllText` this time; `ru.ts` stayed at exactly +23 / −0.
-  **Predicted 2026-09-21, written before running:** API `tsc` **281** · lint **0 / 230** · **442** ·
-  English-4xx ceiling **107** (every new throw is keyed) · user `tsc` **3** · lint **0 / 208** ·
-  Jest **284** · **13** checkers · colour ceiling **1** (the strip uses a token) · driver: **no file
-  in `git status`**, `tsc` **19** · lint **0 / 275** · **295 + 12** — unchanged because nothing in
-  it was touched and `shared/` has no driver-app reader.
-- [x] **5. Close.** ✅ **DONE 2026-09-21 — except the commit, which waits on open question ⑥.**
-  `PLAN-T114.md` §8 (② built) · T-127's card (stays in *Now* until ⑥ is answered — it could still
-  mean code) · T-114's and T-102's cards · `CHECKLIST.md` §3 (a stale line rewritten + 6 walks) ·
-  `CLAUDE.md` (counts; the computed-key blind spot; **`shared/`**; **BIGINT as a §5 gotcha** — two
-  cards running) · `ARCHITECTURE.md` (Place-matching row, Tests row, the folder map gains `shared/`)
-  · JOURNAL.
-  🔴 **Closing found two things, and one of them was my own mistake:**
-  ① **Step 1's "survivable today" was false** — reading `GeoSheet`'s commit paths (not reasoning
-  about them) showed a district with no QFY list has been **unorderable in all four scopes since
-  2026-09-03**. The escape already fixed all four; **a test now pins it for `aro`** (15 screen tests;
-  mutation ⓛ now **3** red, predicted 3). User Jest **284 → 285**; `tsc` 3, lint 0/208.
-  ② **The app is stricter than decision ① on an edit** → open question ⑥ below.
+- [x] **0a** Board: T-129 → *Now* (P1), T-130 (P2) and T-131 (P1) → *Next*; T-127's card repointed
+  at `PLAN-T127.md`, its stale "NOT COMMITTED" corrected; T-061 / T-063 carry a dated correction;
+  `check-board` ✓.
+- [x] **0b** Plan approved by the owner 2026-09-24 ("i confirm" — decisions ①–③ at their defaults).
+- [x] **1 Measure, no code — done 2026-09-24.** Baselines re-run, **identical to the board:**
+  API `tsc` 281 · lint 0/230 · **442/442**; driver `tsc` 19 · lint 0/275 · **295/295 + 12
+  checkers** (44.9 s) · 3 colours.
+  **Payloads, read from the code:** personal-info → `/personal` flat, trimmed, empties dropped,
+  `birth_date` DD.MM.YYYY raw · passport → `/passport` flat, `birth_date`/`issue_date`/
+  `expiry_date` raw · licence → `/license` **nested** `{ license: {…}, emergencyContacts? }`, 8
+  dates raw · vehicle → `/vehicle` flat, no dates, `license_plate` top-level ✓ · taxi →
+  `/taxi-license` flat, 3 dates **already ISO** (screen-local `convertDateToISO`), `license_number`
+  top-level ✓. So the nesting bug is the licence route alone; the date bug is three screens.
+  **DATEONLY per route: 1 + 3 + 9 + 3 = 16** (licence: `birth_date` + `issue_date` + 7
+  `category_*`; the app never sends `license.birth_date`, the service accepts it — rule it too).
+  **Admin: closed (risk ⑤).** It only READS driver dates (`DriverDetailPage`); its writes go to
+  `/admin/drivers/:id` and `/status`, and no admin route imports the driver validators.
+  **Dotted key: confirmed (risk ⑥).** `getFieldName` → `t('fields.license.license_number')`, and
+  `t()` returns the KEY on a miss → *"fields.license.license_number kiritilishi shart"*. Step 3
+  resolves the leaf when the full path is not in the dictionary.
+  **Ceiling: safe.** `unkeyedErrors.test.ts:111` scans `new AppError(` sites only; `validateRequest`
+  throws `ValidationError`, keyed through `validation.*`. Steps 2–3 add no `AppError`.
+  **Harness: render is feasible.** `renderScreen` = real navigation + stubbed auth with
+  `token: 'test-access-token'`; tests mock `../api/driver` and `../utils/toast` per file (two do
+  already); `jest-expo` auto-mocks `expo-image-picker`; the licence screen has no native date
+  picker (text inputs); a missing translation key FAILS the test.
+  **Reuse, not a sixth regex:** `utils/validation.ts` `isValidDate` and four screen-local
+  `parseDate`s already parse DD.MM.YYYY. `formDate.ts` gets one `parseDisplayDate` the others can
+  call; `isValidDate` stays (it caps the year at today, wrong for an expiry).
+  **Raw-toast checker:** forbids `error.message` in toast args; step 6 passes the server's
+  translated `errors[].message` via `getFieldErrors`, never `.message`. Checker house shape: node
+  script, `✓`/`✗` verdict line, `exit 1`, a "PROVEN ABLE TO FAIL" footer.
+- [x] **2 API — dates. Done 2026-09-24.** `isIsoDate` went into the existing `utils/validation.ts`
+  beside its siblings rather than a new `isoDate.ts` (one import site, one test file). The `date`
+  rule uses it, and all **16** DATEONLY fields now carry the rule: passport ×3, licence ×9 (dotted),
+  taxi ×3, personal-info ×1 (it already had one). **API 442 → 465 tests.**
+  🔴 **Two defects the step found that the card had not:** ① **`validation.invalidDate` carried no
+  `{field}`** — every date refusal read *"Sana noto'g'ri formatda"*, and the licence page has NINE
+  date fields. That is T-061's *"it says the data is wrong but not which row"* in a second place;
+  the template now names its subject in all three locales. ② **`fields.license_issue_date` did not
+  exist** in any locale, so that field's refusal named the raw column. Added.
+- [x] **3 API — nesting. Done 2026-09-24.** `utils/readField.ts` + test (dotted, plain key, missing
+  branch, null/string/number branch, array index); `validateRequest` reads through it;
+  `licenseValidation` requires `license.license_number`; **`getFieldName` falls back to the LEAF** of
+  a dotted key, because `t()` returns the key on a miss and *"fields.license.license_number"* would
+  otherwise have gone to a driver. `email`/`phone` now pass `String(value)` — `readField` returns
+  `unknown` where the index read returned `any`, and a `typeof` guard would have started ACCEPTING
+  `{ email: 12345 }`, which the old code refused.
+  ✅ Checked, no code written: every Sequelize `validate:` block in the models is attached to a
+  **column**, so `mapSequelizeErrors`' `item.path` is always set and the new `{field}` template
+  cannot produce a headless sentence there.
+  ✅ **Proven able to fail — 9 mutations, 9 red** (scratch runner, each file restored and
+  byte-compared): ⓐ `readField` reads the top level only · ⓑ the `date` rule back to `Date.parse`
+  · ⓒ `isIsoDate` drops the calendar check · ⓓ `getFieldName` loses the leaf fallback · ⓔ the
+  licence rule back to a top-level `license_number` · ⓕ the uz dictionary loses
+  `license_issue_date` · ⓖ the licence date rules dropped · ⓗ the passport date rules dropped ·
+  ⓘ `invalidDate` stops naming its field.
+  🔴 **ⓕ CAME BACK GREEN THE FIRST TIME** — removing a `fields.*` entry left every assertion happy,
+  because the leaf fallback then yields the column name, which is a plausible word and not a
+  visible key. The test was rewritten to refuse a snake_case token in any message; it is now red.
+  *A mutation is the only thing that finds an assertion this shape.*
+- [x] **4 App — dates. Done 2026-09-24.** `utils/formDate.ts` — `parseDisplayDate`,
+  `formatDisplayDate`, `toIsoDate`, `fromIsoDate` — with 18 tests. **227 lines deleted from the
+  four screens for 61 added:** all four `convertDateFormat` copies (byte-identical, md5-checked)
+  and all four `formatDate` copies (likewise) are gone, plus the taxi `convertDateToISO`; 18 call
+  sites renamed. **Driver 295 → 313 tests**, `tsc` 19, lint 0/275, 12 checkers — all at baseline.
+  ✅ **What the copies disagreed on was the YEAR CEILING** — personal-info refused anything after
+  the current year, the other three allowed ten more. That is a *rule*, not parsing, so the shared
+  parser has **no ceiling** (documented and pinned by a test) and each screen keeps its own number
+  in a 4-line `parseDate` wrapper over the shared parse. Nothing changed behaviour; the rules about
+  which dates are allowed stay in `utils/dateLimits.ts` where T-101 put them.
+  ✅ **Proven able to fail — 7 mutations, 7 red**, each naming the expected test: ⓐ `toIsoDate`
+  swaps day and month (5 red, including *"NOT 2015-01-03"*) · ⓑ the calendar read-back removed ·
+  ⓒ padding removed · ⓓ `fromIsoDate` blanks what it cannot read · ⓔ a year ceiling put back in
+  the parser · ⓕ a half-typed date returned instead of null · ⓖ a loose ISO accepted as ISO.
+  🔴 **The first run reported all seven GREEN — and that was the RUNNER, not the tests.** Jest
+  prints `×` (U+00D7) on Windows and my matcher looked for `✕` (U+2715). Caught by mutating by hand
+  and reading the raw output instead of trusting the summary. *A green mutation is a claim about my
+  own tooling before it is a claim about the tests.*
+  ⚠️ **The screens are swapped but still POST the display format** — the conversion goes in at the
+  payload boundary in step 5. Nothing a driver does is different yet.
+  ⚠️ **PowerShell fixed one self-inflicted problem:** the swap script left a bare LF where each
+  deleted block had been, in four pure-CRLF files. Normalised and re-verified at 0.
+- [ ] **5 App — payload builders.** `utils/registrationPayload.ts`: `buildPersonalInfoPayload`,
+  `buildPassportPayload`, `buildLicensePayload(licenseData, contacts)` — dates → ISO at the boundary,
+  empties dropped, `license` nested, contacts filtered. `registrationPayload.test.ts` asserts the
+  wire shape (this is the one place the shape lives on the app side; step 3's test is its twin).
+  The three screens call the builders. Taxi keeps its shape, uses the shared helper.
+- [ ] **6 App — wrappers.** `api/driver.ts`: `readJsonOrThrow`; 13 wrappers use it.
+  `api/driver.test.ts` with a mocked `fetch`: a 422 `{ errors: [{ field: 'license.license_number',
+  message }] }` → the thrown error is an `ApiError` whose `getFieldErrors()` is that map; a 500 →
+  `status` 500; a 200 → `data`. Then `DriverLicenseScreen.test.tsx`: submit → `updateLicense`
+  called with ISO dates and nested `license`; a rejected 422 → **that** message under the field
+  and in the toast, not `driverLicense.errorUpdate`. If rendering needs more mocks than the harness
+  has, say so here and fall back to the builder tests + a thin render.
+- [ ] **7 Checker.** `scripts/check-api-errors.mjs`: no `throw new Error(result` in `api/*.ts`
+  (13 → 0, may not regrow). Proven red by re-adding one. **Also add** (raised by step 4): no screen
+  may define its own date parser or formatter — the four copies this card deleted are exactly the
+  thing that grows back, and `tsc` cannot see a re-added local function.
+- [ ] **8 Prove red + re-measure.** ≥ 8 mutations, red set predicted before each; `tsc` / lint /
+  `npm test` in both projects against the step-1 numbers; `check-raw-error-toasts` still green.
+- [ ] **9 Docs.** `CHECKLIST.md` — a T-129 section (passport issue date on the 15th or later;
+  licence with category B `25.06.2010`; licence number left empty → the toast **names the field**;
+  the admin shows `2010-06-25`). The owner's read-only SQL for already-saved dates (decision ②).
+  `TODO.md`, `JOURNAL.md`; `ARCHITECTURE.md` only if it lists utils. Commit proposed, not made.
 
 ## Files to touch
 
-**API:** `services/PassengerOfferService.ts` (the caller) · `utils/geoMatch.ts` **only if** the
-shared fixture needs an export (its rules do not change) · their tests
-**User app:** `utils/scopeCompleteness.ts` (new + test) · `screens/CreatePassengerOfferScreen.tsx`
-(validate + the strip) · `types/orderScope.ts` (the header's "still not wired" note) ·
-`translations/{uz,ru,en}.ts` · `scripts/check-scope-completeness.mjs` (new) + `run-checks.mjs`
-**Docs:** PLAN · PLAN-T114 · TODO · JOURNAL · CHECKLIST
-**NOT touched:** 🛑 the driver app · the admin panel · migrations · dependencies · `infra/**`.
+- API: `src/utils/isoDate.ts` (+test), `src/utils/readField.ts` (+test), `src/middleware/validator.ts`
+  (+ blocks in `validator.test.ts`), `src/i18n/translator.ts` only if `getFieldName` needs the leaf.
+- Driver app: `api/driver.ts` (+`api/driver.test.ts`), `utils/formDate.ts` (+test),
+  `utils/registrationPayload.ts` (+test), `screens/DriverPersonalInfoScreen.tsx`,
+  `DriverPassportScreen.tsx`, `DriverLicenseScreen.tsx` (+`DriverLicenseScreen.test.tsx`),
+  `DriverTaxiLicenseScreen.tsx` (helper swap only), `scripts/check-api-errors.mjs`.
+- Docs: `docs/CHECKLIST.md`, `docs/TODO.md`, `docs/JOURNAL.md`, this file.
+- ❌ No migration · ❌ no dependency · ❌ `infra/**`, `.env`, user app, admin untouched.
+- **Touched by steps 2-3 (8 files):** `src/utils/validation.ts` (+`.test.ts`),
+  `src/utils/readField.ts` (+`.test.ts`, new), `src/middleware/validator.ts` (+`.test.ts`),
+  `src/i18n/translator.ts`, `src/i18n/translations/{uz,ru,en}.ts`. No `isoDate.ts` — see step 2.
 
 ## Risks / open questions
 
-1. ⚠️ **Orders created 2026-09-13 → today can be `tuman` with no QFY** — decision ① is what keeps
-   them editable. Whichever way the owner answers, step 2 must have a test for that exact row.
-2. ⚠️ **This makes the form STRICTER, which is a real refusal a passenger will meet.** If the strip's
-   wording is not clear, the report will be *"the app won't let me order"*. **The three new sentences
-   are the owner's to read** (Risk 2 of T-102i, same shape).
-3. ⚠️ **`yaqin` demands different districts but cannot check adjacency** — so it will accept two
-   districts at opposite ends of the country until T-102f populates the table. Stated, not hidden.
-4. 🔴 **Two readers of one rule, in two languages** — the exact class that bit T-123 and T-116. The
-   shared case table is the mitigation; if step 1 finds it cannot be shared, that is worth saying
-   out loud rather than quietly duplicating.
-5. 🛑 **The device backlog.** This is the fourth unwalked card in the same subsystem. A refusal that
-   fires wrongly on a phone will be hard to attribute between T-102e, T-102i and this.
-6. ✅ **ANSWERED 2026-09-21: KEEP STRICT** — the owner said *"commit"* to the message proposed for
-   the strict path. The app keeps asking for the QFY on any save of an incomplete order; the server
-   stays lenient on untouched routes. Pinned by the edit-path test.
-   ~~❓ **OPEN, FOUND IN STEP 5 — THE APP IS STRICTER THAN DECISION ① ON AN EDIT.**~~ Decision ① was
-   put as *"a passenger changing only the price is not held hostage"*, and the **server** honours
-   it (`scopeVerdict` skips an update that did not move the route or scope). **The app does not:**
-   `validateForm` applies the rule on every save, so editing an old *Tuman ichi* order with no QFY
-   and changing only the seats **asks for the QFY first**. That matches this plan's written Goal 1
-   (*"the form demands what the scope matches at"*) — which the owner approved — but NOT the plain-
-   language summary I gave (*"strict on new orders, lenient on old ones"*). I should have said it.
-   - **Keep the app strict (my recommendation).** Nobody can be stuck: a `tuman` sheet opens AT the
-     QFY (one tap per end), and a district with no list has the escape. It also cleans up the week
-     of orders that asked for QFY precision and could never get it. A client stricter than its
-     server is the ordinary shape.
-   - **Or mirror the server** — skip the rule in edit mode when the loaded route and scope are
-     unchanged (`sameGeo` already exists in the screen). ~10 lines + a test.
-   **Needs the owner's answer before commit.** The edit-path test pins today's (strict) behaviour.
+- **① Strict ISO on the server** (default) vs accepting `DD.MM.YYYY` too. Default is strict: the
+  server cannot disambiguate `01.03.2015`, and the app is the one that produced the display format.
+  Consequence: the **old app build** gets a keyed *"Sana noto'g'ri formatda"* instead of a silent
+  swap — an improvement even before the rebuild.
+- **② Already-saved dates.** A swapped `2015-01-03` is indistinguishable from a real one. Default:
+  **report, don't touch** — step 9 gives the owner a read-only SQL listing driver rows whose DATEONLY
+  values all have day ≤ 12 (candidates), for a manual check in the admin. No data mutation by this
+  card. Rows with day > 12 never saved (500), so nothing is missing silently.
+- **③ Deploy order:** API first, then the app rebuild. Both are the owner's; neither is this card.
+- **④** The five screens are 1 100–1 400 lines with image and date pickers; a render test may need
+  mocks the harness lacks. Fallback in step 6 — the builder tests still hold the wire shape.
+- **⑤** If the **admin panel** edits driver dates through the same routes in another format, the
+  strict rule would refuse it — step 1 checks before step 2 lands.
+- **⑥** Dotted keys vs `getFieldName` / `fields.*` — step 1 checks; step 3 resolves the leaf.
+- **⑦ Seen, not changed:** the user app's wrappers also throw bare `Error`s (timeouts, geo); its
+  registration posts no dates this way. Board at `/end-day` if the owner wants it.
+- **⑧** Which API version is live is unknown; the owner's symptom fits both the 422 (if T-063 is
+  deployed) and the 500 (either way). The fix covers both.
 
 ## Session notes
 
-### 2026-09-21 — planned, approved, steps 0-3 built
+### 2026-09-24 — boarded and planned, nothing built
 
-- **The write side of T-102i.** `geoMatch.validateScope` had held the whole rule, tested, with
-  **zero callers** since 2026-09-12 — the third rule module in this subsystem found written and
-  unapplied. It now has two readers, held together by one case table both suites execute.
-- 🔴 **The BIGINT trap, a second time — and worse than the first.** T-102i's version mislabelled
-  results; this one would have **refused correct orders**, telling a passenger editing a valid
-  *Tuman ichi* order that its endpoints are in different districts. Same root cause (pg returns
-  BIGINT as a string, the model's types say `number`), same fix shape (a pure function fed strings
-  exactly as pg sends them).
-- 🔴 **A test that asserted the right outcome and never built the condition.** The BIGINT mutation
-  came back GREEN. The patch in the test carried the whole form, so both sides were numbers and
-  the mixed comparison never happened. *Only the mutation could show that* — this is the entire
-  argument for the prove-red rule.
-- 🔴 **`tsc` caught what the green suite hid**, exactly as `ubexgo-verification-habits` says: the
-  API's `ORDER_SCOPES` is strings, the app's is objects. `s.key` was `undefined`, every computed
-  key came out `adm2`, and the adm3 half of a whole message family went unchecked.
-- 🔴 **I opened a hole in T-116's guard and had to close it:** its key checker scans for
-  `messageKey: '<literal>'`, and this card's key is **computed** — the first one in the codebase.
-- **Two owner decisions, both taken before code:** ① the server refuses on create and on update
-  only when the route or scope actually moved (nothing becomes uneditable); ② the picker offers a
-  way out when a district has no QFY list — chosen without checking the data *because it is
-  correct either way*.
-- ⚠️ **Self-inflicted and repaired:** a PowerShell `Set-Content -Encoding utf8` restore added a BOM
-  and rewrote every line ending in `ru.ts`. `ubexgo-verification-habits` already warns about this
-  class; it applies to PowerShell restores too, not just the Bash tool.
-- **Step 4:** 15 predictions across three projects, 15 exact. Re-reading my own checker found it
-  leaving three bundles in the cache where every sibling cleans up — fixed to the house idiom and
-  re-proven red.
-- **Step 5:** writing the phone checklist forced two corrections — step 1's "survivable" claim
-  (false: the dead end predates this card and hit every scope) and an unstated gap between the
-  app and decision ① (open question ⑥). *A checklist written for a person is a stricter reader
-  than a plan written for myself.*
+- Start-day arrived with three owner reports; all three grounded before a card was written. The
+  licence failure turned out to be three layers, each hiding the one beneath: a wrapper that drops
+  the body, a validator reading the wrong level, and a date format the ORM guesses at.
+- The date finding was **measured, not read**: one node one-liner against the API's own `moment`
+  turned "probably fine" into "swapped and saved".
+- Two older cards were corrected on the spot rather than left to mislead: T-061 (its read path
+  never received anything) and T-063 (its suite is not in the tree).
+- **Steps 2-3 (server side) built and proven:** the licence rule reads the nesting the screen
+  posts, a DATEONLY field takes ISO only, and a date refusal finally says WHICH date. API 465
+  tests, `tsc` 281 and lint 0/230 both unmoved. Nine mutations, nine red — one of them only after
+  the assertion it exposed was rewritten. The two extra defects (a template with no `{field}`, a
+  missing dictionary entry) were both found by writing the test, not by reading the code.
+- **Step 4 (the app's date helper):** 227 lines of duplicated date code deleted for 61, and the
+  duplication turned out to be hiding a disagreement — one screen's parser refused a year the other
+  three accepted. The shared parser therefore holds no rule at all, only the format.
+- **Twice now a GREEN mutation has been the more useful result** — step 3's exposed an assertion
+  that could not see a missing dictionary entry; step 4's exposed a runner that could not see a
+  failing test on Windows. Neither was a fact about the code under test.
 
 ## Resume point
 
-> **Updated 2026-09-21. T-127 IS COMPLETE — steps 0-5, ⑥ answered (keep strict), COMMITTED** as
-> *"T-127: each ride type demands the depth it searches on"* (`git log --grep T-127` — the hash is
-> not written here because this line is part of that commit). **T-127 → *Parked*.**
-> 🛑 **Nothing is left for Claude on this card.** The owner: deploy the API, rebuild the user app,
-> walk `CHECKLIST.md` §3 (six T-127 walks).
-> **▶️ NEXT: the owner's pick.** Natural follow-ons: **T-128** (drivers find orders by ids, not typed
-> text — the same rules with the roles swapped) · **T-102f** (the neighbours admin screen, which is
-> what would let *Yaqin* check that districts actually ADJOIN) · **T-126** (driver app hardcoded
-> Uzbek). `/new-task` moves this file to `docs/PLAN-T127.md` first.
-> 🟢 **API `tsc` 281 · lint 0/230 · 442** (391 + 51) · **user `tsc` 3 · lint 0/208 · 285 + 13
-> checkers** · **driver app untouched.** No migration, no dependency, `infra/**` untouched.
-> **What works now:** an order must reach the depth its ride type matches at — a QFY on both ends
-> for *Tuman ichi* / *Yaqin hududlar*, one province for *Viloyat ichi*, two different districts for
-> *Yaqin*; the form says which level it will be searched on and marks the offending field; a
-> district with **no QFY list** offers a way out and then says it is matched at the district; the
-> server refuses the same order in the passenger's language, and on an edit only when the route or
-> the ride type actually moved.
-> ⚠️ **Also fixed, and worth saying to anyone walking it:** a district with **no QFY list** has
-> been unorderable in ALL four ride types since 2026-09-03; the picker's new escape fixes that too.
-> 🛑 **Still device-unwalked, and this card adds to the queue** — `CHECKLIST.md` §3 (six T-127
-> walks) and §5. **Needs the API deploy + a user-app rebuild.**
->
-> **--- history below, still true ---**
-> ✅ **0a** T-101 → *Next*, T-127 → *Now* (P1), `check-board` ✓. **0b** plan approved ("ok").
-> ✅ **① answered: A** — refuse on create; on update only when the row would still be incomplete.
-> ✅ **1 (measure) done** — the case table is read out of `validateScope`; the shared fixture works
-> as repo-root JSON (both sides are Node, test-time only, CI-safe); the strip goes between the route
-> card and the time card; a keyed 400 leaves the 107 ceiling alone.
-> 🛑 **▶️ BLOCKED ON DECISION ② — do not start step 3 without it.** Step 1 found that requiring a QFY
-> can make a district **unorderable**: `GeoSheet` opens at `settlement`, and a district with no
-> settlement rows renders *"Ro'yxat bo'sh"* with no way forward (Back is pinned by the root card).
-> Harmless today because the QFY is optional; a dead end the moment this card lands.
-> **The owner's question: do all districts have QFY rows?** Recommended regardless: **A** — the
-> sheet offers *"no QFY list here — continue with the district"*, and the strip says that side
-> matches at the district.
-> **Step 2 (server) is NOT blocked by ②** and can start as soon as the owner answers or defers it.
-> 🟢 Baselines to hold: **API `tsc` 281 · lint 0/230 · 391 · user 3 · 0/208 · 278 + 12 · driver
-> untouched.** ⚠️ English-4xx ceiling **107**, may only fall.
-> **What this card is:** the write side of T-102i. The server matches a `tuman` / `yaqin` order at
-> the QFY; nothing requires the passenger to give one. `geoMatch.validateScope` already holds the
-> whole rule and **has zero callers** — this card gives it two, and holds them together with one
-> shared case table.
-> 🟢 Baselines to hold: **API `tsc` 281 · lint 0/230 · 391 · user 3 · 0/208 · 278 + 12 · driver
-> untouched.** ⚠️ The API's English-4xx **ceiling is 107 and must not rise** — a new 400 here needs
-> a `messageKey`.
+> **Updated 2026-09-24. Steps 0-4 DONE, NOT COMMITTED. The SERVER side is finished; on the APP side
+> the shared date helper is in and the four screens use it, but nothing converts at the POST
+> boundary yet — steps 5-7 remain.**
+> **What works now, server-side:** a licence save is validated where the screen actually puts its
+> fields, so `licenseValidation` no longer refuses every licence; a DATEONLY field accepts
+> `YYYY-MM-DD` only, on all 16 fields across the five driver routes, so `01.03.2015` is refused
+> instead of stored with its day and month swapped; and a date refusal names WHICH date, in uz, ru
+> and en. **API `tsc` 281 · lint 0/230 · 465 tests (442 + 23), all green.** 9 mutations, 9 red.
+> ⚠️ **The deployed app still posts DD.MM.YYYY, so until the app side lands and both are shipped,
+> an old build gets a NAMED date refusal instead of a silent swap.** That is the intended interim
+> state (risk ①), and it is strictly better than today — but it means **the API must not be
+> deployed on its own and called finished.**
+> **Step 4 landed:** `utils/formDate.ts` (+18 tests) replaced nine duplicated date helpers across
+> the four registration screens; **driver 313 tests · `tsc` 19 · lint 0/275 · 12 checkers**, every
+> baseline held. The screens still post `DD.MM.YYYY` — step 5 is where that changes.
+> **▶️ NEXT: step 5** — `utils/registrationPayload.ts` with `buildPersonalInfoPayload`,
+> `buildPassportPayload`, `buildLicensePayload` (dates through `toIsoDate`, empties dropped,
+> `license` nested, contacts filtered) + its test, then the three screens call the builders. Its
+> test is the twin of step 3's: one asserts the wire shape the app SENDS, the other what the server
+> ACCEPTS. **Then step 6** (the 13 wrappers → `ApiError`, the screen test) and **step 7** (two
+> checkers — see the step).
+> **Driver-app baselines to hold: `tsc` 19 · lint 0/275 · 313 + 12 checkers · 3 colours.**
+> Risk ⑤ (admin) closed; ⑥ resolved by the leaf fallback. 🔒 **T-131** still rides the same deploy.
+> **T-131** (delete `console.log('code', code)`, `OtpService.ts:364`) is a separate one-line card
+> in *Next*; it must land before the next API deploy. **T-130** (name prefill, expired passport)
+> follows this card and reuses its helpers.

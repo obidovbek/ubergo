@@ -10,6 +10,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  isIsoDate,
   isValidEmail,
   isValidPhone,
   isValidPassword,
@@ -122,5 +123,44 @@ describe('sanitizeString', () => {
    */
   it('is NOT an HTML escaper — quotes and ampersands survive', () => {
     assert.equal(sanitizeString('a & b "c"'), 'a & b "c"');
+  });
+});
+
+/*
+ * T-129. The two inputs that matter are the owner's: the driver app posted the
+ * display format `DD.MM.YYYY`, and the ORM's `moment(value)` read `15.03.2015` as
+ * invalid and `01.03.2015` as January 3rd. Both must be refused HERE, before the
+ * database sees them — the second one used to be stored, swapped, in silence.
+ */
+describe('isIsoDate — the only date format a DATEONLY column may receive', () => {
+  it('accepts a real YYYY-MM-DD, leap day included', () => {
+    for (const ok of ['2015-03-15', '2016-02-29', '1990-01-01', '2031-12-31']) {
+      assert.equal(isIsoDate(ok), true, `${ok} should be accepted`);
+    }
+  });
+
+  it('refuses the display format the app used to post — both the crash and the silent swap', () => {
+    // moment('15.03.2015') → "Invalid date" → Postgres 500 → the generic toast.
+    assert.equal(isIsoDate('15.03.2015'), false);
+    // moment('01.03.2015') → 2015-01-03: saved with day and month exchanged.
+    assert.equal(isIsoDate('01.03.2015'), false);
+  });
+
+  it('refuses a date the calendar does not have', () => {
+    for (const bad of ['2015-02-30', '2015-02-29', '2015-04-31', '2015-13-01', '2015-00-10', '2015-03-00']) {
+      assert.equal(isIsoDate(bad), false, `${bad} should be refused`);
+    }
+  });
+
+  it('refuses near-misses: unpadded parts, a time part, slashes, prose', () => {
+    for (const bad of ['2015-3-5', '2015-03-15T00:00:00Z', '2015-03-15 10:00', '2015/03/15', '15 March 2015', '20150315']) {
+      assert.equal(isIsoDate(bad), false, `${bad} should be refused`);
+    }
+  });
+
+  it('refuses anything that is not a string — the rule itself skips absent values', () => {
+    for (const bad of [undefined, null, 20150315, new Date('2015-03-15'), {}, '']) {
+      assert.equal(isIsoDate(bad), false);
+    }
   });
 });

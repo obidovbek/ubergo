@@ -32,7 +32,8 @@ export default {
     url: "Неверный формат URL",
     unique: "{field} уже существует",
     notMatch: "{field} не совпадает",
-    invalidDate: "Неверный формат даты",
+    // T-129: see the note in uz.ts — the template named no field.
+    invalidDate: "{field}: неверный формат даты",
     pastDate: "Дата должна быть в прошлом",
     futureDate: "Дата должна быть в будущем",
     invalidChoice: "Неверный выбор",
@@ -170,6 +171,8 @@ export default {
     owner_pinfl: 'ПИНФЛ владельца',
     
     // Taxi license fields
+    // T-129: see the note in uz.ts — this key was missing in all three locales.
+    license_issue_date: 'Дата выдачи лицензии',
     license_registry_number: 'Реестровый номер',
     license_sheet_number: 'Номер лицензии',
     license_sheet_valid_from: 'Действителен с',
